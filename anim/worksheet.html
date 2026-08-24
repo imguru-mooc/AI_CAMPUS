@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>컴퓨터 구조 Day 1 · 디지털 워크시트</title>
+<style>
+:root{--navy:#1E2761;--navy2:#2A3578;--navy3:#36429A;--ice:#CADCFC;--icebg:#EDF3FC;
+--white:#FFFFFF;--data:#FFC24B;--ok:#7BE0AD;--warn:#FF8B8B;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--navy);color:var(--ice);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+header{padding:13px 20px;border-bottom:1px solid var(--navy3);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+header h1{font-size:16px;color:var(--white)}
+header .nm{display:flex;align-items:center;gap:8px;margin-left:auto;font-size:13px}
+input,select,textarea{background:var(--navy);border:1px solid var(--navy3);color:var(--white);
+border-radius:8px;padding:8px 10px;font-family:inherit;font-size:14px}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid var(--data);outline-offset:2px}
+nav{display:flex;gap:6px;padding:10px 20px;flex-wrap:wrap;border-bottom:1px solid var(--navy3)}
+nav button{background:transparent;color:var(--ice);border:1px solid var(--navy3);border-radius:999px;
+padding:7px 13px;font-size:12.5px;cursor:pointer;font-family:inherit;font-weight:700}
+nav button.on{background:var(--ice);color:var(--navy);border-color:var(--ice)}
+nav button.done::after{content:" ✓";color:var(--ok)}
+nav button.on.done::after{color:#1c7a4d}
+main{flex:1;width:min(880px,95vw);margin:0 auto;padding:18px 0 40px}
+.sec{display:none}.sec.on{display:block;animation:fd .25s ease}
+@keyframes fd{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+h2{font-size:21px;color:var(--white);margin-bottom:4px}
+.lead{font-size:13.5px;opacity:.85;line-height:1.55;margin-bottom:14px}
+.lead b{color:var(--data)}
+.card{background:var(--navy2);border-radius:14px;padding:16px 18px;margin-bottom:12px}
+.row{display:flex;align-items:center;gap:10px;padding:9px 4px;border-top:1px solid var(--navy3);font-size:14px;flex-wrap:wrap}
+.row:first-child{border-top:none}
+.row .lbl{flex:1;min-width:200px;line-height:1.45}
+.mark{width:26px;text-align:center;font-weight:700}
+.mark.ok{color:var(--ok)}.mark.bad{color:var(--warn)}
+.btn{background:var(--ice);color:var(--navy);border:none;border-radius:999px;padding:10px 20px;
+font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin:4px 8px 4px 0}
+.btn.ghost{background:transparent;color:var(--ice);border:1px solid var(--ice)}
+.btn:disabled{opacity:.4;cursor:default}
+.hint{font-size:12px;opacity:.7;margin-top:8px;line-height:1.5}
+.pair{display:flex;gap:8px;flex-wrap:wrap}
+.tg{border:1px solid var(--navy3);background:var(--navy);color:var(--ice);border-radius:999px;
+padding:7px 14px;font-size:12.5px;cursor:pointer;font-family:inherit;font-weight:700}
+.tg.sel{background:var(--data);color:var(--navy);border-color:var(--data)}
+.status{margin-top:10px;min-height:20px;border-radius:10px;padding:10px 14px;background:rgba(202,220,252,.08);font-size:13.5px;line-height:1.5}
+.status b{color:var(--data)}.status.good{background:rgba(123,224,173,.12)}.status.bad{background:rgba(255,139,139,.12)}
+/* 완료 화면 */
+#doneOv{position:fixed;inset:0;background:rgba(20,25,60,.92);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+#doneOv.on{display:flex}
+.donecard{background:var(--icebg);color:var(--navy);border-radius:16px;width:min(640px,94vw);padding:26px 30px}
+.donecard .top{display:flex;align-items:center;gap:14px;border-bottom:2px solid var(--navy);padding-bottom:12px;margin-bottom:12px}
+.donecard .chk{width:52px;height:52px;border-radius:50%;background:var(--navy);color:var(--white);
+display:flex;align-items:center;justify-content:center;font-size:28px;flex:none}
+.donecard h3{font-size:18px}
+.donecard .meta{font-size:12.5px;opacity:.75;margin-top:2px}
+.donecard .body{font-size:14px;line-height:1.7;white-space:pre-wrap;word-break:break-all;max-height:46vh;overflow:auto}
+.donecard .cap{margin-top:14px;background:var(--navy);color:var(--white);border-radius:10px;padding:10px 14px;font-size:13px;text-align:center;font-weight:700}
+.donecard .closeb{margin-top:12px;text-align:center}
+footer{text-align:center;font-size:11px;opacity:.55;padding:12px;border-top:1px solid var(--navy3)}
+</style>
+</head>
+<body>
+<header>
+  <h1>컴퓨터 구조 Day 1 · 디지털 워크시트</h1>
+  <div class="nm"><label for="uname"><b style="color:var(--white)">이름</b></label>
+  <input id="uname" style="width:130px" placeholder="이름 입력 (필수)"></div>
+</header>
+<nav id="nav"></nav>
+<main id="main"></main>
+<div id="doneOv" role="dialog" aria-modal="true">
+  <div class="donecard">
+    <div class="top"><div class="chk">✓</div>
+      <div><h3 id="dcTitle"></h3><div class="meta" id="dcMeta"></div></div></div>
+    <div class="body" id="dcBody"></div>
+    <div class="cap">📸 이 화면을 캡처해서 노션의 내 이름 아래에 붙여넣으세요</div>
+    <div class="closeb"><button class="btn ghost" id="dcClose" style="color:var(--navy);border-color:var(--navy)">닫기</button></div>
+  </div>
+</div>
+<footer>답은 이 브라우저에 자동 저장됩니다 · 창을 닫아도 유지 · 다른 기기에서는 이어지지 않으니 하루 동안 같은 브라우저를 쓰세요</footer>
+
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const S = {load(k,d){try{const v=localStorage.getItem("ws_"+k);return v===null?d:JSON.parse(v);}catch(e){return d;}},
+           save(k,v){try{localStorage.setItem("ws_"+k,JSON.stringify(v));}catch(e){}}};
+const PARTS=["CPU","메모리(RAM)","저장장치(SSD/HDD)","입출력장치"];
+let cur="p2";
+
+/* ---------- 공용 ---------- */
+function sel(id,opts,val){
+  return '<select id="'+id+'"><option value="">— 선택 —</option>'+
+    opts.map(o=>'<option'+(o===val?" selected":"")+'>'+o+'</option>').join("")+'</select>';
+}
+function nameOK(){
+  if(!$("uname").value.trim()){alert("먼저 상단에 이름을 입력하세요.");$("uname").focus();return false;}
+  return true;
+}
+function showDone(pn,title,body){
+  if(!nameOK())return;
+  const now=new Date();
+  $("dcTitle").textContent="실습 "+pn+" — "+title;
+  $("dcMeta").textContent=$("uname").value.trim()+" · "+now.toLocaleDateString("ko-KR")+" "+now.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});
+  $("dcBody").textContent=body;
+  $("doneOv").classList.add("on");
+  S.save("done_"+pn,true); paintNav();
+}
+$("dcClose").addEventListener("click",()=>$("doneOv").classList.remove("on"));
+$("uname").value=S.load("name","");
+$("uname").addEventListener("input",()=>S.save("name",$("uname").value));
+
+/* ---------- 섹션 정의 ---------- */
+const SECS=[
+["p2","실습 2 · 부품 이름표"],["p3","실습 3 · 역할 짝짓기"],["p4","실습 4 · 분류"],
+["p5","실습 5 · 데이터의 길"],["p6","실습 6 · 사양표 해석"],["p7","실습 7 · 화면 캡처"],
+["p8","실습 8 · 내 사양표"],["p9","실습 9 · 소개서"]];
+
+function paintNav(){
+  $("nav").innerHTML=SECS.map(([id,t])=>
+   '<button data-s="'+id+'" class="'+(id===cur?"on ":"")+(S.load("done_"+id.slice(1),false)?"done":"")+'">'+t+'</button>').join("");
+  document.querySelectorAll("#nav button").forEach(b=>b.addEventListener("click",()=>{cur=b.dataset.s;paint();}));
+}
+function paint(){
+  document.querySelectorAll(".sec").forEach(s=>s.classList.toggle("on",s.id===cur));
+  paintNav();
+}
+
+/* ---------- HTML 골격 ---------- */
+$("main").innerHTML=`
+<section class="sec" id="p2">
+ <h2>실습 2 — 부품 이름표 채우기</h2>
+ <p class="lead">본체 안 네 자리의 <b>부품 이름</b>을 고르세요. 결과물: 이름표가 채워진 배치도.</p>
+ <div class="card" id="p2rows"></div>
+ <button class="btn ghost" id="p2chk">정답 확인 (선생님 안내 후)</button>
+ <button class="btn" id="p2done">완료 화면 보기</button>
+ <div class="status" id="p2st">네 칸을 모두 고르면 완료할 수 있습니다.</div>
+</section>
+
+<section class="sec" id="p3">
+ <h2>실습 3 — 부품과 역할 짝짓기</h2>
+ <p class="lead">역할 4개 중 <b>오늘 배운 부품의 것 2개만</b> 주인을 고르세요. <b>남는 역할 2개는 정상</b> — "잇지 않음"을 고르면 됩니다. 그 주인은 오후에 등장합니다.</p>
+ <div class="card" id="p3rows"></div>
+ <div class="card">
+  <div class="row"><span class="lbl">CPU의 별명 — 일하는 ____</span><input id="p3n1" style="width:110px"><span class="mark" id="p3n1m"></span></div>
+  <div class="row"><span class="lbl">메모리의 별명 — ____</span><input id="p3n2" style="width:110px"><span class="mark" id="p3n2m"></span></div>
+  <div class="row"><span class="lbl">(보너스) 둘이 붙어 있어야 하는 이유 한 문장</span><input id="p3b" style="flex:2;min-width:220px"></div>
+ </div>
+ <button class="btn ghost" id="p3chk">정답 확인 (선생님 안내 후)</button>
+ <button class="btn" id="p3done">완료 화면 보기</button>
+ <div class="status" id="p3st">역할 4개의 주인과 별명 2개를 채우면 완료할 수 있습니다.</div>
+</section>
+
+<section class="sec" id="p4">
+ <h2>실습 4 — 사라진다 vs 남는다</h2>
+ <p class="lead">각 항목이 전원을 껐을 때 어떻게 되는지 고르세요. 판단 기준: <b>지금 쓰는 중인가(작업대), 보관돼 있나(창고)?</b></p>
+ <div class="card" id="p4rows"></div>
+ <button class="btn ghost" id="p4chk">정답 확인 (선생님 안내 후)</button>
+ <button class="btn" id="p4done">완료 화면 보기</button>
+ <div class="status" id="p4st">8개를 모두 분류하면 완료할 수 있습니다.</div>
+</section>
+
+<section class="sec" id="p5">
+ <h2>실습 5 — 데이터의 길</h2>
+ <p class="lead">전원을 켜고 프로그램이 화면에 뜨기까지, 데이터가 지나는 <b>순서대로</b> 부품을 고르세요. 시작이 헷갈리면 — 데이터가 밤새 어디서 자고 있었죠?</p>
+ <div class="card" id="p5rows"></div>
+ <button class="btn ghost" id="p5chk">정답 확인 (선생님 안내 후)</button>
+ <button class="btn" id="p5done">완료 화면 보기</button>
+ <div class="status" id="p5st">네 칸을 모두 고르면 완료할 수 있습니다. 같은 부품을 두 번 쓸 수 없습니다.</div>
+</section>
+
+<section class="sec" id="p6">
+ <h2>실습 6 — 사양표 해석하기</h2>
+ <p class="lead">각 줄의 숫자가 뜻하는 것을 <b>내 말로</b> 적으세요. 비유("손이 8개고 빠르다")로 적어도 정답. 스스로 물어보세요 — <b>이 숫자는 손·작업대·창고 중 누구 것인가?</b></p>
+ <div class="card">
+  <div class="hint" style="margin:0 0 8px">아래는 예시 사양표입니다 — 실제 판매 페이지는 수업 화면 기준. [강사 확정]</div>
+  <div class="row"><span class="lbl"><b>프로세서(CPU)</b> · 3.2GHz · 8코어</span><textarea id="p6a" rows="1" style="flex:2;min-width:220px"></textarea></div>
+  <div class="row"><span class="lbl"><b>메모리(RAM)</b> · 16GB</span><textarea id="p6b" rows="1" style="flex:2;min-width:220px"></textarea></div>
+  <div class="row"><span class="lbl"><b>저장장치</b> · 512GB SSD</span><textarea id="p6c" rows="1" style="flex:2;min-width:220px"></textarea></div>
+  <div class="row"><span class="lbl"><b>디스플레이</b> · 15.6인치</span><textarea id="p6d" rows="1" style="flex:2;min-width:220px"></textarea></div>
+ </div>
+ <button class="btn ghost" id="p6chk">참고 답안 보기 (선생님 안내 후)</button>
+ <button class="btn" id="p6done">완료 화면 보기</button>
+ <div class="status" id="p6st">네 줄을 모두 적으면 완료할 수 있습니다. 함정 주의 — GB가 두 번 나옵니다.</div>
+</section>
+
+<section class="sec" id="p7">
+ <h2>실습 7 — 시스템 정보 화면 캡처</h2>
+ <p class="lead">이 실습의 결과물은 워크시트가 아니라 <b>시스템 정보 화면 그 자체</b>입니다.</p>
+ <div class="card">
+  <div class="row"><span class="lbl">1. 시스템 정보를 엽니다 — 경로는 수업 화면 안내를 따르세요 [강사 확정: OS별 경로]</span></div>
+  <div class="row"><span class="lbl">2. CPU · RAM · 저장장치 항목이 보이는 상태로 둡니다</span></div>
+  <div class="row"><span class="lbl">3. 화면을 캡처합니다 [강사 확정: 캡처 단축키]</span></div>
+  <div class="row"><span class="lbl">4. 캡처를 <b>노션의 내 이름 아래에</b> 붙여넣습니다</span></div>
+  <div class="row"><span class="lbl">5. 화면 속 숫자 세 개(GHz·코어, RAM GB, 저장 GB)를 눈으로 찾아 두세요 — 다음 실습에서 바로 적습니다</span></div>
+ </div>
+ <button class="btn" id="p7done">붙여넣기까지 마쳤습니다</button>
+ <div class="status" id="p7st">노션에 캡처가 올라갔으면 버튼을 누르세요 (체크 표시용).</div>
+</section>
+
+<section class="sec" id="p8">
+ <h2>실습 8 — 내 사양표 빈칸 채우기</h2>
+ <p class="lead">방금 캡처한 <b>내 시스템 정보의 숫자를 그대로</b> 적으세요. 화면에 보이는 숫자가 정답입니다.</p>
+ <div class="card">
+  <div class="row"><span class="lbl">CPU 이름</span><input id="p8nm" style="flex:2;min-width:200px" placeholder="예: 화면에 보이는 프로세서 이름"></div>
+  <div class="row"><span class="lbl">CPU 속도 (GHz)</span><input id="p8g" type="number" step="0.1" min="0.5" max="8" style="width:110px"></div>
+  <div class="row"><span class="lbl">코어 수 (개)</span><input id="p8c" type="number" step="1" min="1" max="64" style="width:110px"></div>
+  <div class="row"><span class="lbl">메모리 RAM (GB)</span><input id="p8r" type="number" step="1" min="1" max="256" style="width:110px"></div>
+  <div class="row"><span class="lbl">저장장치 (GB)</span><input id="p8d" type="number" step="1" min="16" max="8192" style="width:110px"></div>
+  <div class="row"><span class="lbl">저장장치 종류 (화면에 없으면 비워 두기)</span><span class="pair" id="p8kind">
+    <button class="tg" data-v="SSD">SSD</button><button class="tg" data-v="HDD">HDD</button><button class="tg" data-v="">모름</button></span></div>
+ </div>
+ <button class="btn" id="p8done">완료 화면 보기</button>
+ <div class="status" id="p8st">마지막 점검 — <b>메모리 GB 칸에 저장장치 GB를 적지 않았나요?</b> 보통 창고(저장)가 훨씬 큽니다.</div>
+</section>
+
+<section class="sec" id="p9">
+ <h2>실습 9 — 내 컴퓨터 소개서</h2>
+ <p class="lead">오늘 만든 답들이 <b>자동으로 모입니다.</b> 소개 문장만 직접 쓰면 소개서가 완성됩니다.</p>
+ <div class="card">
+  <div class="row"><span class="lbl">내 컴퓨터를 한 문장으로 소개하면</span><input id="p9intro" style="flex:2;min-width:220px" placeholder="자유롭게 — 맞춤법·글솜씨는 평가하지 않습니다"></div>
+  <div class="row"><span class="lbl">(보너스) 오늘 가장 신기했던 것 한 줄</span><input id="p9wow" style="flex:2;min-width:220px"></div>
+ </div>
+ <div class="status" id="p9st"></div>
+ <button class="btn" id="p9done">소개서 완성 화면 보기</button>
+</section>`;
+
+/* ---------- 실습 2 ---------- */
+const P2Q=[["① 메인보드 가운데, 방열판 아래"],["② ① 바로 옆 슬롯, 길쭉한 막대"],["③ 구석의 상자 또는 별도 슬롯의 막대"],["④ 본체 바깥 (키보드·마우스·모니터 자리)"]];
+const P2A=[0,1,2,3]; // PARTS 인덱스
+function p2init(){
+  const v=S.load("p2",["","","",""]);
+  $("p2rows").innerHTML=P2Q.map((q,i)=>'<div class="row"><span class="lbl">'+q[0]+'</span>'+sel("p2s"+i,PARTS,v[i])+'<span class="mark" id="p2m'+i+'"></span></div>').join("");
+  for(let i=0;i<4;i++)$("p2s"+i).addEventListener("change",()=>{const a=S.load("p2",["","","",""]);a[i]=$("p2s"+i).value;S.save("p2",a);});
+}
+$("main").addEventListener("input",()=>{}); // no-op (개별 저장)
+function p2vals(){return [0,1,2,3].map(i=>$("p2s"+i).value);}
+document.addEventListener("click",e=>{
+  if(e.target.id==="p2chk"){
+    if(!confirm("선생님이 정답 공개를 안내했을 때만 확인하세요. 계속할까요?"))return;
+    const v=p2vals();let ok=0;
+    v.forEach((x,i)=>{const m=$("p2m"+i);if(!x){m.textContent="";return;}
+      const good=x===PARTS[P2A[i]];m.textContent=good?"✓":"✗";m.className="mark "+(good?"ok":"bad");if(good)ok++;});
+    $("p2st").className="status "+(ok===4?"good":"bad");
+    $("p2st").innerHTML=ok===4?"네 칸 모두 정답! 완료 화면을 캡처하세요.":"✗ 표시 칸을 고친 뒤 다시 확인하세요. 힌트 — 위치를 떠올리기: CPU 옆 vs 구석.";
+  }
+  if(e.target.id==="p2done"){
+    const v=p2vals();
+    if(v.some(x=>!x)){$("p2st").className="status bad";$("p2st").textContent="아직 비어 있는 칸이 있습니다.";return;}
+    showDone(2,"부품 이름표 채우기", P2Q.map((q,i)=>q[0]+"\n   → "+v[i]).join("\n"));
+  }
+});
+
+/* ---------- 실습 3 ---------- */
+const P3R=[["전원을 꺼도 파일이 남는다","잇지 않음"],["지금 쓰는 것을 올려둔다","메모리(RAM)"],
+["계산과 명령을 처리한다","CPU"],["컴퓨터로 들어가고 나오는 문이 된다","잇지 않음"]];
+const P3OPT=["CPU","메모리(RAM)","잇지 않음 (주인이 아직 안 나옴)"];
+function p3norm(x){return x.startsWith("잇지 않음")?"잇지 않음":x;}
+function p3init(){
+  const v=S.load("p3",["","","",""]);
+  $("p3rows").innerHTML=P3R.map((r,i)=>'<div class="row"><span class="lbl">'+r[0]+'</span>'+sel("p3s"+i,P3OPT,v[i])+'<span class="mark" id="p3m'+i+'"></span></div>').join("");
+  for(let i=0;i<4;i++)$("p3s"+i).addEventListener("change",()=>{const a=S.load("p3",["","","",""]);a[i]=$("p3s"+i).value;S.save("p3",a);});
+  $("p3n1").value=S.load("p3n1","");$("p3n2").value=S.load("p3n2","");$("p3b").value=S.load("p3b","");
+  ["p3n1","p3n2","p3b"].forEach(id=>$(id).addEventListener("input",()=>S.save(id,$(id).value)));
+}
+document.addEventListener("click",e=>{
+  if(e.target.id==="p3chk"){
+    if(!confirm("선생님이 정답 공개를 안내했을 때만 확인하세요. 계속할까요?"))return;
+    let ok=0;
+    P3R.forEach((r,i)=>{const x=$("p3s"+i).value,m=$("p3m"+i);if(!x){m.textContent="";return;}
+      const good=p3norm(x)===r[1];m.textContent=good?"✓":"✗";m.className="mark "+(good?"ok":"bad");if(good)ok++;});
+    const n1=$("p3n1").value.replace(/\s/g,""),n2=$("p3n2").value.replace(/\s/g,"");
+    const g1=n1.includes("손"),g2=n2.includes("작업대");
+    $("p3n1m").textContent=n1?(g1?"✓":"✗"):"";$("p3n1m").className="mark "+(g1?"ok":"bad");
+    $("p3n2m").textContent=n2?(g2?"✓":"✗"):"";$("p3n2m").className="mark "+(g2?"ok":"bad");
+    const all=ok===4&&g1&&g2;
+    $("p3st").className="status "+(all?"good":"bad");
+    $("p3st").innerHTML=all?"전부 정답! 남은 역할 2개의 주인은 점심 먹고 옵니다.":"✗를 고친 뒤 다시 확인하세요. 힌트 — 작업대 위의 것은 끄면 어떻게 된다고 했죠?";
+  }
+  if(e.target.id==="p3done"){
+    const v=[0,1,2,3].map(i=>$("p3s"+i).value);
+    if(v.some(x=>!x)||!$("p3n1").value.trim()||!$("p3n2").value.trim()){
+      $("p3st").className="status bad";$("p3st").textContent="역할 4개의 주인과 별명 2개를 모두 채워야 합니다.";return;}
+    showDone(3,"부품과 역할 짝짓기",
+      P3R.map((r,i)=>"· "+r[0]+"\n   → "+v[i]).join("\n")+
+      "\n\n별명: CPU = 일하는 "+$("p3n1").value.trim()+" / 메모리 = "+$("p3n2").value.trim()+
+      ($("p3b").value.trim()?"\n보너스: "+$("p3b").value.trim():""));
+  }
+});
+
+/* ---------- 실습 4 ---------- */
+const P4I=[["작업 중이던 문서 (저장 안 함)","사라진다"],["어제 저장한 사진 파일","남는다"],
+["지금 틀어 놓은 음악의 재생 위치","사라진다"],["다운로드해 둔 설치 파일","남는다"],
+["열려 있는 브라우저 탭들","사라진다"],["저장해 둔 문서 파일","남는다"],
+["게임 실행 중 화면","사라진다"],["저장한 게임 세이브 파일","남는다"]];
+function p4init(){
+  const v=S.load("p4",Array(8).fill(""));
+  $("p4rows").innerHTML=P4I.map((it,i)=>'<div class="row"><span class="lbl">'+it[0]+'</span><span class="pair">'+
+   '<button class="tg'+(v[i]==="사라진다"?" sel":"")+'" data-i="'+i+'" data-v="사라진다">🗂️ 사라진다</button>'+
+   '<button class="tg'+(v[i]==="남는다"?" sel":"")+'" data-i="'+i+'" data-v="남는다">🏬 남는다</button></span>'+
+   '<span class="mark" id="p4m'+i+'"></span></div>').join("");
+}
+document.addEventListener("click",e=>{
+  const t=e.target;
+  if(t.classList&&t.classList.contains("tg")&&t.dataset.i!==undefined&&t.closest("#p4rows")){
+    const i=+t.dataset.i,v=S.load("p4",Array(8).fill(""));v[i]=t.dataset.v;S.save("p4",v);
+    t.parentElement.querySelectorAll(".tg").forEach(x=>x.classList.remove("sel"));t.classList.add("sel");
+  }
+  if(t.id==="p4chk"){
+    if(!confirm("선생님이 정답 공개를 안내했을 때만 확인하세요. 계속할까요?"))return;
+    const v=S.load("p4",Array(8).fill(""));let ok=0;
+    P4I.forEach((it,i)=>{const m=$("p4m"+i);if(!v[i]){m.textContent="";return;}
+      const good=v[i]===it[1];m.textContent=good?"✓":"✗";m.className="mark "+(good?"ok":"bad");if(good)ok++;});
+    $("p4st").className="status "+(ok===8?"good":"bad");
+    $("p4st").innerHTML=ok===8?"8개 전부 정답!":"✗를 고친 뒤 다시 확인하세요. 힌트 — '문서'라는 단어에 속지 말 것: 저장했는지가 운명을 가릅니다.";
+  }
+  if(t.id==="p4done"){
+    const v=S.load("p4",Array(8).fill(""));
+    if(v.some(x=>!x)){$("p4st").className="status bad";$("p4st").textContent="아직 분류하지 않은 항목이 있습니다.";return;}
+    showDone(4,"사라진다 vs 남는다",
+      "🗂️ 꺼지면 사라진다:\n"+P4I.map((it,i)=>v[i]==="사라진다"?"  · "+it[0]:"").filter(Boolean).join("\n")+
+      "\n\n🏬 꺼도 남는다:\n"+P4I.map((it,i)=>v[i]==="남는다"?"  · "+it[0]:"").filter(Boolean).join("\n"));
+  }
+});
+
+/* ---------- 실습 5 ---------- */
+const P5A=["저장장치(SSD/HDD)","메모리(RAM)","CPU","화면(모니터)"];
+const P5OPT=["CPU","메모리(RAM)","저장장치(SSD/HDD)","화면(모니터)"];
+function p5init(){
+  const v=S.load("p5",["","","",""]);
+  $("p5rows").innerHTML=[0,1,2,3].map(i=>'<div class="row"><span class="lbl">'+(i+1)+'번째로 지나는 곳</span>'+
+   sel("p5s"+i,P5OPT,v[i])+'<span class="mark" id="p5m'+i+'"></span></div>').join("")+
+   '<div class="hint">완성 문장: 데이터의 길 = 1번 → 2번 → 3번 → 4번</div>';
+  for(let i=0;i<4;i++)$("p5s"+i).addEventListener("change",()=>{const a=S.load("p5",["","","",""]);a[i]=$("p5s"+i).value;S.save("p5",a);});
+}
+document.addEventListener("click",e=>{
+  if(e.target.id==="p5chk"){
+    if(!confirm("선생님이 정답 공개를 안내했을 때만 확인하세요. 계속할까요?"))return;
+    const v=[0,1,2,3].map(i=>$("p5s"+i).value);let ok=0;
+    v.forEach((x,i)=>{const m=$("p5m"+i);if(!x){m.textContent="";return;}
+      const good=x===P5A[i];m.textContent=good?"✓":"✗";m.className="mark "+(good?"ok":"bad");if(good)ok++;});
+    $("p5st").className="status "+(ok===4?"good":"bad");
+    $("p5st").innerHTML=ok===4?"정확합니다 — 창고에서 꺼내, 작업대에 올리고, 손이 일해서, 문으로 나간다.":"✗를 고친 뒤 다시 확인하세요. 힌트 — 순서를 이야기로: 꺼내서 → 올리고 → 일해서 → 나간다.";
+  }
+  if(e.target.id==="p5done"){
+    const v=[0,1,2,3].map(i=>$("p5s"+i).value);
+    if(v.some(x=>!x)){$("p5st").className="status bad";$("p5st").textContent="아직 비어 있는 칸이 있습니다.";return;}
+    if(new Set(v).size!==4){$("p5st").className="status bad";$("p5st").textContent="같은 부품이 두 번 들어갔습니다 — 네 부품이 한 번씩만.";return;}
+    showDone(5,"데이터의 길","데이터의 길:\n"+v.join(" → "));
+  }
+});
+
+/* ---------- 실습 6 ---------- */
+const P6REF=["3.2GHz = 손(CPU)이 일하는 속도 · 8코어 = 일하는 손이 8개",
+"16GB = 작업대(메모리)의 넓이 — 동시에 올려둘 수 있는 양",
+"512GB = 창고(저장장치)의 크기 · SSD = 빠른 창고",
+"15.6인치 = 문(모니터)의 크기 — 부품 성능이 아님"];
+function p6init(){
+  ["p6a","p6b","p6c","p6d"].forEach(id=>{$(id).value=S.load(id,"");$(id).addEventListener("input",()=>S.save(id,$(id).value));});
+}
+document.addEventListener("click",e=>{
+  if(e.target.id==="p6chk"){
+    if(!confirm("선생님이 정답 공개를 안내했을 때만 확인하세요. 계속할까요?"))return;
+    $("p6st").className="status good";
+    $("p6st").innerHTML="<b>참고 답안</b> — 내 답과 뜻이 같으면 정답입니다:<br>· "+P6REF.join("<br>· ");
+  }
+  if(e.target.id==="p6done"){
+    const v=["p6a","p6b","p6c","p6d"].map(id=>$(id).value.trim());
+    if(v.some(x=>!x)){$("p6st").className="status bad";$("p6st").textContent="네 줄을 모두 적어야 합니다.";return;}
+    showDone(6,"사양표 해석하기",
+      "프로세서 3.2GHz·8코어 → "+v[0]+"\n메모리 16GB → "+v[1]+"\n저장장치 512GB SSD → "+v[2]+"\n디스플레이 15.6인치 → "+v[3]);
+  }
+});
+
+/* ---------- 실습 7 ---------- */
+document.addEventListener("click",e=>{
+  if(e.target.id==="p7done"){
+    if(!nameOK())return;
+    S.save("done_7",true);paintNav();
+    $("p7st").className="status good";
+    $("p7st").textContent="확인! 화면 속 숫자 세 개를 기억한 채 실습 8로 가세요.";
+  }
+});
+
+/* ---------- 실습 8 ---------- */
+function p8init(){
+  const v=S.load("p8",{});
+  $("p8nm").value=v.nm||"";$("p8g").value=v.g||"";$("p8c").value=v.c||"";$("p8r").value=v.r||"";$("p8d").value=v.d||"";
+  document.querySelectorAll("#p8kind .tg").forEach(b=>{b.classList.toggle("sel",(v.k||"")===b.dataset.v&&b.dataset.v!=="");
+    b.addEventListener("click",()=>{const s=S.load("p8",{});s.k=b.dataset.v;S.save("p8",s);
+      document.querySelectorAll("#p8kind .tg").forEach(x=>x.classList.remove("sel"));if(b.dataset.v)b.classList.add("sel");});});
+  ["nm","g","c","r","d"].forEach(k=>{$("p8"+k).addEventListener("input",()=>{const s=S.load("p8",{});s[k]=$("p8"+k).value;S.save("p8",s);});});
+}
+document.addEventListener("click",e=>{
+  if(e.target.id==="p8done"){
+    const s=S.load("p8",{});
+    if(!s.g||!s.c||!s.r||!s.d){$("p8st").className="status bad";$("p8st").textContent="숫자 네 개(GHz·코어·RAM·저장)는 필수입니다.";return;}
+    if(+s.r>=+s.d){$("p8st").className="status bad";$("p8st").innerHTML="잠깐 — 메모리("+s.r+"GB)가 저장장치("+s.d+"GB)보다 크거나 같습니다. 보통은 창고가 훨씬 큽니다. <b>두 GB가 바뀌지 않았는지</b> 화면을 다시 확인하고, 맞다면 그대로 완료하세요.";
+      if(!confirm("두 GB 값을 다시 확인했고, 화면 그대로가 맞습니까?"))return;}
+    showDone(8,"내 사양표",
+      (s.nm?("CPU 이름: "+s.nm+"\n"):"")+"CPU 속도: "+s.g+"GHz · 코어 "+s.c+"개\n메모리(RAM): "+s.r+"GB\n저장장치: "+s.d+"GB"+(s.k?" ("+s.k+")":""));
+  }
+});
+
+/* ---------- 실습 9 ---------- */
+function p9init(){
+  $("p9intro").value=S.load("p9intro","");$("p9wow").value=S.load("p9wow","");
+  ["p9intro","p9wow"].forEach(id=>$(id).addEventListener("input",()=>S.save(id,$(id).value)));
+  p9status();
+}
+function p9status(){
+  const need=[["p2","실습 2 배치도"],["p3","실습 3 역할"],["p8","실습 8 내 사양표"]];
+  const miss=need.filter(([k])=>{
+    if(k==="p8"){const s=S.load("p8",{});return !(s.g&&s.r&&s.d);}
+    const v=S.load(k,[]);return !(Array.isArray(v)&&v.length&&v.every(x=>x));});
+  if(miss.length){$("p9st").className="status bad";
+    $("p9st").innerHTML="재료가 아직 부족합니다: <b>"+miss.map(m=>m[1]).join(" · ")+"</b> 탭을 먼저 완료하세요.";}
+  else{$("p9st").className="status good";$("p9st").textContent="재료 준비 완료 — 소개 문장을 쓰고 완성 화면을 여세요.";}
+}
+document.querySelectorAll("#nav").forEach(()=>{});
+document.addEventListener("click",e=>{
+  if(e.target.dataset&&e.target.dataset.s==="p9")p9status();
+  if(e.target.id==="p9done"){
+    p9status();
+    const p2=S.load("p2",[]),p3=S.load("p3",[]),p8=S.load("p8",{});
+    if(!(p8.g&&p8.r&&p8.d)||!(p2.length&&p2.every(x=>x))){alert("재료(실습 2·3·8)를 먼저 완료하세요.");return;}
+    const roles=P3R.map((r,i)=>p3norm(p3[i]||"")!=="잇지 않음"?("· "+(p3[i]||"")+" — "+r[0]):"").filter(Boolean).join("\n");
+    const nick="비유: CPU=일하는 "+(S.load("p3n1","")||"손")+" · 메모리="+(S.load("p3n2","")||"작업대")+" · 저장장치=창고 · 입출력장치=출입구";
+    const body=($("p9intro").value.trim()?("\u300c"+$("p9intro").value.trim()+"\u300d\n\n"):"")+
+      "1) 부품 4가지: "+p2.join(", ")+"\n\n2) 역할:\n"+roles+"\n"+nick+
+      "\n\n3) 내 컴퓨터의 숫자:\n"+(p8.nm?("CPU "+p8.nm+"\n"):"")+p8.g+"GHz · 코어 "+p8.c+"개 · RAM "+p8.r+"GB · 저장 "+p8.d+"GB"+(p8.k?" ("+p8.k+")":"")+
+      ($("p9wow").value.trim()?"\n\n★ 오늘 가장 신기했던 것: "+$("p9wow").value.trim():"");
+    showDone(9,"내 컴퓨터 소개서",body);
+  }
+});
+
+/* ---------- 시작 ---------- */
+p2init();p3init();p4init();p5init();p6init();p8init();p9init();
+paintNav();paint();
+</script>
+</body>
+</html>
