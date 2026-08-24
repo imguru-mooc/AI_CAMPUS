@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>로딩의 정체 · 컴퓨터 구조 Day 1</title>
+<style>
+:root{--navy:#1E2761;--navy2:#2A3578;--navy3:#36429A;--ice:#CADCFC;--icebg:#EDF3FC;
+--white:#FFFFFF;--data:#FFC24B;--ok:#7BE0AD;--warn:#FF8B8B;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--navy);color:var(--ice);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;
+min-height:100vh;display:flex;flex-direction:column}
+header{padding:14px 22px;border-bottom:1px solid var(--navy3);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+header a{color:var(--ice);opacity:.7;font-size:12.5px;text-decoration:none}
+header a:hover{opacity:1}
+header h1{font-size:17px;color:var(--white)}
+header .tagchip{font-size:11.5px;background:var(--navy2);border-radius:999px;padding:4px 12px}
+main{flex:1;width:min(980px,95vw);margin:0 auto;padding:20px 0 34px}
+.lead{font-size:14px;opacity:.85;line-height:1.6;margin-bottom:14px}
+.lead b{color:var(--data)}
+.stage{background:var(--navy2);border-radius:16px;padding:22px;position:relative;min-height:260px;overflow:hidden}
+.panel{margin-top:14px;border:1px dashed var(--navy3);border-radius:14px;padding:13px 16px;
+display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center}
+.grp{display:flex;align-items:center;gap:9px;font-size:13.5px}
+.grp label{font-weight:700;color:var(--white)}
+output{min-width:48px;font-weight:700;color:var(--data)}
+input[type=range]{accent-color:var(--data);width:150px}
+input[type=number],input[type=text]{background:var(--navy);border:1px solid var(--navy3);color:var(--white);
+border-radius:8px;padding:8px 10px;font-family:inherit;font-size:14px;width:110px}
+.btn{background:var(--ice);color:var(--navy);border:none;border-radius:999px;padding:10px 20px;
+font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn.ghost{background:transparent;color:var(--ice);border:1px solid var(--ice)}
+.btn:disabled{opacity:.4;cursor:default}
+button:focus-visible,input:focus-visible{outline:3px solid var(--data);outline-offset:2px}
+.status{margin-top:12px;min-height:44px;border-radius:12px;padding:11px 16px;
+background:rgba(202,220,252,.08);font-size:14.5px;line-height:1.5}
+.status b{color:var(--data)} .status.good{background:rgba(123,224,173,.12)} .status.bad{background:rgba(255,139,139,.12)}
+.token{width:24px;height:24px;border-radius:50%;background:var(--data);
+box-shadow:0 0 13px rgba(255,194,75,.75);position:absolute;transition:left .7s ease,top .7s ease;z-index:6}
+.shake{animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+@keyframes pop{from{transform:scale(.5);opacity:0}}
+footer{text-align:center;font-size:11.5px;opacity:.55;padding:13px;border-top:1px solid var(--navy3)}
+
+.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;position:relative;padding-top:6px}
+.station{background:var(--navy);border-radius:12px;padding:16px 10px 14px;text-align:center;
+border:2px solid transparent;transition:border-color .3s,box-shadow .3s;position:relative;z-index:2}
+.station .em{font-size:32px}.station h3{font-size:14px;color:var(--white);margin-top:8px}
+.station .cap{font-size:11px;opacity:.7;margin-top:2px}
+.station.hot{border-color:var(--data);box-shadow:0 0 18px rgba(255,194,75,.35)}
+.station.err{border-color:var(--warn)}
+.screenwin{margin:10px auto 0;width:74px;height:44px;border-radius:6px;background:var(--icebg);
+color:var(--navy);font-size:10.5px;font-weight:700;display:none;align-items:center;justify-content:center}
+.screenwin.on{display:flex;animation:pop .4s ease}
+.steptext{margin-top:14px;font-size:15px;color:var(--white);min-height:24px;font-weight:700}
+@media(max-width:720px){.flow{grid-template-columns:repeat(2,1fr)}}
+
+.deskico{width:84px;margin:0 auto;text-align:center;cursor:pointer}
+.deskico .em{font-size:44px}.deskico .nm{font-size:11.5px;margin-top:2px}
+.lbar{height:14px;background:var(--navy);border-radius:999px;overflow:hidden;margin-top:16px}
+.lbar i{display:block;height:100%;width:0%;background:var(--data)}
+
+</style>
+</head>
+<body>
+<header>
+  <a href="index.html">← 전체 목록</a>
+  <h1>로딩의 정체</h1>
+  <span class="tagchip">S5 부품이 주고받는 것</span>
+</header>
+<main>
+<p class="lead">로딩 바가 도는 동안 컴퓨터는 무엇을 할까요? 저장장치 종류를 고르고 <b>아이콘을 클릭</b>해 실행해 보세요.</p>
+
+<div class="stage" id="stg">
+  <div class="deskico" id="ico"><div class="em">🎮</div><div class="nm">내 게임</div></div>
+  <div class="lbar"><i id="bar"></i></div>
+  <div class="flow" style="margin-top:18px">
+    <div class="station" id="m0"><span class="em">🏬</span><h3>저장장치</h3><div class="cap" id="dtype">SSD</div></div>
+    <div class="station" id="m1"><span class="em">🗂️</span><h3>메모리</h3><div class="cap">옮겨 담는 중…</div></div>
+    <div class="station" id="m2"><span class="em">🧠</span><h3>CPU</h3><div class="cap">기다리는 중</div></div>
+    <div class="station" id="m3"><span class="em">🖥️</span><h3>화면</h3><div class="cap">로딩 바 표시</div>
+      <div class="screenwin" id="gwin">게임 시작!</div></div>
+  </div>
+</div>
+<div class="panel">
+  <div class="grp"><label>저장장치</label>
+    <button class="btn ghost" id="ssd">SSD (빠름)</button>
+    <button class="btn ghost" id="hdd">HDD (느림)</button></div>
+  <button class="btn" id="run">아이콘 실행</button>
+</div>
+<div class="status" id="st">로딩 = <b>창고에서 작업대로 옮기는 시간</b>입니다. SSD와 HDD로 각각 실행해 시간을 비교해 보세요.</div>
+
+</main>
+<footer>컴퓨터 구조 Day 1 · 호박색 점은 언제나 「데이터」 · 인터넷 없이 동작</footer>
+<script>
+"use strict";
+const $=(id)=>document.getElementById(id);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+let kind="SSD",busy=false,last={};
+function pickK(k){kind=k;$("dtype").textContent=k;
+ $("ssd").style.borderColor=k==="SSD"?"var(--data)":"var(--ice)";
+ $("hdd").style.borderColor=k==="HDD"?"var(--data)":"var(--ice)";}
+$("ssd").addEventListener("click",()=>pickK("SSD"));
+$("hdd").addEventListener("click",()=>pickK("HDD"));
+function spawnTok(){const st=$("stg").getBoundingClientRect();
+ const a=$("m0").getBoundingClientRect(),b=$("m1").getBoundingClientRect();
+ const t=document.createElement("div");t.className="token";
+ t.style.left=(a.left-st.left+a.width/2-12)+"px";t.style.top=(a.top-st.top+40)+"px";
+ $("stg").appendChild(t);
+ requestAnimationFrame(()=>{t.style.left=(b.left-st.left+b.width/2-12)+"px";t.style.top=(b.top-st.top+40)+"px";});
+ setTimeout(()=>t.remove(),reduced?0:760);}
+function go(){
+ if(busy)return;busy=true;$("gwin").classList.remove("on");
+ $("m0").classList.add("hot");$("m1").classList.add("hot");
+ const dur=kind==="SSD"?2600:7800;const t0=performance.now();
+ const tok=setInterval(spawnTok,reduced?400:520);
+ (function fr(){const p=Math.min(100,(performance.now()-t0)/dur*100);
+   $("bar").style.width=p+"%";
+   if(p<100){requestAnimationFrame(fr);}
+   else{clearInterval(tok);busy=false;
+     $("m0").classList.remove("hot");$("m1").classList.remove("hot");
+     $("gwin").classList.add("on");
+     last[kind]=(dur/1000).toFixed(1);
+     let extra="";
+     if(last.SSD&&last.HDD)extra=" — SSD "+last.SSD+"초 vs HDD "+last.HDD+"초, <b>"+(last.HDD/last.SSD).toFixed(1)+"배</b> 차이!";
+     $("st").className="status good";
+     $("st").innerHTML=kind+"로 <b>"+(dur/1000).toFixed(1)+"초</b> 만에 로딩 완료"+extra;
+   }})();}
+$("run").addEventListener("click",go);
+$("ico").addEventListener("click",go);
+pickK("SSD");
+
+</script>
+</body>
+</html>

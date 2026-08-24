@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>작업대 크기 — GB 체험 · 컴퓨터 구조 Day 1</title>
+<style>
+:root{--navy:#1E2761;--navy2:#2A3578;--navy3:#36429A;--ice:#CADCFC;--icebg:#EDF3FC;
+--white:#FFFFFF;--data:#FFC24B;--ok:#7BE0AD;--warn:#FF8B8B;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--navy);color:var(--ice);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;
+min-height:100vh;display:flex;flex-direction:column}
+header{padding:14px 22px;border-bottom:1px solid var(--navy3);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+header a{color:var(--ice);opacity:.7;font-size:12.5px;text-decoration:none}
+header a:hover{opacity:1}
+header h1{font-size:17px;color:var(--white)}
+header .tagchip{font-size:11.5px;background:var(--navy2);border-radius:999px;padding:4px 12px}
+main{flex:1;width:min(980px,95vw);margin:0 auto;padding:20px 0 34px}
+.lead{font-size:14px;opacity:.85;line-height:1.6;margin-bottom:14px}
+.lead b{color:var(--data)}
+.stage{background:var(--navy2);border-radius:16px;padding:22px;position:relative;min-height:260px;overflow:hidden}
+.panel{margin-top:14px;border:1px dashed var(--navy3);border-radius:14px;padding:13px 16px;
+display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center}
+.grp{display:flex;align-items:center;gap:9px;font-size:13.5px}
+.grp label{font-weight:700;color:var(--white)}
+output{min-width:48px;font-weight:700;color:var(--data)}
+input[type=range]{accent-color:var(--data);width:150px}
+input[type=number],input[type=text]{background:var(--navy);border:1px solid var(--navy3);color:var(--white);
+border-radius:8px;padding:8px 10px;font-family:inherit;font-size:14px;width:110px}
+.btn{background:var(--ice);color:var(--navy);border:none;border-radius:999px;padding:10px 20px;
+font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn.ghost{background:transparent;color:var(--ice);border:1px solid var(--ice)}
+.btn:disabled{opacity:.4;cursor:default}
+button:focus-visible,input:focus-visible{outline:3px solid var(--data);outline-offset:2px}
+.status{margin-top:12px;min-height:44px;border-radius:12px;padding:11px 16px;
+background:rgba(202,220,252,.08);font-size:14.5px;line-height:1.5}
+.status b{color:var(--data)} .status.good{background:rgba(123,224,173,.12)} .status.bad{background:rgba(255,139,139,.12)}
+.token{width:24px;height:24px;border-radius:50%;background:var(--data);
+box-shadow:0 0 13px rgba(255,194,75,.75);position:absolute;transition:left .7s ease,top .7s ease;z-index:6}
+.shake{animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+@keyframes pop{from{transform:scale(.5);opacity:0}}
+footer{text-align:center;font-size:11.5px;opacity:.55;padding:13px;border-top:1px solid var(--navy3)}
+
+.desk{background:var(--navy);border-radius:12px;padding:14px;min-height:150px}
+.slots{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.slot{width:86px;height:44px;border:1.5px dashed var(--navy3);border-radius:8px;display:flex;
+align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.slot.fill{border-style:solid;border-color:var(--data);background:rgba(255,194,75,.14);color:var(--data)}
+
+</style>
+</head>
+<body>
+<header>
+  <a href="index.html">← 전체 목록</a>
+  <h1>작업대 크기 — GB 체험</h1>
+  <span class="tagchip">S6 사양표 읽는 법</span>
+</header>
+<main>
+<p class="lead">1GB = 칸 1개라고 생각합시다. <b>메모리 크기를 바꿔 가며</b> 프로그램을 올려 보세요. 꽉 차는 순간이 곧 「버벅임」입니다.</p>
+
+<div class="stage"><div class="desk">
+  <h3 style="font-size:14px;color:var(--white)">🗂️ 작업대 (메모리)</h3>
+  <div class="slots" id="slots"></div></div></div>
+<div class="panel">
+  <div class="grp"><label for="gb">메모리</label><input type="range" id="gb" min="4" max="16" value="8" step="4"><output id="gbo">8GB</output></div>
+  <button class="btn" id="put">프로그램 올리기</button>
+  <button class="btn ghost" id="clr">작업대 비우기</button>
+</div>
+<div class="status" id="st">작업대가 꽉 차면 무슨 일이 생길까요?</div>
+
+</main>
+<footer>컴퓨터 구조 Day 1 · 호박색 점은 언제나 「데이터」 · 인터넷 없이 동작</footer>
+<script>
+"use strict";
+const $=(id)=>document.getElementById(id);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+let used=0;
+const APP=["웹브라우저","문서 편집","음악","사진 편집","게임","메신저","영상 통화","코딩 도구","지도","계산기","발표 자료","번역기","메일","캘린더","그림판","백신"];
+function slots(){const gb=+$("gb").value;$("gbo").value=gb+"GB";used=Math.min(used,gb);
+ $("slots").innerHTML=Array.from({length:gb},(_,i)=>'<div class="slot'+(i<used?" fill":"")+'">'+(i<used?APP[i%16]:(i+1)+"GB")+'</div>').join("");}
+$("gb").addEventListener("input",slots);
+$("put").addEventListener("click",()=>{const gb=+$("gb").value;
+ if(used>=gb){$("slots").parentElement.classList.add("shake");
+   setTimeout(()=>$("slots").parentElement.classList.remove("shake"),450);
+   $("st").className="status bad";
+   $("st").innerHTML="작업대가 <b>꽉 찼습니다!</b> 새 프로그램이 올라갈 자리가 없습니다 — 컴퓨터가 버벅이는 바로 그 순간. GB가 크면 이 순간이 늦게 옵니다.";return;}
+ used++;slots();$("st").className="status";
+ $("st").innerHTML="프로그램 <b>"+used+"개</b>가 올라와 있습니다. ("+used+"GB / "+gb+"GB)";});
+$("clr").addEventListener("click",()=>{used=0;slots();$("st").className="status";$("st").textContent="작업대를 비웠습니다.";});
+slots();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>X-ray 투시 슬라이더 · 컴퓨터 구조 Day 1</title>
+<style>
+:root{--navy:#1E2761;--navy2:#2A3578;--navy3:#36429A;--ice:#CADCFC;--icebg:#EDF3FC;
+--white:#FFFFFF;--data:#FFC24B;--ok:#7BE0AD;--warn:#FF8B8B;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--navy);color:var(--ice);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;
+min-height:100vh;display:flex;flex-direction:column}
+header{padding:14px 22px;border-bottom:1px solid var(--navy3);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+header a{color:var(--ice);opacity:.7;font-size:12.5px;text-decoration:none}
+header a:hover{opacity:1}
+header h1{font-size:17px;color:var(--white)}
+header .tagchip{font-size:11.5px;background:var(--navy2);border-radius:999px;padding:4px 12px}
+main{flex:1;width:min(980px,95vw);margin:0 auto;padding:20px 0 34px}
+.lead{font-size:14px;opacity:.85;line-height:1.6;margin-bottom:14px}
+.lead b{color:var(--data)}
+.stage{background:var(--navy2);border-radius:16px;padding:22px;position:relative;min-height:260px;overflow:hidden}
+.panel{margin-top:14px;border:1px dashed var(--navy3);border-radius:14px;padding:13px 16px;
+display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center}
+.grp{display:flex;align-items:center;gap:9px;font-size:13.5px}
+.grp label{font-weight:700;color:var(--white)}
+output{min-width:48px;font-weight:700;color:var(--data)}
+input[type=range]{accent-color:var(--data);width:150px}
+input[type=number],input[type=text]{background:var(--navy);border:1px solid var(--navy3);color:var(--white);
+border-radius:8px;padding:8px 10px;font-family:inherit;font-size:14px;width:110px}
+.btn{background:var(--ice);color:var(--navy);border:none;border-radius:999px;padding:10px 20px;
+font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn.ghost{background:transparent;color:var(--ice);border:1px solid var(--ice)}
+.btn:disabled{opacity:.4;cursor:default}
+button:focus-visible,input:focus-visible{outline:3px solid var(--data);outline-offset:2px}
+.status{margin-top:12px;min-height:44px;border-radius:12px;padding:11px 16px;
+background:rgba(202,220,252,.08);font-size:14.5px;line-height:1.5}
+.status b{color:var(--data)} .status.good{background:rgba(123,224,173,.12)} .status.bad{background:rgba(255,139,139,.12)}
+.token{width:24px;height:24px;border-radius:50%;background:var(--data);
+box-shadow:0 0 13px rgba(255,194,75,.75);position:absolute;transition:left .7s ease,top .7s ease;z-index:6}
+.shake{animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+@keyframes pop{from{transform:scale(.5);opacity:0}}
+footer{text-align:center;font-size:11.5px;opacity:.55;padding:13px;border-top:1px solid var(--navy3)}
+
+.xwrap{position:relative;width:min(560px,92%);height:300px;margin:0 auto;border-radius:14px;overflow:hidden;border:2px solid var(--navy3)}
+.inner,.lid{position:absolute;inset:0}
+.inner{background:var(--navy)}
+.lid{background:var(--navy3);display:flex;align-items:center;justify-content:center;font-size:60px;transition:clip-path .1s linear}
+.ip{position:absolute;background:var(--navy2);border:1.5px solid var(--data);border-radius:9px;color:var(--data);
+font-size:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.ip .em{font-size:20px}
+
+</style>
+</head>
+<body>
+<header>
+  <a href="index.html">← 전체 목록</a>
+  <h1>X-ray 투시 슬라이더</h1>
+  <span class="tagchip">S2 부품 4가지</span>
+</header>
+<main>
+<p class="lead">노트북에도 같은 부품이 들어 있습니다. <b>슬라이더를 밀어</b> 겉모습을 투시해 보세요.</p>
+
+<div class="stage">
+  <div class="xwrap">
+    <div class="inner">
+      <div class="ip" style="left:34%;top:20%;width:100px;height:66px"><span class="em">🧠</span>CPU</div>
+      <div class="ip" style="left:60%;top:18%;width:54px;height:104px"><span class="em">🗂️</span>메모리</div>
+      <div class="ip" style="left:10%;top:60%;width:104px;height:56px"><span class="em">🏬</span>저장장치</div>
+      <div class="ip" style="left:62%;top:66%;width:104px;height:52px"><span class="em">🔋</span>배터리</div>
+    </div>
+    <div class="lid" id="lid">💻</div>
+  </div>
+</div>
+<div class="panel">
+  <div class="grp"><label for="x">투시</label>
+  <input type="range" id="x" min="0" max="100" value="0"><output id="xo">0%</output></div>
+</div>
+<div class="status" id="st">0%는 겉모습, 100%는 속. 데스크톱과 부품 구성이 같다는 것을 확인해 보세요.</div>
+
+</main>
+<footer>컴퓨터 구조 Day 1 · 호박색 점은 언제나 「데이터」 · 인터넷 없이 동작</footer>
+<script>
+"use strict";
+const $=(id)=>document.getElementById(id);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+$("x").addEventListener("input",()=>{
+  const v=+$("x").value; $("xo").value=v+"%";
+  $("lid").style.clipPath="inset(0 0 0 "+v+"%)";
+  if(v===0)$("st").innerHTML="겉모습 — 우리가 평소에 보는 노트북.";
+  else if(v<100)$("st").innerHTML="투시 중… 부품이 <b>납작하게 눕혀져</b> 들어가 있을 뿐, 종류는 같습니다.";
+  else{$("st").className="status good";$("st").innerHTML="전부 보입니다 — CPU·메모리·저장장치. S7에서 <b>내 노트북의 이 부품들</b>을 시스템 정보로 확인합니다.";}
+});
+
+</script>
+</body>
+</html>

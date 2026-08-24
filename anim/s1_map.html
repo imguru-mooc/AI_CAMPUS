@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>오늘의 지도 · 컴퓨터 구조 Day 1</title>
+<style>
+:root{--navy:#1E2761;--navy2:#2A3578;--navy3:#36429A;--ice:#CADCFC;--icebg:#EDF3FC;
+--white:#FFFFFF;--data:#FFC24B;--ok:#7BE0AD;--warn:#FF8B8B;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--navy);color:var(--ice);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;
+min-height:100vh;display:flex;flex-direction:column}
+header{padding:14px 22px;border-bottom:1px solid var(--navy3);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+header a{color:var(--ice);opacity:.7;font-size:12.5px;text-decoration:none}
+header a:hover{opacity:1}
+header h1{font-size:17px;color:var(--white)}
+header .tagchip{font-size:11.5px;background:var(--navy2);border-radius:999px;padding:4px 12px}
+main{flex:1;width:min(980px,95vw);margin:0 auto;padding:20px 0 34px}
+.lead{font-size:14px;opacity:.85;line-height:1.6;margin-bottom:14px}
+.lead b{color:var(--data)}
+.stage{background:var(--navy2);border-radius:16px;padding:22px;position:relative;min-height:260px;overflow:hidden}
+.panel{margin-top:14px;border:1px dashed var(--navy3);border-radius:14px;padding:13px 16px;
+display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center}
+.grp{display:flex;align-items:center;gap:9px;font-size:13.5px}
+.grp label{font-weight:700;color:var(--white)}
+output{min-width:48px;font-weight:700;color:var(--data)}
+input[type=range]{accent-color:var(--data);width:150px}
+input[type=number],input[type=text]{background:var(--navy);border:1px solid var(--navy3);color:var(--white);
+border-radius:8px;padding:8px 10px;font-family:inherit;font-size:14px;width:110px}
+.btn{background:var(--ice);color:var(--navy);border:none;border-radius:999px;padding:10px 20px;
+font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn.ghost{background:transparent;color:var(--ice);border:1px solid var(--ice)}
+.btn:disabled{opacity:.4;cursor:default}
+button:focus-visible,input:focus-visible{outline:3px solid var(--data);outline-offset:2px}
+.status{margin-top:12px;min-height:44px;border-radius:12px;padding:11px 16px;
+background:rgba(202,220,252,.08);font-size:14.5px;line-height:1.5}
+.status b{color:var(--data)} .status.good{background:rgba(123,224,173,.12)} .status.bad{background:rgba(255,139,139,.12)}
+.token{width:24px;height:24px;border-radius:50%;background:var(--data);
+box-shadow:0 0 13px rgba(255,194,75,.75);position:absolute;transition:left .7s ease,top .7s ease;z-index:6}
+.shake{animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+@keyframes pop{from{transform:scale(.5);opacity:0}}
+footer{text-align:center;font-size:11.5px;opacity:.55;padding:13px;border-top:1px solid var(--navy3)}
+
+.road{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;align-items:end}
+.stnp{background:var(--navy);border-radius:12px;padding:12px 6px 10px;text-align:center;cursor:pointer;
+border:2px solid transparent;transition:border-color .25s}
+.stnp .em{font-size:26px}.stnp h3{font-size:12.5px;color:var(--white);margin-top:6px}
+.stnp .art{font-size:10.5px;margin-top:4px;color:var(--data);min-height:26px}
+.stnp.hot{border-color:var(--data);box-shadow:0 0 14px rgba(255,194,75,.35)}
+@media(max-width:720px){.road{grid-template-columns:repeat(4,1fr)}}
+
+</style>
+</head>
+<body>
+<header>
+  <a href="index.html">← 전체 목록</a>
+  <h1>오늘의 지도</h1>
+  <span class="tagchip">S1 오프닝</span>
+</header>
+<main>
+<p class="lead">오늘 지나갈 일곱 정거장입니다. 정거장을 <b>클릭</b>하면 그 시간에 손에 남는 결과물이 보입니다.</p>
+
+<div class="stage">
+  <div class="road" id="road"></div>
+</div>
+<div class="panel"><button class="btn" id="walk">처음부터 걷기</button></div>
+<div class="status" id="st">정거장을 눌러 보세요. 오늘 하루가 끝나면 결과물 일곱 개가 여러분 손에 있습니다.</div>
+
+</main>
+<footer>컴퓨터 구조 Day 1 · 호박색 점은 언제나 「데이터」 · 인터넷 없이 동작</footer>
+<script>
+"use strict";
+const $=(id)=>document.getElementById(id);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const ST=[
+ ["🔩","S2 부품 4가지","부품 배치도","내부 사진에 이름 4개를 채운 배치도 1장"],
+ ["🤝","S3 CPU와 메모리","매칭 시트","부품과 역할을 짝지은 시트 1장"],
+ ["🏬","S4 저장·입출력","분류 시트","「사라진다 vs 남는다」 분류 시트 1장"],
+ ["➡️","S5 데이터의 길","흐름도","4대 부품 사이 화살표를 그린 흐름도 1장"],
+ ["🔎","S6 사양표 읽기","해석 워크시트","판매 페이지 사양표를 해석한 시트 1장"],
+ ["📸","S7 내 컴퓨터","스크린샷·사양표","시스템 정보 캡처와 내 사양표"],
+ ["🏁","S8 종합","내 컴퓨터 소개서","오늘 전부를 한 장에 담아 제출"]];
+let cur=-1,timer=null;
+function render(){
+  $("road").innerHTML=ST.map((s,i)=>
+   '<div class="stnp'+(i===cur?" hot":"")+'" data-i="'+i+'"><div class="em">'+s[0]+'</div><h3>'+s[1]+'</h3><div class="art">'+(i<=cur?("🗂 "+s[2]):"?")+'</div></div>').join("");
+  document.querySelectorAll(".stnp").forEach(el=>el.addEventListener("click",()=>{
+    clearInterval(timer); cur=+el.dataset.i; render();
+    $("st").innerHTML="<b>"+ST[cur][1]+"</b> — 이 시간의 결과물: <b>"+ST[cur][2]+"</b>. "+ST[cur][3]+".";
+  }));
+}
+$("walk").addEventListener("click",()=>{
+  clearInterval(timer); cur=-1; render();
+  timer=setInterval(()=>{ cur++; if(cur>=ST.length){clearInterval(timer);
+    $("st").className="status good"; $("st").innerHTML="도착! 일곱 개의 결과물이 모두 모이면 마지막에 <b>내 컴퓨터 소개서</b>가 됩니다."; cur=6; render(); return;}
+    render(); $("st").className="status";
+    $("st").innerHTML="<b>"+ST[cur][1]+"</b> — "+ST[cur][3]+".";
+  }, reduced?400:1100);
+});
+render();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>내일의 문틈 · 컴퓨터 구조 Day 1</title>
+<style>
+:root{--navy:#1E2761;--navy2:#2A3578;--navy3:#36429A;--ice:#CADCFC;--icebg:#EDF3FC;
+--white:#FFFFFF;--data:#FFC24B;--ok:#7BE0AD;--warn:#FF8B8B;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--navy);color:var(--ice);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;
+min-height:100vh;display:flex;flex-direction:column}
+header{padding:14px 22px;border-bottom:1px solid var(--navy3);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+header a{color:var(--ice);opacity:.7;font-size:12.5px;text-decoration:none}
+header a:hover{opacity:1}
+header h1{font-size:17px;color:var(--white)}
+header .tagchip{font-size:11.5px;background:var(--navy2);border-radius:999px;padding:4px 12px}
+main{flex:1;width:min(980px,95vw);margin:0 auto;padding:20px 0 34px}
+.lead{font-size:14px;opacity:.85;line-height:1.6;margin-bottom:14px}
+.lead b{color:var(--data)}
+.stage{background:var(--navy2);border-radius:16px;padding:22px;position:relative;min-height:260px;overflow:hidden}
+.panel{margin-top:14px;border:1px dashed var(--navy3);border-radius:14px;padding:13px 16px;
+display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center}
+.grp{display:flex;align-items:center;gap:9px;font-size:13.5px}
+.grp label{font-weight:700;color:var(--white)}
+output{min-width:48px;font-weight:700;color:var(--data)}
+input[type=range]{accent-color:var(--data);width:150px}
+input[type=number],input[type=text]{background:var(--navy);border:1px solid var(--navy3);color:var(--white);
+border-radius:8px;padding:8px 10px;font-family:inherit;font-size:14px;width:110px}
+.btn{background:var(--ice);color:var(--navy);border:none;border-radius:999px;padding:10px 20px;
+font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn.ghost{background:transparent;color:var(--ice);border:1px solid var(--ice)}
+.btn:disabled{opacity:.4;cursor:default}
+button:focus-visible,input:focus-visible{outline:3px solid var(--data);outline-offset:2px}
+.status{margin-top:12px;min-height:44px;border-radius:12px;padding:11px 16px;
+background:rgba(202,220,252,.08);font-size:14.5px;line-height:1.5}
+.status b{color:var(--data)} .status.good{background:rgba(123,224,173,.12)} .status.bad{background:rgba(255,139,139,.12)}
+.token{width:24px;height:24px;border-radius:50%;background:var(--data);
+box-shadow:0 0 13px rgba(255,194,75,.75);position:absolute;transition:left .7s ease,top .7s ease;z-index:6}
+.shake{animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+@keyframes pop{from{transform:scale(.5);opacity:0}}
+footer{text-align:center;font-size:11.5px;opacity:.55;padding:13px;border-top:1px solid var(--navy3)}
+
+.introdoc{margin:0 auto;max-width:420px;background:var(--icebg);color:var(--navy);border-radius:12px;padding:16px 18px}
+.introdoc h3{font-size:15px;text-align:center;margin-bottom:10px}
+.introdoc p{font-size:13.5px;padding:6px 0;border-top:1px dashed #b8c6e0}
+.gbchip{background:var(--data);border-radius:6px;padding:2px 8px;font-weight:700;cursor:pointer;border:2px solid transparent}
+.gbchip:hover{border-color:var(--navy)}
+.overlay{position:absolute;inset:0;background:var(--navy);display:none;flex-direction:column;
+align-items:center;justify-content:center;gap:14px;z-index:9;border-radius:16px}
+.overlay.on{display:flex;animation:pop .5s}
+.bin{font-family:'Courier New',monospace;font-size:22px;letter-spacing:3px;color:var(--data)}
+.bin span{opacity:.25;animation:blink 1.4s infinite}
+@keyframes blink{50%{opacity:1}}
+
+</style>
+</head>
+<body>
+<header>
+  <a href="index.html">← 전체 목록</a>
+  <h1>내일의 문틈</h1>
+  <span class="tagchip">S8 종합 · Day 2 예고</span>
+</header>
+<main>
+<p class="lead">완성된 소개서에서 <b>「8GB」를 클릭</b>해 보세요. 그 숫자 안으로 카메라가 들어갑니다 — 내일 이야기가 살짝 보입니다.</p>
+
+<div class="stage" style="min-height:300px">
+  <div class="introdoc">
+    <h3>📄 내 컴퓨터 소개서</h3>
+    <p>CPU — 일하는 손, 계산과 명령 처리</p>
+    <p>메모리 — 작업대, <span class="gbchip" id="gb">8GB</span></p>
+    <p>저장장치 — 창고, 꺼도 남는 곳</p>
+    <p>입출력장치 — 출입구</p>
+  </div>
+  <div class="overlay" id="ov">
+    <div style="font-size:14px;opacity:.8">8GB 안으로 들어가면…</div>
+    <div class="bin" id="bits"></div>
+    <div style="font-size:16px;color:var(--white);font-weight:700">전부 0과 1 — 이게 내일 이야기입니다</div>
+    <button class="btn ghost" id="back">돌아가기</button>
+  </div>
+</div>
+<div class="status" id="st">오늘 배운 부품들 「안에」 무엇이 담겨 있을까요?</div>
+
+</main>
+<footer>컴퓨터 구조 Day 1 · 호박색 점은 언제나 「데이터」 · 인터넷 없이 동작</footer>
+<script>
+"use strict";
+const $=(id)=>document.getElementById(id);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+$("gb").addEventListener("click",()=>{
+ $("bits").innerHTML="01000001 01001001".split("").map((b,i)=>b===" "?"&nbsp;&nbsp;":"<span style='animation-delay:"+(i*0.08)+"s'>"+b+"</span>").join("");
+ $("ov").classList.add("on");
+ $("st").innerHTML="글자·색·소리 — 부품 안의 <b>모든 것이 숫자</b>입니다. Day 2: 컴퓨터 속 모든 것은 숫자다.";});
+$("back").addEventListener("click",()=>$("ov").classList.remove("on"));
+
+</script>
+</body>
+</html>

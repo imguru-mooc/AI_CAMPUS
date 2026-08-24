@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3일의 줌인 · 컴퓨터 구조 Day 1</title>
+<style>
+:root{--navy:#1E2761;--navy2:#2A3578;--navy3:#36429A;--ice:#CADCFC;--icebg:#EDF3FC;
+--white:#FFFFFF;--data:#FFC24B;--ok:#7BE0AD;--warn:#FF8B8B;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--navy);color:var(--ice);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;
+min-height:100vh;display:flex;flex-direction:column}
+header{padding:14px 22px;border-bottom:1px solid var(--navy3);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+header a{color:var(--ice);opacity:.7;font-size:12.5px;text-decoration:none}
+header a:hover{opacity:1}
+header h1{font-size:17px;color:var(--white)}
+header .tagchip{font-size:11.5px;background:var(--navy2);border-radius:999px;padding:4px 12px}
+main{flex:1;width:min(980px,95vw);margin:0 auto;padding:20px 0 34px}
+.lead{font-size:14px;opacity:.85;line-height:1.6;margin-bottom:14px}
+.lead b{color:var(--data)}
+.stage{background:var(--navy2);border-radius:16px;padding:22px;position:relative;min-height:260px;overflow:hidden}
+.panel{margin-top:14px;border:1px dashed var(--navy3);border-radius:14px;padding:13px 16px;
+display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center}
+.grp{display:flex;align-items:center;gap:9px;font-size:13.5px}
+.grp label{font-weight:700;color:var(--white)}
+output{min-width:48px;font-weight:700;color:var(--data)}
+input[type=range]{accent-color:var(--data);width:150px}
+input[type=number],input[type=text]{background:var(--navy);border:1px solid var(--navy3);color:var(--white);
+border-radius:8px;padding:8px 10px;font-family:inherit;font-size:14px;width:110px}
+.btn{background:var(--ice);color:var(--navy);border:none;border-radius:999px;padding:10px 20px;
+font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn.ghost{background:transparent;color:var(--ice);border:1px solid var(--ice)}
+.btn:disabled{opacity:.4;cursor:default}
+button:focus-visible,input:focus-visible{outline:3px solid var(--data);outline-offset:2px}
+.status{margin-top:12px;min-height:44px;border-radius:12px;padding:11px 16px;
+background:rgba(202,220,252,.08);font-size:14.5px;line-height:1.5}
+.status b{color:var(--data)} .status.good{background:rgba(123,224,173,.12)} .status.bad{background:rgba(255,139,139,.12)}
+.token{width:24px;height:24px;border-radius:50%;background:var(--data);
+box-shadow:0 0 13px rgba(255,194,75,.75);position:absolute;transition:left .7s ease,top .7s ease;z-index:6}
+.shake{animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+@keyframes pop{from{transform:scale(.5);opacity:0}}
+footer{text-align:center;font-size:11.5px;opacity:.55;padding:13px;border-top:1px solid var(--navy3)}
+
+</style>
+</head>
+<body>
+<header>
+  <a href="index.html">← 전체 목록</a>
+  <h1>3일의 줌인</h1>
+  <span class="tagchip">S1 오프닝</span>
+</header>
+<main>
+<p class="lead">컴퓨터를 점점 깊이 들여다봅니다. <b>「더 깊이」</b>를 누를 때마다 하루씩 안으로 — 이 카메라의 끝이 3일 뒤 우리의 도착점입니다.</p>
+
+<div class="stage" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:320px">
+  <div id="card" style="text-align:center;transition:transform .45s ease,opacity .45s ease">
+    <div id="em" style="font-size:96px">💻</div>
+    <h2 id="tt" style="color:var(--white);font-size:24px;margin-top:10px">컴퓨터</h2>
+    <p id="dd" style="font-size:14px;opacity:.85;margin-top:6px">겉모습 — 지금 우리 눈에 보이는 것</p>
+  </div>
+  <div id="dots" style="margin-top:22px;display:flex;gap:10px"></div>
+</div>
+<div class="panel">
+  <button class="btn" id="deeper">더 깊이 ▼</button>
+  <button class="btn ghost" id="upper" disabled>한 층 위로 ▲</button>
+</div>
+<div class="status" id="st">지금은 겉모습. 오늘(Day 1)은 한 층만 내려갑니다.</div>
+
+</main>
+<footer>컴퓨터 구조 Day 1 · 호박색 점은 언제나 「데이터」 · 인터넷 없이 동작</footer>
+<script>
+"use strict";
+const $=(id)=>document.getElementById(id);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const L=[
+ {e:"💻",t:"컴퓨터",d:"겉모습 — 지금 우리 눈에 보이는 것",s:"지금은 겉모습. 오늘(Day 1)은 한 층만 내려갑니다."},
+ {e:"🔩",t:"Day 1 · 부품",d:"열면 보이는 네 부품 — CPU·메모리·저장장치·입출력장치",s:"<b>오늘의 층.</b> 부품의 이름·역할·숫자를 배웁니다."},
+ {e:"🔢",t:"Day 2 · 숫자",d:"부품 안에 담긴 것 — 모든 것은 0과 1",s:"내일의 층. 문자와 색이 숫자로 저장된 모습을 봅니다."},
+ {e:"⚙️",t:"Day 3 · 실행",d:"숫자가 움직이는 순간 — CPU의 명령 실행",s:"마지막 층. 시뮬레이터에서 명령이 실행되는 것을 직접 봅니다."}];
+let d=0;
+function dots(){$("dots").innerHTML=L.map((_,i)=>'<span style="width:11px;height:11px;border-radius:50%;background:'+(i===d?'var(--data)':'var(--navy3)')+'"></span>').join("");}
+function paint(){
+  const c=$("card");
+  c.style.opacity=0; c.style.transform="scale("+(reduced?1:1.6)+")";
+  setTimeout(()=>{
+    $("em").textContent=L[d].e; $("tt").textContent=L[d].t; $("dd").textContent=L[d].d;
+    $("st").innerHTML=L[d].s;
+    c.style.transform="scale(1)"; c.style.opacity=1; dots();
+    $("deeper").disabled=d>=3; $("upper").disabled=d<=0;
+  }, reduced?0:220);
+}
+$("deeper").addEventListener("click",()=>{if(d<3){d++;paint();}});
+$("upper").addEventListener("click",()=>{if(d>0){d--;paint();}});
+dots();
+
+</script>
+</body>
+</html>

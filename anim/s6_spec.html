@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>사양표 스캐너 · 컴퓨터 구조 Day 1</title>
+<style>
+:root{--navy:#1E2761;--navy2:#2A3578;--navy3:#36429A;--ice:#CADCFC;--icebg:#EDF3FC;
+--white:#FFFFFF;--data:#FFC24B;--ok:#7BE0AD;--warn:#FF8B8B;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--navy);color:var(--ice);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;
+min-height:100vh;display:flex;flex-direction:column}
+header{padding:14px 22px;border-bottom:1px solid var(--navy3);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+header a{color:var(--ice);opacity:.7;font-size:12.5px;text-decoration:none}
+header a:hover{opacity:1}
+header h1{font-size:17px;color:var(--white)}
+header .tagchip{font-size:11.5px;background:var(--navy2);border-radius:999px;padding:4px 12px}
+main{flex:1;width:min(980px,95vw);margin:0 auto;padding:20px 0 34px}
+.lead{font-size:14px;opacity:.85;line-height:1.6;margin-bottom:14px}
+.lead b{color:var(--data)}
+.stage{background:var(--navy2);border-radius:16px;padding:22px;position:relative;min-height:260px;overflow:hidden}
+.panel{margin-top:14px;border:1px dashed var(--navy3);border-radius:14px;padding:13px 16px;
+display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center}
+.grp{display:flex;align-items:center;gap:9px;font-size:13.5px}
+.grp label{font-weight:700;color:var(--white)}
+output{min-width:48px;font-weight:700;color:var(--data)}
+input[type=range]{accent-color:var(--data);width:150px}
+input[type=number],input[type=text]{background:var(--navy);border:1px solid var(--navy3);color:var(--white);
+border-radius:8px;padding:8px 10px;font-family:inherit;font-size:14px;width:110px}
+.btn{background:var(--ice);color:var(--navy);border:none;border-radius:999px;padding:10px 20px;
+font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn.ghost{background:transparent;color:var(--ice);border:1px solid var(--ice)}
+.btn:disabled{opacity:.4;cursor:default}
+button:focus-visible,input:focus-visible{outline:3px solid var(--data);outline-offset:2px}
+.status{margin-top:12px;min-height:44px;border-radius:12px;padding:11px 16px;
+background:rgba(202,220,252,.08);font-size:14.5px;line-height:1.5}
+.status b{color:var(--data)} .status.good{background:rgba(123,224,173,.12)} .status.bad{background:rgba(255,139,139,.12)}
+.token{width:24px;height:24px;border-radius:50%;background:var(--data);
+box-shadow:0 0 13px rgba(255,194,75,.75);position:absolute;transition:left .7s ease,top .7s ease;z-index:6}
+.shake{animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+@keyframes pop{from{transform:scale(.5);opacity:0}}
+footer{text-align:center;font-size:11.5px;opacity:.55;padding:13px;border-top:1px solid var(--navy3)}
+
+.spec{background:var(--icebg);color:var(--navy);border-radius:12px;overflow:hidden;max-width:560px;margin:0 auto}
+.spec .hd{background:var(--ice);padding:10px 16px;font-weight:700;font-size:13.5px;display:flex;justify-content:space-between}
+.row{display:flex;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--ice);cursor:pointer;font-size:14px}
+.row:hover,.row.hot{background:#dbe7fb}
+.row b{font-weight:700}
+.badge{font-size:10.5px;background:var(--warn);color:var(--navy);border-radius:999px;padding:2px 10px}
+.trans{margin-top:14px;background:var(--navy);border-radius:12px;padding:14px 16px;min-height:74px;font-size:14.5px;line-height:1.6}
+.trans .em{font-size:26px;margin-right:8px}
+
+</style>
+</head>
+<body>
+<header>
+  <a href="index.html">← 전체 목록</a>
+  <h1>사양표 스캐너</h1>
+  <span class="tagchip">S6 사양표 읽는 법</span>
+</header>
+<main>
+<p class="lead">판매 페이지 사양표의 <b>줄을 클릭</b>하면 오늘 배운 비유로 번역됩니다. 실습 6에서 이 번역을 직접 적게 됩니다.</p>
+
+<div class="stage">
+  <div class="spec">
+    <div class="hd"><span>노트북 사양 (예시)</span><span class="badge">예시 화면 — 실제 페이지는 수업에서 확정</span></div>
+    <div class="row" data-k="0"><span>프로세서(CPU)</span><b>3.2GHz · 8코어</b></div>
+    <div class="row" data-k="1"><span>메모리(RAM)</span><b>16GB</b></div>
+    <div class="row" data-k="2"><span>저장장치</span><b>512GB SSD</b></div>
+    <div class="row" data-k="3"><span>디스플레이</span><b>15.6인치</b></div>
+  </div>
+  <div class="trans" id="tr">↑ 궁금한 줄을 클릭하세요.</div>
+</div>
+<div class="status">모든 줄을 한 번씩 눌러 네 부품의 숫자를 전부 번역해 보세요.</div>
+
+</main>
+<footer>컴퓨터 구조 Day 1 · 호박색 점은 언제나 「데이터」 · 인터넷 없이 동작</footer>
+<script>
+"use strict";
+const $=(id)=>document.getElementById(id);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const T=[
+ "<span class='em'>🧠</span><b>3.2GHz</b> = 손이 움직이는 속도, <b>8코어</b> = 일하는 손이 8개. 손이 많고 빠른 컴퓨터입니다.",
+ "<span class='em'>🗂️</span><b>16GB</b> = 작업대의 넓이. 프로그램 여러 개를 동시에 올려도 여유가 있습니다.",
+ "<span class='em'>🏬</span><b>512GB</b> = 창고의 크기, <b>SSD</b> = 빠른 창고. 파일을 많이, 빨리 꺼낼 수 있습니다.",
+ "<span class='em'>🖥️</span><b>15.6인치</b> = 출력 문(모니터)의 크기 — 부품 성능과는 별개의 숫자입니다."];
+document.querySelectorAll(".row").forEach(r=>r.addEventListener("click",()=>{
+ document.querySelectorAll(".row").forEach(x=>x.classList.remove("hot"));
+ r.classList.add("hot");$("tr").innerHTML=T[+r.dataset.k];}));
+
+</script>
+</body>
+</html>

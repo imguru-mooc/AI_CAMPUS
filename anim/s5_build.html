@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>흐름 조립 게임 · 컴퓨터 구조 Day 1</title>
+<style>
+:root{--navy:#1E2761;--navy2:#2A3578;--navy3:#36429A;--ice:#CADCFC;--icebg:#EDF3FC;
+--white:#FFFFFF;--data:#FFC24B;--ok:#7BE0AD;--warn:#FF8B8B;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--navy);color:var(--ice);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;
+min-height:100vh;display:flex;flex-direction:column}
+header{padding:14px 22px;border-bottom:1px solid var(--navy3);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+header a{color:var(--ice);opacity:.7;font-size:12.5px;text-decoration:none}
+header a:hover{opacity:1}
+header h1{font-size:17px;color:var(--white)}
+header .tagchip{font-size:11.5px;background:var(--navy2);border-radius:999px;padding:4px 12px}
+main{flex:1;width:min(980px,95vw);margin:0 auto;padding:20px 0 34px}
+.lead{font-size:14px;opacity:.85;line-height:1.6;margin-bottom:14px}
+.lead b{color:var(--data)}
+.stage{background:var(--navy2);border-radius:16px;padding:22px;position:relative;min-height:260px;overflow:hidden}
+.panel{margin-top:14px;border:1px dashed var(--navy3);border-radius:14px;padding:13px 16px;
+display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center}
+.grp{display:flex;align-items:center;gap:9px;font-size:13.5px}
+.grp label{font-weight:700;color:var(--white)}
+output{min-width:48px;font-weight:700;color:var(--data)}
+input[type=range]{accent-color:var(--data);width:150px}
+input[type=number],input[type=text]{background:var(--navy);border:1px solid var(--navy3);color:var(--white);
+border-radius:8px;padding:8px 10px;font-family:inherit;font-size:14px;width:110px}
+.btn{background:var(--ice);color:var(--navy);border:none;border-radius:999px;padding:10px 20px;
+font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn.ghost{background:transparent;color:var(--ice);border:1px solid var(--ice)}
+.btn:disabled{opacity:.4;cursor:default}
+button:focus-visible,input:focus-visible{outline:3px solid var(--data);outline-offset:2px}
+.status{margin-top:12px;min-height:44px;border-radius:12px;padding:11px 16px;
+background:rgba(202,220,252,.08);font-size:14.5px;line-height:1.5}
+.status b{color:var(--data)} .status.good{background:rgba(123,224,173,.12)} .status.bad{background:rgba(255,139,139,.12)}
+.token{width:24px;height:24px;border-radius:50%;background:var(--data);
+box-shadow:0 0 13px rgba(255,194,75,.75);position:absolute;transition:left .7s ease,top .7s ease;z-index:6}
+.shake{animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+@keyframes pop{from{transform:scale(.5);opacity:0}}
+footer{text-align:center;font-size:11.5px;opacity:.55;padding:13px;border-top:1px solid var(--navy3)}
+
+.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;position:relative;padding-top:6px}
+.station{background:var(--navy);border-radius:12px;padding:16px 10px 14px;text-align:center;
+border:2px solid transparent;transition:border-color .3s,box-shadow .3s;position:relative;z-index:2}
+.station .em{font-size:32px}.station h3{font-size:14px;color:var(--white);margin-top:8px}
+.station .cap{font-size:11px;opacity:.7;margin-top:2px}
+.station.hot{border-color:var(--data);box-shadow:0 0 18px rgba(255,194,75,.35)}
+.station.err{border-color:var(--warn)}
+.screenwin{margin:10px auto 0;width:74px;height:44px;border-radius:6px;background:var(--icebg);
+color:var(--navy);font-size:10.5px;font-weight:700;display:none;align-items:center;justify-content:center}
+.screenwin.on{display:flex;animation:pop .4s ease}
+.steptext{margin-top:14px;font-size:15px;color:var(--white);min-height:24px;font-weight:700}
+@media(max-width:720px){.flow{grid-template-columns:repeat(2,1fr)}}
+
+.seq{display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+.sslot{width:110px;height:44px;border:2px dashed var(--navy3);border-radius:10px;display:flex;
+align-items:center;justify-content:center;font-size:13px;font-weight:700}
+.sslot.fill{border-style:solid;border-color:var(--data);color:var(--data)}
+.pick{display:flex;gap:10px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.pk{background:var(--data);color:var(--navy);font-weight:700;border-radius:999px;padding:9px 15px;cursor:pointer;font-size:13px}
+.pk.used{opacity:.25;pointer-events:none}
+
+</style>
+</head>
+<body>
+<header>
+  <a href="index.html">← 전체 목록</a>
+  <h1>흐름 조립 게임</h1>
+  <span class="tagchip">S5 실습 5 리허설</span>
+</header>
+<main>
+<p class="lead">부품 카드를 <b>데이터가 지나는 순서대로</b> 클릭해 길을 조립하고 「실행」을 누르세요. 틀리면 데이터가 막힙니다 — 실습 5의 연습입니다.</p>
+
+<div class="stage" id="stg">
+  <div class="flow">
+    <div class="station" id="q0"><span class="em">🏬</span><h3>저장장치</h3></div>
+    <div class="station" id="q1"><span class="em">🗂️</span><h3>메모리</h3></div>
+    <div class="station" id="q2"><span class="em">🧠</span><h3>CPU</h3></div>
+    <div class="station" id="q3"><span class="em">🖥️</span><h3>화면</h3><div class="screenwin" id="bwin">성공!</div></div>
+  </div>
+  <div class="token" id="btok" style="display:none"></div>
+  <div class="seq" id="seq"></div>
+  <div class="pick" id="pick"></div>
+</div>
+<div class="panel">
+  <button class="btn" id="run" disabled>실행</button>
+  <button class="btn ghost" id="rst">다시 조립</button>
+</div>
+<div class="status" id="st">1번 칸부터 차례로 — 전원을 켠 뒤 데이터가 <b>맨 처음</b> 있는 곳은 어디일까요?</div>
+
+</main>
+<footer>컴퓨터 구조 Day 1 · 호박색 점은 언제나 「데이터」 · 인터넷 없이 동작</footer>
+<script>
+"use strict";
+const $=(id)=>document.getElementById(id);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const NM=["저장장치","메모리","CPU","화면"];
+let seq=[];
+function draw(){
+ $("seq").innerHTML=[0,1,2,3].map(i=>'<div class="sslot'+(seq[i]!==undefined?" fill":"")+'">'+(seq[i]!==undefined?NM[seq[i]]:(i+1)+"번")+'</div>').join("");
+ const order=[2,0,3,1];
+ $("pick").innerHTML=order.map(i=>'<span class="pk'+(seq.includes(i)?" used":"")+'" data-i="'+i+'">'+NM[i]+'</span>').join("");
+ document.querySelectorAll(".pk").forEach(p=>p.addEventListener("click",()=>{seq.push(+p.dataset.i);draw();}));
+ $("run").disabled=seq.length!==4;}
+function tokAt(id){const st=$("stg").getBoundingClientRect(),r=$(id).getBoundingClientRect(),t=$("btok");
+ t.style.display="block";t.style.left=(r.left-st.left+r.width/2-12)+"px";t.style.top=(r.top-st.top+36)+"px";}
+$("run").addEventListener("click",()=>{
+ $("bwin").classList.remove("on");
+ for(let i=0;i<4;i++){$("q"+i).classList.remove("hot","err");}
+ let k=0;
+ function stepGo(){
+   const want=k, got=seq[k];
+   tokAt("q"+got);
+   setTimeout(()=>{
+     if(got!==want){
+       $("q"+got).classList.add("err");$("q"+got).classList.add("shake");
+       setTimeout(()=>$("q"+got).classList.remove("shake"),450);
+       $("st").className="status bad";
+       $("st").innerHTML=(k+1)+"번째에 <b>"+NM[got]+"</b>? 데이터가 막혔습니다 — "+(k+1)+"번째로 가야 할 곳을 다시 생각해 보세요.";
+       return;}
+     $("q"+got).classList.add("hot");
+     k++;
+     if(k>=4){$("bwin").classList.add("on");$("st").className="status good";
+       $("st").innerHTML="정확합니다! <b>저장장치 → 메모리 → CPU → 화면</b>. 이제 종이에 화살표로 그대로 그리면 됩니다.";return;}
+     stepGo();
+   },reduced?60:850);}
+ stepGo();});
+$("rst").addEventListener("click",()=>{seq=[];$("btok").style.display="none";$("bwin").classList.remove("on");
+ for(let i=0;i<4;i++)$("q"+i).classList.remove("hot","err");
+ $("st").className="status";$("st").innerHTML="1번 칸부터 차례로 조립하세요.";draw();});
+draw();
+
+</script>
+</body>
+</html>

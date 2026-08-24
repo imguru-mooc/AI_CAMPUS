@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>케이스 오픈 탐색 · 컴퓨터 구조 Day 1</title>
+<style>
+:root{--navy:#1E2761;--navy2:#2A3578;--navy3:#36429A;--ice:#CADCFC;--icebg:#EDF3FC;
+--white:#FFFFFF;--data:#FFC24B;--ok:#7BE0AD;--warn:#FF8B8B;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--navy);color:var(--ice);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;
+min-height:100vh;display:flex;flex-direction:column}
+header{padding:14px 22px;border-bottom:1px solid var(--navy3);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+header a{color:var(--ice);opacity:.7;font-size:12.5px;text-decoration:none}
+header a:hover{opacity:1}
+header h1{font-size:17px;color:var(--white)}
+header .tagchip{font-size:11.5px;background:var(--navy2);border-radius:999px;padding:4px 12px}
+main{flex:1;width:min(980px,95vw);margin:0 auto;padding:20px 0 34px}
+.lead{font-size:14px;opacity:.85;line-height:1.6;margin-bottom:14px}
+.lead b{color:var(--data)}
+.stage{background:var(--navy2);border-radius:16px;padding:22px;position:relative;min-height:260px;overflow:hidden}
+.panel{margin-top:14px;border:1px dashed var(--navy3);border-radius:14px;padding:13px 16px;
+display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center}
+.grp{display:flex;align-items:center;gap:9px;font-size:13.5px}
+.grp label{font-weight:700;color:var(--white)}
+output{min-width:48px;font-weight:700;color:var(--data)}
+input[type=range]{accent-color:var(--data);width:150px}
+input[type=number],input[type=text]{background:var(--navy);border:1px solid var(--navy3);color:var(--white);
+border-radius:8px;padding:8px 10px;font-family:inherit;font-size:14px;width:110px}
+.btn{background:var(--ice);color:var(--navy);border:none;border-radius:999px;padding:10px 20px;
+font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn.ghost{background:transparent;color:var(--ice);border:1px solid var(--ice)}
+.btn:disabled{opacity:.4;cursor:default}
+button:focus-visible,input:focus-visible{outline:3px solid var(--data);outline-offset:2px}
+.status{margin-top:12px;min-height:44px;border-radius:12px;padding:11px 16px;
+background:rgba(202,220,252,.08);font-size:14.5px;line-height:1.5}
+.status b{color:var(--data)} .status.good{background:rgba(123,224,173,.12)} .status.bad{background:rgba(255,139,139,.12)}
+.token{width:24px;height:24px;border-radius:50%;background:var(--data);
+box-shadow:0 0 13px rgba(255,194,75,.75);position:absolute;transition:left .7s ease,top .7s ease;z-index:6}
+.shake{animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+@keyframes pop{from{transform:scale(.5);opacity:0}}
+footer{text-align:center;font-size:11.5px;opacity:.55;padding:13px;border-top:1px solid var(--navy3)}
+
+.case{position:relative;width:min(520px,90%);height:320px;margin:0 auto;background:var(--navy);
+border-radius:14px;border:2px solid var(--navy3)}
+.door{position:absolute;inset:0;background:var(--navy3);border-radius:12px;display:flex;align-items:center;
+justify-content:center;font-size:52px;transition:transform .8s ease;z-index:5}
+.door.open{transform:translateX(103%);opacity:.25}
+.part{position:absolute;background:var(--navy2);border:1.5px solid var(--navy3);border-radius:10px;
+display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;cursor:pointer;gap:2px}
+.part .em{font-size:22px}
+.part.hot{border-color:var(--data);box-shadow:0 0 14px rgba(255,194,75,.4);color:var(--data)}
+
+</style>
+</head>
+<body>
+<header>
+  <a href="index.html">← 전체 목록</a>
+  <h1>케이스 오픈 탐색</h1>
+  <span class="tagchip">S2 부품 4가지</span>
+</header>
+<main>
+<p class="lead">본체 옆판을 <b>직접 열고</b>, 부품을 클릭해 이름과 위치를 확인하세요. 자동 투어도 있습니다.</p>
+
+<div class="stage">
+  <div class="case" id="case">
+    <div class="door" id="door">🖥️<span style="font-size:13px;margin-left:8px">본체 옆판</span></div>
+    <div class="part" id="p0" style="left:38%;top:26%;width:110px;height:78px"><span class="em">🧠</span>CPU</div>
+    <div class="part" id="p1" style="left:66%;top:22%;width:64px;height:120px"><span class="em">🗂️</span>메모리</div>
+    <div class="part" id="p2" style="left:8%;top:66%;width:120px;height:64px"><span class="em">🏬</span>저장장치</div>
+    <div class="part" id="p3" style="left:70%;top:70%;width:110px;height:58px"><span class="em">⌨️</span>연결 단자</div>
+  </div>
+</div>
+<div class="panel">
+  <button class="btn" id="open">옆판 열기</button>
+  <button class="btn ghost" id="tour">자동 투어</button>
+</div>
+<div class="status" id="st">먼저 「옆판 열기」 — 컴퓨터 안을 이렇게 자주 들여다볼 기회는 흔치 않습니다.</div>
+
+</main>
+<footer>컴퓨터 구조 Day 1 · 호박색 점은 언제나 「데이터」 · 인터넷 없이 동작</footer>
+<script>
+"use strict";
+const $=(id)=>document.getElementById(id);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const P=[
+ ["CPU","방열판 아래 네모난 칩 — 메인보드 가운데. 일하는 손입니다."],
+ ["메모리 (RAM)","길쭉한 막대 — CPU 바로 옆 슬롯. 붙어 있는 이유는 S3에서!"],
+ ["저장장치 (SSD/HDD)","네모난 상자 또는 얇은 막대 — 케이블·슬롯으로 연결."],
+ ["입출력 연결 단자","키보드·마우스·모니터가 꽂히는 곳 — 장치 자체는 본체 밖에 있습니다."]];
+let opened=false,tt=null;
+$("open").addEventListener("click",()=>{
+  opened=true; $("door").classList.add("open");
+  $("st").innerHTML="열렸습니다! 부품을 <b>클릭</b>해 보세요.";
+});
+function pick(i){
+  for(let k=0;k<4;k++) $("p"+k).classList.toggle("hot",k===i);
+  $("st").innerHTML="<b>"+P[i][0]+"</b> — "+P[i][1];
+}
+for(let i=0;i<4;i++) $("p"+i).addEventListener("click",()=>{ if(!opened){$("st").innerHTML="먼저 옆판을 여세요!";return;} clearInterval(tt); pick(i); });
+$("tour").addEventListener("click",()=>{
+  if(!opened){$("open").click();}
+  clearInterval(tt); let i=-1;
+  tt=setInterval(()=>{ i++; if(i>3){clearInterval(tt); $("st").className="status good";
+    $("st").innerHTML="네 부품 투어 끝 — 실습에서는 이 자리들에 <b>이름표</b>를 직접 답니다."; return;}
+    $("st").className="status"; pick(i);
+  }, reduced?500:1600);
+});
+
+</script>
+</body>
+</html>
