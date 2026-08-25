@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>글자 컨베이어 · 컴퓨터 구조 Day 2</title>
+<style>
+:root{--navy:#1E2761;--navy2:#2A3578;--navy3:#36429A;--ice:#CADCFC;--icebg:#EDF3FC;--white:#FFFFFF;--data:#FFC24B;--ok:#7BE0AD;--warn:#FF8B8B}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{background:var(--navy);color:var(--ice);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;display:flex;flex-direction:column;min-height:100vh}
+header{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--navy3);flex-wrap:wrap}
+header a{color:var(--ice);opacity:.7;text-decoration:none;font-size:13px}
+header a:hover{opacity:1}
+header h1{font-size:17px;color:var(--white);letter-spacing:.02em}
+.tag{font-size:12px;background:var(--navy3);border-radius:999px;padding:4px 12px}
+.tag.star{background:var(--data);color:var(--navy);font-weight:700}
+main{flex:1;width:min(980px,94vw);margin:0 auto;padding:24px 0 44px}
+.panel{background:var(--navy2);border:1px solid var(--navy3);border-radius:16px;padding:22px;margin-bottom:18px}
+.hint{font-size:13.5px;opacity:.8;line-height:1.7}
+.btn{background:var(--ice);color:var(--navy);border:0;border-radius:999px;padding:10px 20px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}
+.btn.ghost{background:transparent;color:var(--ice);border:1px solid var(--navy3)}
+.btn.on{background:var(--data);color:var(--navy)}
+.btn:active{transform:translateY(1px)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--data);outline-offset:2px}
+.bits{display:flex;gap:8px;flex-wrap:wrap}
+.bit{width:46px;height:58px;border:2px solid var(--navy3);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:var(--ice);background:var(--navy);transition:background .15s,border-color .15s,color .15s}
+.bit.click{cursor:pointer}
+.bit.on{background:var(--data);color:var(--navy);border-color:var(--data)}
+.bit.sign{border-color:var(--warn)}
+.pv{width:46px;text-align:center;font-size:12px;opacity:.75}
+.big{font-size:34px;font-weight:800;color:var(--white)}
+.amber{color:var(--data)}
+.warn{color:var(--warn)}
+.ok{color:var(--ok)}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.hidden{display:none !important}
+input[type=number],input[type=text],select{background:var(--navy);border:1px solid var(--navy3);color:var(--white);border-radius:10px;padding:10px 12px;font-size:15px;font-family:inherit;width:120px}
+input[type=text]{width:170px}
+input[type=range]{accent-color:var(--data);width:220px}
+.flash{animation:fl .55s}
+@keyframes fl{0%{background:var(--data);color:var(--navy);border-color:var(--data)}100%{}}
+.blink{animation:bl 1s infinite alternate}
+@keyframes bl{from{background:var(--navy)}to{background:var(--data);color:var(--navy)}}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.01s !important;transition-duration:.01s !important}}
+.belt{display:flex;align-items:center;gap:14px;justify-content:center;flex-wrap:wrap}
+.station{width:220px;min-height:130px;border:2px solid var(--navy3);border-radius:14px;padding:14px;text-align:center}
+.station h3{font-size:13px;opacity:.75;margin-bottom:12px;font-weight:700}
+.slot{font-size:34px;font-weight:800;color:var(--white);min-height:48px}
+.arrow{font-size:26px;color:var(--data)}
+.mini{font-size:20px;letter-spacing:2px}
+.pair{margin-top:16px;text-align:center;font-size:14.5px}
+</style>
+</head>
+<body>
+<header><a href="index.html">← 목록</a><h1>글자 컨베이어</h1><span class="tag star">S5 주 도구</span></header>
+<main>
+<div class="panel hint">영문자 하나를 넣고 보내기를 누르세요. 글자가 컨베이어를 타고 <b>글자 → 번호(ASCII) → 2진수 8칸</b>으로 변환됩니다. 이니셜을 확인한 뒤 <b>이니셜 카드</b>는 손으로 작성하세요.</div>
+<div class="panel">
+  <div class="row" style="justify-content:center;margin-bottom:20px">
+    <input type="text" id="ch" maxlength="1" placeholder="A~Z, a~z" style="width:120px;text-align:center;font-size:22px">
+    <button class="btn" id="go">보내기 ▶</button>
+  </div>
+  <div class="belt">
+    <div class="station"><h3>① 글자</h3><div class="slot" id="s1"></div></div>
+    <div class="arrow">→</div>
+    <div class="station"><h3>② ASCII 번호</h3><div class="slot amber" id="s2"></div></div>
+    <div class="arrow">→</div>
+    <div class="station"><h3>③ 2진수 (1바이트)</h3><div class="slot amber mini" id="s3"></div></div>
+  </div>
+  <div class="pair hint" id="pair"></div>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const pad8=n=>((n%256)+256)%256===0&&n!==0?"00000000":(((n%256)+256)%256).toString(2).padStart(8,"0");
+const P8=n=>(((n%256)+256)%256).toString(2).padStart(8,"0");
+const HX=n=>(((n%256)+256)%256).toString(16).toUpperCase().padStart(2,"0");
+const NUM=n=>n.toLocaleString("ko-KR");
+$("go").onclick=()=>{
+  const c=($("ch").value||"").trim();
+  if(!/^[A-Za-z]$/.test(c)){$("pair").innerHTML="<span class='warn'>영문자 한 글자만 넣을 수 있습니다 (ASCII는 영문 약속표입니다).</span>";return;}
+  const code=c.charCodeAt(0);
+  $("s1").textContent="";$("s2").textContent="";$("s3").textContent="";$("pair").textContent="";
+  setTimeout(()=>{$("s1").textContent=c;$("s1").classList.add("flash");setTimeout(()=>$("s1").classList.remove("flash"),560);},80);
+  setTimeout(()=>{$("s2").textContent=code;$("s2").classList.add("flash");setTimeout(()=>$("s2").classList.remove("flash"),560);},700);
+  setTimeout(()=>{$("s3").textContent=P8(code);$("s3").classList.add("flash");setTimeout(()=>$("s3").classList.remove("flash"),560);},1350);
+  const other=/[A-Z]/.test(c)?c.toLowerCase():c.toUpperCase();
+  setTimeout(()=>{$("pair").innerHTML="짝꿍 글자 <b>"+other+"</b>의 번호는 <b class='amber'>"+other.charCodeAt(0)+"</b> — 대문자와 소문자는 <b>다른 번호</b>입니다.";},1900);
+};
+$("ch").addEventListener("keydown",e=>{if(e.key==="Enter")$("go").click();});
+</script>
+</body>
+</html>

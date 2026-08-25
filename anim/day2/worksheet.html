@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>컴퓨터 구조 Day 2 · 디지털 워크시트</title>
+<style>
+:root{--navy:#1E2761;--navy2:#2A3578;--navy3:#36429A;--ice:#CADCFC;--icebg:#EDF3FC;
+--white:#FFFFFF;--data:#FFC24B;--ok:#7BE0AD;--warn:#FF8B8B;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--navy);color:var(--ice);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+header{padding:13px 20px;border-bottom:1px solid var(--navy3);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+header h1{font-size:16px;color:var(--white)}
+header .nm{display:flex;align-items:center;gap:8px;margin-left:auto;font-size:13px}
+input,select,textarea{background:var(--navy);border:1px solid var(--navy3);color:var(--white);
+border-radius:8px;padding:8px 10px;font-family:inherit;font-size:14px}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid var(--data);outline-offset:2px}
+nav{display:flex;gap:6px;padding:10px 20px;flex-wrap:wrap;border-bottom:1px solid var(--navy3)}
+nav button{background:transparent;color:var(--ice);border:1px solid var(--navy3);border-radius:999px;
+padding:7px 13px;font-size:12.5px;cursor:pointer;font-family:inherit;font-weight:700}
+nav button.on{background:var(--ice);color:var(--navy);border-color:var(--ice)}
+nav button.done::after{content:" ✓";color:var(--ok)}
+nav button.on.done::after{color:#1c7a4d}
+main{flex:1;width:min(880px,95vw);margin:0 auto;padding:18px 0 40px}
+.sec{display:none}.sec.on{display:block;animation:fd .25s ease}
+@keyframes fd{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+h2{font-size:21px;color:var(--white);margin-bottom:4px}
+.lead{font-size:13.5px;opacity:.85;line-height:1.55;margin-bottom:14px}
+.lead b{color:var(--data)}
+.card{background:var(--navy2);border-radius:14px;padding:16px 18px;margin-bottom:12px}
+.card h4{font-size:13.5px;color:var(--white);margin:2px 0 6px}
+.row{display:flex;align-items:center;gap:10px;padding:9px 4px;border-top:1px solid var(--navy3);font-size:14px;flex-wrap:wrap}
+.row:first-child{border-top:none}
+.row .lbl{flex:1;min-width:200px;line-height:1.45}
+.mark{width:26px;text-align:center;font-weight:700}
+.mark.ok{color:var(--ok)}.mark.bad{color:var(--warn)}
+.btn{background:var(--ice);color:var(--navy);border:none;border-radius:999px;padding:10px 20px;
+font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin:4px 8px 4px 0}
+.btn.ghost{background:transparent;color:var(--ice);border:1px solid var(--ice)}
+.btn:disabled{opacity:.4;cursor:default}
+.hint{font-size:12px;opacity:.7;margin-top:8px;line-height:1.5}
+.pair{display:flex;gap:8px;flex-wrap:wrap}
+.tg{border:1px solid var(--navy3);background:var(--navy);color:var(--ice);border-radius:999px;
+padding:7px 14px;font-size:12.5px;cursor:pointer;font-family:inherit;font-weight:700}
+.tg.sel{background:var(--data);color:var(--navy);border-color:var(--data)}
+.bin{font-family:Consolas,'Malgun Gothic',monospace;letter-spacing:2px;text-transform:none}
+.pvbar{display:flex;gap:6px;font-size:11.5px;opacity:.75;margin:2px 0 8px}
+.pvbar span{width:34px;text-align:center}
+.status{margin-top:10px;min-height:20px;border-radius:10px;padding:10px 14px;background:rgba(202,220,252,.08);font-size:13.5px;line-height:1.5}
+.status b{color:var(--data)}.status.good{background:rgba(123,224,173,.12)}.status.bad{background:rgba(255,139,139,.12)}
+/* 완료 화면 */
+#doneOv{position:fixed;inset:0;background:rgba(20,25,60,.92);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+#doneOv.on{display:flex}
+.donecard{background:var(--icebg);color:var(--navy);border-radius:16px;width:min(640px,94vw);padding:26px 30px}
+.donecard .top{display:flex;align-items:center;gap:14px;border-bottom:2px solid var(--navy);padding-bottom:12px;margin-bottom:12px}
+.donecard .chk{width:52px;height:52px;border-radius:50%;background:var(--navy);color:var(--white);
+display:flex;align-items:center;justify-content:center;font-size:28px;flex:none}
+.donecard h3{font-size:18px}
+.donecard .meta{font-size:12.5px;opacity:.75;margin-top:2px}
+.donecard .body{font-size:14px;line-height:1.7;white-space:pre-wrap;word-break:break-all;max-height:46vh;overflow:auto}
+.donecard .cap{margin-top:14px;background:var(--navy);color:var(--white);border-radius:10px;padding:10px 14px;font-size:13px;text-align:center;font-weight:700}
+.donecard .closeb{margin-top:12px;text-align:center}
+footer{text-align:center;font-size:11px;opacity:.55;padding:12px;border-top:1px solid var(--navy3)}
+</style>
+</head>
+<body>
+<header>
+  <h1>컴퓨터 구조 Day 2 · 디지털 워크시트</h1>
+  <div class="nm"><label for="uname"><b style="color:var(--white)">이름</b></label>
+  <input id="uname" style="width:130px" placeholder="이름 입력 (필수)"></div>
+</header>
+<nav id="nav"></nav>
+<main id="main"></main>
+<div id="doneOv" role="dialog" aria-modal="true">
+  <div class="donecard">
+    <div class="top"><div class="chk">✓</div>
+      <div><h3 id="dcTitle"></h3><div class="meta" id="dcMeta"></div></div></div>
+    <div class="body" id="dcBody"></div>
+    <div class="cap">📸 이 화면을 캡처해서 노션의 내 이름 아래에 붙여넣으세요</div>
+    <div class="closeb"><button class="btn ghost" id="dcClose" style="color:var(--navy);border-color:var(--navy)">닫기</button></div>
+  </div>
+</div>
+<footer>답은 이 브라우저에 자동 저장됩니다 · 창을 닫아도 유지 · 다른 기기에서는 이어지지 않으니 하루 동안 같은 브라우저를 쓰세요</footer>
+
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const S = {load(k,d){try{const v=localStorage.getItem("ws2_"+k);return v===null?d:JSON.parse(v);}catch(e){return d;}},
+           save(k,v){try{localStorage.setItem("ws2_"+k,JSON.stringify(v));}catch(e){}}};
+const P8=n=>(((n%256)+256)%256).toString(2).padStart(8,"0");
+const HX=n=>(((n%256)+256)%256).toString(16).toUpperCase().padStart(2,"0");
+const nb=x=>(x||"").replace(/\s/g,"");
+const isBin8=x=>/^[01]{8}$/.test(x);
+let cur="p1";
+
+/* ---------- 공용 ---------- */
+function sel(id,opts,val){
+  return '<select id="'+id+'"><option value="">— 선택 —</option>'+
+    opts.map(o=>'<option'+(String(o)===String(val)?" selected":"")+'>'+o+'</option>').join("")+'</select>';
+}
+function txt(id,val,w,ph,bin){
+  return '<input id="'+id+'" style="width:'+(w||130)+'px" value="'+(val||"").replace(/"/g,"&quot;")+'"'+
+    (ph?' placeholder="'+ph+'"':'')+(bin?' class="bin" maxlength="9" inputmode="numeric"':'')+'>';
+}
+function num(id,val,w,min,max){
+  return '<input id="'+id+'" type="number" style="width:'+(w||100)+'px" value="'+(val===undefined||val===null?"":val)+'"'+
+    (min!==undefined?' min="'+min+'"':'')+(max!==undefined?' max="'+max+'"':'')+'>';
+}
+function bindSave(id,key){$(id).addEventListener("input",()=>S.save(key,$(id).value));}
+function nameOK(){
+  if(!$("uname").value.trim()){alert("먼저 상단에 이름을 입력하세요.");$("uname").focus();return false;}
+  return true;
+}
+function showDone(pn,title,body){
+  if(!nameOK())return;
+  const now=new Date();
+  $("dcTitle").textContent="실습 "+pn+" — "+title;
+  $("dcMeta").textContent=$("uname").value.trim()+" · "+now.toLocaleDateString("ko-KR")+" "+now.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});
+  $("dcBody").textContent=body;
+  $("doneOv").classList.add("on");
+  S.save("done_"+pn,true); paintNav();
+}
+$("dcClose").addEventListener("click",()=>$("doneOv").classList.remove("on"));
+$("uname").value=S.load("name","");
+$("uname").addEventListener("input",()=>S.save("name",$("uname").value));
+function confirmChk(){return confirm("선생님이 정답 공개를 안내했을 때만 확인하세요. 계속할까요?");}
+function mark(id,good){const m=$(id);m.textContent=good?"✓":"✗";m.className="mark "+(good?"ok":"bad");}
+function clearMark(id){const m=$(id);m.textContent="";m.className="mark";}
+const PVBAR='<div class="pvbar"><span>128</span><span>64</span><span>32</span><span>16</span><span>8</span><span>4</span><span>2</span><span>1</span></div>';
+
+/* ---------- 섹션 정의 ---------- */
+const SECS=[
+["p1","실습 1 · 0/1 기록지"],["p2","실습 2 · 양방향 변환"],["p3","실습 3 · 단위 사다리"],
+["p4","실습 4 · 정수 표현"],["p5","실습 5 · 이니셜 카드"],["p6","실습 6 · RGB 기록"],
+["p7","실습 7 · 16진수"],["p8","실습 8 · 데이터 카드"]];
+
+function paintNav(){
+  $("nav").innerHTML=SECS.map(([id,t])=>
+   '<button data-s="'+id+'" class="'+(id===cur?"on ":"")+(S.load("done_"+id.slice(1),false)?"done":"")+'">'+t+'</button>').join("");
+  document.querySelectorAll("#nav button").forEach(b=>b.addEventListener("click",()=>{cur=b.dataset.s;paint();
+    if(cur==="p7")p7init(); if(cur==="p8")p8status();}));
+}
+function paint(){
+  document.querySelectorAll(".sec").forEach(s=>s.classList.toggle("on",s.id===cur));
+  paintNav();
+}
+
+/* ---------- HTML 골격 ---------- */
+$("main").innerHTML=`
+<section class="sec" id="p1">
+ <h2>실습 1 — 켜짐/꺼짐을 0과 1로 받아 적기</h2>
+ <p class="lead">수업 화면의 전구 8개를 <b>왼쪽부터</b> 봅니다. 켜져 있으면 <b>1</b>, 꺼져 있으면 <b>0</b> — 여덟 자리를 이어서 입력하세요. 정답은 선생님 화면 아래 문자열과 직접 대조합니다.</p>
+ <div class="card">
+  <div class="row"><span class="lbl">1회차 (여덟 자리, 예: 01101001)</span><input id="p1a" class="bin" maxlength="8" inputmode="numeric" style="width:160px"></div>
+  <div class="row"><span class="lbl">2회차</span><input id="p1b" class="bin" maxlength="8" inputmode="numeric" style="width:160px"></div>
+  <div class="row"><span class="lbl">(보너스) 이 여덟 칸 하나하나를 부르는 이름은? — 오후 S3에서 확인</span><input id="p1bn" style="width:130px"></div>
+ </div>
+ <button class="btn" id="p1done">완료 화면 보기</button>
+ <div class="status" id="p1st">두 회차 모두 0과 1로만 8자리를 채우면 완료할 수 있습니다. 방향 주의 — 글 읽는 방향 그대로, 왼쪽부터.</div>
+</section>
+
+<section class="sec" id="p2">
+ <h2>실습 2 — 2진수 ↔ 10진수 양방향 변환</h2>
+ <p class="lead">자릿값 표를 보며 <b>손으로 먼저</b> 풉니다. 1부는 켜진 자리의 자릿값을 <b>더하기</b>, 2부는 128부터 <b>덜어내기</b>. 검산까지가 문제입니다 — 반대 방향으로 되돌려 원래 수가 나오는지 스스로 확인한 뒤 적으세요.</p>
+ <div class="card">
+  <h4>1부 — 2진수 → 10진수</h4>
+  ${PVBAR}
+  <div class="row"><span class="lbl bin">01100100</span><input id="p2d0" type="number" style="width:100px"><span class="mark" id="p2dm0"></span></div>
+  <div class="row"><span class="lbl bin">00010111</span><input id="p2d1" type="number" style="width:100px"><span class="mark" id="p2dm1"></span></div>
+  <div class="row"><span class="lbl bin">10110010</span><input id="p2d2" type="number" style="width:100px"><span class="mark" id="p2dm2"></span></div>
+ </div>
+ <div class="card">
+  <h4>2부 — 10진수 → 2진수 (8자리로)</h4>
+  <div class="row"><span class="lbl">52</span><input id="p2b0" class="bin" maxlength="8" style="width:150px"><span class="mark" id="p2bm0"></span></div>
+  <div class="row"><span class="lbl">141</span><input id="p2b1" class="bin" maxlength="8" style="width:150px"><span class="mark" id="p2bm1"></span></div>
+  <div class="row"><span class="lbl">209</span><input id="p2b2" class="bin" maxlength="8" style="width:150px"><span class="mark" id="p2bm2"></span></div>
+ </div>
+ <button class="btn ghost" id="p2chk">정답 확인 (선생님 안내 후)</button>
+ <button class="btn" id="p2done">완료 화면 보기</button>
+ <div class="status" id="p2st">여섯 칸을 모두 채우면 완료할 수 있습니다. 2부는 <b>8칸짜리 방</b> — 빈 방도 0으로 닫아 주세요.</div>
+</section>
+
+<section class="sec" id="p3">
+ <h2>실습 3 — 비트에서 GB까지, 단위 사다리</h2>
+ <p class="lead">아래에서 위로 올라가는 사다리입니다. <b>몇 개가 모여 다음 칸 1개가 되는지</b> 고르고, Day 1 「내 컴퓨터 소개서」의 두 숫자를 옮겨 적으세요. 힌트 — 10이 아니라 얼마씩 커진다고 했죠? 단, <b>한 칸만 예외</b>입니다.</p>
+ <div class="card">
+  <h4>1부 — 사다리 빈칸</h4>
+  <div class="row"><span class="lbl">1 GB = ______ MB</span><span id="p3s0w"></span><span class="mark" id="p3m0"></span></div>
+  <div class="row"><span class="lbl">1 MB = ______ KB</span><span id="p3s1w"></span><span class="mark" id="p3m1"></span></div>
+  <div class="row"><span class="lbl">1 KB = ______ 바이트</span><span id="p3s2w"></span><span class="mark" id="p3m2"></span></div>
+  <div class="row"><span class="lbl">1 바이트 = ______ 비트</span><span id="p3s3w"></span><span class="mark" id="p3m3"></span></div>
+ </div>
+ <div class="card">
+  <h4>2부 — 내 컴퓨터를 사다리에 올리기 (Day 1 소개서에서 옮기기)</h4>
+  <div class="row"><span class="lbl">메모리(RAM) 용량 (GB)</span><input id="p3r" type="number" min="1" max="256" style="width:100px"></div>
+  <div class="row"><span class="lbl">저장장치 용량</span><input id="p3d" type="number" min="1" max="8192" style="width:100px"><span class="pair" id="p3du">
+    <button class="tg" data-v="GB">GB</button><button class="tg" data-v="TB">TB</button></span></div>
+  <div class="row"><span class="lbl">(보너스) 8GB는 바이트 몇 개?</span><span id="p3bnw"></span><span class="mark" id="p3bnm"></span></div>
+ </div>
+ <button class="btn ghost" id="p3chk">정답 확인 (선생님 안내 후)</button>
+ <button class="btn" id="p3done">완료 화면 보기</button>
+ <div class="status" id="p3st">1부 네 칸과 2부 숫자 두 개를 채우면 완료할 수 있습니다.</div>
+</section>
+
+<section class="sec" id="p4">
+ <h2>실습 4 — 정해진 8칸에 정수 담기</h2>
+ <p class="lead">1·2부는 손으로 먼저. 음수는 <b>0에서 뒤로 되감기</b>입니다 — 0의 바로 뒤 칸이 -1(=11111111)이었죠. 3부는 <b>주행계 화면을 본 뒤</b> 목격한 그대로 기록하세요.</p>
+ <div class="card">
+  <h4>1부 — 부호 없는 8칸</h4>
+  ${PVBAR}
+  <div class="row"><span class="lbl">37</span><input id="p4b0" class="bin" maxlength="8" style="width:150px"><span class="mark" id="p4m0"></span></div>
+  <div class="row"><span class="lbl">100</span><input id="p4b1" class="bin" maxlength="8" style="width:150px"><span class="mark" id="p4m1"></span></div>
+ </div>
+ <div class="card">
+  <h4>2부 — 음수 담기</h4>
+  <div class="row"><span class="lbl">-5 (0에서 다섯 칸 되감기)</span><input id="p4neg" class="bin" maxlength="8" style="width:150px"><span class="mark" id="p4m2"></span></div>
+  <div class="row"><span class="lbl">맨 앞 칸(부호)은?</span><span class="pair" id="p4sign">
+    <button class="tg" data-v="0">0</button><button class="tg" data-v="1">1</button></span><span class="mark" id="p4m3"></span></div>
+ </div>
+ <div class="card">
+  <h4>3부 — 넘침 목격 기록 (주행계 관찰 후)</h4>
+  <div class="row"><span class="lbl">127의 8칸</span><input id="p4o1" class="bin" maxlength="8" style="width:150px"><span class="mark" id="p4m4"></span></div>
+  <div class="row"><span class="lbl">+1을 누른 뒤의 8칸</span><input id="p4o2" class="bin" maxlength="8" style="width:150px"><span class="mark" id="p4m5"></span></div>
+  <div class="row"><span class="lbl">그 8칸을 부호 있게 읽으면</span><input id="p4o3" type="number" style="width:100px"><span class="mark" id="p4m6"></span></div>
+  <div class="row"><span class="lbl">이 사건의 이름 (따라 쓰기)</span><input id="p4o4" style="width:190px" placeholder="넘침 (오버플로우)"><span class="mark" id="p4m7"></span></div>
+ </div>
+ <button class="btn ghost" id="p4chk">정답 확인 (선생님 안내 후)</button>
+ <button class="btn" id="p4done">완료 화면 보기</button>
+ <div class="status" id="p4st">모든 칸을 채우면 완료할 수 있습니다. 부호는 스티커가 아니라 <b>되감기</b>입니다.</div>
+</section>
+
+<section class="sec" id="p5">
+ <h2>실습 5 — 2진수로 적힌 내 이니셜 카드</h2>
+ <p class="lead">ASCII 표에서 내 이니셜(영문 대문자 2~3자)의 <b>번호</b>를 찾고, 오전의 손놀림으로 <b>8칸</b>으로 바꿔 적으세요. 세 번째 글자가 없으면 비워 둡니다.</p>
+ <div class="card">
+  <div class="row"><span class="lbl">글자 ①</span><input id="p5l0" maxlength="1" style="width:60px;text-transform:uppercase">
+   <span class="lbl" style="flex:0 0 auto;min-width:0">번호</span><input id="p5c0" type="number" style="width:90px">
+   <span class="lbl" style="flex:0 0 auto;min-width:0">8칸</span><input id="p5b0" class="bin" maxlength="8" style="width:150px"><span class="mark" id="p5m0"></span></div>
+  <div class="row"><span class="lbl">글자 ②</span><input id="p5l1" maxlength="1" style="width:60px;text-transform:uppercase">
+   <span class="lbl" style="flex:0 0 auto;min-width:0">번호</span><input id="p5c1" type="number" style="width:90px">
+   <span class="lbl" style="flex:0 0 auto;min-width:0">8칸</span><input id="p5b1" class="bin" maxlength="8" style="width:150px"><span class="mark" id="p5m1"></span></div>
+  <div class="row"><span class="lbl">글자 ③ (없으면 비움)</span><input id="p5l2" maxlength="1" style="width:60px;text-transform:uppercase">
+   <span class="lbl" style="flex:0 0 auto;min-width:0">번호</span><input id="p5c2" type="number" style="width:90px">
+   <span class="lbl" style="flex:0 0 auto;min-width:0">8칸</span><input id="p5b2" class="bin" maxlength="8" style="width:150px"><span class="mark" id="p5m2"></span></div>
+  <div class="row"><span class="lbl">(보너스) ① 글자의 소문자 짝꿍 번호는?</span><input id="p5bn" type="number" style="width:90px"><span class="mark" id="p5bnm"></span></div>
+ </div>
+ <button class="btn ghost" id="p5chk">정답 확인 (선생님 안내 후)</button>
+ <button class="btn" id="p5done">완료 화면 보기</button>
+ <div class="status" id="p5st">글자 두 개 이상을 번호·8칸까지 채우면 완료할 수 있습니다. 글자 하나 = 1바이트 = <b>8칸</b> — 빈 방도 0으로.</div>
+</section>
+
+<section class="sec" id="p6">
+ <h2>실습 6 — 색을 숫자 3개로 적기</h2>
+ <p class="lead">1부는 도구 없이 <b>먼저 추리</b>하세요 — 물감 직관 주의: <b>빛은 섞을수록 밝아집니다</b>. 2부는 빛 혼합기로 좋아하는 색을 만들고 세 숫자를 옮겨 적으세요. 각 숫자는 0~255, 오후에 배운 <b>1바이트</b>의 범위입니다.</p>
+ <div class="card">
+  <h4>1부 — 숫자를 보고 색 맞히기</h4>
+  <div class="row"><span class="lbl">(255, 0, 0)</span><span id="p6s0w"></span><span class="mark" id="p6m0"></span></div>
+  <div class="row"><span class="lbl">(0, 0, 255)</span><span id="p6s1w"></span><span class="mark" id="p6m1"></span></div>
+  <div class="row"><span class="lbl">(255, 255, 0)</span><span id="p6s2w"></span><span class="mark" id="p6m2"></span></div>
+ </div>
+ <div class="card">
+  <h4>2부 — 좋아하는 색을 숫자로</h4>
+  <div class="row"><span class="lbl">내 색 이름 (자유)</span><input id="p6nm" style="flex:2;min-width:180px" placeholder="예: 노을 주황"></div>
+  <div class="row"><span class="lbl">빨강</span><input id="p6r" type="number" min="0" max="255" style="width:90px">
+   <span class="lbl" style="flex:0 0 auto;min-width:0">초록</span><input id="p6g" type="number" min="0" max="255" style="width:90px">
+   <span class="lbl" style="flex:0 0 auto;min-width:0">파랑</span><input id="p6b" type="number" min="0" max="255" style="width:90px"></div>
+  <div class="row"><span class="lbl">(보너스) 세 숫자의 최댓값이 255인 이유 한 문장</span><input id="p6bn" style="flex:2;min-width:220px"></div>
+ </div>
+ <button class="btn ghost" id="p6chk">정답 확인 (선생님 안내 후)</button>
+ <button class="btn" id="p6done">완료 화면 보기</button>
+ <div class="status" id="p6st">1부 세 칸과 2부 숫자 세 개(0~255)를 채우면 완료할 수 있습니다.</div>
+</section>
+
+<section class="sec" id="p7">
+ <h2>실습 7 — 4칸씩 끊어 16진수로 읽기</h2>
+ <p class="lead">새 계산은 없습니다 — 오늘 적은 것을 <b>짧게 다시 읽는</b> 시간입니다. 칼질은 항상 한가운데, <b>4칸 · 4칸</b>. 대응표: 1010=A · 1011=B · 1100=C · 1101=D · 1110=E · 1111=F</p>
+ <div class="card">
+  <h4>1부 — 내 이니셜을 16진수로 (실습 5에서 자동으로 가져옴)</h4>
+  <div id="p7rows"><div class="hint">실습 5 탭을 먼저 완료하면 여기에 글자가 나타납니다.</div></div>
+ </div>
+ <div class="card">
+  <h4>2부 — 정수를 16진수로</h4>
+  <div class="row"><span class="lbl">100 = <span class="bin">01100100</span> → 16진수</span><input id="p7int" class="bin" maxlength="2" style="width:80px;text-transform:uppercase"><span class="mark" id="p7mi"></span></div>
+ </div>
+ <div class="card">
+  <h4>3부 — 색상 코드 풀기: <span class="bin">#4B96FF</span></h4>
+  <div class="row"><span class="lbl">빨강 (4B)</span><input id="p73r" type="number" style="width:90px"><span class="mark" id="p7m3r"></span>
+   <span class="lbl" style="flex:0 0 auto;min-width:0">초록 (96)</span><input id="p73g" type="number" style="width:90px"><span class="mark" id="p7m3g"></span>
+   <span class="lbl" style="flex:0 0 auto;min-width:0">파랑 (FF)</span><input id="p73b" type="number" style="width:90px"><span class="mark" id="p7m3b"></span></div>
+ </div>
+ <button class="btn ghost" id="p7chk">정답 확인 (선생님 안내 후)</button>
+ <button class="btn" id="p7done">완료 화면 보기</button>
+ <div class="status" id="p7st">이니셜 16진수와 2·3부를 모두 채우면 완료할 수 있습니다.</div>
+</section>
+
+<section class="sec" id="p8">
+ <h2>실습 8 — 나의 데이터 카드</h2>
+ <p class="lead">오늘 만든 답들이 <b>자동으로 모입니다.</b> 내 정수 하나(음수 권장)와 색 코드, 오늘의 한 문장만 직접 쓰면 카드가 완성됩니다.</p>
+ <div class="card">
+  <div class="row"><span class="lbl">내 정수 하나 (−128~127, 음수 권장)</span><input id="p8n" type="number" min="-128" max="127" style="width:100px"></div>
+  <div class="row"><span class="lbl">그 정수의 8칸</span><input id="p8nb" class="bin" maxlength="8" style="width:150px"><span class="mark" id="p8m1"></span></div>
+  <div class="row"><span class="lbl">그 정수의 16진수</span><input id="p8nh" class="bin" maxlength="2" style="width:80px;text-transform:uppercase"><span class="mark" id="p8m2"></span></div>
+  <div class="row"><span class="lbl">내 색의 코드 — 실습 6의 세 숫자를 실습 7의 손놀림으로</span>
+   <span style="font-weight:700">#</span><input id="p8code" class="bin" maxlength="6" style="width:110px;text-transform:uppercase"><span class="mark" id="p8m3"></span></div>
+  <div class="row"><span class="lbl">오늘의 한 문장 — "컴퓨터 속의 모든 것은 ____"</span><input id="p8line" style="flex:2;min-width:200px" placeholder="자유롭게 — 맞춤법·글솜씨는 평가하지 않습니다"></div>
+ </div>
+ <div class="status" id="p8st"></div>
+ <button class="btn ghost" id="p8chk">정답 확인 (선생님 안내 후)</button>
+ <button class="btn" id="p8done">데이터 카드 완성 화면 보기</button>
+</section>`;
+
+/* ---------- 실습 1 ---------- */
+(function(){
+  ["p1a","p1b","p1bn"].forEach(id=>{$(id).value=S.load(id,"");bindSave(id,id);});
+})();
+document.addEventListener("click",e=>{
+  if(e.target.id==="p1done"){
+    const a=nb($("p1a").value),b=nb($("p1b").value);
+    if(!isBin8(a)||!isBin8(b)){$("p1st").className="status bad";
+      $("p1st").textContent="두 회차 모두 0과 1로만 정확히 8자리여야 합니다.";return;}
+    showDone(1,"켜짐/꺼짐을 0과 1로 받아 적기",
+      "1회차: "+a+"\n2회차: "+b+($("p1bn").value.trim()?"\n보너스(여덟 칸의 이름): "+$("p1bn").value.trim():"")+
+      "\n\n※ 정답 여부는 수업 화면의 문자열과 직접 대조");
+  }
+});
+
+/* ---------- 실습 2 ---------- */
+const P2DQ=["01100100","00010111","10110010"],P2DA=[100,23,178];
+const P2BQ=[52,141,209],P2BA=["00110100","10001101","11010001"];
+(function(){
+  for(let i=0;i<3;i++){$("p2d"+i).value=S.load("p2d"+i,"");bindSave("p2d"+i,"p2d"+i);
+    $("p2b"+i).value=S.load("p2b"+i,"");bindSave("p2b"+i,"p2b"+i);}
+})();
+document.addEventListener("click",e=>{
+  if(e.target.id==="p2chk"){
+    if(!confirmChk())return;
+    let ok=0;
+    for(let i=0;i<3;i++){
+      const d=$("p2d"+i).value;
+      if(d===""){clearMark("p2dm"+i);}else{const g=+d===P2DA[i];mark("p2dm"+i,g);if(g)ok++;}
+      const b=nb($("p2b"+i).value);
+      if(b===""){clearMark("p2bm"+i);}else{const g=b===P2BA[i];mark("p2bm"+i,g);if(g)ok++;}
+    }
+    $("p2st").className="status "+(ok===6?"good":"bad");
+    $("p2st").innerHTML=ok===6?"여섯 문제 전부 정답 — 검산까지 통과!":"✗를 고친 뒤 다시 확인하세요. 힌트 — 2부에서 자리가 모자라면: <b>8칸짜리 방, 빈 방도 0으로.</b>";
+  }
+  if(e.target.id==="p2done"){
+    const dv=[0,1,2].map(i=>$("p2d"+i).value),bv=[0,1,2].map(i=>nb($("p2b"+i).value));
+    if(dv.some(x=>x==="")||bv.some(x=>!isBin8(x))){
+      $("p2st").className="status bad";$("p2st").textContent="여섯 칸을 모두 채워야 합니다 (2부는 8자리).";return;}
+    showDone(2,"양방향 변환",
+      "1부 (2진수 → 10진수)\n"+P2DQ.map((q,i)=>"  "+q+" → "+dv[i]).join("\n")+
+      "\n\n2부 (10진수 → 2진수)\n"+P2BQ.map((q,i)=>"  "+q+" → "+bv[i]).join("\n"));
+  }
+});
+
+/* ---------- 실습 3 ---------- */
+const P3OPT=[8,512,1000,1024],P3A=[1024,1024,1024,8];
+const P3BN=["8,388,608","8,589,934,592","8,000,000,000"],P3BNA="8,589,934,592";
+(function(){
+  const v=S.load("p3s",["","","",""]);
+  for(let i=0;i<4;i++){$("p3s"+i+"w").innerHTML=sel("p3s"+i,P3OPT,v[i]);
+    $("p3s"+i).addEventListener("change",()=>{const a=S.load("p3s",["","","",""]);a[i]=$("p3s"+i).value;S.save("p3s",a);});}
+  $("p3bnw").innerHTML=sel("p3bn",P3BN,S.load("p3bn",""));
+  $("p3bn").addEventListener("change",()=>S.save("p3bn",$("p3bn").value));
+  $("p3r").value=S.load("p3r","");bindSave("p3r","p3r");
+  $("p3d").value=S.load("p3d","");bindSave("p3d","p3d");
+  const u=S.load("p3u","GB");
+  document.querySelectorAll("#p3du .tg").forEach(b=>{b.classList.toggle("sel",b.dataset.v===u);
+    b.addEventListener("click",()=>{S.save("p3u",b.dataset.v);
+      document.querySelectorAll("#p3du .tg").forEach(x=>x.classList.remove("sel"));b.classList.add("sel");});});
+})();
+document.addEventListener("click",e=>{
+  if(e.target.id==="p3chk"){
+    if(!confirmChk())return;
+    let ok=0;
+    for(let i=0;i<4;i++){const x=$("p3s"+i).value;
+      if(!x){clearMark("p3m"+i);continue;}
+      const g=+x===P3A[i];mark("p3m"+i,g);if(g)ok++;}
+    const bn=$("p3bn").value;
+    if(bn){mark("p3bnm",bn===P3BNA);}else clearMark("p3bnm");
+    $("p3st").className="status "+(ok===4?"good":"bad");
+    $("p3st").innerHTML=ok===4?"사다리 완성! 1,024배씩 — 그리고 <b>바이트만 예외</b>: 아침에 받아 적은 그 여덟 칸.":"✗를 고친 뒤 다시 확인하세요. 힌트 — 예외는 딱 한 칸: <b>1바이트 = 여덟 칸 묶음.</b>";
+  }
+  if(e.target.id==="p3done"){
+    const sv=[0,1,2,3].map(i=>$("p3s"+i).value);
+    if(sv.some(x=>!x)||!$("p3r").value||!$("p3d").value){
+      $("p3st").className="status bad";$("p3st").textContent="1부 네 칸과 2부 숫자 두 개는 필수입니다.";return;}
+    const u=S.load("p3u","GB");
+    if(u==="GB"&&+$("p3r").value>=+$("p3d").value){
+      $("p3st").className="status bad";
+      $("p3st").innerHTML="잠깐 — RAM("+$("p3r").value+"GB)이 저장장치("+$("p3d").value+"GB)보다 크거나 같습니다. Day 1에서 확인한 두 GB가 바뀌지 않았는지 다시 보고, 맞다면 그대로 완료하세요.";
+      if(!confirm("두 GB 값을 다시 확인했고, 그대로가 맞습니까?"))return;}
+    showDone(3,"단위 사다리",
+      "1 GB = "+sv[0]+" MB\n1 MB = "+sv[1]+" KB\n1 KB = "+sv[2]+" 바이트\n1 바이트 = "+sv[3]+" 비트\n\n내 컴퓨터: RAM "+$("p3r").value+"GB · 저장장치 "+$("p3d").value+u+
+      ($("p3bn").value?"\n보너스: 8GB = "+$("p3bn").value+" 바이트":""));
+  }
+});
+
+/* ---------- 실습 4 ---------- */
+(function(){
+  ["p4b0","p4b1","p4neg","p4o1","p4o2","p4o3","p4o4"].forEach(id=>{$(id).value=S.load(id,"");bindSave(id,id);});
+  const s=S.load("p4sign","");
+  document.querySelectorAll("#p4sign .tg").forEach(b=>{b.classList.toggle("sel",b.dataset.v===s);
+    b.addEventListener("click",()=>{S.save("p4sign",b.dataset.v);
+      document.querySelectorAll("#p4sign .tg").forEach(x=>x.classList.remove("sel"));b.classList.add("sel");});});
+})();
+document.addEventListener("click",e=>{
+  if(e.target.id==="p4chk"){
+    if(!confirmChk())return;
+    const chkBin=(id,mid,ans)=>{const v=nb($(id).value);if(!v){clearMark(mid);return 0;}const g=v===ans;mark(mid,g);return g?1:0;};
+    let ok=0;
+    ok+=chkBin("p4b0","p4m0","00100101");
+    ok+=chkBin("p4b1","p4m1","01100100");
+    ok+=chkBin("p4neg","p4m2","11111011");
+    const sg=S.load("p4sign","");if(sg){mark("p4m3",sg==="1");ok+=(sg==="1"?1:0);}else clearMark("p4m3");
+    ok+=chkBin("p4o1","p4m4","01111111");
+    ok+=chkBin("p4o2","p4m5","10000000");
+    const o3=$("p4o3").value;if(o3!==""){mark("p4m6",+o3===-128);ok+=(+o3===-128?1:0);}else clearMark("p4m6");
+    const o4=$("p4o4").value.replace(/\s/g,"");
+    if(o4){const g=o4.includes("넘침")||o4.includes("오버플로");mark("p4m7",g);ok+=(g?1:0);}else clearMark("p4m7");
+    $("p4st").className="status "+(ok===8?"good":"bad");
+    $("p4st").innerHTML=ok===8?"전부 정답 — 넘침을 목격하고 기록까지 마쳤습니다.":"✗를 고친 뒤 다시 확인하세요. 힌트 — -5는 부호 스티커가 아니라 <b>되감기</b>: 0의 뒤 칸이 -1이었죠? 그리고 100은 오전 실습 2에 이미 있었습니다.";
+  }
+  if(e.target.id==="p4done"){
+    const need=["p4b0","p4b1","p4neg","p4o1","p4o2"].map(id=>nb($(id).value));
+    if(need.some(x=>!isBin8(x))||!S.load("p4sign","")||$("p4o3").value===""||!$("p4o4").value.trim()){
+      $("p4st").className="status bad";$("p4st").textContent="모든 칸을 채워야 합니다 (2진수는 8자리, 부호 칸 선택 포함).";return;}
+    showDone(4,"정수 표현",
+      "37 → "+nb($("p4b0").value)+"\n100 → "+nb($("p4b1").value)+
+      "\n-5 → "+nb($("p4neg").value)+" (부호 칸: "+S.load("p4sign","")+")"+
+      "\n\n넘침 목격 기록\n127 = "+nb($("p4o1").value)+"\n+1 → "+nb($("p4o2").value)+
+      "\n부호 있게 읽으면 → "+$("p4o3").value+"\n사건의 이름: "+$("p4o4").value.trim());
+  }
+});
+
+/* ---------- 실습 5 ---------- */
+(function(){
+  for(let i=0;i<3;i++){
+    ["l","c","b"].forEach(k=>{const id="p5"+k+i;$(id).value=S.load(id,"");
+      $(id).addEventListener("input",()=>{if(k==="l")$(id).value=$(id).value.toUpperCase();S.save(id,$(id).value);});});
+  }
+  $("p5bn").value=S.load("p5bn","");bindSave("p5bn","p5bn");
+})();
+function p5rowState(i){
+  const l=($("p5l"+i).value||"").toUpperCase().trim(),c=$("p5c"+i).value,b=nb($("p5b"+i).value);
+  return {l:l,c:c,b:b,filled:!!(l&&c!==""&&b),valid:/^[A-Z]$/.test(l)};
+}
+document.addEventListener("click",e=>{
+  if(e.target.id==="p5chk"){
+    if(!confirmChk())return;
+    let done=0,ok=0;
+    for(let i=0;i<3;i++){
+      const r=p5rowState(i);
+      if(!r.l&&r.c===""&&!r.b){clearMark("p5m"+i);continue;}
+      done++;
+      if(!r.valid){mark("p5m"+i,false);continue;}
+      const code=r.l.charCodeAt(0);
+      const g=(+r.c===code)&&(r.b===P8(code));
+      mark("p5m"+i,g);if(g)ok++;
+    }
+    const r0=p5rowState(0);
+    if($("p5bn").value!==""&&r0.valid){mark("p5bnm",+$("p5bn").value===r0.l.charCodeAt(0)+32);}else clearMark("p5bnm");
+    $("p5st").className="status "+(done>=2&&ok===done?"good":"bad");
+    $("p5st").innerHTML=(done>=2&&ok===done)?"이니셜 완성! (참고 — 대문자 번호 = 64 + 알파벳 순번)":"✗를 고친 뒤 다시 확인하세요. 힌트 — 번호가 맞는데 ✗라면 8칸을 세어 보세요: <b>글자 하나 = 8칸, 빈 방도 0으로.</b>";
+  }
+  if(e.target.id==="p5done"){
+    const rows=[0,1,2].map(p5rowState),full=rows.filter(r=>r.filled);
+    if(full.length<2||full.some(r=>!r.valid||!isBin8(r.b))){
+      $("p5st").className="status bad";$("p5st").textContent="영문 대문자 두 글자 이상을 번호·8칸(8자리)까지 채워야 합니다.";return;}
+    showDone(5,"내 이니셜 카드",
+      full.map(r=>r.l+" = "+r.c+" = "+r.b).join("\n")+
+      ($("p5bn").value?"\n보너스: "+full[0].l.toLowerCase()+" = "+$("p5bn").value:""));
+  }
+});
+
+/* ---------- 실습 6 ---------- */
+const P6OPT=["빨강","파랑","노랑","초록","주황","흰색"],P6A=["빨강","파랑","노랑"];
+(function(){
+  const v=S.load("p6s",["","",""]);
+  for(let i=0;i<3;i++){$("p6s"+i+"w").innerHTML=sel("p6s"+i,P6OPT,v[i]);
+    $("p6s"+i).addEventListener("change",()=>{const a=S.load("p6s",["","",""]);a[i]=$("p6s"+i).value;S.save("p6s",a);});}
+  ["p6nm","p6r","p6g","p6b","p6bn"].forEach(id=>{$(id).value=S.load(id,"");bindSave(id,id);});
+})();
+function rgbOK(x){return x!==""&&+x>=0&&+x<=255&&Number.isInteger(+x);}
+document.addEventListener("click",e=>{
+  if(e.target.id==="p6chk"){
+    if(!confirmChk())return;
+    let ok=0;
+    for(let i=0;i<3;i++){const x=$("p6s"+i).value;
+      if(!x){clearMark("p6m"+i);continue;}
+      const g=x===P6A[i];mark("p6m"+i,g);if(g)ok++;}
+    $("p6st").className="status "+(ok===3?"good":"bad");
+    $("p6st").innerHTML=ok===3?"세 색 모두 정답 — (255,255,0)이 초록이 아닌 이유: <b>빛은 섞을수록 밝아집니다.</b>":"✗를 고친 뒤 다시 확인하세요. 힌트 — 물감 직관을 내려놓기: 빨강 빛 + 초록 빛 = ?";
+  }
+  if(e.target.id==="p6done"){
+    const sv=[0,1,2].map(i=>$("p6s"+i).value);
+    if(sv.some(x=>!x)){$("p6st").className="status bad";$("p6st").textContent="1부 세 칸을 먼저 채우세요.";return;}
+    if(!rgbOK($("p6r").value)||!rgbOK($("p6g").value)||!rgbOK($("p6b").value)){
+      $("p6st").className="status bad";$("p6st").textContent="2부의 세 숫자는 각각 0~255의 정수여야 합니다 — 1바이트의 범위.";return;}
+    showDone(6,"RGB 기록",
+      "1부: (255,0,0)="+sv[0]+" · (0,0,255)="+sv[1]+" · (255,255,0)="+sv[2]+
+      "\n\n내 색"+($("p6nm").value.trim()?" 「"+$("p6nm").value.trim()+"」":"")+" = ("+$("p6r").value+", "+$("p6g").value+", "+$("p6b").value+")"+
+      ($("p6bn").value.trim()?"\n보너스: "+$("p6bn").value.trim():""));
+  }
+});
+
+/* ---------- 실습 7 ---------- */
+function p7letters(){
+  const out=[];
+  for(let i=0;i<3;i++){
+    const l=(S.load("p5l"+i,"")||"").toUpperCase().trim();
+    if(/^[A-Z]$/.test(l))out.push(l);
+  }
+  return out;
+}
+function p7init(){
+  const ls=p7letters();
+  if(!ls.length){$("p7rows").innerHTML='<div class="hint">실습 5 탭을 먼저 완료하면 여기에 글자가 나타납니다.</div>';return;}
+  $("p7rows").innerHTML=ls.map((l,i)=>{
+    const code=l.charCodeAt(0);
+    return '<div class="row"><span class="lbl">'+l+' = <span class="bin">'+P8(code)+'</span> → 16진수 두 글자</span>'+
+      '<input id="p7h'+i+'" class="bin" maxlength="2" style="width:80px;text-transform:uppercase" value="'+(S.load("p7h"+i,"")||"")+'">'+
+      '<span class="mark" id="p7hm'+i+'"></span></div>';
+  }).join("");
+  ls.forEach((l,i)=>{$("p7h"+i).addEventListener("input",()=>{$("p7h"+i).value=$("p7h"+i).value.toUpperCase();S.save("p7h"+i,$("p7h"+i).value);});});
+}
+(function(){
+  ["p7int","p73r","p73g","p73b"].forEach(id=>{$(id).value=S.load(id,"");
+    $(id).addEventListener("input",()=>{if(id==="p7int")$(id).value=$(id).value.toUpperCase();S.save(id,$(id).value);});});
+})();
+document.addEventListener("click",e=>{
+  if(e.target.id==="p7chk"){
+    if(!confirmChk())return;
+    const ls=p7letters();
+    if(!ls.length){$("p7st").className="status bad";$("p7st").textContent="실습 5 탭을 먼저 완료하세요 — 1부의 재료가 그 탭에서 옵니다.";return;}
+    let ok=0,total=ls.length+4;
+    ls.forEach((l,i)=>{const v=nb($("p7h"+i).value).toUpperCase();
+      if(!v){clearMark("p7hm"+i);return;}
+      const g=v===HX(l.charCodeAt(0));mark("p7hm"+i,g);if(g)ok++;});
+    const vi=nb($("p7int").value).toUpperCase();
+    if(vi){mark("p7mi",vi==="64");ok+=(vi==="64"?1:0);}else clearMark("p7mi");
+    [["p73r","p7m3r",75],["p73g","p7m3g",150],["p73b","p7m3b",255]].forEach(([id,mid,a])=>{
+      const v=$(id).value;if(v===""){clearMark(mid);return;}
+      const g=+v===a;mark(mid,g);if(g)ok++;});
+    $("p7st").className="status "+(ok===total?"good":"bad");
+    $("p7st").innerHTML=ok===total?"전부 정답 — 10진수 100이 16진수로는 <b>64</b>. 같은 수, 다른 표기입니다.":"✗를 고친 뒤 다시 확인하세요. 힌트 — 칼질은 3칸도 5칸도 아닌 <b>정확히 4칸</b>. 대응표의 왼쪽이 전부 4칸이죠?";
+  }
+  if(e.target.id==="p7done"){
+    const ls=p7letters();
+    if(!ls.length){$("p7st").className="status bad";$("p7st").textContent="실습 5 탭을 먼저 완료하세요.";return;}
+    const hx=ls.map((l,i)=>nb($("p7h"+i).value).toUpperCase());
+    if(hx.some(v=>!/^[0-9A-F]{2}$/.test(v))||!/^[0-9A-F]{2}$/.test(nb($("p7int").value).toUpperCase())||
+       $("p73r").value===""||$("p73g").value===""||$("p73b").value===""){
+      $("p7st").className="status bad";$("p7st").textContent="이니셜 16진수(두 글자씩)와 2·3부를 모두 채워야 합니다.";return;}
+    showDone(7,"16진수 변환",
+      "1부: "+ls.map((l,i)=>l+" = "+P8(l.charCodeAt(0))+" = "+hx[i]).join(" · ")+
+      "\n2부: 100 = 01100100 = "+nb($("p7int").value).toUpperCase()+
+      "\n3부: #4B96FF = ("+$("p73r").value+", "+$("p73g").value+", "+$("p73b").value+")");
+  }
+});
+
+/* ---------- 실습 8 ---------- */
+(function(){
+  ["p8n","p8nb","p8nh","p8code","p8line"].forEach(id=>{$(id).value=S.load(id,"");
+    $(id).addEventListener("input",()=>{if(id==="p8nh"||id==="p8code")$(id).value=$(id).value.toUpperCase();S.save(id,$(id).value);});});
+})();
+function p8colorHex(){
+  const r=S.load("p6r",""),g=S.load("p6g",""),b=S.load("p6b","");
+  if(!rgbOK(r)||!rgbOK(g)||!rgbOK(b))return null;
+  return HX(+r)+HX(+g)+HX(+b);
+}
+function p8status(){
+  const need=[];
+  if(!p7letters().length||!(nb(S.load("p7h0","")||"")))need.push("실습 5·7 이니셜");
+  if(!p8colorHex())need.push("실습 6 내 색");
+  if(need.length){$("p8st").className="status bad";
+    $("p8st").innerHTML="재료가 아직 부족합니다: <b>"+need.join(" · ")+"</b> 탭을 먼저 완료하세요.";}
+  else{$("p8st").className="status good";$("p8st").textContent="재료 준비 완료 — 내 정수와 색 코드, 한 문장을 쓰고 카드를 완성하세요.";}
+}
+document.addEventListener("click",e=>{
+  if(e.target.id==="p8chk"){
+    if(!confirmChk())return;
+    const n=$("p8n").value;
+    if(n===""){$("p8st").className="status bad";$("p8st").textContent="먼저 내 정수를 정하세요 (−128~127).";return;}
+    const t=((+n%256)+256)%256;
+    const vb=nb($("p8nb").value);
+    if(vb){mark("p8m1",vb===P8(t));}else clearMark("p8m1");
+    const vh=nb($("p8nh").value).toUpperCase();
+    if(vh){mark("p8m2",vh===HX(t));}else clearMark("p8m2");
+    const ch=p8colorHex(),vc=nb($("p8code").value).toUpperCase();
+    if(vc&&ch){mark("p8m3",vc===ch);}else clearMark("p8m3");
+    const allOk=vb===P8(t)&&vh===HX(t)&&(!ch||vc===ch);
+    $("p8st").className="status "+(allOk?"good":"bad");
+    $("p8st").innerHTML=allOk?"카드의 계산이 전부 맞습니다 — 완성 화면을 여세요.":"✗를 고친 뒤 다시 확인하세요. 힌트 — 음수라면 <b>되감기</b>(맨 앞 칸 1), 색 코드는 <b>두 글자 = 1바이트</b>씩 세 번.";
+  }
+  if(e.target.dataset&&e.target.dataset.s==="p8")p8status();
+  if(e.target.id==="p8done"){
+    p8status();
+    const ls=p7letters(),ch=p8colorHex();
+    if(!ls.length||!ch){alert("재료(실습 5·6·7)를 먼저 완료하세요.");return;}
+    const n=$("p8n").value,vb=nb($("p8nb").value),vh=nb($("p8nh").value).toUpperCase(),vc=nb($("p8code").value).toUpperCase();
+    if(n===""||!isBin8(vb)||!/^[0-9A-F]{2}$/.test(vh)||!/^[0-9A-F]{6}$/.test(vc)){
+      $("p8st").className="status bad";$("p8st").textContent="내 정수·8칸·16진수·색 코드(#여섯 글자)를 모두 채워야 합니다.";return;}
+    const hx=ls.map((l,i)=>nb(S.load("p7h"+i,"")||"").toUpperCase());
+    const cnm=(S.load("p6nm","")||"").trim();
+    const body=($("p8line").value.trim()?("\u300c컴퓨터 속의 모든 것은 "+$("p8line").value.trim()+"\u300d\n\n"):"")+
+      "1) 내 이니셜\n"+ls.map((l,i)=>"  "+l+" = "+l.charCodeAt(0)+" = "+P8(l.charCodeAt(0))+" = "+(hx[i]||HX(l.charCodeAt(0)))).join("\n")+
+      "\n\n2) 내가 좋아하는 색"+(cnm?" 「"+cnm+"」":"")+"\n  ("+S.load("p6r","")+", "+S.load("p6g","")+", "+S.load("p6b","")+") = #"+vc+
+      "\n\n3) 내 정수\n  "+n+" = "+vb+" = "+vh;
+    showDone(8,"나의 데이터 카드",body);
+  }
+});
+
+/* ---------- 시작 ---------- */
+p7init();
+p8status();
+paintNav();paint();
+</script>
+</body>
+</html>

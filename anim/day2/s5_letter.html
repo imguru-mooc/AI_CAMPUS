@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>비밀 편지 해독 · 컴퓨터 구조 Day 2</title>
+<style>
+:root{--navy:#1E2761;--navy2:#2A3578;--navy3:#36429A;--ice:#CADCFC;--icebg:#EDF3FC;--white:#FFFFFF;--data:#FFC24B;--ok:#7BE0AD;--warn:#FF8B8B}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{background:var(--navy);color:var(--ice);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;display:flex;flex-direction:column;min-height:100vh}
+header{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--navy3);flex-wrap:wrap}
+header a{color:var(--ice);opacity:.7;text-decoration:none;font-size:13px}
+header a:hover{opacity:1}
+header h1{font-size:17px;color:var(--white);letter-spacing:.02em}
+.tag{font-size:12px;background:var(--navy3);border-radius:999px;padding:4px 12px}
+.tag.star{background:var(--data);color:var(--navy);font-weight:700}
+main{flex:1;width:min(980px,94vw);margin:0 auto;padding:24px 0 44px}
+.panel{background:var(--navy2);border:1px solid var(--navy3);border-radius:16px;padding:22px;margin-bottom:18px}
+.hint{font-size:13.5px;opacity:.8;line-height:1.7}
+.btn{background:var(--ice);color:var(--navy);border:0;border-radius:999px;padding:10px 20px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}
+.btn.ghost{background:transparent;color:var(--ice);border:1px solid var(--navy3)}
+.btn.on{background:var(--data);color:var(--navy)}
+.btn:active{transform:translateY(1px)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--data);outline-offset:2px}
+.bits{display:flex;gap:8px;flex-wrap:wrap}
+.bit{width:46px;height:58px;border:2px solid var(--navy3);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:var(--ice);background:var(--navy);transition:background .15s,border-color .15s,color .15s}
+.bit.click{cursor:pointer}
+.bit.on{background:var(--data);color:var(--navy);border-color:var(--data)}
+.bit.sign{border-color:var(--warn)}
+.pv{width:46px;text-align:center;font-size:12px;opacity:.75}
+.big{font-size:34px;font-weight:800;color:var(--white)}
+.amber{color:var(--data)}
+.warn{color:var(--warn)}
+.ok{color:var(--ok)}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.hidden{display:none !important}
+input[type=number],input[type=text],select{background:var(--navy);border:1px solid var(--navy3);color:var(--white);border-radius:10px;padding:10px 12px;font-size:15px;font-family:inherit;width:120px}
+input[type=text]{width:170px}
+input[type=range]{accent-color:var(--data);width:220px}
+.flash{animation:fl .55s}
+@keyframes fl{0%{background:var(--data);color:var(--navy);border-color:var(--data)}100%{}}
+.blink{animation:bl 1s infinite alternate}
+@keyframes bl{from{background:var(--navy)}to{background:var(--data);color:var(--navy)}}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.01s !important;transition-duration:.01s !important}}
+.line{perspective:700px;margin-bottom:10px;cursor:pointer}
+.inner{position:relative;height:62px;transition:transform .5s;transform-style:preserve-3d}
+.line.fl .inner{transform:rotateX(180deg)}
+.face{position:absolute;inset:0;border:2px solid var(--navy3);border-radius:12px;display:flex;align-items:center;justify-content:center;backface-visibility:hidden;font-weight:800}
+.front{font-size:20px;letter-spacing:4px;color:var(--data)}
+.back{transform:rotateX(180deg);background:var(--ice);color:var(--navy);font-size:30px}
+</style>
+</head>
+<body>
+<header><a href="index.html">← 목록</a><h1>비밀 편지 해독</h1><span class="tag ">S5 보조 · 심화(역방향)</span></header>
+<main>
+<div class="panel hint">2진수로 적힌 편지가 도착했습니다. 한 줄씩 눌러 <b>ASCII 표로 해독</b>하세요. 컨베이어의 반대 방향 — 2진수에서 글자로 돌아오는 연습입니다.</div>
+<div class="panel">
+  <div class="row" style="margin-bottom:16px"><button class="btn ghost" id="new">새 편지 받기</button><span class="hint">줄을 누르면 해독됩니다</span></div>
+  <div id="mail" style="max-width:420px"></div>
+  <p class="hint" id="msg" style="margin-top:10px"></p>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const pad8=n=>((n%256)+256)%256===0&&n!==0?"00000000":(((n%256)+256)%256).toString(2).padStart(8,"0");
+const P8=n=>(((n%256)+256)%256).toString(2).padStart(8,"0");
+const HX=n=>(((n%256)+256)%256).toString(16).toUpperCase().padStart(2,"0");
+const NUM=n=>n.toLocaleString("ko-KR");
+const WORDS=["HI","CPU","BIT","RAM","BYTE","CODE"];
+let word="",opened=0;
+function build(){
+  word=WORDS[Math.floor(Math.random()*WORDS.length)];opened=0;$("msg").textContent="";
+  const m=$("mail");m.innerHTML="";
+  [...word].forEach(ch=>{
+    const line=document.createElement("div");line.className="line";line.tabIndex=0;
+    line.innerHTML="<div class='inner'><div class='face front'>"+P8(ch.charCodeAt(0))+"</div><div class='face back'>"+ch+" <span style='font-size:14px;margin-left:10px'>= "+ch.charCodeAt(0)+"</span></div></div>";
+    const go=()=>{if(line.classList.contains("fl"))return;line.classList.add("fl");opened++;
+      if(opened===word.length)$("msg").innerHTML="해독 완료: <b class='ok' style='font-size:20px'>"+word+"</b>";};
+    line.onclick=go;line.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go();}};
+    m.appendChild(line);
+  });
+}
+$("new").onclick=build;build();
+</script>
+</body>
+</html>

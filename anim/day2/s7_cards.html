@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>열여섯 이름표 · 컴퓨터 구조 Day 2</title>
+<style>
+:root{--navy:#1E2761;--navy2:#2A3578;--navy3:#36429A;--ice:#CADCFC;--icebg:#EDF3FC;--white:#FFFFFF;--data:#FFC24B;--ok:#7BE0AD;--warn:#FF8B8B}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{background:var(--navy);color:var(--ice);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;display:flex;flex-direction:column;min-height:100vh}
+header{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--navy3);flex-wrap:wrap}
+header a{color:var(--ice);opacity:.7;text-decoration:none;font-size:13px}
+header a:hover{opacity:1}
+header h1{font-size:17px;color:var(--white);letter-spacing:.02em}
+.tag{font-size:12px;background:var(--navy3);border-radius:999px;padding:4px 12px}
+.tag.star{background:var(--data);color:var(--navy);font-weight:700}
+main{flex:1;width:min(980px,94vw);margin:0 auto;padding:24px 0 44px}
+.panel{background:var(--navy2);border:1px solid var(--navy3);border-radius:16px;padding:22px;margin-bottom:18px}
+.hint{font-size:13.5px;opacity:.8;line-height:1.7}
+.btn{background:var(--ice);color:var(--navy);border:0;border-radius:999px;padding:10px 20px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}
+.btn.ghost{background:transparent;color:var(--ice);border:1px solid var(--navy3)}
+.btn.on{background:var(--data);color:var(--navy)}
+.btn:active{transform:translateY(1px)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--data);outline-offset:2px}
+.bits{display:flex;gap:8px;flex-wrap:wrap}
+.bit{width:46px;height:58px;border:2px solid var(--navy3);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:var(--ice);background:var(--navy);transition:background .15s,border-color .15s,color .15s}
+.bit.click{cursor:pointer}
+.bit.on{background:var(--data);color:var(--navy);border-color:var(--data)}
+.bit.sign{border-color:var(--warn)}
+.pv{width:46px;text-align:center;font-size:12px;opacity:.75}
+.big{font-size:34px;font-weight:800;color:var(--white)}
+.amber{color:var(--data)}
+.warn{color:var(--warn)}
+.ok{color:var(--ok)}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.hidden{display:none !important}
+input[type=number],input[type=text],select{background:var(--navy);border:1px solid var(--navy3);color:var(--white);border-radius:10px;padding:10px 12px;font-size:15px;font-family:inherit;width:120px}
+input[type=text]{width:170px}
+input[type=range]{accent-color:var(--data);width:220px}
+.flash{animation:fl .55s}
+@keyframes fl{0%{background:var(--data);color:var(--navy);border-color:var(--data)}100%{}}
+.blink{animation:bl 1s infinite alternate}
+@keyframes bl{from{background:var(--navy)}to{background:var(--data);color:var(--navy)}}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.01s !important;transition-duration:.01s !important}}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;max-width:560px}
+.fc{perspective:600px;cursor:pointer}
+.fin{position:relative;height:86px;transition:transform .45s;transform-style:preserve-3d}
+.fc.fl .fin{transform:rotateY(180deg)}
+.ff{position:absolute;inset:0;border-radius:12px;display:flex;align-items:center;justify-content:center;backface-visibility:hidden;font-weight:800;border:2px solid var(--navy3)}
+.f1{font-size:18px;letter-spacing:2px;color:var(--data)}
+.f2{transform:rotateY(180deg);background:var(--ice);color:var(--navy);font-size:34px}
+</style>
+</head>
+<body>
+<header><a href="index.html">← 목록</a><h1>열여섯 이름표</h1><span class="tag ">S7 보조 · 눈에 익히기</span></header>
+<main>
+<div class="panel hint">2진수 네 칸의 조합은 딱 <b>열여섯 가지</b> — 각각 16진수 이름표(0~9, A~F) 하나씩을 가집니다. 카드를 눌러 뒤집으며 눈에 익히세요.</div>
+<div class="panel">
+  <div class="row" style="margin-bottom:16px"><button class="btn ghost" id="all">모두 뒤집기</button><button class="btn ghost" id="none">모두 되돌리기</button><button class="btn ghost" id="mix">순서 섞기 (퀴즈)</button></div>
+  <div class="grid" id="g"></div>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const pad8=n=>((n%256)+256)%256===0&&n!==0?"00000000":(((n%256)+256)%256).toString(2).padStart(8,"0");
+const P8=n=>(((n%256)+256)%256).toString(2).padStart(8,"0");
+const HX=n=>(((n%256)+256)%256).toString(16).toUpperCase().padStart(2,"0");
+const NUM=n=>n.toLocaleString("ko-KR");
+let order=[...Array(16).keys()];
+function build(){
+  const g=$("g");g.innerHTML="";
+  order.forEach(n=>{
+    const c=document.createElement("div");c.className="fc";c.tabIndex=0;
+    c.innerHTML="<div class='fin'><div class='ff f1'>"+n.toString(2).padStart(4,"0")+"</div><div class='ff f2'>"+n.toString(16).toUpperCase()+"</div></div>";
+    const go=()=>c.classList.toggle("fl");
+    c.onclick=go;c.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go();}};
+    g.appendChild(c);
+  });
+}
+$("all").onclick=()=>document.querySelectorAll(".fc").forEach(c=>c.classList.add("fl"));
+$("none").onclick=()=>document.querySelectorAll(".fc").forEach(c=>c.classList.remove("fl"));
+$("mix").onclick=()=>{order.sort(()=>Math.random()-.5);build();};
+build();
+</script>
+</body>
+</html>

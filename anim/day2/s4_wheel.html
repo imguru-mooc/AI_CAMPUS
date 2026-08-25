@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>수 바퀴 · 컴퓨터 구조 Day 2</title>
+<style>
+:root{--navy:#1E2761;--navy2:#2A3578;--navy3:#36429A;--ice:#CADCFC;--icebg:#EDF3FC;--white:#FFFFFF;--data:#FFC24B;--ok:#7BE0AD;--warn:#FF8B8B}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{background:var(--navy);color:var(--ice);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;display:flex;flex-direction:column;min-height:100vh}
+header{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--navy3);flex-wrap:wrap}
+header a{color:var(--ice);opacity:.7;text-decoration:none;font-size:13px}
+header a:hover{opacity:1}
+header h1{font-size:17px;color:var(--white);letter-spacing:.02em}
+.tag{font-size:12px;background:var(--navy3);border-radius:999px;padding:4px 12px}
+.tag.star{background:var(--data);color:var(--navy);font-weight:700}
+main{flex:1;width:min(980px,94vw);margin:0 auto;padding:24px 0 44px}
+.panel{background:var(--navy2);border:1px solid var(--navy3);border-radius:16px;padding:22px;margin-bottom:18px}
+.hint{font-size:13.5px;opacity:.8;line-height:1.7}
+.btn{background:var(--ice);color:var(--navy);border:0;border-radius:999px;padding:10px 20px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}
+.btn.ghost{background:transparent;color:var(--ice);border:1px solid var(--navy3)}
+.btn.on{background:var(--data);color:var(--navy)}
+.btn:active{transform:translateY(1px)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--data);outline-offset:2px}
+.bits{display:flex;gap:8px;flex-wrap:wrap}
+.bit{width:46px;height:58px;border:2px solid var(--navy3);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:var(--ice);background:var(--navy);transition:background .15s,border-color .15s,color .15s}
+.bit.click{cursor:pointer}
+.bit.on{background:var(--data);color:var(--navy);border-color:var(--data)}
+.bit.sign{border-color:var(--warn)}
+.pv{width:46px;text-align:center;font-size:12px;opacity:.75}
+.big{font-size:34px;font-weight:800;color:var(--white)}
+.amber{color:var(--data)}
+.warn{color:var(--warn)}
+.ok{color:var(--ok)}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.hidden{display:none !important}
+input[type=number],input[type=text],select{background:var(--navy);border:1px solid var(--navy3);color:var(--white);border-radius:10px;padding:10px 12px;font-size:15px;font-family:inherit;width:120px}
+input[type=text]{width:170px}
+input[type=range]{accent-color:var(--data);width:220px}
+.flash{animation:fl .55s}
+@keyframes fl{0%{background:var(--data);color:var(--navy);border-color:var(--data)}100%{}}
+.blink{animation:bl 1s infinite alternate}
+@keyframes bl{from{background:var(--navy)}to{background:var(--data);color:var(--navy)}}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.01s !important;transition-duration:.01s !important}}
+svg{display:block;margin:0 auto}
+.read{text-align:center;font-size:15px;line-height:2;margin-top:10px}
+</style>
+</head>
+<body>
+<header><a href="index.html">← 목록</a><h1>수 바퀴</h1><span class="tag ">S4 보조 · 2의 보수 비유</span></header>
+<main>
+<div class="panel hint">0~255가 시계처럼 <b>원</b>으로 이어져 있습니다. 부호 모드를 켜면 원판 절반(128~255)의 <b>이름표만</b> -128~-1로 바뀝니다 — 칸은 그대로, <b>읽는 약속</b>만 바뀌는 것. 그것이 2의 보수입니다.</div>
+<div class="panel">
+  <svg id="sv" width="380" height="380" viewBox="0 0 380 380" role="img" aria-label="0부터 255까지의 수 바퀴"></svg>
+  <div class="row" style="justify-content:center;margin-top:8px">
+    <button class="btn" id="m16">−16</button><button class="btn" id="m1">−1</button>
+    <button class="btn" id="p1">+1</button><button class="btn" id="p16">+16</button>
+    <button class="btn ghost" id="mode">부호 모드 켜기</button>
+  </div>
+  <div class="read">칸: <b class="amber" id="bits"></b> · 부호 없이: <b class="amber" id="uv"></b> · 부호 있게: <b id="svv" class="hidden"></b></div>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const pad8=n=>((n%256)+256)%256===0&&n!==0?"00000000":(((n%256)+256)%256).toString(2).padStart(8,"0");
+const P8=n=>(((n%256)+256)%256).toString(2).padStart(8,"0");
+const HX=n=>(((n%256)+256)%256).toString(16).toUpperCase().padStart(2,"0");
+const NUM=n=>n.toLocaleString("ko-KR");
+const NS="http://www.w3.org/2000/svg",svg=$("sv"),CX=190,CY=190,R=150;
+let v=0,signed=false;
+function el(t,at){const e=document.createElementNS(NS,t);for(const k in at)e.setAttribute(k,at[k]);return e;}
+svg.appendChild(el("circle",{cx:CX,cy:CY,r:R,fill:"none",stroke:"#36429A","stroke-width":2}));
+const labels=[];
+for(let i=0;i<256;i+=16){
+  const a=i/256*2*Math.PI-Math.PI/2;
+  const x1=CX+Math.cos(a)*(R-8),y1=CY+Math.sin(a)*(R-8),x2=CX+Math.cos(a)*R,y2=CY+Math.sin(a)*R;
+  svg.appendChild(el("line",{x1:x1,y1:y1,x2:x2,y2:y2,stroke:"#CADCFC","stroke-width":2}));
+  const tx=CX+Math.cos(a)*(R+22),ty=CY+Math.sin(a)*(R+22)+5;
+  const t=el("text",{x:tx,y:ty,"text-anchor":"middle","font-size":13,"font-weight":700,fill:"#CADCFC"});
+  t.textContent=i;t.dataset.v=i;labels.push(t);svg.appendChild(t);
+}
+const needle=el("line",{x1:CX,y1:CY,x2:CX,y2:CY-R+16,stroke:"#FFC24B","stroke-width":5,"stroke-linecap":"round"});
+needle.style.transition="transform .35s";needle.style.transformOrigin="190px 190px";
+svg.appendChild(needle);
+svg.appendChild(el("circle",{cx:CX,cy:CY,r:7,fill:"#FFC24B"}));
+function render(){
+  needle.style.transform="rotate("+(v/256*360)+"deg)";
+  labels.forEach(t=>{const n=+t.dataset.v;
+    if(signed&&n>=128){t.textContent=n-256;t.setAttribute("fill","#FF8B8B");}
+    else{t.textContent=n;t.setAttribute("fill","#CADCFC");}});
+  $("bits").textContent=P8(v);$("uv").textContent=v;
+  const sv2=v<128?v:v-256;$("svv").textContent=sv2;$("svv").className=sv2<0?"warn":"ok";
+}
+function add(d){v=((v+d)%256+256)%256;render();}
+$("p1").onclick=()=>add(1);$("m1").onclick=()=>add(-1);$("p16").onclick=()=>add(16);$("m16").onclick=()=>add(-16);
+$("mode").onclick=()=>{signed=!signed;$("mode").textContent=signed?"부호 모드 끄기":"부호 모드 켜기";$("mode").classList.toggle("on",signed);$("svv").classList.toggle("hidden",!signed);render();};
+render();
+</script>
+</body>
+</html>

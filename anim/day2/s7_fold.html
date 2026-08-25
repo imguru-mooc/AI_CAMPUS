@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4칸 묶기 · 컴퓨터 구조 Day 2</title>
+<style>
+:root{--navy:#1E2761;--navy2:#2A3578;--navy3:#36429A;--ice:#CADCFC;--icebg:#EDF3FC;--white:#FFFFFF;--data:#FFC24B;--ok:#7BE0AD;--warn:#FF8B8B}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{background:var(--navy);color:var(--ice);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;display:flex;flex-direction:column;min-height:100vh}
+header{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--navy3);flex-wrap:wrap}
+header a{color:var(--ice);opacity:.7;text-decoration:none;font-size:13px}
+header a:hover{opacity:1}
+header h1{font-size:17px;color:var(--white);letter-spacing:.02em}
+.tag{font-size:12px;background:var(--navy3);border-radius:999px;padding:4px 12px}
+.tag.star{background:var(--data);color:var(--navy);font-weight:700}
+main{flex:1;width:min(980px,94vw);margin:0 auto;padding:24px 0 44px}
+.panel{background:var(--navy2);border:1px solid var(--navy3);border-radius:16px;padding:22px;margin-bottom:18px}
+.hint{font-size:13.5px;opacity:.8;line-height:1.7}
+.btn{background:var(--ice);color:var(--navy);border:0;border-radius:999px;padding:10px 20px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}
+.btn.ghost{background:transparent;color:var(--ice);border:1px solid var(--navy3)}
+.btn.on{background:var(--data);color:var(--navy)}
+.btn:active{transform:translateY(1px)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--data);outline-offset:2px}
+.bits{display:flex;gap:8px;flex-wrap:wrap}
+.bit{width:46px;height:58px;border:2px solid var(--navy3);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:var(--ice);background:var(--navy);transition:background .15s,border-color .15s,color .15s}
+.bit.click{cursor:pointer}
+.bit.on{background:var(--data);color:var(--navy);border-color:var(--data)}
+.bit.sign{border-color:var(--warn)}
+.pv{width:46px;text-align:center;font-size:12px;opacity:.75}
+.big{font-size:34px;font-weight:800;color:var(--white)}
+.amber{color:var(--data)}
+.warn{color:var(--warn)}
+.ok{color:var(--ok)}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.hidden{display:none !important}
+input[type=number],input[type=text],select{background:var(--navy);border:1px solid var(--navy3);color:var(--white);border-radius:10px;padding:10px 12px;font-size:15px;font-family:inherit;width:120px}
+input[type=text]{width:170px}
+input[type=range]{accent-color:var(--data);width:220px}
+.flash{animation:fl .55s}
+@keyframes fl{0%{background:var(--data);color:var(--navy);border-color:var(--data)}100%{}}
+.blink{animation:bl 1s infinite alternate}
+@keyframes bl{from{background:var(--navy)}to{background:var(--data);color:var(--navy)}}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.01s !important;transition-duration:.01s !important}}
+.gapL{margin-right:34px !important;transition:margin .5s}
+.hexcard{width:100px;height:120px;background:var(--ice);color:var(--navy);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800}
+.hexcard .h{font-size:46px}
+.hexcard .b{font-size:13px;opacity:.75}
+.stage{min-height:150px;display:flex;gap:20px;align-items:center;justify-content:center}
+.codebar{font-size:30px;font-weight:800;letter-spacing:2px;text-align:center;min-height:44px}
+.byteRow{display:flex;align-items:center;gap:14px;margin-bottom:10px}
+.byteRow .who{width:56px;font-weight:800}
+.mini .bit{width:28px;height:36px;font-size:14px;border-radius:6px}
+.sw2{width:120px;height:56px;border-radius:14px;border:3px solid var(--navy3);margin:14px auto 0;transition:background .3s}
+</style>
+</head>
+<body>
+<header><a href="index.html">← 목록</a><h1>4칸 묶기</h1><span class="tag star">S7 주 도구</span></header>
+<main>
+<div class="panel hint">긴 2진수는 <b>4칸씩 끊어</b> 16진수 한 글자로 읽습니다. 묶기 버튼을 한 단계씩 누르며 접히는 과정을 본 뒤, <b>워크시트는 손으로</b> 작성하세요.</div>
+<div class="panel row">
+  <button class="btn on" id="tabB">바이트 하나 접기</button>
+  <button class="btn ghost" id="tabC">색 코드 접기 (#RRGGBB)</button>
+</div>
+<div class="panel" id="pB">
+  <p class="hint" style="margin-bottom:14px">칸을 눌러 원하는 2진수를 만든 뒤 접어 보세요.</p>
+  <div class="stage" id="stB"><div class="bits" id="bitsB"></div></div>
+  <div class="codebar amber" id="noteB"></div>
+  <div class="row" style="justify-content:center"><button class="btn" id="foldB">묶기 한 단계 ▶</button><button class="btn ghost" id="resetB">처음부터</button></div>
+</div>
+<div class="panel hidden" id="pC">
+  <div id="rows"></div>
+  <div class="codebar amber" id="code">#</div>
+  <div class="sw2" id="sw2"></div>
+  <div class="row" style="justify-content:center;margin-top:14px"><button class="btn" id="foldC">한 바이트 접기 ▶</button><button class="btn ghost" id="resetC">처음부터</button></div>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const pad8=n=>((n%256)+256)%256===0&&n!==0?"00000000":(((n%256)+256)%256).toString(2).padStart(8,"0");
+const P8=n=>(((n%256)+256)%256).toString(2).padStart(8,"0");
+const HX=n=>(((n%256)+256)%256).toString(16).toUpperCase().padStart(2,"0");
+const NUM=n=>n.toLocaleString("ko-KR");
+// ---- 탭
+$("tabB").onclick=()=>{$("pB").classList.remove("hidden");$("pC").classList.add("hidden");$("tabB").className="btn on";$("tabC").className="btn ghost";};
+$("tabC").onclick=()=>{$("pC").classList.remove("hidden");$("pB").classList.add("hidden");$("tabC").className="btn on";$("tabB").className="btn ghost";};
+// ---- 바이트 하나
+let bb=[0,1,0,0,1,0,1,1],stage=0;
+function renderB(){
+  const el=$("bitsB");el.innerHTML="";
+  bb.forEach((b,i)=>{const d=document.createElement("div");d.className="bit"+(stage===0?" click":"")+(b?" on":"")+(stage>=1&&i===3?" gapL":"");d.textContent=b;
+    if(stage===0){d.onclick=()=>{bb[i]^=1;renderB();};}
+    el.appendChild(d);});
+  if(stage===0)$("noteB").textContent="";
+}
+$("foldB").onclick=()=>{
+  if(stage===0){stage=1;renderB();$("noteB").textContent="4칸 + 4칸으로 가릅니다";}
+  else if(stage===1){
+    stage=2;
+    const hi=parseInt(bb.slice(0,4).join(""),2),lo=parseInt(bb.slice(4).join(""),2);
+    $("stB").innerHTML="<div class='hexcard flash'><div class='h'>"+hi.toString(16).toUpperCase()+"</div><div class='b'>"+bb.slice(0,4).join("")+"</div></div>"+
+      "<div class='hexcard flash'><div class='h'>"+lo.toString(16).toUpperCase()+"</div><div class='b'>"+bb.slice(4).join("")+"</div></div>";
+    $("noteB").textContent=bb.join("")+"  =  "+hi.toString(16).toUpperCase()+lo.toString(16).toUpperCase()+"  (여덟 칸이 두 글자로)";
+  }
+};
+$("resetB").onclick=()=>{stage=0;$("stB").innerHTML="<div class='bits' id='bitsB'></div>";renderB();};
+renderB();
+// ---- 색 코드
+const BYTES=[["빨강",255],["초록",107],["파랑",0]];let ci=0;
+function renderC(){
+  const el=$("rows");el.innerHTML="";
+  BYTES.forEach(([nm,v],i)=>{
+    const d=document.createElement("div");d.className="byteRow";
+    let inner="<span class='who'>"+nm+"</span>";
+    if(i<ci){inner+="<span class='big amber' style='font-size:24px'>"+HX(v)+"</span><span class='hint'>← 접힘 ("+v+")</span>";}
+    else{inner+="<div class='bits mini'>"+[...P8(v)].map(ch=>"<div class='bit"+(ch==="1"?" on":"")+"'>"+ch+"</div>").join("")+"</div><span class='hint'>= "+v+"</span>";}
+    el.appendChild(d);d.insertAdjacentHTML("beforeend","");d.innerHTML=inner;
+  });
+  let code="#";for(let k=0;k<ci;k++)code+=HX(BYTES[k][1]);
+  $("code").textContent=code;
+  if(ci===3){$("sw2").style.background="rgb(255,107,0)";$("code").textContent="#FF6B00 — 웹에서 본 색상 코드의 정체";}
+  else $("sw2").style.background="transparent";
+}
+$("foldC").onclick=()=>{if(ci<3){ci++;renderC();}};
+$("resetC").onclick=()=>{ci=0;renderC();};
+renderC();
+</script>
+</body>
+</html>

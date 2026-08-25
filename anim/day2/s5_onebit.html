@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>한 비트 차이 · 컴퓨터 구조 Day 2</title>
+<style>
+:root{--navy:#1E2761;--navy2:#2A3578;--navy3:#36429A;--ice:#CADCFC;--icebg:#EDF3FC;--white:#FFFFFF;--data:#FFC24B;--ok:#7BE0AD;--warn:#FF8B8B}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{background:var(--navy);color:var(--ice);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;display:flex;flex-direction:column;min-height:100vh}
+header{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--navy3);flex-wrap:wrap}
+header a{color:var(--ice);opacity:.7;text-decoration:none;font-size:13px}
+header a:hover{opacity:1}
+header h1{font-size:17px;color:var(--white);letter-spacing:.02em}
+.tag{font-size:12px;background:var(--navy3);border-radius:999px;padding:4px 12px}
+.tag.star{background:var(--data);color:var(--navy);font-weight:700}
+main{flex:1;width:min(980px,94vw);margin:0 auto;padding:24px 0 44px}
+.panel{background:var(--navy2);border:1px solid var(--navy3);border-radius:16px;padding:22px;margin-bottom:18px}
+.hint{font-size:13.5px;opacity:.8;line-height:1.7}
+.btn{background:var(--ice);color:var(--navy);border:0;border-radius:999px;padding:10px 20px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}
+.btn.ghost{background:transparent;color:var(--ice);border:1px solid var(--navy3)}
+.btn.on{background:var(--data);color:var(--navy)}
+.btn:active{transform:translateY(1px)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--data);outline-offset:2px}
+.bits{display:flex;gap:8px;flex-wrap:wrap}
+.bit{width:46px;height:58px;border:2px solid var(--navy3);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:var(--ice);background:var(--navy);transition:background .15s,border-color .15s,color .15s}
+.bit.click{cursor:pointer}
+.bit.on{background:var(--data);color:var(--navy);border-color:var(--data)}
+.bit.sign{border-color:var(--warn)}
+.pv{width:46px;text-align:center;font-size:12px;opacity:.75}
+.big{font-size:34px;font-weight:800;color:var(--white)}
+.amber{color:var(--data)}
+.warn{color:var(--warn)}
+.ok{color:var(--ok)}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.hidden{display:none !important}
+input[type=number],input[type=text],select{background:var(--navy);border:1px solid var(--navy3);color:var(--white);border-radius:10px;padding:10px 12px;font-size:15px;font-family:inherit;width:120px}
+input[type=text]{width:170px}
+input[type=range]{accent-color:var(--data);width:220px}
+.flash{animation:fl .55s}
+@keyframes fl{0%{background:var(--data);color:var(--navy);border-color:var(--data)}100%{}}
+.blink{animation:bl 1s infinite alternate}
+@keyframes bl{from{background:var(--navy)}to{background:var(--data);color:var(--navy)}}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.01s !important;transition-duration:.01s !important}}
+.lab2{width:60px;font-size:22px;font-weight:800;color:var(--white);text-align:center}
+.coderow{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+.cd{width:70px;font-size:15px;opacity:.85}
+</style>
+</head>
+<body>
+<header><a href="index.html">← 목록</a><h1>한 비트 차이</h1><span class="tag ">S5 보조 · 대소문자</span></header>
+<main>
+<div class="panel hint">같은 글자의 대문자와 소문자 — 8칸 중 <b>다른 칸은 딱 하나</b>입니다. 어느 자리인지 찾아보세요.</div>
+<div class="panel">
+  <div class="row" style="margin-bottom:20px"><label>글자 고르기</label><select id="pick"></select></div>
+  <div class="bits" style="margin-left:148px" id="pv"></div>
+  <div style="height:8px"></div>
+  <div class="coderow"><span class="lab2" id="u"></span><span class="cd" id="uc"></span><div class="bits" id="ub"></div></div>
+  <div class="coderow"><span class="lab2" id="l"></span><span class="cd" id="lc"></span><div class="bits" id="lb"></div></div>
+  <p class="hint" id="msg" style="margin-top:12px"></p>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const pad8=n=>((n%256)+256)%256===0&&n!==0?"00000000":(((n%256)+256)%256).toString(2).padStart(8,"0");
+const P8=n=>(((n%256)+256)%256).toString(2).padStart(8,"0");
+const HX=n=>(((n%256)+256)%256).toString(16).toUpperCase().padStart(2,"0");
+const NUM=n=>n.toLocaleString("ko-KR");
+const sel=$("pick");
+"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach(ch=>{const o=document.createElement("option");o.textContent=ch+" / "+ch.toLowerCase();o.value=ch;sel.appendChild(o);});
+const PV=[128,64,32,16,8,4,2,1];PV.forEach(v=>{const d=document.createElement("div");d.className="pv";d.textContent=v;$("pv").appendChild(d);});
+function row(el,code,diffIdx){
+  el.innerHTML="";const s=P8(code);
+  [...s].forEach((ch,i)=>{const d=document.createElement("div");d.className="bit"+(ch==="1"?" on":"")+(i===diffIdx?" blink":"");d.textContent=ch;el.appendChild(d);});
+}
+function render(){
+  const U=sel.value,L=U.toLowerCase(),uc=U.charCodeAt(0),lc=L.charCodeAt(0);
+  const us=P8(uc),ls=P8(lc);let diff=-1;
+  for(let i=0;i<8;i++)if(us[i]!==ls[i])diff=i;
+  $("u").textContent=U;$("l").textContent=L;$("uc").textContent="= "+uc;$("lc").textContent="= "+lc;
+  row($("ub"),uc,diff);row($("lb"),lc,diff);
+  $("msg").innerHTML="다른 칸은 자릿값 <b class='amber'>32</b> 하나뿐 — 그래서 소문자 번호는 항상 대문자보다 <b class='amber'>32</b> 큽니다.";
+}
+sel.onchange=render;render();
+</script>
+</body>
+</html>

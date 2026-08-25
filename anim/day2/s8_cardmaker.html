@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>데이터 카드 생성기 · 컴퓨터 구조 Day 2</title>
+<style>
+:root{--navy:#1E2761;--navy2:#2A3578;--navy3:#36429A;--ice:#CADCFC;--icebg:#EDF3FC;--white:#FFFFFF;--data:#FFC24B;--ok:#7BE0AD;--warn:#FF8B8B}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{background:var(--navy);color:var(--ice);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;display:flex;flex-direction:column;min-height:100vh}
+header{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--navy3);flex-wrap:wrap}
+header a{color:var(--ice);opacity:.7;text-decoration:none;font-size:13px}
+header a:hover{opacity:1}
+header h1{font-size:17px;color:var(--white);letter-spacing:.02em}
+.tag{font-size:12px;background:var(--navy3);border-radius:999px;padding:4px 12px}
+.tag.star{background:var(--data);color:var(--navy);font-weight:700}
+main{flex:1;width:min(980px,94vw);margin:0 auto;padding:24px 0 44px}
+.panel{background:var(--navy2);border:1px solid var(--navy3);border-radius:16px;padding:22px;margin-bottom:18px}
+.hint{font-size:13.5px;opacity:.8;line-height:1.7}
+.btn{background:var(--ice);color:var(--navy);border:0;border-radius:999px;padding:10px 20px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}
+.btn.ghost{background:transparent;color:var(--ice);border:1px solid var(--navy3)}
+.btn.on{background:var(--data);color:var(--navy)}
+.btn:active{transform:translateY(1px)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--data);outline-offset:2px}
+.bits{display:flex;gap:8px;flex-wrap:wrap}
+.bit{width:46px;height:58px;border:2px solid var(--navy3);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:var(--ice);background:var(--navy);transition:background .15s,border-color .15s,color .15s}
+.bit.click{cursor:pointer}
+.bit.on{background:var(--data);color:var(--navy);border-color:var(--data)}
+.bit.sign{border-color:var(--warn)}
+.pv{width:46px;text-align:center;font-size:12px;opacity:.75}
+.big{font-size:34px;font-weight:800;color:var(--white)}
+.amber{color:var(--data)}
+.warn{color:var(--warn)}
+.ok{color:var(--ok)}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.hidden{display:none !important}
+input[type=number],input[type=text],select{background:var(--navy);border:1px solid var(--navy3);color:var(--white);border-radius:10px;padding:10px 12px;font-size:15px;font-family:inherit;width:120px}
+input[type=text]{width:170px}
+input[type=range]{accent-color:var(--data);width:220px}
+.flash{animation:fl .55s}
+@keyframes fl{0%{background:var(--data);color:var(--navy);border-color:var(--data)}100%{}}
+.blink{animation:bl 1s infinite alternate}
+@keyframes bl{from{background:var(--navy)}to{background:var(--data);color:var(--navy)}}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.01s !important;transition-duration:.01s !important}}
+.dcard{max-width:560px;margin:0 auto;background:var(--icebg);color:var(--navy);border-radius:20px;padding:26px;transform:rotateY(90deg);transition:transform .6s;box-shadow:0 12px 40px rgba(0,0,0,.4)}
+.dcard.show{transform:none}
+.dcard h2{font-size:19px;margin-bottom:14px;border-bottom:2px solid var(--navy);padding-bottom:8px}
+.dcard table{width:100%;border-collapse:collapse;font-size:14px}
+.dcard td{padding:7px 6px;border-bottom:1px solid #b9c9e8;vertical-align:top}
+.dcard td.k{font-weight:800;width:88px}
+.dcard .bin{font-family:Consolas,monospace;letter-spacing:1px}
+.dcard .hx{font-weight:800;color:#b96a00}
+.csw{display:inline-block;width:18px;height:18px;border-radius:5px;vertical-align:-4px;border:1px solid #999}
+</style>
+</head>
+<body>
+<header><a href="index.html">← 목록</a><h1>데이터 카드 생성기</h1><span class="tag star">S8 주 도구 · 검산 전용</span></header>
+<main>
+<div class="panel hint">이니셜·좋아하는 색·정수 하나를 넣으면 <b>2진수/16진수 병기</b> 카드가 만들어집니다. <b>손으로 먼저 작성한</b> 나의 데이터 카드와 비교해 검산하세요.</div>
+<div class="panel">
+  <div class="row">
+    <label>이니셜(영문 2~3자)</label><input type="text" id="ini" value="KJ" maxlength="3" style="width:100px;text-transform:uppercase">
+    <label>좋아하는 색</label><input type="color" id="col" value="#FF6B00" style="width:64px;height:44px;border:none;background:none;cursor:pointer">
+    <label>정수(−128~127)</label><input type="number" id="num" value="-25" min="-128" max="127">
+    <button class="btn" id="go">카드 만들기</button>
+  </div>
+</div>
+<div class="dcard" id="card" aria-live="polite"></div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const pad8=n=>((n%256)+256)%256===0&&n!==0?"00000000":(((n%256)+256)%256).toString(2).padStart(8,"0");
+const P8=n=>(((n%256)+256)%256).toString(2).padStart(8,"0");
+const HX=n=>(((n%256)+256)%256).toString(16).toUpperCase().padStart(2,"0");
+const NUM=n=>n.toLocaleString("ko-KR");
+$("go").onclick=()=>{
+  const ini=($("ini").value||"").toUpperCase().replace(/[^A-Z]/g,"").slice(0,3);
+  let n=parseInt($("num").value||"0",10);n=Math.max(-128,Math.min(127,n));$("num").value=n;
+  const hexc=$("col").value.replace("#","").toUpperCase();
+  if(ini.length<2){alert("이니셜은 영문 2~3자로 넣어 주세요.");return;}
+  const rgb=[parseInt(hexc.slice(0,2),16),parseInt(hexc.slice(2,4),16),parseInt(hexc.slice(4,6),16)];
+  const tw=((n%256)+256)%256; // 2의 보수
+  let rows="";
+  [...ini].forEach(ch=>{const c=ch.charCodeAt(0);
+    rows+="<tr><td class='k'>문자 "+ch+"</td><td>번호 "+c+" · <span class='bin'>"+P8(c)+"</span> · <span class='hx'>"+HX(c)+"</span></td></tr>";});
+  const chn=["빨강","초록","파랑"];
+  rgb.forEach((v,i)=>{rows+="<tr><td class='k'>"+chn[i]+"</td><td>"+v+" · <span class='bin'>"+P8(v)+"</span> · <span class='hx'>"+HX(v)+"</span></td></tr>";});
+  rows+="<tr><td class='k'>색 코드</td><td><span class='csw' style='background:#"+hexc+"'></span> <span class='hx'>#"+hexc+"</span> (세 바이트를 이어 쓴 것)</td></tr>";
+  rows+="<tr><td class='k'>정수 "+n+"</td><td>8칸에 담으면 <span class='bin'>"+P8(tw)+"</span> · <span class='hx'>"+HX(tw)+"</span>"+(n<0?" <span style='opacity:.7'>(2의 보수 — 맨 앞 칸이 1)</span>":"")+"</td></tr>";
+  const c=$("card");c.classList.remove("show");
+  setTimeout(()=>{c.innerHTML="<h2>나의 데이터 카드 · "+ini+"</h2><table>"+rows+"</table>";c.classList.add("show");},250);
+};
+</script>
+</body>
+</html>

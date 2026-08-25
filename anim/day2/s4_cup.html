@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>넘치는 물컵 · 컴퓨터 구조 Day 2</title>
+<style>
+:root{--navy:#1E2761;--navy2:#2A3578;--navy3:#36429A;--ice:#CADCFC;--icebg:#EDF3FC;--white:#FFFFFF;--data:#FFC24B;--ok:#7BE0AD;--warn:#FF8B8B}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{background:var(--navy);color:var(--ice);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;display:flex;flex-direction:column;min-height:100vh}
+header{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--navy3);flex-wrap:wrap}
+header a{color:var(--ice);opacity:.7;text-decoration:none;font-size:13px}
+header a:hover{opacity:1}
+header h1{font-size:17px;color:var(--white);letter-spacing:.02em}
+.tag{font-size:12px;background:var(--navy3);border-radius:999px;padding:4px 12px}
+.tag.star{background:var(--data);color:var(--navy);font-weight:700}
+main{flex:1;width:min(980px,94vw);margin:0 auto;padding:24px 0 44px}
+.panel{background:var(--navy2);border:1px solid var(--navy3);border-radius:16px;padding:22px;margin-bottom:18px}
+.hint{font-size:13.5px;opacity:.8;line-height:1.7}
+.btn{background:var(--ice);color:var(--navy);border:0;border-radius:999px;padding:10px 20px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}
+.btn.ghost{background:transparent;color:var(--ice);border:1px solid var(--navy3)}
+.btn.on{background:var(--data);color:var(--navy)}
+.btn:active{transform:translateY(1px)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--data);outline-offset:2px}
+.bits{display:flex;gap:8px;flex-wrap:wrap}
+.bit{width:46px;height:58px;border:2px solid var(--navy3);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:var(--ice);background:var(--navy);transition:background .15s,border-color .15s,color .15s}
+.bit.click{cursor:pointer}
+.bit.on{background:var(--data);color:var(--navy);border-color:var(--data)}
+.bit.sign{border-color:var(--warn)}
+.pv{width:46px;text-align:center;font-size:12px;opacity:.75}
+.big{font-size:34px;font-weight:800;color:var(--white)}
+.amber{color:var(--data)}
+.warn{color:var(--warn)}
+.ok{color:var(--ok)}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.hidden{display:none !important}
+input[type=number],input[type=text],select{background:var(--navy);border:1px solid var(--navy3);color:var(--white);border-radius:10px;padding:10px 12px;font-size:15px;font-family:inherit;width:120px}
+input[type=text]{width:170px}
+input[type=range]{accent-color:var(--data);width:220px}
+.flash{animation:fl .55s}
+@keyframes fl{0%{background:var(--data);color:var(--navy);border-color:var(--data)}100%{}}
+.blink{animation:bl 1s infinite alternate}
+@keyframes bl{from{background:var(--navy)}to{background:var(--data);color:var(--navy)}}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.01s !important;transition-duration:.01s !important}}
+.cupwrap{display:flex;gap:30px;align-items:flex-end;justify-content:center}
+.cup{width:150px;height:240px;border:3px solid var(--ice);border-top:none;border-radius:0 0 18px 18px;position:relative;overflow:visible;background:var(--navy)}
+.water{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(180deg,#ffd27a,#FFC24B);transition:height .1s;border-radius:0 0 15px 15px}
+.gauge{position:absolute;right:-46px;bottom:0;height:100%;display:flex;flex-direction:column-reverse;justify-content:space-between;font-size:11px;opacity:.8}
+.spill{position:absolute;top:-16px;left:-14px;right:-14px;text-align:center;font-size:26px;opacity:0;transition:opacity .2s}
+.spill.show{opacity:1}
+</style>
+</head>
+<body>
+<header><a href="index.html">← 목록</a><h1>넘치는 물컵</h1><span class="tag ">S4 보조 · 넘침 예고편</span></header>
+<main>
+<div class="panel hint">8칸 눈금 컵에 방울을 떨어뜨립니다. <b>256번째 방울</b>에서 무슨 일이 일어날까요? 주행계를 만지기 전 30초 예고편입니다.</div>
+<div class="panel">
+  <div class="cupwrap">
+    <div class="cup"><div class="water" id="w" style="height:0%"></div><div class="spill" id="sp">💦💦💦</div>
+      <div class="gauge"><span>0</span><span>32</span><span>64</span><span>96</span><span>128</span><span>160</span><span>192</span><span>224</span><span>256</span></div>
+    </div>
+    <div>
+      <div class="big amber" id="cnt">0</div>
+      <div class="hint">방울 수 · 2진수 <b id="bin">00000000</b></div>
+      <div class="row" style="margin-top:16px"><button class="btn" id="drop">한 방울</button><button class="btn ghost" id="auto">자동으로 떨어뜨리기</button></div>
+      <p class="hint" id="msg" style="margin-top:14px;max-width:280px"></p>
+    </div>
+  </div>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const pad8=n=>((n%256)+256)%256===0&&n!==0?"00000000":(((n%256)+256)%256).toString(2).padStart(8,"0");
+const P8=n=>(((n%256)+256)%256).toString(2).padStart(8,"0");
+const HX=n=>(((n%256)+256)%256).toString(16).toUpperCase().padStart(2,"0");
+const NUM=n=>n.toLocaleString("ko-KR");
+let c=0,auto=false;
+setInterval(()=>{if(auto)drip();},70);
+function drip(){
+  c++;
+  if(c===256){
+    $("w").style.height="100%";$("sp").classList.add("show");
+    $("msg").innerHTML="<b class='warn'>왈칵!</b> 256번째 방울 — 8칸으로는 담을 수 없어 컵이 <b>0</b>으로 비워졌습니다. 이것이 <b>넘침(오버플로우)</b>입니다.";
+    auto=false;$("auto").textContent="자동으로 떨어뜨리기";
+    setTimeout(()=>{c=0;$("w").style.height="0%";$("sp").classList.remove("show");update();},900);
+    $("cnt").textContent="256!";$("bin").textContent="1 0000 0000 ?";
+    return;
+  }
+  update();
+}
+function update(){$("w").style.height=(c/256*100)+"%";$("cnt").textContent=c;$("bin").textContent=P8(c);}
+$("drop").onclick=drip;
+$("auto").onclick=()=>{auto=!auto;$("auto").textContent=auto?"멈추기":"자동으로 떨어뜨리기";};
+</script>
+</body>
+</html>

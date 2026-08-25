@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>용량 저울 · 컴퓨터 구조 Day 2</title>
+<style>
+:root{--navy:#1E2761;--navy2:#2A3578;--navy3:#36429A;--ice:#CADCFC;--icebg:#EDF3FC;--white:#FFFFFF;--data:#FFC24B;--ok:#7BE0AD;--warn:#FF8B8B}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{background:var(--navy);color:var(--ice);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;display:flex;flex-direction:column;min-height:100vh}
+header{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--navy3);flex-wrap:wrap}
+header a{color:var(--ice);opacity:.7;text-decoration:none;font-size:13px}
+header a:hover{opacity:1}
+header h1{font-size:17px;color:var(--white);letter-spacing:.02em}
+.tag{font-size:12px;background:var(--navy3);border-radius:999px;padding:4px 12px}
+.tag.star{background:var(--data);color:var(--navy);font-weight:700}
+main{flex:1;width:min(980px,94vw);margin:0 auto;padding:24px 0 44px}
+.panel{background:var(--navy2);border:1px solid var(--navy3);border-radius:16px;padding:22px;margin-bottom:18px}
+.hint{font-size:13.5px;opacity:.8;line-height:1.7}
+.btn{background:var(--ice);color:var(--navy);border:0;border-radius:999px;padding:10px 20px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}
+.btn.ghost{background:transparent;color:var(--ice);border:1px solid var(--navy3)}
+.btn.on{background:var(--data);color:var(--navy)}
+.btn:active{transform:translateY(1px)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--data);outline-offset:2px}
+.bits{display:flex;gap:8px;flex-wrap:wrap}
+.bit{width:46px;height:58px;border:2px solid var(--navy3);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:var(--ice);background:var(--navy);transition:background .15s,border-color .15s,color .15s}
+.bit.click{cursor:pointer}
+.bit.on{background:var(--data);color:var(--navy);border-color:var(--data)}
+.bit.sign{border-color:var(--warn)}
+.pv{width:46px;text-align:center;font-size:12px;opacity:.75}
+.big{font-size:34px;font-weight:800;color:var(--white)}
+.amber{color:var(--data)}
+.warn{color:var(--warn)}
+.ok{color:var(--ok)}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.hidden{display:none !important}
+input[type=number],input[type=text],select{background:var(--navy);border:1px solid var(--navy3);color:var(--white);border-radius:10px;padding:10px 12px;font-size:15px;font-family:inherit;width:120px}
+input[type=text]{width:170px}
+input[type=range]{accent-color:var(--data);width:220px}
+.flash{animation:fl .55s}
+@keyframes fl{0%{background:var(--data);color:var(--navy);border-color:var(--data)}100%{}}
+.blink{animation:bl 1s infinite alternate}
+@keyframes bl{from{background:var(--navy)}to{background:var(--data);color:var(--navy)}}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.01s !important;transition-duration:.01s !important}}
+.ruler{position:relative;height:90px;border-bottom:3px solid var(--navy3);margin:30px 6px 8px}
+.tick{position:absolute;bottom:-3px;width:2px;height:14px;background:var(--navy3)}
+.tick span{position:absolute;top:16px;left:-14px;font-size:13px;width:40px;text-align:center;opacity:.85}
+.pin{position:absolute;bottom:14px;font-size:30px;transition:left .6s;transform:translateX(-50%)}
+.items{display:flex;gap:10px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<header><a href="index.html">← 목록</a><h1>용량 저울</h1><span class="tag ">S3 보조 · 감 잡기</span></header>
+<main>
+<div class="panel hint">일상의 물건들이 용량 눈금 위 어디에 놓이는지 확인하세요. 사다리 표를 쓰기 전에 <b>단위와 물건을 짝지어 두는</b> 준비 운동입니다.</div>
+<div class="panel">
+  <div class="items">
+    <button class="btn ghost" data-b="30720" data-e="📄">문서 1쪽 · 30KB</button>
+    <button class="btn ghost" data-b="4194304" data-e="🖼️">사진 1장 · 4MB</button>
+    <button class="btn ghost" data-b="8388608" data-e="🎵">노래 1곡 · 8MB</button>
+    <button class="btn ghost" data-b="4294967296" data-e="🎬">영화 1편 · 4GB</button>
+  </div>
+  <div class="ruler" id="ruler"><div class="pin" id="pin" style="left:0%">📍</div></div>
+  <p class="hint" id="msg"></p>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const pad8=n=>((n%256)+256)%256===0&&n!==0?"00000000":(((n%256)+256)%256).toString(2).padStart(8,"0");
+const P8=n=>(((n%256)+256)%256).toString(2).padStart(8,"0");
+const HX=n=>(((n%256)+256)%256).toString(16).toUpperCase().padStart(2,"0");
+const NUM=n=>n.toLocaleString("ko-KR");
+const marks=[["B",0],["KB",1],["MB",2],["GB",3],["TB",4]];
+marks.forEach(([nm,k])=>{const t=document.createElement("div");t.className="tick";t.style.left=(k*25)+"%";t.innerHTML="<span>"+nm+"</span>";$("ruler").appendChild(t);});
+document.querySelectorAll("[data-b]").forEach(b=>{
+  b.onclick=()=>{
+    const bytes=+b.dataset.b;
+    const pos=Math.log(bytes)/Math.log(1024)*25;
+    $("pin").style.left=Math.min(100,pos)+"%";$("pin").textContent=b.dataset.e;
+    $("msg").innerHTML=b.textContent+" = 바이트 <b class='amber'>"+NUM(bytes)+"</b>개";
+  };
+});
+</script>
+</body>
+</html>

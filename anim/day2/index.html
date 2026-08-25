@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>컴퓨터 구조 Day 2 · 애니메이션 실험실</title>
+<style>
+:root{--navy:#1E2761;--navy2:#2A3578;--navy3:#36429A;--ice:#CADCFC;--white:#FFFFFF;--data:#FFC24B}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--navy);color:var(--ice);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;min-height:100vh}
+header{padding:34px 22px 10px;text-align:center}
+header h1{color:var(--white);font-size:26px;letter-spacing:.02em}
+header p{font-size:14px;opacity:.8;margin-top:10px;line-height:1.7}
+main{width:min(820px,94vw);margin:16px auto 60px}
+.panel{background:var(--navy2);border:1px solid var(--navy3);border-radius:16px;padding:20px;margin-bottom:16px}
+.panel h2{font-size:16px;color:var(--white);margin-bottom:12px}
+.item{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--navy3);border-radius:12px;margin-bottom:8px;text-decoration:none;color:var(--ice);transition:border-color .15s,background .15s}
+.item:hover{border-color:var(--data);background:rgba(255,194,75,.06)}
+.item .ttl{font-weight:800;font-size:15px;flex:0 0 auto}
+.tag{font-size:11.5px;background:var(--navy3);border-radius:999px;padding:3px 10px}
+.tag.star{background:var(--data);color:var(--navy);font-weight:700}
+.item .go{margin-left:auto;font-size:13px;opacity:.7}
+.rule{font-size:13px;opacity:.85;line-height:1.8;border-top:1px solid var(--navy3);margin-top:8px;padding-top:12px}
+a:focus-visible{outline:3px solid var(--data);outline-offset:2px}
+</style>
+</head>
+<body>
+<header>
+  <h1>컴퓨터 구조 Day 2 · 애니메이션 실험실</h1>
+  <p>모든 것은 0과 1 — 데이터는 언제나 <b style="color:var(--data)">호박색</b>입니다.<br>
+  순서는 항상 <b>손 먼저, 화면은 검산</b>. 계산 세션(S2·S4·S7)은 워크시트를 푼 뒤에 여세요.</p>
+</header>
+<main>
+<div class='panel'><h2>S1 브리지 — 그 부품 안에는 뭐가 담겨 있나</h2><a class='item' href='s1_switch8.html'><span class='ttl'>스위치 8개</span><span class='tag star'>★ 주 도구</span><span class='go'>열기 →</span></a><a class='item' href='s1_waveform.html'><span class='ttl'>전선 파형 읽기</span><span class='tag'>보조</span><span class='go'>열기 →</span></a><a class='item' href='s1_zoom8gb.html'><span class='ttl'>8GB 확대경</span><span class='tag'>보조</span><span class='go'>열기 →</span></a></div><div class='panel'><h2>S2 자릿값과 양방향 변환</h2><a class='item' href='s2_scale.html'><span class='ttl'>자릿값 저울</span><span class='tag star'>★ 주 도구</span><span class='go'>열기 →</span></a><a class='item' href='s2_coin.html'><span class='ttl'>동전 교환기</span><span class='tag'>보조</span><span class='go'>열기 →</span></a><a class='item' href='s2_count.html'><span class='ttl'>나란히 세기</span><span class='tag'>보조</span><span class='go'>열기 →</span></a></div><div class='panel'><h2>S3 비트와 바이트 — 칸을 묶는 단위</h2><a class='item' href='s3_ladder.html'><span class='ttl'>묶음 사다리</span><span class='tag star'>★ 주 도구</span><span class='go'>열기 →</span></a><a class='item' href='s3_grain.html'><span class='ttl'>알갱이 채우기</span><span class='tag'>보조</span><span class='go'>열기 →</span></a><a class='item' href='s3_balance.html'><span class='ttl'>용량 저울</span><span class='tag'>보조</span><span class='go'>열기 →</span></a></div><div class='panel'><h2>S4 정수의 구조 — 정해진 칸 안에 숫자 넣기</h2><a class='item' href='s4_odometer.html'><span class='ttl'>8비트 주행계</span><span class='tag star'>★ 주 도구</span><span class='go'>열기 →</span></a><a class='item' href='s4_wheel.html'><span class='ttl'>수 바퀴</span><span class='tag'>보조</span><span class='go'>열기 →</span></a><a class='item' href='s4_cup.html'><span class='ttl'>넘치는 물컵</span><span class='tag'>보조</span><span class='go'>열기 →</span></a></div><div class='panel'><h2>S5 문자가 숫자가 되는 규칙 — ASCII</h2><a class='item' href='s5_conveyor.html'><span class='ttl'>글자 컨베이어</span><span class='tag star'>★ 주 도구</span><span class='go'>열기 →</span></a><a class='item' href='s5_letter.html'><span class='ttl'>비밀 편지 해독</span><span class='tag'>보조</span><span class='go'>열기 →</span></a><a class='item' href='s5_onebit.html'><span class='ttl'>한 비트 차이</span><span class='tag'>보조</span><span class='go'>열기 →</span></a></div><div class='panel'><h2>S6 색이 숫자가 되는 규칙 — RGB</h2><a class='item' href='s6_mixer.html'><span class='ttl'>빛 혼합기</span><span class='tag star'>★ 주 도구</span><span class='go'>열기 →</span></a><a class='item' href='s6_flashlight.html'><span class='ttl'>손전등 3개</span><span class='tag'>보조</span><span class='go'>열기 →</span></a><a class='item' href='s6_pixel.html'><span class='ttl'>픽셀 확대경</span><span class='tag'>보조</span><span class='go'>열기 →</span></a></div><div class='panel'><h2>S7 16진수 — 2진수를 짧게 읽는 법</h2><a class='item' href='s7_fold.html'><span class='ttl'>4칸 묶기</span><span class='tag star'>★ 주 도구</span><span class='go'>열기 →</span></a><a class='item' href='s7_cards.html'><span class='ttl'>열여섯 이름표</span><span class='tag'>보조</span><span class='go'>열기 →</span></a><a class='item' href='s7_hexcolor.html'><span class='ttl'>색상코드 해부</span><span class='tag'>보조</span><span class='go'>열기 →</span></a></div><div class='panel'><h2>S8 종합 — 나의 데이터 카드 한 장</h2><a class='item' href='s8_cardmaker.html'><span class='ttl'>데이터 카드 생성기</span><span class='tag star'>★ 주 도구</span><span class='go'>열기 →</span></a><a class='item' href='s8_memory.html'><span class='ttl'>메모리 한 줄 보기</span><span class='tag'>보조</span><span class='go'>열기 →</span></a></div>
+<div class="panel rule">★ 주 도구는 실습 흐름에 필수 · 보조는 막힌 사람용 다른 비유, 빨리 끝낸 사람용 심화, 강사 시연 중 하나로 씁니다. 전부 단일 파일이라 인터넷 없이 동작하며, GitHub Pages의 Day2/anim/ 폴더에 그대로 올리면 됩니다.</div>
+</main>
+</body>
+</html>

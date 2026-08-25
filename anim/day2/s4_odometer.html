@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>8비트 주행계 · 컴퓨터 구조 Day 2</title>
+<style>
+:root{--navy:#1E2761;--navy2:#2A3578;--navy3:#36429A;--ice:#CADCFC;--icebg:#EDF3FC;--white:#FFFFFF;--data:#FFC24B;--ok:#7BE0AD;--warn:#FF8B8B}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{background:var(--navy);color:var(--ice);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;display:flex;flex-direction:column;min-height:100vh}
+header{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--navy3);flex-wrap:wrap}
+header a{color:var(--ice);opacity:.7;text-decoration:none;font-size:13px}
+header a:hover{opacity:1}
+header h1{font-size:17px;color:var(--white);letter-spacing:.02em}
+.tag{font-size:12px;background:var(--navy3);border-radius:999px;padding:4px 12px}
+.tag.star{background:var(--data);color:var(--navy);font-weight:700}
+main{flex:1;width:min(980px,94vw);margin:0 auto;padding:24px 0 44px}
+.panel{background:var(--navy2);border:1px solid var(--navy3);border-radius:16px;padding:22px;margin-bottom:18px}
+.hint{font-size:13.5px;opacity:.8;line-height:1.7}
+.btn{background:var(--ice);color:var(--navy);border:0;border-radius:999px;padding:10px 20px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}
+.btn.ghost{background:transparent;color:var(--ice);border:1px solid var(--navy3)}
+.btn.on{background:var(--data);color:var(--navy)}
+.btn:active{transform:translateY(1px)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--data);outline-offset:2px}
+.bits{display:flex;gap:8px;flex-wrap:wrap}
+.bit{width:46px;height:58px;border:2px solid var(--navy3);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:var(--ice);background:var(--navy);transition:background .15s,border-color .15s,color .15s}
+.bit.click{cursor:pointer}
+.bit.on{background:var(--data);color:var(--navy);border-color:var(--data)}
+.bit.sign{border-color:var(--warn)}
+.pv{width:46px;text-align:center;font-size:12px;opacity:.75}
+.big{font-size:34px;font-weight:800;color:var(--white)}
+.amber{color:var(--data)}
+.warn{color:var(--warn)}
+.ok{color:var(--ok)}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.hidden{display:none !important}
+input[type=number],input[type=text],select{background:var(--navy);border:1px solid var(--navy3);color:var(--white);border-radius:10px;padding:10px 12px;font-size:15px;font-family:inherit;width:120px}
+input[type=text]{width:170px}
+input[type=range]{accent-color:var(--data);width:220px}
+.flash{animation:fl .55s}
+@keyframes fl{0%{background:var(--data);color:var(--navy);border-color:var(--data)}100%{}}
+.blink{animation:bl 1s infinite alternate}
+@keyframes bl{from{background:var(--navy)}to{background:var(--data);color:var(--navy)}}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.01s !important;transition-duration:.01s !important}}
+.banner{margin-top:16px;padding:12px 16px;border-radius:12px;font-weight:700;display:none}
+.banner.show{display:block}
+.banner.wrap0{background:rgba(255,194,75,.15);border:1px solid var(--data);color:var(--data)}
+.banner.wrapS{background:rgba(255,139,139,.15);border:1px solid var(--warn);color:var(--warn)}
+.read{font-size:15px;margin-top:14px;line-height:2}
+</style>
+</head>
+<body>
+<header><a href="index.html">← 목록</a><h1>8비트 주행계</h1><span class="tag star">S4 주 도구</span></header>
+<main>
+<div class="panel hint">정수는 <b>정해진 8칸</b>에 담깁니다. +1을 눌러 255를 넘겨 보세요 — 그리고 <b>부호 모드</b>를 켜고 127에서 +1을 눌러 보세요. 워크시트의 '127+1' 답은 여기서 <b>목격한 뒤</b> 적는 겁니다.</div>
+<div class="panel">
+  <div class="bits" id="pv"></div>
+  <div style="height:8px"></div>
+  <div class="bits" id="bits"></div>
+  <div class="row" style="margin-top:20px">
+    <button class="btn" id="m1">−1</button>
+    <button class="btn" id="p1">+1</button>
+    <button class="btn ghost" id="p16">+16</button>
+    <button class="btn ghost" id="mode">부호 모드 켜기</button>
+    <button class="btn ghost" id="zero">0으로</button>
+  </div>
+  <div class="read">
+    부호 없이 읽으면: <b class="amber" id="uv">0</b><br>
+    <span id="srow" class="hidden">부호 있게 읽으면: <b id="sv">0</b> <span class="hint">(맨 앞 빨간 칸이 부호)</span></span>
+  </div>
+  <div class="banner" id="ban"></div>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const pad8=n=>((n%256)+256)%256===0&&n!==0?"00000000":(((n%256)+256)%256).toString(2).padStart(8,"0");
+const P8=n=>(((n%256)+256)%256).toString(2).padStart(8,"0");
+const HX=n=>(((n%256)+256)%256).toString(16).toUpperCase().padStart(2,"0");
+const NUM=n=>n.toLocaleString("ko-KR");
+const PV=[128,64,32,16,8,4,2,1];
+const pvEl=$("pv");PV.forEach(v=>{const d=document.createElement("div");d.className="pv";d.textContent=v;pvEl.appendChild(d);});
+let v=0,signed=false,prev="00000000";
+function render(){
+  const s=P8(v),el=$("bits");el.innerHTML="";
+  [...s].forEach((ch,i)=>{const d=document.createElement("div");d.className="bit"+(ch==="1"?" on":"")+(signed&&i===0?" sign":"");d.textContent=ch;
+    if(prev[i]!==ch)d.classList.add("flash");el.appendChild(d);});
+  prev=s;
+  $("uv").textContent=v;
+  const sv=v<128?v:v-256;
+  $("sv").textContent=sv;$("sv").className=sv<0?"warn":"amber";
+}
+function banner(cls,msg){const b=$("ban");b.className="banner show "+cls;b.textContent=msg;clearTimeout(banner.t);banner.t=setTimeout(()=>b.classList.remove("show"),3200);}
+function add(d){
+  const pv=v;v=((v+d)%256+256)%256;
+  if(d>0&&pv>v)banner("wrap0","255를 넘는 순간 — 칸이 모자라 0으로 되감겼습니다 (넘침)");
+  if(d<0&&pv<v)banner("wrap0","0 아래로 내려가는 순간 — 반대로 되감겨 255가 됩니다");
+  if(signed){
+    const ps=pv<128?pv:pv-256,ns=v<128?v:v-256;
+    if(d>0&&ps===127)banner("wrapS","127 + 1 = -128 ?! 부호 칸이 뒤집혔습니다 — 이것이 넘침입니다");
+    if(d<0&&ps===-128)banner("wrapS","-128 − 1 = 127 ?! 반대 방향 넘침입니다");
+  }
+  render();
+}
+$("p1").onclick=()=>add(1);$("m1").onclick=()=>add(-1);$("p16").onclick=()=>add(16);
+$("zero").onclick=()=>{v=0;render();};
+$("mode").onclick=()=>{signed=!signed;$("mode").textContent=signed?"부호 모드 끄기":"부호 모드 켜기";$("mode").classList.toggle("on",signed);$("srow").classList.toggle("hidden",!signed);render();};
+render();
+</script>
+</body>
+</html>

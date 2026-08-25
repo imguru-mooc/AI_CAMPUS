@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>픽셀 확대경 · 컴퓨터 구조 Day 2</title>
+<style>
+:root{--navy:#1E2761;--navy2:#2A3578;--navy3:#36429A;--ice:#CADCFC;--icebg:#EDF3FC;--white:#FFFFFF;--data:#FFC24B;--ok:#7BE0AD;--warn:#FF8B8B}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{background:var(--navy);color:var(--ice);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;display:flex;flex-direction:column;min-height:100vh}
+header{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--navy3);flex-wrap:wrap}
+header a{color:var(--ice);opacity:.7;text-decoration:none;font-size:13px}
+header a:hover{opacity:1}
+header h1{font-size:17px;color:var(--white);letter-spacing:.02em}
+.tag{font-size:12px;background:var(--navy3);border-radius:999px;padding:4px 12px}
+.tag.star{background:var(--data);color:var(--navy);font-weight:700}
+main{flex:1;width:min(980px,94vw);margin:0 auto;padding:24px 0 44px}
+.panel{background:var(--navy2);border:1px solid var(--navy3);border-radius:16px;padding:22px;margin-bottom:18px}
+.hint{font-size:13.5px;opacity:.8;line-height:1.7}
+.btn{background:var(--ice);color:var(--navy);border:0;border-radius:999px;padding:10px 20px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}
+.btn.ghost{background:transparent;color:var(--ice);border:1px solid var(--navy3)}
+.btn.on{background:var(--data);color:var(--navy)}
+.btn:active{transform:translateY(1px)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--data);outline-offset:2px}
+.bits{display:flex;gap:8px;flex-wrap:wrap}
+.bit{width:46px;height:58px;border:2px solid var(--navy3);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:var(--ice);background:var(--navy);transition:background .15s,border-color .15s,color .15s}
+.bit.click{cursor:pointer}
+.bit.on{background:var(--data);color:var(--navy);border-color:var(--data)}
+.bit.sign{border-color:var(--warn)}
+.pv{width:46px;text-align:center;font-size:12px;opacity:.75}
+.big{font-size:34px;font-weight:800;color:var(--white)}
+.amber{color:var(--data)}
+.warn{color:var(--warn)}
+.ok{color:var(--ok)}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.hidden{display:none !important}
+input[type=number],input[type=text],select{background:var(--navy);border:1px solid var(--navy3);color:var(--white);border-radius:10px;padding:10px 12px;font-size:15px;font-family:inherit;width:120px}
+input[type=text]{width:170px}
+input[type=range]{accent-color:var(--data);width:220px}
+.flash{animation:fl .55s}
+@keyframes fl{0%{background:var(--data);color:var(--navy);border-color:var(--data)}100%{}}
+.blink{animation:bl 1s infinite alternate}
+@keyframes bl{from{background:var(--navy)}to{background:var(--data);color:var(--navy)}}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.01s !important;transition-duration:.01s !important}}
+canvas{width:100%;max-width:640px;border-radius:14px;display:block;cursor:crosshair;border:1px solid var(--navy3)}
+.probe{display:flex;gap:18px;align-items:center;margin-top:16px;flex-wrap:wrap}
+.chip{width:70px;height:70px;border-radius:14px;border:3px solid var(--navy3)}
+.nums{font-size:18px;font-weight:800;line-height:1.9}
+</style>
+</head>
+<body>
+<header><a href="index.html">← 목록</a><h1>픽셀 확대경</h1><span class="tag ">S6 보조 · 실물 확인</span></header>
+<main>
+<div class="panel hint">그림 위에서 마우스(또는 손가락)를 움직여 보세요. 화면의 모든 점(픽셀)은 <b>빨강·초록·파랑 숫자 3개</b>일 뿐입니다.</div>
+<div class="panel">
+  <canvas id="cv" width="640" height="360"></canvas>
+  <div class="probe">
+    <div class="chip" id="chip"></div>
+    <div class="nums">빨강 <span class="amber" id="pr">—</span> · 초록 <span class="amber" id="pg">—</span> · 파랑 <span class="amber" id="pb">—</span><br>
+    <span class="hint">각각 0~255, 1바이트씩 — 점 하나 = 3바이트</span></div>
+  </div>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const pad8=n=>((n%256)+256)%256===0&&n!==0?"00000000":(((n%256)+256)%256).toString(2).padStart(8,"0");
+const P8=n=>(((n%256)+256)%256).toString(2).padStart(8,"0");
+const HX=n=>(((n%256)+256)%256).toString(16).toUpperCase().padStart(2,"0");
+const NUM=n=>n.toLocaleString("ko-KR");
+const cv=$("cv"),cx=cv.getContext("2d");
+// 노을 풍경을 코드로 그림 (외부 이미지 없이 오프라인 동작)
+let g=cx.createLinearGradient(0,0,0,230);
+g.addColorStop(0,"#1E2761");g.addColorStop(.55,"#b0538a");g.addColorStop(1,"#FFC24B");
+cx.fillStyle=g;cx.fillRect(0,0,640,230);
+cx.fillStyle="#ffe08a";cx.beginPath();cx.arc(430,205,46,0,7);cx.fill();
+g=cx.createLinearGradient(0,230,0,360);g.addColorStop(0,"#12173f");g.addColorStop(1,"#0a0d29");
+cx.fillStyle=g;cx.fillRect(0,230,640,130);
+cx.fillStyle="rgba(255,224,138,.5)";cx.fillRect(410,232,40,90);
+cx.fillStyle="#0e1233";
+for(let i=0;i<9;i++){const w=40+Math.random()*40,h=60+Math.random()*90,x=i*70;cx.fillRect(x,230-h,w,h);}
+function probe(clientX,clientY){
+  const r=cv.getBoundingClientRect();
+  const x=Math.floor((clientX-r.left)*(cv.width/r.width));
+  const y=Math.floor((clientY-r.top)*(cv.height/r.height));
+  if(x<0||y<0||x>=640||y>=360)return;
+  const d=cx.getImageData(x,y,1,1).data;
+  $("chip").style.background="rgb("+d[0]+","+d[1]+","+d[2]+")";
+  $("pr").textContent=d[0];$("pg").textContent=d[1];$("pb").textContent=d[2];
+}
+cv.addEventListener("mousemove",e=>probe(e.clientX,e.clientY));
+cv.addEventListener("touchmove",e=>{e.preventDefault();probe(e.touches[0].clientX,e.touches[0].clientY);},{passive:false});
+</script>
+</body>
+</html>
