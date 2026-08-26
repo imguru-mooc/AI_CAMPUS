@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>전가산기 해부도 — 덧셈 한 자리의 속살</title>
+<style>
+  :root{
+    --bg:#0f141d;
+    --panel:#161d2a;
+    --panel2:#1b2434;
+    --line:#26314a;
+    --ink:#dce6f5;
+    --dim:#7d8ba3;
+    --bit1:#ffd166;     /* 신호 1 */
+    --sig0:#54637f;     /* 신호 0 (전달됨) */
+    --accent:#4cc9f0;
+    --mask:#c792ea;
+    --on:#7ee787;
+    --bad:#ff5d73;
+    --mono:"JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    min-height:100vh; padding:24px 16px 60px;
+  }
+  .wrap{max-width:960px; margin:0 auto;}
+
+  header{margin-bottom:18px;}
+  .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.18em; color:var(--accent); text-transform:uppercase;}
+  h1{font-size:clamp(20px,4vw,28px); font-weight:800; margin-top:6px;}
+  h1 code{font-family:var(--mono); color:var(--bit1);}
+  .sub{color:var(--dim); font-size:14px; margin-top:6px; line-height:1.6;}
+  .sub b{color:var(--ink);}
+
+  /* ── 제어 ─────────────────── */
+  .controls{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin-bottom:14px;}
+  .row{display:flex; flex-wrap:wrap; gap:14px; align-items:center;}
+  .grp{display:flex; flex-direction:column; gap:6px;}
+  .grp .cap{font-size:11px; color:var(--dim); letter-spacing:.05em;}
+  .ins{display:flex; gap:8px;}
+  .inbtn{
+    width:56px; height:56px; border-radius:12px; border:1px solid var(--line);
+    background:var(--bg); color:var(--dim); font-family:var(--mono); font-size:22px; font-weight:800;
+    cursor:pointer; position:relative;
+  }
+  .inbtn.on{color:var(--bit1); border-color:var(--bit1);}
+  .inbtn .t{position:absolute; top:-8px; left:6px; font-size:10px; color:var(--dim); background:var(--panel); padding:0 4px;}
+  .inbtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .btn{padding:11px 18px; border:none; border-radius:8px; font-weight:800; font-size:14px; cursor:pointer; font-family:inherit;}
+  .btn.go{background:var(--bit1); color:#2a2005;}
+  .btn.all{background:transparent; color:var(--accent); border:1px solid var(--accent);}
+  .btn:disabled{opacity:.4; cursor:default;}
+  .btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .sumline{font-family:var(--mono); font-size:14px; color:var(--dim);}
+  .sumline b{color:var(--ink); font-size:17px;}
+
+  /* ── 회로 ─────────────────── */
+  .circuit{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:10px 8px 4px; margin-bottom:14px; overflow-x:auto;}
+  .circuit svg{display:block; min-width:660px; width:100%; height:auto;}
+
+  .wire{stroke:var(--line); stroke-width:3; fill:none; transition:stroke .2s;}
+  .wire.v1{stroke:var(--bit1); filter:drop-shadow(0 0 4px rgba(255,209,102,.6));}
+  .wire.v0{stroke:var(--sig0);}
+  .branch{fill:var(--line); transition:fill .2s;}
+  .branch.v1{fill:var(--bit1);}
+  .branch.v0{fill:var(--sig0);}
+  .pulse1{fill:var(--bit1); filter:drop-shadow(0 0 6px rgba(255,209,102,.9));}
+  .pulse0{fill:var(--sig0);}
+
+  .gate rect{fill:var(--bg); stroke:var(--line); stroke-width:1.5; rx:10; transition:stroke .25s;}
+  .gate text{fill:var(--dim); font-family:var(--mono); font-weight:800; text-anchor:middle;}
+  .gate .gsym{font-size:17px;}
+  .gate .gnm{font-size:9px; fill:var(--dim); font-weight:400;}
+  .gate.fire rect{stroke:var(--accent);}
+  .gate.fire .gsym{fill:var(--ink);}
+  .gate .val{font-size:13px; fill:var(--bit1); font-weight:800;}
+  .gate .val.zero{fill:var(--sig0);}
+
+  .pad text{font-family:var(--mono); font-weight:800; font-size:14px; fill:var(--dim);}
+  .pad .pv{font-size:16px;}
+  .pad.v1 .pv{fill:var(--bit1);}
+  .pad.v0 .pv{fill:var(--sig0);}
+  .pad .pn{font-size:11px; fill:var(--dim); font-weight:400;}
+  .outpad rect{fill:var(--bg); stroke:var(--line); stroke-width:1.5; rx:9; transition:stroke .25s;}
+  .outpad.v1 rect{stroke:var(--on);}
+  .outpad.v1 .pv{fill:var(--on);}
+  .outpad.v0 rect{stroke:var(--sig0);}
+  .outpad.v0 .pv{fill:var(--sig0);}
+
+  .qlabel{font-size:10.5px; fill:var(--dim); font-family:"Pretendard","Apple SD Gothic Neo",sans-serif;}
+
+  /* ── 진리표 + 사슬 ───────────── */
+  .lower{display:grid; grid-template-columns:1fr 1.3fr; gap:14px; margin-bottom:14px;}
+  @media(max-width:760px){.lower{grid-template-columns:1fr;}}
+  .panelbox{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px 16px;}
+  .panelbox h2{font-size:13px; font-weight:800; margin-bottom:10px;}
+  .panelbox h2 small{color:var(--dim); font-weight:400; margin-left:6px;}
+  .tt{border-collapse:collapse; font-family:var(--mono); font-size:13px; width:100%;}
+  .tt th{color:var(--dim); font-weight:400; font-size:11px; padding:4px 0; border-bottom:1px solid var(--line);}
+  .tt td{text-align:center; padding:4.5px 0; color:var(--dim);}
+  .tt tr.cur td{color:var(--ink); background:var(--panel2);}
+  .tt td.co{color:#7a6a3c;} .tt td.su{color:#4c7a52;}
+  .tt tr.cur td.co{color:var(--bit1); font-weight:800;}
+  .tt tr.cur td.su{color:var(--on); font-weight:800;}
+  .tt td.done{color:var(--on); font-size:11px;}
+  .tt th.sep,.tt td.sep{border-left:1px solid var(--line);}
+
+  .chain{display:flex; align-items:center; gap:0; margin:6px 0 10px; overflow-x:auto; padding-bottom:4px;}
+  .fa{
+    min-width:58px; text-align:center; font-family:var(--mono); font-size:11px; font-weight:800;
+    border:1px solid var(--line); border-radius:9px; padding:10px 0; color:var(--dim); background:var(--bg);
+  }
+  .fa.hl{border-color:var(--bit1); color:var(--bit1);}
+  .fa small{display:block; font-size:9px; color:var(--dim); font-weight:400; margin-top:2px;}
+  .chev{font-family:var(--mono); color:var(--bit1); font-size:13px; padding:0 3px; white-space:nowrap;}
+  .chainnote{font-size:12.5px; color:var(--dim); line-height:1.7;}
+  .chainnote b{color:var(--ink);}
+  .chainnote code{font-family:var(--mono); background:var(--bg); padding:1px 6px; border-radius:5px; font-size:12px;}
+
+  /* ── 해설/판정 ───────────── */
+  .explain{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:13px 16px; margin-bottom:14px; font-size:14px; line-height:1.75; color:var(--dim); min-height:52px;
+  }
+  .explain b{color:var(--ink);}
+  .explain code{font-family:var(--mono); background:var(--bg); padding:2px 7px; border-radius:6px; font-size:13px;}
+  .explain .x{color:var(--accent); font-weight:800;}
+  .explain .a{color:var(--mask); font-weight:800;}
+  .explain .o{color:var(--on); font-weight:800;}
+  .verdict{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:16px; font-size:14px; line-height:1.8; color:var(--dim); display:none;
+  }
+  .verdict.show{display:block;}
+  .verdict b{color:var(--ink);}
+  .verdict .fine{color:var(--on); font-weight:700;}
+  .verdict code{font-family:var(--mono); background:var(--bg); padding:2px 7px; border-radius:6px; font-size:13px;}
+
+  @media (prefers-reduced-motion:reduce){
+    .wire,.gate rect{transition:none;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Full Adder · 1-bit</div>
+    <h1>전가산기 해부도 — 덧셈 <code>한 자리</code>의 속살</h1>
+    <p class="sub">지난 시간 리플 캐리 덧셈에서 "한 칸"이 하던 일 — <b>A + B + 자리올림입력(Cin)</b>을 계산해 <b>Sum</b>과 <b>자리올림출력(Cout)</b>을 내는 것 — 이 실제로는 <b>XOR 2개, AND 2개, OR 1개</b>로 만들어집니다. 신호가 게이트를 통과하는 순서를 그대로 재생합니다.</p>
+  </header>
+
+  <section class="controls">
+    <div class="row">
+      <div class="grp">
+        <span class="cap">입력 3개 — 눌러서 0↔1</span>
+        <div class="ins">
+          <button class="inbtn" id="inA"><span class="t">A</span>1</button>
+          <button class="inbtn" id="inB"><span class="t">B</span>1</button>
+          <button class="inbtn" id="inC"><span class="t">Cin</span>0</button>
+        </div>
+      </div>
+      <div class="grp">
+        <span class="cap">이번 계산</span>
+        <div class="sumline" id="sumline"></div>
+      </div>
+      <button class="btn go" id="btnGo">신호 흘리기 ▶</button>
+      <button class="btn all" id="btnAll">8가지 전부 ▶▶</button>
+    </div>
+  </section>
+
+  <section class="circuit">
+    <svg viewBox="0 0 720 330" xmlns="http://www.w3.org/2000/svg" id="svg">
+      <!-- 배선 -->
+      <path class="wire" id="wAX" d="M62,60 H120 V80 H180"/>
+      <path class="wire" id="wAA" d="M120,60 V162 H180"/>
+      <path class="wire" id="wBX" d="M62,120 H150 V100 H180"/>
+      <path class="wire" id="wBA" d="M150,120 V182 H180"/>
+      <path class="wire" id="wS1"  d="M256,90 H330"/>
+      <path class="wire" id="wS1X" d="M330,90 V80 H390"/>
+      <path class="wire" id="wS1A" d="M330,90 V162 H390"/>
+      <path class="wire" id="wCX" d="M62,260 H340 V100 H390"/>
+      <path class="wire" id="wCA" d="M340,182 H390"/>
+      <path class="wire" id="wSum" d="M466,90 H630"/>
+      <path class="wire" id="wC1" d="M256,172 V296 H520 V237 H540"/>
+      <path class="wire" id="wC2" d="M466,172 H510 V217 H540"/>
+      <path class="wire" id="wCout" d="M616,227 H630"/>
+      <!-- 분기점 -->
+      <circle class="branch" id="brA" cx="120" cy="60" r="4"/>
+      <circle class="branch" id="brB" cx="150" cy="120" r="4"/>
+      <circle class="branch" id="brS" cx="330" cy="90" r="4"/>
+      <circle class="branch" id="brC" cx="340" cy="182" r="4"/>
+
+      <!-- 입력 패드 -->
+      <g class="pad" id="padA"><text class="pn" x="20" y="48">A</text><text class="pv" x="20" y="66">1</text></g>
+      <g class="pad" id="padB"><text class="pn" x="20" y="108">B</text><text class="pv" x="20" y="126">1</text></g>
+      <g class="pad" id="padC"><text class="pn" x="20" y="248">Cin</text><text class="pv" x="20" y="266">0</text><text class="qlabel" x="20" y="282">아랫자리에서 올라온 것</text></g>
+
+      <!-- 게이트 -->
+      <g class="gate" id="gXOR1">
+        <rect x="180" y="68" width="76" height="44"/>
+        <text class="gsym" x="218" y="88">⊕ XOR</text>
+        <text class="gnm" x="218" y="103">둘이 다른가?</text>
+        <text class="val" id="vXOR1" x="262" y="72"></text>
+      </g>
+      <g class="gate" id="gAND1">
+        <rect x="180" y="150" width="76" height="44"/>
+        <text class="gsym" x="218" y="170">∧ AND</text>
+        <text class="gnm" x="218" y="185">둘 다 1인가?</text>
+        <text class="val" id="vAND1" x="262" y="154"></text>
+      </g>
+      <g class="gate" id="gXOR2">
+        <rect x="390" y="68" width="76" height="44"/>
+        <text class="gsym" x="428" y="88">⊕ XOR</text>
+        <text class="gnm" x="428" y="103">Cin까지 반영</text>
+        <text class="val" id="vXOR2" x="472" y="72"></text>
+      </g>
+      <g class="gate" id="gAND2">
+        <rect x="390" y="150" width="76" height="44"/>
+        <text class="gsym" x="428" y="170">∧ AND</text>
+        <text class="gnm" x="428" y="185">S1과 Cin 둘 다?</text>
+        <text class="val" id="vAND2" x="472" y="154"></text>
+      </g>
+      <g class="gate" id="gOR">
+        <rect x="540" y="205" width="76" height="44"/>
+        <text class="gsym" x="578" y="225">∨ OR</text>
+        <text class="gnm" x="578" y="240">둘 중 하나라도?</text>
+      </g>
+
+      <!-- 출력 패드 -->
+      <g class="outpad" id="padSum">
+        <rect x="632" y="70" width="76" height="40"/>
+        <text class="pn" x="670" y="86" text-anchor="middle">Sum</text>
+        <text class="pv" x="670" y="103" text-anchor="middle" id="outSum">·</text>
+      </g>
+      <g class="outpad" id="padCout">
+        <rect x="632" y="207" width="76" height="40"/>
+        <text class="pn" x="670" y="223" text-anchor="middle">Cout</text>
+        <text class="pv" x="670" y="240" text-anchor="middle" id="outCout">·</text>
+      </g>
+      <text class="qlabel" x="670" y="122" text-anchor="middle">이 자리의 답</text>
+      <text class="qlabel" x="670" y="259" text-anchor="middle">윗자리로 올릴 것</text>
+    </svg>
+  </section>
+
+  <section class="explain" id="explain">
+    입력을 정하고 <b>신호 흘리기 ▶</b>를 누르면 전기가 게이트를 지나는 순서 그대로 재생됩니다. <b>8가지 전부 ▶▶</b>는 가능한 입력 조합을 모두 돌며 진리표를 채웁니다.
+  </section>
+
+  <section class="lower">
+    <div class="panelbox">
+      <h2>진리표 <small>1의 개수를 세어 보세요</small></h2>
+      <table class="tt">
+        <thead><tr><th>A</th><th>B</th><th>Cin</th><th class="sep">1의 개수</th><th class="sep">Cout</th><th>Sum</th><th></th></tr></thead>
+        <tbody id="ttbody"></tbody>
+      </table>
+    </div>
+    <div class="panelbox">
+      <h2>이 한 칸이 8개 이어지면 <small>지난 시간의 8비트 덧셈기</small></h2>
+      <div class="chain" id="chainbox"></div>
+      <div class="chainnote">
+        오른쪽 칸(bit 0)의 <code>Cout</code>이 왼쪽 칸(bit 1)의 <code>Cin</code>으로 — 자리올림이 <b>물결처럼 왼쪽으로 번지는</b> 구조라서 리플(ripple) 캐리라고 부릅니다. bit 0의 Cin은 0으로 고정, 맨 왼쪽 bit 7의 Cout이 지난 시간 배운 <b>CF 플래그</b>가 됩니다.
+      </div>
+    </div>
+  </section>
+
+  <section class="verdict" id="verdict" aria-live="polite"></section>
+
+</div>
+
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const NS="http://www.w3.org/2000/svg";
+  const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const sleep=ms=>new Promise(r=>setTimeout(r, reduced?0:ms));
+  const svg=$("#svg");
+
+  let A=1,B=1,C=0, busy=false;
+
+  /* ── 입력 UI ─────────────────────── */
+  function renderIns(){
+    [["inA",A],["inB",B],["inC",C]].forEach(([id,v])=>{
+      const el=$("#"+id);
+      el.classList.toggle("on",v===1);
+      el.innerHTML=el.innerHTML.replace(/(<\/span>)[01]/, "$1"+v);
+    });
+    $("#padA").querySelector(".pv").textContent=A;
+    $("#padB").querySelector(".pv").textContent=B;
+    $("#padC").querySelector(".pv").textContent=C;
+    ["padA","padB","padC"].forEach((id,i)=>{
+      const v=[A,B,C][i];
+      $("#"+id).setAttribute("class","pad v"+v);
+    });
+    $("#sumline").innerHTML=`${A} + ${B} + ${C} = <b>${A+B+C}</b> → Cout·Sum으로 쪼개짐`;
+    markTT();
+  }
+  $("#inA").addEventListener("click",()=>{ if(!busy){A^=1; renderIns();}});
+  $("#inB").addEventListener("click",()=>{ if(!busy){B^=1; renderIns();}});
+  $("#inC").addEventListener("click",()=>{ if(!busy){C^=1; renderIns();}});
+
+  /* ── 진리표 ─────────────────────── */
+  const done=new Set();
+  function buildTT(){
+    const tb=$("#ttbody"); tb.innerHTML="";
+    for(let k=0;k<8;k++){
+      const a=(k>>2)&1,b=(k>>1)&1,c=k&1;
+      const n=a+b+c, co=n>=2?1:0, su=n&1;
+      const tr=document.createElement("tr");
+      tr.id="ttr"+k;
+      tr.innerHTML=`<td>${a}</td><td>${b}</td><td>${c}</td><td class="sep">${n}개</td><td class="sep co">${co}</td><td class="su">${su}</td><td class="done" id="ttd${k}"></td>`;
+      tb.appendChild(tr);
+    }
+  }
+  function markTT(){
+    for(let k=0;k<8;k++) $("#ttr"+k).classList.toggle("cur", k===(A<<2|B<<1|C));
+  }
+
+  /* ── 사슬 ───────────────────────── */
+  (function(){
+    const box=$("#chainbox");
+    for(let i=7;i>=0;i--){
+      const d=document.createElement("div");
+      d.className="fa"+(i===0?" hl":"");
+      d.innerHTML=`FA<small>bit ${i}</small>`;
+      box.appendChild(d);
+      if(i>0){
+        const ch=document.createElement("span");
+        ch.className="chev"; ch.innerHTML="←C";
+        box.appendChild(ch);
+      }
+    }
+  })();
+
+  /* ── 회로 상태 ───────────────────── */
+  function resetCircuit(){
+    svg.querySelectorAll(".wire").forEach(w=>w.setAttribute("class","wire"));
+    svg.querySelectorAll(".branch").forEach(b=>b.setAttribute("class","branch"));
+    svg.querySelectorAll(".gate").forEach(g=>g.classList.remove("fire"));
+    ["vXOR1","vAND1","vXOR2","vAND2"].forEach(id=>$("#"+id).textContent="");
+    $("#outSum").textContent="·"; $("#outCout").textContent="·";
+    $("#padSum").setAttribute("class","outpad");
+    $("#padCout").setAttribute("class","outpad");
+  }
+  function pulseAlong(pathId, v, dur){
+    const path=$("#"+pathId);
+    return new Promise(res=>{
+      const fin=()=>{ path.setAttribute("class","wire v"+v); res(); };
+      if(reduced){ fin(); return; }
+      const len=path.getTotalLength();
+      const dot=document.createElementNS(NS,"circle");
+      dot.setAttribute("r","5.5");
+      dot.setAttribute("class", v? "pulse1":"pulse0");
+      svg.appendChild(dot);
+      const t0=performance.now();
+      (function frame(t){
+        const p=Math.min(1,(t-t0)/dur);
+        const pt=path.getPointAtLength(len*p);
+        dot.setAttribute("cx",pt.x); dot.setAttribute("cy",pt.y);
+        if(p<1) requestAnimationFrame(frame);
+        else{ dot.remove(); fin(); }
+      })(t0);
+    });
+  }
+  function setBranch(id,v){ $("#"+id).setAttribute("class","branch v"+v); }
+  function fireGate(gid,vid,v){
+    $("#"+gid).classList.add("fire");
+    if(vid){
+      const el=$("#"+vid);
+      el.textContent=v;
+      el.setAttribute("class","val"+(v?"":" zero"));
+    }
+  }
+
+  /* ── 실행 ───────────────────────── */
+  async function run(quiet){
+    resetCircuit();
+    const ex=$("#explain");
+    const S1=A^B, Sum=S1^C, C1=A&B, C2=S1&C, Cout=C1|C2;
+    const D=quiet? 220: 380;
+
+    // ① A, B 전파
+    if(!quiet) ex.innerHTML=`<b>① 입력 전파</b> — A(${A})와 B(${B})가 배선을 타고 <span class="x">XOR</span>과 <span class="a">AND</span> 양쪽으로 <b>동시에 복사</b>되어 갑니다. 전선은 값을 나눠 갖는 게 아니라 그대로 퍼뜨립니다.`;
+    setBranch("brA",A); setBranch("brB",B);
+    await Promise.all([
+      pulseAlong("wAX",A,D), pulseAlong("wAA",A,D),
+      pulseAlong("wBX",B,D), pulseAlong("wBA",B,D),
+    ]);
+    await sleep(quiet?120:450);
+
+    // ② 1단 게이트
+    fireGate("gXOR1","vXOR1",S1);
+    if(!quiet) ex.innerHTML=`<b>② 1단</b> — <span class="x">XOR</span>: "A와 B가 다른가?" → <b>${S1}</b>. 지금까지 1이 <b>홀수 개</b>인지의 답이기도 합니다.`;
+    await sleep(quiet?150:700);
+    fireGate("gAND1","vAND1",C1);
+    if(!quiet) ex.innerHTML+=`<br><span class="a">AND</span>: "A와 B 둘 다 1인가?" → <b>${C1}</b> — 자리올림 <b>후보 ①</b>.`;
+    await sleep(quiet?150:750);
+
+    // ③ S1, Cin 전파
+    if(!quiet) ex.innerHTML=`<b>③ 2단으로</b> — 1단의 결과 S1(${S1})과, 아랫자리에서 올라온 Cin(${C})이 2단의 <span class="x">XOR</span>·<span class="a">AND</span>로 갑니다.`;
+    setBranch("brS",S1); setBranch("brC",C);
+    await Promise.all([
+      pulseAlong("wS1",S1,quiet?160:260),
+    ]);
+    await Promise.all([
+      pulseAlong("wS1X",S1,D), pulseAlong("wS1A",S1,D),
+      pulseAlong("wCX",C,quiet?300:520), pulseAlong("wCA",C,D),
+    ]);
+    await sleep(quiet?120:450);
+
+    // ④ 2단 게이트
+    fireGate("gXOR2","vXOR2",Sum);
+    if(!quiet) ex.innerHTML=`<b>④ 2단</b> — <span class="x">XOR</span>: S1에 Cin까지 반영 → 세 입력 중 1이 홀수 개인가? → <b>Sum = ${Sum}</b>.`;
+    await pulseAlong("wSum",Sum,quiet?220:400);
+    $("#outSum").textContent=Sum;
+    $("#padSum").setAttribute("class","outpad v"+Sum);
+    await sleep(quiet?150:700);
+    fireGate("gAND2","vAND2",C2);
+    if(!quiet) ex.innerHTML+=`<br><span class="a">AND</span>: "S1도 1이고 Cin도 1인가?" → <b>${C2}</b> — 자리올림 <b>후보 ②</b>.`;
+    await sleep(quiet?150:750);
+
+    // ⑤ OR → Cout
+    if(!quiet) ex.innerHTML=`<b>⑤ 자리올림 판정</b> — 두 후보가 <span class="o">OR</span>로 모입니다: 둘 중 <b>하나라도</b> 성립하면 윗자리로 1을 올립니다. (두 후보는 동시에 1이 될 수 없어서 OR로 충분합니다.)`;
+    await Promise.all([
+      pulseAlong("wC1",C1,quiet?300:560),
+      pulseAlong("wC2",C2,quiet?240:420),
+    ]);
+    fireGate("gOR",null,Cout);
+    await sleep(quiet?120:400);
+    await pulseAlong("wCout",Cout,quiet?150:250);
+    $("#outCout").textContent=Cout;
+    $("#padCout").setAttribute("class","outpad v"+Cout);
+    await sleep(quiet?200:500);
+
+    return {Sum,Cout};
+  }
+
+  async function single(){
+    if(busy) return; busy=true; lock(true);
+    $("#verdict").className="verdict";
+    const {Sum,Cout}=await run(false);
+    const n=A+B+C;
+    const v=$("#verdict");
+    v.innerHTML =
+      `<b class="fine">계산 완료 — ${A} + ${B} + ${C} = ${n}</b><br>` +
+      `검산: <code>2 × Cout + Sum = 2×${Cout} + ${Sum} = ${2*Cout+Sum}</code> ✓ — 두 출력이 합쳐서 정확히 ${n}을 표현합니다.<br>` +
+      `외우지 말고 이렇게 기억하세요: <b>Sum은 "1이 홀수 개인가?"(XOR 두 번), Cout은 "1이 2개 이상인가?"(다수결)</b>. ` +
+      `게이트 5개짜리 이 상자가 덧셈의 전부이고, 이것을 8개 이으면 8비트 덧셈기, 64개 이으면 여러분 컴퓨터의 덧셈기입니다.`;
+    v.classList.add("show");
+    done.add(A<<2|B<<1|C);
+    $("#ttd"+(A<<2|B<<1|C)).textContent="✓";
+    busy=false; lock(false);
+  }
+
+  async function runAll(){
+    if(busy) return; busy=true; lock(true);
+    $("#verdict").className="verdict";
+    for(let k=0;k<8;k++){
+      A=(k>>2)&1; B=(k>>1)&1; C=k&1;
+      renderIns();
+      $("#explain").innerHTML=`<b>조합 ${k+1}/8</b> — A=${A}, B=${B}, Cin=${C}`;
+      await run(true);
+      done.add(k);
+      $("#ttd"+k).textContent="✓";
+      await sleep(320);
+    }
+    const v=$("#verdict");
+    v.innerHTML =
+      `<b class="fine">8가지 조합 완료 — 진리표가 전부 검증됐습니다</b><br>` +
+      `규칙은 두 줄로 요약됩니다: <b>Sum = 1의 개수가 홀수면 1</b>, <b>Cout = 1이 2개 이상이면 1</b>.<br>` +
+      `같은 회로에 어떤 입력이 와도 항상 <code>A + B + Cin = 2×Cout + Sum</code> — 전가산기는 사실 <b>"1을 세는 기계"</b>입니다.`;
+    v.classList.add("show");
+    busy=false; lock(false);
+  }
+
+  function lock(on){ ["btnGo","btnAll"].forEach(id=>$("#"+id).disabled=on); }
+
+  buildTT();
+  renderIns();
+  $("#btnGo").addEventListener("click",single);
+  $("#btnAll").addEventListener("click",runAll);
+})();
+</script>
+</body>
+</html>

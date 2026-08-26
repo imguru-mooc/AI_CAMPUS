@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>컴퓨터 구조 Day 3 · 디지털 워크시트</title>
+<style>
+:root{--navy:#1E2761;--navy2:#2A3578;--navy3:#36429A;--ice:#CADCFC;--icebg:#EDF3FC;
+--white:#FFFFFF;--data:#FFC24B;--ok:#7BE0AD;--warn:#FF8B8B;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--navy);color:var(--ice);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+header{padding:13px 20px;border-bottom:1px solid var(--navy3);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+header h1{font-size:16px;color:var(--white)}
+header .nm{display:flex;align-items:center;gap:8px;margin-left:auto;font-size:13px}
+input,select,textarea{background:var(--navy);border:1px solid var(--navy3);color:var(--white);
+border-radius:8px;padding:8px 10px;font-family:inherit;font-size:14px}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid var(--data);outline-offset:2px}
+input:disabled,select:disabled{opacity:.55}
+nav{display:flex;gap:6px;padding:10px 20px;flex-wrap:wrap;border-bottom:1px solid var(--navy3)}
+nav button{background:transparent;color:var(--ice);border:1px solid var(--navy3);border-radius:999px;
+padding:7px 13px;font-size:12.5px;cursor:pointer;font-family:inherit;font-weight:700}
+nav button.on{background:var(--ice);color:var(--navy);border-color:var(--ice)}
+nav button.done::after{content:" ✓";color:var(--ok)}
+nav button.on.done::after{color:#1c7a4d}
+main{flex:1;width:min(920px,95vw);margin:0 auto;padding:18px 0 40px}
+.sec{display:none}.sec.on{display:block;animation:fd .25s ease}
+@keyframes fd{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+h2{font-size:21px;color:var(--white);margin-bottom:4px}
+.lead{font-size:13.5px;line-height:1.7;margin-bottom:14px}
+.lead b{color:var(--white)}
+.tool{display:inline-flex;align-items:center;gap:8px;background:var(--navy2);border:1px solid var(--navy3);
+border-radius:10px;padding:8px 12px;font-size:12.5px;margin:2px 8px 10px 0}
+.tool a{color:var(--data);font-weight:700;text-decoration:none}
+.rule{background:var(--navy2);border-left:4px solid var(--data);border-radius:0 10px 10px 0;
+padding:10px 14px;font-size:12.5px;line-height:1.7;margin-bottom:16px}
+.rule b{color:var(--data)}
+h3{font-size:15px;color:var(--white);margin:20px 0 8px}
+.wt{width:100%;border-collapse:collapse;font-size:13.5px;margin-bottom:6px}
+.wt th{background:var(--navy2);color:var(--white);font-weight:700;padding:8px 6px;border:1px solid var(--navy3);font-size:12.5px}
+.wt td{padding:6px;border:1px solid var(--navy3);text-align:center}
+.wt td.l{text-align:left}
+.wt .mono{font-family:Consolas,'Courier New',monospace}
+.b8{width:120px;font-family:Consolas,'Courier New',monospace;letter-spacing:2px;text-align:center}
+.b3{width:64px;text-align:center}
+.b5{width:84px;text-align:center}
+select.s01{width:56px;text-align:center}
+textarea{width:100%;min-height:56px;resize:vertical;line-height:1.6}
+.fix{color:var(--warn);font-size:12px;margin-left:6px;font-weight:700;white-space:nowrap}
+input.okf,select.okf{border-color:var(--ok)}
+input.bad,select.bad{border-color:var(--warn)}
+.actions{display:flex;gap:10px;margin:18px 0 8px;flex-wrap:wrap}
+.actions button{border:none;border-radius:9px;padding:11px 18px;font-family:inherit;font-weight:800;font-size:14px;cursor:pointer}
+.actions .grade{background:var(--data);color:#4a3406}
+.actions .finish{background:var(--ice);color:var(--navy)}
+.actions button:disabled{opacity:.5;cursor:default}
+.res{font-size:14px;line-height:1.8;background:var(--navy2);border:1px solid var(--navy3);border-radius:10px;padding:12px 14px;display:none;margin-bottom:6px}
+.res.on{display:block}
+.res b{color:var(--white)} .res .sc{color:var(--data);font-weight:800;font-size:16px}
+.note{font-size:12px;line-height:1.7;margin-top:6px}
+.note b{color:var(--white)}
+.chkrow{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:13.5px;margin:6px 0}
+.chkrow label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.free{background:var(--navy2);border:1px dashed var(--navy3);border-radius:10px;padding:12px 14px;margin:8px 0}
+.free .cap{font-size:12px;color:var(--data);font-weight:700;margin-bottom:6px}
+#done{position:fixed;inset:0;background:rgba(10,14,32,.93);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+#done.on{display:flex}
+.dcard{background:var(--navy2);border:2px solid var(--ice);border-radius:18px;padding:26px 28px;max-width:600px;width:100%;max-height:88vh;overflow:auto}
+.dcard .tag{font-size:12px;color:var(--data);font-weight:800;letter-spacing:.08em}
+.dcard h2{margin:6px 0 2px}
+.dcard .meta{font-size:13px;margin-bottom:12px}
+.dcard .meta b{color:var(--white)}
+.dcard ul{list-style:none;margin:10px 0;border-top:1px solid var(--navy3)}
+.dcard li{padding:8px 2px;border-bottom:1px solid var(--navy3);font-size:13.5px;line-height:1.6}
+.dcard li b{color:var(--white)} .dcard li .v{color:var(--data);font-weight:800}
+.dcard .cap-inst{background:var(--navy);border:1px solid var(--data);border-radius:10px;padding:10px 12px;
+font-size:13px;color:var(--data);font-weight:700;text-align:center;margin:12px 0 6px}
+.dcard .close{margin-top:8px;width:100%;border:none;border-radius:9px;padding:11px;background:var(--ice);color:var(--navy);font-weight:800;font-family:inherit;font-size:14px;cursor:pointer}
+.reset{background:transparent;border:1px solid var(--navy3);color:var(--ice);border-radius:8px;padding:7px 11px;font-size:12px;cursor:pointer;font-family:inherit}
+.smalltbl th,.smalltbl td{font-size:12.5px;padding:5px 4px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>컴퓨터 구조 · Day 3 디지털 워크시트</h1>
+  <button class="reset" id="btnReset">전체 초기화</button>
+  <div class="nm"><label for="stuName">이름</label><input id="stuName" style="width:110px" placeholder="이름 입력"></div>
+</header>
+
+<nav id="tabs"></nav>
+
+<main id="main">
+
+<!-- ── 안내 ─────────────────────────── -->
+<section class="sec" data-w="G">
+  <h2>사용 안내</h2>
+  <div class="rule">
+    오늘의 규칙 — <b>예측 먼저, 화면은 검산.</b> 각 실습의 예측 칸은 애니메이션 실행 <b>전에</b> 채웁니다.
+    <b>「채점하기」를 누르면 예측 칸이 잠기고</b> 틀린 칸 옆에 바른 답이 표시됩니다 — 종이의 볼펜 규칙과 같습니다.
+    틀린 예측은 감점이 아니라 <b>학습 증거</b>입니다.
+  </div>
+  <div class="lead">
+    ① 상단에 <b>이름</b>을 먼저 입력하세요 (완료 화면에 찍힙니다).<br>
+    ② 각 실습에서 <b>예측 → 채점 → 애니메이션으로 확인 → 「실습 완료 화면 만들기」</b> 순서로 진행합니다.<br>
+    ③ 완료 화면을 <b>캡처해 노션에 붙여넣으면</b> 제출 완료입니다.<br>
+    ④ 답은 이 브라우저에 자동 저장됩니다 — 실수로 닫아도 그대로 남습니다.
+  </div>
+  <div class="note">애니메이션 열기 버튼은 <b>anim/ 폴더 상대 경로</b> 기준입니다. 파일 배치가 다르면 강사 안내를 따르세요.</div>
+</section>
+
+<!-- ── W1 ─────────────────────────── -->
+<section class="sec" data-w="W1">
+  <h2>실습 1 · 논리 연산 예측 적중표</h2>
+  <span class="tool">도구 <a href="anim/logic_gates_bitwise.html" target="_blank" rel="noopener">▶ 논리 연산 실험대</a></span>
+  <div class="rule">아래 두 표를 <b>애니메이션을 열기 전에</b> 전부 채우고 채점하세요. 그 다음에 애니메이션으로 눈으로 확인합니다.</div>
+
+  <h3>① 진리표 예측</h3>
+  <table class="wt">
+    <tr><th>A</th><th>B</th><th>A AND B</th><th>A OR B</th><th>A XOR B</th><th>NOT A</th></tr>
+    <tr><td>0</td><td>0</td><td><select class="s01" id="w1t0a"><option value=""></option><option>0</option><option>1</option></select></td><td><select class="s01" id="w1t0o"><option value=""></option><option>0</option><option>1</option></select></td><td><select class="s01" id="w1t0x"><option value=""></option><option>0</option><option>1</option></select></td><td><select class="s01" id="w1t0n"><option value=""></option><option>0</option><option>1</option></select></td></tr>
+    <tr><td>0</td><td>1</td><td><select class="s01" id="w1t1a"><option value=""></option><option>0</option><option>1</option></select></td><td><select class="s01" id="w1t1o"><option value=""></option><option>0</option><option>1</option></select></td><td><select class="s01" id="w1t1x"><option value=""></option><option>0</option><option>1</option></select></td><td><select class="s01" id="w1t1n"><option value=""></option><option>0</option><option>1</option></select></td></tr>
+    <tr><td>1</td><td>0</td><td><select class="s01" id="w1t2a"><option value=""></option><option>0</option><option>1</option></select></td><td><select class="s01" id="w1t2o"><option value=""></option><option>0</option><option>1</option></select></td><td><select class="s01" id="w1t2x"><option value=""></option><option>0</option><option>1</option></select></td><td><select class="s01" id="w1t2n"><option value=""></option><option>0</option><option>1</option></select></td></tr>
+    <tr><td>1</td><td>1</td><td><select class="s01" id="w1t3a"><option value=""></option><option>0</option><option>1</option></select></td><td><select class="s01" id="w1t3o"><option value=""></option><option>0</option><option>1</option></select></td><td><select class="s01" id="w1t3x"><option value=""></option><option>0</option><option>1</option></select></td><td><select class="s01" id="w1t3n"><option value=""></option><option>0</option><option>1</option></select></td></tr>
+  </table>
+
+  <h3>② 8비트 연산 예측 (필수 4문제)</h3>
+  <table class="wt">
+    <tr><th>문제</th><th>내 예측 — 2진 8자리</th><th>내 예측 — 10진</th></tr>
+    <tr><td class="mono">204 &amp; 15</td><td><input class="b8" id="w1p0b" maxlength="8" placeholder="········"></td><td><input class="b5" id="w1p0d"></td></tr>
+    <tr><td class="mono">12 | 128</td><td><input class="b8" id="w1p1b" maxlength="8" placeholder="········"></td><td><input class="b5" id="w1p1d"></td></tr>
+    <tr><td class="mono">170 ^ 255</td><td><input class="b8" id="w1p2b" maxlength="8" placeholder="········"></td><td><input class="b5" id="w1p2d"></td></tr>
+    <tr><td class="mono">99 ^ 99</td><td><input class="b8" id="w1p3b" maxlength="8" placeholder="········"></td><td><input class="b5" id="w1p3d"></td></tr>
+  </table>
+
+  <h3>③ 한 줄 정리 (자유 서술)</h3>
+  <textarea id="w1free" placeholder="AND은 ___할 때, OR은 ___할 때, XOR은 ___할 때 쓴다."></textarea>
+
+  <div class="actions">
+    <button class="grade" data-g="W1">채점하기 (예측 잠김)</button>
+    <button class="finish" data-f="W1">실습 완료 화면 만들기</button>
+  </div>
+  <div class="res" id="resW1"></div>
+</section>
+
+<!-- ── W2 ─────────────────────────── -->
+<section class="sec" data-w="W2">
+  <h2>실습 2 · 가산기 조립 확인표</h2>
+  <span class="tool">도구 <a href="anim/half_adder.html" target="_blank" rel="noopener">▶ 반가산기</a></span>
+  <span class="tool"><a href="anim/full_adder.html" target="_blank" rel="noopener">▶ 전가산기</a></span>
+  <div class="rule">①은 <b>실행 전 예측</b>(채점 시 잠김), ②는 전가산기 애니메이션을 <b>실행한 뒤</b> 화면을 보고 옮겨 적는 칸입니다.</div>
+
+  <h3>① 반가산기 진리표 예측</h3>
+  <table class="wt">
+    <tr><th>A</th><th>B</th><th>Sum 예측</th><th>Carry 예측</th></tr>
+    <tr><td>0</td><td>0</td><td><select class="s01" id="w2h0s"><option value=""></option><option>0</option><option>1</option></select></td><td><select class="s01" id="w2h0c"><option value=""></option><option>0</option><option>1</option></select></td></tr>
+    <tr><td>0</td><td>1</td><td><select class="s01" id="w2h1s"><option value=""></option><option>0</option><option>1</option></select></td><td><select class="s01" id="w2h1c"><option value=""></option><option>0</option><option>1</option></select></td></tr>
+    <tr><td>1</td><td>0</td><td><select class="s01" id="w2h2s"><option value=""></option><option>0</option><option>1</option></select></td><td><select class="s01" id="w2h2c"><option value=""></option><option>0</option><option>1</option></select></td></tr>
+    <tr><td>1</td><td>1</td><td><select class="s01" id="w2h3s"><option value=""></option><option>0</option><option>1</option></select></td><td><select class="s01" id="w2h3c"><option value=""></option><option>0</option><option>1</option></select></td></tr>
+  </table>
+
+  <h3>② 전가산기 검산 (실행 후 기입)</h3>
+  <table class="wt">
+    <tr><th>A</th><th>B</th><th>Cin</th><th>1의 개수</th><th>Cout</th><th>Sum</th><th>검산: 2×Cout+Sum</th></tr>
+    <tr><td>1</td><td>0</td><td>1</td><td><input class="b3" id="w2f0n"></td><td><input class="b3" id="w2f0c"></td><td><input class="b3" id="w2f0s"></td><td><input class="b3" id="w2f0v"></td></tr>
+    <tr><td>1</td><td>1</td><td>1</td><td><input class="b3" id="w2f1n"></td><td><input class="b3" id="w2f1c"></td><td><input class="b3" id="w2f1s"></td><td><input class="b3" id="w2f1v"></td></tr>
+  </table>
+
+  <h3>③ 빈칸 채우기</h3>
+  <table class="wt">
+    <tr><td class="l">Sum을 만드는 게이트</td><td><select class="b5" id="w2gs"><option value=""></option><option>XOR</option><option>AND</option><option>OR</option></select></td>
+        <td class="l">Carry를 만드는 게이트</td><td><select class="b5" id="w2gc"><option value=""></option><option>XOR</option><option>AND</option><option>OR</option></select></td></tr>
+    <tr><td class="l">전가산기 = 반가산기 몇 개?</td><td><input class="b3" id="w2cnt"></td>
+        <td class="l">+ 무슨 게이트 1개?</td><td><select class="b5" id="w2glue"><option value=""></option><option>XOR</option><option>AND</option><option>OR</option></select></td></tr>
+  </table>
+  <div class="free"><div class="cap">서술 — 반가산기가 "반(半)"인 이유</div>
+  <textarea id="w2free" placeholder="______ 이(가) 들어올 입력이 없어서."></textarea></div>
+
+  <div class="actions">
+    <button class="grade" data-g="W2">채점하기 (①만 잠김)</button>
+    <button class="finish" data-f="W2">실습 완료 화면 만들기</button>
+  </div>
+  <div class="res" id="resW2"></div>
+</section>
+
+<!-- ── W3 ─────────────────────────── -->
+<section class="sec" data-w="W3">
+  <h2>실습 3 · 2의 보수 뺄셈 검산지</h2>
+  <span class="tool">도구 <a href="anim/twos_complement_subtraction.html" target="_blank" rel="noopener">▶ 2의 보수 뺄셈</a></span>
+  <div class="rule">지정 문제 <b>9 − 13</b>을 전 과정 <b>손으로 계산해 먼저 채우고</b> 채점 → 그 다음 애니메이션에 9와 13을 넣어 단계별로 대조하세요.</div>
+
+  <h3>① 지정 문제: 9 − 13</h3>
+  <table class="wt">
+    <tr><th>단계</th><th>손 계산 (8비트 2진)</th></tr>
+    <tr><td class="l">B = 13</td><td><input class="b8" id="w3s0" maxlength="8"></td></tr>
+    <tr><td class="l">비트 반전 (~B)</td><td><input class="b8" id="w3s1" maxlength="8"></td></tr>
+    <tr><td class="l">+1 → 2의 보수 (−B)</td><td><input class="b8" id="w3s2" maxlength="8"></td></tr>
+    <tr><td class="l">A = 9</td><td><input class="b8" id="w3s3" maxlength="8"></td></tr>
+    <tr><td class="l">A + (−B) 결과</td><td><input class="b8" id="w3s4" maxlength="8"></td></tr>
+    <tr><td class="l">9번째 비트(자리올림)</td><td>
+      <select class="b5" id="w3s5"><option value=""></option><option>버림 있음</option><option>없음</option></select></td></tr>
+    <tr><td class="l">결과 — 부호 있는 10진</td><td><input class="b5" id="w3s6"></td></tr>
+  </table>
+
+  <h3>② 자유 문제 (결과가 음수가 되도록 직접 출제)</h3>
+  <table class="wt">
+    <tr><th>내 문제 A</th><th>− B</th><th>손 계산 결과</th><th>애니메이션 결과</th></tr>
+    <tr><td><input class="b5" id="w3fa" type="number" min="0" max="126"></td>
+        <td><input class="b5" id="w3fb" type="number" min="1" max="127"></td>
+        <td><input class="b5" id="w3fh"></td>
+        <td><input class="b5" id="w3fm"></td></tr>
+  </table>
+
+  <div class="free"><div class="cap">서술 — CPU에 뺄셈 회로가 없어도 되는 이유</div>
+  <textarea id="w3free"></textarea></div>
+
+  <div class="actions">
+    <button class="grade" data-g="W3">채점하기 (①만 잠김)</button>
+    <button class="finish" data-f="W3">실습 완료 화면 만들기</button>
+  </div>
+  <div class="res" id="resW3"></div>
+</section>
+
+<!-- ── W4 ─────────────────────────── -->
+<section class="sec" data-w="W4">
+  <h2>실습 4 · 상태 플래그 예측표</h2>
+  <span class="tool">도구 <a href="anim/cpu_flags_simulator.html" target="_blank" rel="noopener">▶ 플래그 시뮬레이터</a></span>
+  <div class="rule">6개 사례의 플래그 24칸을 <b>전부 예측한 뒤</b> 채점하세요(잠김). 그 다음 애니메이션 프리셋 6개를 눌러 눈으로 재확인합니다.</div>
+
+  <h3>① 사례별 플래그 예측 (0 또는 1)</h3>
+  <table class="wt" id="w4tbl">
+    <tr><th>사례</th><th>CF</th><th>ZF</th><th>SF</th><th>OF</th></tr>
+  </table>
+
+  <h3>② 핵심 구분</h3>
+  <table class="wt">
+    <tr><td class="l">CF는 어떤 계산의 경고인가</td><td><select class="b5" id="w4cf" style="width:110px"><option value=""></option><option>부호 없는</option><option>부호 있는</option></select></td>
+        <td class="l">OF는 어떤 계산의 경고인가</td><td><select class="b5" id="w4of" style="width:110px"><option value=""></option><option>부호 없는</option><option>부호 있는</option></select></td></tr>
+  </table>
+  <div class="free"><div class="cap">서술 — 200+100에서 CF=1인데 OF=0인 이유</div>
+  <textarea id="w4free"></textarea></div>
+
+  <div class="actions">
+    <button class="grade" data-g="W4">채점하기 (예측 잠김)</button>
+    <button class="finish" data-f="W4">실습 완료 화면 만들기</button>
+  </div>
+  <div class="res" id="resW4"></div>
+</section>
+
+<!-- ── W5 ─────────────────────────── -->
+<section class="sec" data-w="W5">
+  <h2>실습 5 · 하드웨어 제어 코드 옮겨쓰기</h2>
+  <span class="tool">도구 <a href="anim/hardware_flag_control.html" target="_blank" rel="noopener">▶ 하드웨어 플래그 제어</a></span>
+  <div class="rule">애니메이션을 <b>새로고침한 직후(REG=00000000)</b> 시나리오 「과열 대응」을 실행해 관찰하고, 화면의 코드 로그를 보지 않고 아래를 채운 뒤 채점 → 로그와 대조하세요.</div>
+
+  <h3>① 「과열 대응」을 코드로</h3>
+  <table class="wt">
+    <tr><th style="width:26%">하는 일</th><th>C 코드 한 줄</th><th style="width:24%">실행 후 REG (2진)</th></tr>
+    <tr><td class="l">히터(bit 3) 끄기</td><td><input style="width:100%" class="mono" id="w5c0" placeholder="REG ..."></td><td><input class="b8" id="w5r0" maxlength="8"></td></tr>
+    <tr><td class="l">냉각팬(bit 4) 켜기</td><td><input style="width:100%" class="mono" id="w5c1" placeholder="REG ..."></td><td><input class="b8" id="w5r1" maxlength="8"></td></tr>
+    <tr><td class="l">히터 꺼졌는지 검사</td><td><input style="width:100%" class="mono" id="w5c2" placeholder="if ( ... )"></td><td>변화 없음</td></tr>
+  </table>
+
+  <h3>② 서술 2개</h3>
+  <div class="free"><div class="cap">검사(&amp;)를 해도 REG가 변하지 않는 이유</div><textarea id="w5f1"></textarea></div>
+  <div class="free"><div class="cap">REG = 16; 처럼 통째로 대입하면 안 되는 이유</div><textarea id="w5f2"></textarea></div>
+
+  <h3>③ 내 시나리오 (자유 — 수동 조작으로 실행해 코드 로그와 대조)</h3>
+  <table class="wt">
+    <tr><th>내 코드</th><th style="width:20%">로그와 일치?</th></tr>
+    <tr><td><input style="width:100%" class="mono" id="w5m0"></td><td><select class="b5" id="w5mc0"><option value=""></option><option>일치</option><option>불일치</option></select></td></tr>
+    <tr><td><input style="width:100%" class="mono" id="w5m1"></td><td><select class="b5" id="w5mc1"><option value=""></option><option>일치</option><option>불일치</option></select></td></tr>
+    <tr><td><input style="width:100%" class="mono" id="w5m2"></td><td><select class="b5" id="w5mc2"><option value=""></option><option>일치</option><option>불일치</option></select></td></tr>
+  </table>
+
+  <div class="actions">
+    <button class="grade" data-g="W5">채점하기 (①만 채점)</button>
+    <button class="finish" data-f="W5">실습 완료 화면 만들기</button>
+  </div>
+  <div class="res" id="resW5"></div>
+</section>
+
+<!-- ── W6 ─────────────────────────── -->
+<section class="sec" data-w="W6">
+  <h2>실습 6 · 명령 실행 추적표</h2>
+  <span class="tool">도구 <a href="anim/cpu_instruction_cycle.html" target="_blank" rel="noopener">▶ 명령 실행 사이클</a></span>
+  <div class="rule">종이 카드 손 실습에서 얻은 값으로 <b>먼저 채우고</b> 채점 → 그 다음 애니메이션 「다음 단계 ▶」를 한 박자씩 눌러 대조합니다. 기본값 M[10]=7, M[11]=5 기준입니다.</div>
+
+  <h3>① 명령별 추적 (인출 후 PC · 해석 결과 · 실행 후 A)</h3>
+  <table class="wt smalltbl">
+    <tr><th>명령</th><th>인출 후 PC</th><th>IR (2진 8자리)</th><th>해석된 뜻</th><th>실행 후 A</th><th>ADD의 플래그</th></tr>
+    <tr><td>1</td><td><input class="b3" id="w6p0"></td><td><input class="b8" id="w6i0" maxlength="8"></td>
+      <td><select id="w6m0"><option value=""></option><option>LOAD 10</option><option>ADD 11</option><option>STORE 12</option><option>HALT</option></select></td>
+      <td><input class="b3" id="w6a0"></td><td>—</td></tr>
+    <tr><td>2</td><td><input class="b3" id="w6p1"></td><td><input class="b8" id="w6i1" maxlength="8"></td>
+      <td><select id="w6m1"><option value=""></option><option>LOAD 10</option><option>ADD 11</option><option>STORE 12</option><option>HALT</option></select></td>
+      <td><input class="b3" id="w6a1"></td>
+      <td><select class="b5" id="w6fl" style="width:96px"><option value=""></option><option>없음</option><option>CF</option><option>ZF</option><option>SF</option><option>OF</option></select></td></tr>
+    <tr><td>3</td><td><input class="b3" id="w6p2"></td><td><input class="b8" id="w6i2" maxlength="8"></td>
+      <td><select id="w6m2"><option value=""></option><option>LOAD 10</option><option>ADD 11</option><option>STORE 12</option><option>HALT</option></select></td>
+      <td><input class="b3" id="w6a2"></td><td>—</td></tr>
+    <tr><td>4</td><td><input class="b3" id="w6p3"></td><td><input class="b8" id="w6i3" maxlength="8"></td>
+      <td><select id="w6m3"><option value=""></option><option>LOAD 10</option><option>ADD 11</option><option>STORE 12</option><option>HALT</option></select></td>
+      <td>—</td><td>—</td></tr>
+  </table>
+  <table class="wt"><tr><td class="l">프로그램 종료 후 M[12] =</td><td><input class="b3" id="w6m12"></td><td class="l">= 7 + 5 인지 확인</td></tr></table>
+
+  <div class="actions">
+    <button class="grade" data-g="W6">채점하기</button>
+    <button class="finish" data-f="W6">실습 완료 화면 만들기</button>
+  </div>
+  <div class="res" id="resW6"></div>
+</section>
+
+<!-- ── W7 ─────────────────────────── -->
+<section class="sec" data-w="W7">
+  <h2>실습 7 · 도착점 — 시뮬레이터 단계별 기록</h2>
+  <span class="tool">도구 <a href="anim/cpu_instruction_cycle.html" target="_blank" rel="noopener">▶ 명령 실행 사이클</a></span>
+  <div class="rule">이번엔 두 수를 <b>직접 골라</b> 실행합니다. 2회차는 반드시 <b>합이 255를 넘는 쌍</b>으로 — CF가 켜지는 것을 관찰합니다. 채점은 <b>당신이 고른 수에 맞춰</b> 자동으로 이뤄집니다.</div>
+
+  <h3>① 1회차 — 내가 고른 수</h3>
+  <table class="wt">
+    <tr><th>M[10]</th><th>M[11]</th><th>LOAD 후 A</th><th>ADD 후 A</th><th>STORE 후 M[12]</th><th>ADD의 플래그</th></tr>
+    <tr><td><input class="b3" id="w7a1" type="number" min="0" max="255"></td>
+        <td><input class="b3" id="w7b1" type="number" min="0" max="255"></td>
+        <td><input class="b3" id="w7l1"></td>
+        <td><input class="b3" id="w7d1"></td>
+        <td><input class="b3" id="w7m1"></td>
+        <td><select class="b5" id="w7f1" style="width:96px"><option value=""></option><option>없음</option><option>CF</option><option>ZF</option><option>SF</option><option>CF와 SF</option></select></td></tr>
+  </table>
+
+  <h3>② 2회차 — 합이 255를 넘는 쌍</h3>
+  <table class="wt">
+    <tr><th>M[10]</th><th>M[11]</th><th>ADD 후 A</th><th>켜진 플래그에 CF 포함?</th></tr>
+    <tr><td><input class="b3" id="w7a2" type="number" min="0" max="255"></td>
+        <td><input class="b3" id="w7b2" type="number" min="0" max="255"></td>
+        <td><input class="b3" id="w7d2"></td>
+        <td><select class="b5" id="w7f2"><option value=""></option><option>포함</option><option>미포함</option></select></td></tr>
+  </table>
+  <div class="free"><div class="cap">서술 — 2회차에서 CF가 켜진 이유 한 줄</div><textarea id="w7free"></textarea></div>
+
+  <h3>③ 짝 확인 (도착점)</h3>
+  <div class="chkrow">
+    <label>짝 이름 <input id="w7pair" style="width:110px"></label>
+    <label><input type="checkbox" id="w7done"> 기록표를 보며 짝에게 1분 설명을 마쳤습니다</label>
+  </div>
+
+  <div class="actions">
+    <button class="grade" data-g="W7">채점하기</button>
+    <button class="finish" data-f="W7">도착점 완료 화면 만들기 (전체 요약 포함)</button>
+  </div>
+  <div class="res" id="resW7"></div>
+</section>
+
+<!-- ── W8 ─────────────────────────── -->
+<section class="sec" data-w="W8">
+  <h2>부록 · float32 관찰지 (Day 2 심화)</h2>
+  <span class="tool">도구 <a href="anim/float32_ieee754.html" target="_blank" rel="noopener">▶ float32 해부도</a></span>
+  <div class="rule">강사 안내가 있을 때만 진행하는 <b>선택 실습</b>입니다. 예측 후 애니메이션에서 「저장된 실제 값」을 그대로 복사해 붙여 넣으세요.</div>
+
+  <table class="wt">
+    <tr><th>입력</th><th>정확히 저장될까 — 예측</th><th>저장된 실제 값 (실행 후 복사)</th></tr>
+    <tr><td class="mono">0.25</td>
+      <td><select class="b5" id="w8e0" style="width:96px"><option value=""></option><option>정확</option><option>오차 있음</option></select></td>
+      <td><input style="width:100%" class="mono" id="w8v0"></td></tr>
+    <tr><td class="mono">0.1</td>
+      <td><select class="b5" id="w8e1" style="width:96px"><option value=""></option><option>정확</option><option>오차 있음</option></select></td>
+      <td><input style="width:100%" class="mono" id="w8v1"></td></tr>
+  </table>
+  <div class="free"><div class="cap">서술 — 0.1 + 0.2 ≠ 0.3 이 되는 이유를 위 결과로 설명</div><textarea id="w8free"></textarea></div>
+
+  <div class="actions">
+    <button class="grade" data-g="W8">채점하기</button>
+    <button class="finish" data-f="W8">실습 완료 화면 만들기</button>
+  </div>
+  <div class="res" id="resW8"></div>
+</section>
+
+</main>
+
+<!-- 완료 화면 -->
+<div id="done">
+  <div class="dcard">
+    <div class="tag">컴퓨터 구조 · DAY 3</div>
+    <h2 id="dTitle"></h2>
+    <div class="meta">이름 <b id="dName"></b> · 완료 시각 <b id="dTime"></b></div>
+    <ul id="dList"></ul>
+    <div class="cap-inst">이 화면을 캡처해 노션에 붙여넣으세요</div>
+    <button class="close" id="dClose">닫기</button>
+  </div>
+</div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const P="ws3_";
+
+/* ── W4 표 생성 ── */
+const W4CASES=[
+  {n:"255 + 1",  f:[1,1,0,0]},
+  {n:"127 + 1",  f:[0,0,1,1]},
+  {n:"200 + 100",f:[1,0,0,0]},
+  {n:"128 + 128",f:[1,1,0,1]},
+  {n:"5 − 10",   f:[1,0,1,0]},
+  {n:"80 − 80",  f:[0,1,0,0]},
+];
+(function(){
+  const t=$("#w4tbl");
+  W4CASES.forEach((c,i)=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td class="l mono">${c.n}</td>`+[0,1,2,3].map(j=>
+      `<td><select class="s01" id="w4_${i}_${j}"><option value=""></option><option>0</option><option>1</option></select></td>`).join("");
+    t.appendChild(tr);
+  });
+})();
+
+/* ── 탭 ── */
+const SECS=[["G","안내"],["W1","실습1 논리"],["W2","실습2 가산기"],["W3","실습3 2의보수"],["W4","실습4 플래그"],["W5","실습5 제어"],["W6","실습6 추적"],["W7","실습7 도착점"],["W8","부록 float32"]];
+const nav=$("#tabs");
+SECS.forEach(([k,label])=>{
+  const b=document.createElement("button");
+  b.textContent=label; b.dataset.k=k;
+  b.addEventListener("click",()=>show(k));
+  nav.appendChild(b);
+});
+function show(k){
+  document.querySelectorAll(".sec").forEach(s=>s.classList.toggle("on",s.dataset.w===k));
+  nav.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.k===k));
+  localStorage.setItem(P+"tab",k);
+}
+function markDone(k){
+  nav.querySelector(`[data-k="${k}"]`).classList.add("done");
+  localStorage.setItem(P+"done_"+k,"1");
+}
+
+/* ── 자동 저장/복원 ── */
+document.querySelectorAll("input,select,textarea").forEach(el=>{
+  if(!el.id) return;
+  const ev=(el.tagName==="SELECT"||el.type==="checkbox")?"change":"input";
+  el.addEventListener(ev,()=>{
+    localStorage.setItem(P+el.id, el.type==="checkbox"? (el.checked?"1":"") : el.value);
+  });
+});
+function restore(){
+  document.querySelectorAll("input,select,textarea").forEach(el=>{
+    if(!el.id) return;
+    const v=localStorage.getItem(P+el.id);
+    if(v!==null){ if(el.type==="checkbox") el.checked=v==="1"; else el.value=v; }
+  });
+  SECS.forEach(([k])=>{ if(localStorage.getItem(P+"done_"+k)) nav.querySelector(`[data-k="${k}"]`)?.classList.add("done"); });
+  ["W1","W2","W3","W4"].forEach(w=>{ if(localStorage.getItem(P+"lock_"+w)) lock(w); });
+  show(localStorage.getItem(P+"tab")||"G");
+}
+
+/* ── 채점 도우미 ── */
+function mk(id, ok, ans){
+  const el=$("#"+id);
+  el.classList.toggle("okf",ok); el.classList.toggle("bad",!ok);
+  let s=el.nextElementSibling;
+  if(s&&s.classList&&s.classList.contains("fix")) s.remove();
+  if(!ok && ans!==undefined){
+    const sp=document.createElement("span"); sp.className="fix"; sp.textContent="→ "+ans;
+    el.after(sp);
+  }
+  return ok?1:0;
+}
+function eq(id, ans){ const v=($("#"+id).value||"").trim(); return mk(id, v===String(ans), ans); }
+function eqNorm(id, ans){ // 공백 제거 비교 (코드용)
+  const v=($("#"+id).value||"").replace(/\s+/g,"");
+  const a=String(ans).replace(/\s+/g,"");
+  return mk(id, v===a, ans);
+}
+function res(w, html){ const r=$("#res"+w); r.innerHTML=html; r.classList.add("on"); }
+function score(w, got, tot){ localStorage.setItem(P+"score_"+w, got+"/"+tot); return `<span class="sc">${got} / ${tot}</span>`; }
+const LOCKS={
+  W1:["w1t0a","w1t0o","w1t0x","w1t0n","w1t1a","w1t1o","w1t1x","w1t1n","w1t2a","w1t2o","w1t2x","w1t2n","w1t3a","w1t3o","w1t3x","w1t3n","w1p0b","w1p0d","w1p1b","w1p1d","w1p2b","w1p2d","w1p3b","w1p3d"],
+  W2:["w2h0s","w2h0c","w2h1s","w2h1c","w2h2s","w2h2c","w2h3s","w2h3c"],
+  W3:["w3s0","w3s1","w3s2","w3s3","w3s4","w3s5","w3s6"],
+  W4:(function(){const a=[];for(let i=0;i<6;i++)for(let j=0;j<4;j++)a.push(`w4_${i}_${j}`);return a;})(),
+};
+function lock(w){ (LOCKS[w]||[]).forEach(id=>{ const el=$("#"+id); if(el) el.disabled=true; }); localStorage.setItem(P+"lock_"+w,"1"); }
+
+/* ── 섹션별 채점 ── */
+const GRADERS={
+  W1(){
+    let g=0;
+    const tt={a:[0,0,0,1],o:[0,1,1,1],x:[0,1,1,0],n:[1,1,0,0]};
+    for(let r=0;r<4;r++) for(const k of ["a","o","x","n"]) g+=eq(`w1t${r}${k}`, tt[k][r]);
+    const pr=[["w1p0","00001100",12],["w1p1","10001100",140],["w1p2","01010101",85],["w1p3","00000000",0]];
+    pr.forEach(([id,b,d])=>{ g+=eq(id+"b",b); g+=eq(id+"d",d); });
+    lock("W1");
+    res("W1", `채점 결과 ${score("W1",g,24)} — 틀린 칸(빨강)의 바른 답이 옆에 표시됐습니다. 이제 애니메이션에서 <b>진리표 실험대와 프리셋 4개</b>로 눈으로 재확인하세요.`);
+  },
+  W2(){
+    let g=0;
+    const ha=[[0,0],[1,0],[1,0],[0,1]];
+    ha.forEach((r,i)=>{ g+=eq(`w2h${i}s`,r[0]); g+=eq(`w2h${i}c`,r[1]); });
+    const fa=[["w2f0",[2,1,0,2]],["w2f1",[3,1,1,3]]];
+    fa.forEach(([id,a])=>{ g+=eq(id+"n",a[0]); g+=eq(id+"c",a[1]); g+=eq(id+"s",a[2]); g+=eq(id+"v",a[3]); });
+    g+=eq("w2gs","XOR"); g+=eq("w2gc","AND"); g+=eq("w2cnt",2); g+=eq("w2glue","OR");
+    lock("W2");
+    res("W2", `채점 결과 ${score("W2",g,20)} — ②의 검산식이 입력 합(2, 3)과 같은지 꼭 확인하세요. 서술(반인 이유)은 짝과 비교해 보세요.`);
+  },
+  W3(){
+    let g=0;
+    g+=eq("w3s0","00001101"); g+=eq("w3s1","11110010"); g+=eq("w3s2","11110011");
+    g+=eq("w3s3","00001001"); g+=eq("w3s4","11111100"); g+=eq("w3s5","없음"); g+=eq("w3s6",-4);
+    // 자유 문제: 학생이 고른 수에 맞춰 동적 채점
+    const a=parseInt($("#w3fa").value,10), b=parseInt($("#w3fb").value,10);
+    let extra="";
+    if(!isNaN(a)&&!isNaN(b)){
+      if(a-b>=0){ extra=`<br><b style="color:var(--warn)">자유 문제 주의:</b> ${a}−${b}는 결과가 음수가 아닙니다 — 조건에 맞게 다시 출제하세요.`; mk("w3fa",false); mk("w3fb",false); }
+      else{ mk("w3fa",true); mk("w3fb",true); g+=eq("w3fh",a-b); g+=eq("w3fm",a-b); }
+    }
+    lock("W3");
+    res("W3", `채점 결과 ${score("W3",g,9)} — 이제 애니메이션에 9와 13을 넣어 <b>단계별로</b> 내 손 계산과 대조하세요.${extra}`);
+  },
+  W4(){
+    let g=0;
+    W4CASES.forEach((c,i)=>c.f.forEach((v,j)=>{ g+=eq(`w4_${i}_${j}`,v); }));
+    g+=eq("w4cf","부호 없는"); g+=eq("w4of","부호 있는");
+    lock("W4");
+    const pass=g>=20? "통과 기준(18+②) 충족":"18칸 이상이 목표 — 틀린 사례를 애니메이션에서 다시 실행해 보세요";
+    res("W4", `채점 결과 ${score("W4",g,26)} — ${pass}. 특히 <b>200+100</b>(CF만)과 <b>128+128</b>(CF·ZF·OF)을 애니메이션으로 재확인하세요.`);
+  },
+  W5(){
+    let g=0;
+    g+=eqNorm("w5c0","REG &= ~(1 << 3);");
+    g+=eqNorm("w5c1","REG |= (1 << 4);");
+    // 검사는 핵심 패턴 포함 여부
+    const t=($("#w5c2").value||"").replace(/\s+/g,"");
+    g+=mk("w5c2", t.includes("REG&(1<<3)"), "if (REG & (1 << 3))");
+    g+=eq("w5r0","00000000"); g+=eq("w5r1","00010000");
+    res("W5", `채점 결과 ${score("W5",g,5)} — 코드 표기는 애니메이션 <b>코드 로그와 글자까지 일치</b>가 목표입니다. ③ 내 시나리오는 수동 조작으로 직접 검증해 「일치」를 채우세요.`);
+  },
+  W6(){
+    let g=0;
+    g+=eq("w6p0",1); g+=eq("w6i0","00011010"); g+=eq("w6m0","LOAD 10"); g+=eq("w6a0",7);
+    g+=eq("w6p1",2); g+=eq("w6i1","00101011"); g+=eq("w6m1","ADD 11");  g+=eq("w6a1",12); g+=eq("w6fl","없음");
+    g+=eq("w6p2",3); g+=eq("w6i2","00111100"); g+=eq("w6m2","STORE 12"); g+=eq("w6a2",12);
+    g+=eq("w6p3",4); g+=eq("w6i3","11110000"); g+=eq("w6m3","HALT");
+    g+=eq("w6m12",12);
+    res("W6", `채점 결과 ${score("W6",g,17)} — 이제 애니메이션 「다음 단계 ▶」로 <b>한 박자씩</b> 눌러 사이클 기록과 대조하세요. 7+5=12인데 플래그가 「없음」인 이유도 화면에서 확인됩니다.`);
+  },
+  W7(){
+    let g=0, tot=0, warn="";
+    const a1=parseInt($("#w7a1").value,10), b1=parseInt($("#w7b1").value,10);
+    if(!isNaN(a1)&&!isNaN(b1)){
+      const sum=(a1+b1)&255, cf=(a1+b1)>255, zf=sum===0, sf=sum>=128;
+      tot+=4;
+      g+=eq("w7l1",a1); g+=eq("w7d1",sum); g+=eq("w7m1",sum);
+      const exp = !cf&&!zf&&!sf? "없음" : (cf&&sf? "CF와 SF" : cf? "CF" : zf? "ZF" : "SF");
+      g+=eq("w7f1",exp);
+    } else warn+="1회차 M[10]·M[11]을 먼저 입력하세요. ";
+    const a2=parseInt($("#w7a2").value,10), b2=parseInt($("#w7b2").value,10);
+    if(!isNaN(a2)&&!isNaN(b2)){
+      if(a2+b2<=255){ warn+=`2회차 ${a2}+${b2}=${a2+b2}는 255를 넘지 않습니다 — 다른 쌍으로. `; mk("w7a2",false); mk("w7b2",false); }
+      else{
+        mk("w7a2",true); mk("w7b2",true);
+        tot+=2;
+        g+=eq("w7d2",(a2+b2)&255);
+        g+=eq("w7f2","포함");
+      }
+    } else warn+="2회차 쌍을 입력하세요.";
+    res("W7", `채점 결과 ${score("W7",g,tot||6)} — 채점은 <b>당신이 고른 수 기준</b>으로 계산됐습니다. ${warn? `<b style="color:var(--warn)">${warn}</b>`:""} 짝 설명까지 마치고 체크하면 도착점 완료입니다.`);
+  },
+  W8(){
+    let g=0;
+    g+=eq("w8e0","정확"); g+=eq("w8e1","오차 있음");
+    g+=mk("w8v0", ($("#w8v0").value||"").trim()==="0.25", "0.25");
+    const v=($("#w8v1").value||"").trim();
+    g+=mk("w8v1", v.startsWith("0.100000001490116"), "0.100000001490116…");
+    res("W8", `채점 결과 ${score("W8",g,4)} — 0.1은 저장되는 순간 이미 다른 수였습니다. 이것이 0.1+0.2≠0.3의 전부입니다.`);
+  },
+};
+document.querySelectorAll("[data-g]").forEach(b=>b.addEventListener("click",()=>GRADERS[b.dataset.g]()));
+
+/* ── 완료 화면 ── */
+const TITLES={W1:"실습 1 · 논리 연산 완료",W2:"실습 2 · 가산기 완료",W3:"실습 3 · 2의 보수 완료",W4:"실습 4 · 상태 플래그 완료",W5:"실습 5 · 하드웨어 제어 완료",W6:"실습 6 · 명령 추적 완료",W7:"Day 3 도착점 완료",W8:"부록 · float32 완료"};
+function finish(w){
+  const name=($("#stuName").value||"").trim();
+  if(!name){ alert("상단에 이름을 먼저 입력하세요."); show("G"); $("#stuName").focus(); return; }
+  const sc=localStorage.getItem(P+"score_"+w);
+  if(!sc){ alert("먼저 「채점하기」를 눌러 주세요."); return; }
+  if(w==="W7" && !$("#w7done").checked){ alert("짝에게 1분 설명을 마친 뒤 체크해 주세요 — 그것이 오늘의 도착점입니다."); return; }
+  $("#dTitle").textContent=TITLES[w];
+  $("#dName").textContent=name;
+  $("#dTime").textContent=new Date().toLocaleString("ko-KR");
+  const ul=$("#dList"); ul.innerHTML="";
+  const li=(k,v)=>{ const d=document.createElement("li"); d.innerHTML=`<b>${k}</b> — <span class="v">${v}</span>`; ul.appendChild(d); };
+  li("채점 점수", sc);
+  if(w==="W7"){
+    li("1회차", `M[10]=${$("#w7a1").value} + M[11]=${$("#w7b1").value} → M[12]=${$("#w7m1").value}`);
+    li("2회차 (CF 관찰)", `${$("#w7a2").value} + ${$("#w7b2").value} → A=${$("#w7d2").value}, CF ${$("#w7f2").value||"?"}`);
+    li("짝 확인", `${$("#w7pair").value||"(짝 이름 미기입)"} — 1분 설명 완료`);
+    ["W1","W2","W3","W4","W5","W6"].forEach(k=>{
+      const s=localStorage.getItem(P+"score_"+k);
+      li(TITLES[k].split(" 완료")[0], s? s+" 완료":"미완료");
+    });
+  }else if(w==="W3"){
+    li("지정 문제", "9 − 13 = "+($("#w3s6").value||"?"));
+    li("자유 문제", `${$("#w3fa").value||"?"} − ${$("#w3fb").value||"?"} = ${$("#w3fh").value||"?"}`);
+  }else if(w==="W5"){
+    li("코드 3줄", [$("#w5c0").value,$("#w5c1").value,$("#w5c2").value].filter(Boolean).join(" · ")||"(미기입)");
+  }
+  $("#done").classList.add("on");
+  markDone(w);
+}
+document.querySelectorAll("[data-f]").forEach(b=>b.addEventListener("click",()=>finish(b.dataset.f)));
+$("#dClose").addEventListener("click",()=>$("#done").classList.remove("on"));
+
+/* ── 초기화 ── */
+$("#btnReset").addEventListener("click",()=>{
+  if(!confirm("모든 답과 완료 기록을 지웁니다. 계속할까요?")) return;
+  Object.keys(localStorage).filter(k=>k.startsWith(P)).forEach(k=>localStorage.removeItem(k));
+  location.reload();
+});
+
+restore();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>주소의 원리 — CPU는 메모리 칸을 어떻게 찾아가나</title>
+<style>
+  :root{
+    --bg:#0f141d;
+    --panel:#161d2a;
+    --panel2:#1b2434;
+    --line:#26314a;
+    --ink:#dce6f5;
+    --dim:#7d8ba3;
+    --bit1:#ffd166;     /* 데이터 */
+    --accent:#4cc9f0;   /* 주소 */
+    --mask:#c792ea;
+    --on:#7ee787;
+    --bad:#ff5d73;
+    --mono:"JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    min-height:100vh; padding:24px 16px 60px;
+  }
+  .wrap{max-width:960px; margin:0 auto;}
+
+  header{margin-bottom:18px;}
+  .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.18em; color:var(--accent); text-transform:uppercase;}
+  h1{font-size:clamp(20px,4vw,28px); font-weight:800; margin-top:6px;}
+  h1 code{font-family:var(--mono); color:var(--bit1);}
+  .sub{color:var(--dim); font-size:14px; margin-top:6px; line-height:1.6;}
+  .sub b{color:var(--ink);}
+
+  /* ── 제어 ─────────────────── */
+  .controls{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin-bottom:14px;}
+  .row{display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end;}
+  .grp{display:flex; flex-direction:column; gap:6px;}
+  .grp .cap{font-size:11px; color:var(--dim); letter-spacing:.05em;}
+  .addrbits{display:flex; gap:6px; align-items:center;}
+  .abit{
+    width:46px; height:46px; border-radius:10px; border:1px solid var(--line);
+    background:var(--bg); color:var(--dim); font-family:var(--mono); font-size:20px; font-weight:800;
+    cursor:pointer; position:relative;
+  }
+  .abit.on{color:var(--accent); border-color:var(--accent);}
+  .abit .t{position:absolute; top:-8px; left:5px; font-size:9px; color:var(--dim); background:var(--panel); padding:0 3px;}
+  .abit:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .addreq{font-family:var(--mono); font-size:14px; color:var(--dim); padding-left:4px;}
+  .addreq b{color:var(--accent); font-size:18px;}
+  .field input{
+    width:96px; padding:9px 11px; font-family:var(--mono); font-size:17px;
+    background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:8px;
+  }
+  .field input:focus{outline:2px solid var(--accent); outline-offset:1px;}
+  .btn{padding:10px 18px; border:none; border-radius:8px; font-weight:800; font-size:14px; cursor:pointer; font-family:inherit;}
+  .btn.read{background:var(--accent); color:#06222e;}
+  .btn.write{background:var(--bit1); color:#2a2005;}
+  .btn:disabled{opacity:.4; cursor:default;}
+  .btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .hint{width:100%; font-size:11.5px; color:var(--dim);}
+
+  /* ── 본체: CPU | 버스 | 메모리 ─── */
+  .machine{display:grid; grid-template-columns:220px 120px 1fr; gap:0; margin-bottom:14px;}
+  @media(max-width:760px){
+    .machine{grid-template-columns:1fr;}
+    .buscol{flex-direction:row !important; min-height:0 !important; padding:10px 0;}
+    .buslane{flex:1;}
+  }
+  .panelbox{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px;}
+  .panelbox h2{font-size:13px; font-weight:800; margin-bottom:10px;}
+  .panelbox h2 small{color:var(--dim); font-weight:400; margin-left:6px;}
+
+  /* CPU */
+  .reg{
+    background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:8px;
+    transition:border-color .25s;
+  }
+  .reg.hot{border-color:var(--bit1);}
+  .reg.hotA{border-color:var(--accent);}
+  .reg .nm{font-family:var(--mono); font-size:12px; font-weight:800; color:var(--dim);}
+  .reg .nm small{font-family:"Pretendard","Apple SD Gothic Neo",sans-serif; font-weight:400; margin-left:6px;}
+  .reg .vl{font-family:var(--mono); font-size:19px; font-weight:800; margin-top:3px;}
+  .reg .vl .a{color:var(--accent);} .reg .vl .d{color:var(--bit1);}
+  .ctl{display:flex; gap:6px;}
+  .ctl .lamp{
+    flex:1; text-align:center; font-family:var(--mono); font-size:12px; font-weight:800;
+    padding:8px 0; border-radius:8px; background:var(--bg); border:1px solid var(--line); color:#3a465e;
+  }
+  .ctl .lamp.on{color:var(--on); border-color:var(--on);}
+  .reg.pulse{animation:pulse .45s ease;}
+  @keyframes pulse{0%{transform:scale(1);} 40%{transform:scale(1.04);} 100%{transform:scale(1);}}
+
+  /* 버스 */
+  .buscol{display:flex; flex-direction:column; justify-content:center; gap:22px; min-height:100%; padding:0 6px;}
+  .buslane{text-align:center;}
+  .buslane .wire{height:4px; border-radius:2px; background:var(--line); position:relative; transition:background .3s, box-shadow .3s;}
+  .buslane.aon .wire{background:var(--accent); box-shadow:0 0 10px rgba(76,201,240,.5);}
+  .buslane.don .wire{background:var(--bit1); box-shadow:0 0 10px rgba(255,209,102,.5);}
+  .buslane .lb{font-size:10.5px; color:var(--dim); margin-top:6px; line-height:1.4;}
+  .buslane .lb b{color:var(--ink); font-size:11px;}
+
+  /* 메모리 */
+  .mrow{
+    display:grid; grid-template-columns:70px 34px 1fr 46px; gap:8px; align-items:center;
+    padding:5px 8px; border-radius:8px; border:1px solid transparent; margin-bottom:3px;
+    background:var(--bg);
+    transition:opacity .3s, border-color .3s, background .3s;
+  }
+  .mrow .ad{font-family:var(--mono); font-size:12.5px; color:var(--dim); letter-spacing:.06em;}
+  .mrow .ad .m{color:var(--accent);}
+  .mrow .adn{font-family:var(--mono); font-size:11px; color:var(--dim); text-align:right;}
+  .mrow .vl{font-family:var(--mono); font-size:13.5px; font-weight:700; letter-spacing:.05em;}
+  .mrow .vd{font-family:var(--mono); font-size:11px; color:var(--dim); text-align:right;}
+  .mrow.out{opacity:.18;}
+  .mrow.cand{border-color:var(--line); background:var(--panel2);}
+  .mrow.sel{border-color:var(--on); background:#12241a; opacity:1;}
+  .mrow.sel .vl{color:var(--on);}
+  .mhead{display:grid; grid-template-columns:70px 34px 1fr 46px; gap:8px; font-size:10px; color:var(--dim); padding:0 8px 6px;}
+  .decstat{margin-top:10px; font-family:var(--mono); font-size:12px; color:var(--dim); border-top:1px solid var(--line); padding-top:8px; min-height:34px; line-height:1.6;}
+  .decstat b{color:var(--accent);}
+
+  /* 해설/판정 */
+  .explain{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:13px 16px; margin-bottom:14px; font-size:14px; line-height:1.75; color:var(--dim); min-height:52px;
+  }
+  .explain b{color:var(--ink);}
+  .explain code{font-family:var(--mono); background:var(--bg); padding:2px 7px; border-radius:6px; font-size:13px;}
+  .explain .a{color:var(--accent); font-weight:800;}
+  .explain .d{color:var(--bit1); font-weight:800;}
+  .verdict{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:16px; margin-bottom:14px; font-size:14px; line-height:1.8; color:var(--dim); display:none;
+  }
+  .verdict.show{display:block;}
+  .verdict b{color:var(--ink);}
+  .verdict .fine{color:var(--on); font-weight:700;}
+  .verdict code{font-family:var(--mono); background:var(--bg); padding:2px 7px; border-radius:6px; font-size:13px;}
+
+  /* 스케일 위젯 */
+  .scale{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px;}
+  .scale h2{font-size:13px; font-weight:800;}
+  .scale h2 small{color:var(--dim); font-weight:400; margin-left:6px;}
+  .scale input[type=range]{width:100%; margin:14px 0 10px; accent-color:var(--accent);}
+  .scaleout{font-family:var(--mono); font-size:14px; color:var(--dim); line-height:1.9;}
+  .scaleout b{color:var(--ink); font-size:17px;}
+  .scaleout .gb{color:var(--bit1); font-weight:800;}
+  .scalenote{font-size:12.5px; color:var(--dim); margin-top:8px; line-height:1.7;}
+  .scalenote b{color:var(--ink);}
+
+  .flychip{
+    position:fixed; z-index:99; transform:translate(-50%,-50%);
+    font-family:var(--mono); font-size:13px; font-weight:800;
+    background:var(--accent); color:#06222e; padding:5px 11px; border-radius:8px;
+    transition:left .5s cubic-bezier(.4,0,.2,1), top .5s cubic-bezier(.4,0,.2,1);
+    pointer-events:none; box-shadow:0 4px 18px rgba(76,201,240,.35);
+  }
+  .flychip.gold{background:var(--bit1); color:#2a2005; box-shadow:0 4px 18px rgba(255,209,102,.35);}
+
+  @media (prefers-reduced-motion:reduce){
+    .mrow,.reg,.buslane .wire{transition:none;}
+    .reg.pulse{animation:none;}
+    .flychip{transition:none;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Address Bus · Decoder · Random Access</div>
+    <h1>주소의 원리 — CPU는 수십억 칸 중 <code>한 칸</code>을 어떻게 단번에 찾나</h1>
+    <p class="sub">메모리 칸에는 이름이 없습니다. 있는 것은 <b>번호(주소)</b>뿐 — CPU가 주소를 <b>주소 버스</b>에 실어 보내면, 메모리의 <b>디코더</b>가 주소 비트 하나당 후보를 절반씩 걸러 <b>정확히 한 칸</b>만 켭니다. 검색이 아니라 배선입니다.</p>
+  </header>
+
+  <section class="controls">
+    <div class="row">
+      <div class="grp">
+        <span class="cap">접근할 주소 — 비트를 눌러 만드세요 (또는 메모리 칸 클릭)</span>
+        <div class="addrbits" id="addrbits">
+          <span class="addreq" id="addreq"></span>
+        </div>
+      </div>
+      <div class="grp field">
+        <span class="cap">쓸 값 (0~255)</span>
+        <input id="inVal" type="number" min="0" max="255" value="42">
+      </div>
+      <button class="btn read" id="btnRead">읽기 ▶</button>
+      <button class="btn write" id="btnWrite">쓰기 ▶</button>
+      <span class="hint">읽기 = 메모리→CPU로 값 복사(원본 유지) · 쓰기 = CPU→메모리로 값 덮어쓰기</span>
+    </div>
+  </section>
+
+  <section class="machine">
+    <!-- CPU -->
+    <div class="panelbox">
+      <h2>CPU</h2>
+      <div class="reg" id="regMAR">
+        <div class="nm">MAR<small>주소 레지스터 — 어디에</small></div>
+        <div class="vl"><span class="a" id="marVal">0000</span></div>
+      </div>
+      <div class="reg" id="regMDR">
+        <div class="nm">MDR<small>데이터 레지스터 — 무엇을</small></div>
+        <div class="vl"><span class="d" id="mdrVal">--------</span></div>
+      </div>
+      <div class="ctl">
+        <div class="lamp" id="lampR">READ</div>
+        <div class="lamp" id="lampW">WRITE</div>
+      </div>
+    </div>
+
+    <!-- 버스 -->
+    <div class="buscol">
+      <div class="buslane" id="laneA">
+        <div class="wire" id="wireA"></div>
+        <div class="lb"><b>주소 버스</b><br>한 방향 →</div>
+      </div>
+      <div class="buslane" id="laneD">
+        <div class="wire" id="wireD"></div>
+        <div class="lb"><b>데이터 버스</b><br>양방향 ↔</div>
+      </div>
+      <div class="buslane">
+        <div class="wire" id="wireC"></div>
+        <div class="lb"><b>제어선</b><br>읽기/쓰기 신호</div>
+      </div>
+    </div>
+
+    <!-- 메모리 -->
+    <div class="panelbox">
+      <h2>메모리 <small>16칸 (4비트 주소 = 2⁴)</small></h2>
+      <div class="mhead"><div>주소(2진)</div><div style="text-align:right">10진</div><div>내용</div><div style="text-align:right">10진</div></div>
+      <div id="memBox"></div>
+      <div class="decstat" id="decstat">디코더 대기 중 — 주소가 도착하면 비트 하나씩 후보를 걸러냅니다.</div>
+    </div>
+  </section>
+
+  <section class="explain" id="explain">
+    주소 비트를 눌러 목적지를 정하고 <b>읽기 ▶</b> 또는 <b>쓰기 ▶</b>를 누르세요. 어떤 주소를 고르든 <b>걸리는 박자가 같다</b>는 것을 확인하는 게 오늘의 핵심입니다.
+  </section>
+
+  <section class="verdict" id="verdict" aria-live="polite"></section>
+
+  <!-- 스케일 위젯 -->
+  <section class="scale">
+    <h2>주소 비트가 늘어나면? <small>비트 1개 = 칸 수 2배</small></h2>
+    <input type="range" id="scaleN" min="1" max="32" value="4">
+    <div class="scaleout" id="scaleout"></div>
+    <div class="scalenote" id="scalenote"></div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const sleep=ms=>new Promise(r=>setTimeout(r, reduced?0:ms));
+  const bin8=v=>v.toString(2).padStart(8,"0");
+  const bin4=v=>v.toString(2).padStart(4,"0");
+
+  let mem=[19,7,200,0,88,255,3,64,150,12,99,1,240,55,8,127];
+  let addrBits=[0,1,0,1];   // MSB→LSB, 초기 주소 5
+  let busy=false;
+
+  /* ── 주소 비트 토글 ───────────────── */
+  const ab=$("#addrbits");
+  for(let i=3;i>=0;i--){
+    const b=document.createElement("button");
+    b.className="abit"; b.dataset.i=i;
+    b.innerHTML=`<span class="t">bit ${i}</span>0`;
+    b.addEventListener("click",()=>{ if(!busy){ addrBits[3-i]^=1; renderAddr(); }});
+    ab.insertBefore(b, ab.firstChild);
+  }
+  function addrVal(){ return addrBits.reduce((a,x)=>a*2+x,0); }
+  function renderAddr(){
+    document.querySelectorAll(".abit").forEach(b=>{
+      const i=+b.dataset.i, v=addrBits[3-i];
+      b.innerHTML=`<span class="t">bit ${i}</span>${v}`;
+      b.classList.toggle("on",v===1);
+    });
+    $("#addreq").innerHTML=`= <b>${addrVal()}</b>번지`;
+    $("#marVal").textContent=bin4(addrVal());
+  }
+
+  /* ── 메모리 UI ───────────────────── */
+  const memBox=$("#memBox");
+  function buildMem(){
+    memBox.innerHTML="";
+    for(let ad=0; ad<16; ad++){
+      const r=document.createElement("div");
+      r.className="mrow"; r.id="mrow"+ad;
+      r.style.cursor="pointer";
+      r.title=ad+"번지 선택";
+      r.addEventListener("click",()=>{
+        if(busy) return;
+        addrBits=bin4(ad).split("").map(Number);
+        renderAddr();
+      });
+      memBox.appendChild(r);
+    }
+    renderMem();
+  }
+  function renderMem(matchLen, sel){
+    for(let ad=0; ad<16; ad++){
+      const r=$("#mrow"+ad);
+      const bb=bin4(ad);
+      let adHtml=bb;
+      if(matchLen>0) adHtml=`<span class="m">${bb.slice(0,matchLen)}</span>${bb.slice(matchLen)}`;
+      r.innerHTML=`<div class="ad">${adHtml}</div><div class="adn">${ad}</div>
+        <div class="vl" id="mval${ad}">${bin8(mem[ad])}</div><div class="vd">${mem[ad]}</div>`;
+      r.className="mrow";
+      if(sel===ad) r.classList.add("sel");
+      else if(matchLen!==undefined && matchLen>0){
+        const target=bin4(addrVal());
+        if(bb.slice(0,matchLen)===target.slice(0,matchLen)) r.classList.add("cand");
+        else r.classList.add("out");
+      }
+    }
+  }
+
+  /* ── 날아가는 칩 ─────────────────── */
+  function fly(fromEl,toEl,text,gold){
+    if(reduced||!fromEl||!toEl) return Promise.resolve();
+    const r1=fromEl.getBoundingClientRect(), r2=toEl.getBoundingClientRect();
+    const chip=document.createElement("div");
+    chip.className="flychip"+(gold?" gold":"");
+    chip.textContent=text;
+    chip.style.left=(r1.left+r1.width/2)+"px";
+    chip.style.top=(r1.top+r1.height/2)+"px";
+    document.body.appendChild(chip);
+    void chip.offsetWidth;
+    chip.style.left=(r2.left+r2.width/2)+"px";
+    chip.style.top=(r2.top+r2.height/2)+"px";
+    return new Promise(r=>setTimeout(()=>{chip.remove(); r();},520));
+  }
+  function pulse(id){ const el=$("#"+id); el.classList.remove("pulse"); void el.offsetWidth; el.classList.add("pulse"); }
+
+  /* ── 접근 시퀀스 ─────────────────── */
+  async function access(mode){ // "R" | "W"
+    if(busy) return; busy=true;
+    $("#btnRead").disabled=true; $("#btnWrite").disabled=true;
+    $("#verdict").className="verdict";
+    const ad=addrVal(), target=bin4(ad);
+    const ex=$("#explain"), ds=$("#decstat");
+    renderMem();
+    $("#lampR").classList.toggle("on",mode==="R");
+    $("#lampW").classList.toggle("on",mode==="W");
+
+    // 쓰기면 MDR에 값 먼저 적재
+    let wv=0;
+    if(mode==="W"){
+      wv=Math.min(255,Math.max(0,parseInt($("#inVal").value||"0",10)));
+      $("#inVal").value=wv;
+      $("#mdrVal").textContent=bin8(wv);
+      pulse("regMDR");
+      ex.innerHTML=`<b>준비</b> — 쓸 값 <span class="d">${wv}</span>을 MDR에 올려 두고, 목적지 주소 <span class="a">${target}</span>(${ad}번지)를 MAR에 올립니다. 제어선은 <b>WRITE</b>.`;
+    }else{
+      $("#mdrVal").textContent="--------";
+      ex.innerHTML=`<b>준비</b> — 읽을 주소 <span class="a">${target}</span>(${ad}번지)를 MAR에 올립니다. 제어선은 <b>READ</b>.`;
+    }
+    $("#regMAR").classList.add("hotA");
+    await sleep(900);
+
+    // 1) 주소 버스로 주소 전송
+    $("#laneA").classList.add("aon");
+    ex.innerHTML=`<span class="a">① 주소 전송</span> — MAR의 <code>${target}</code>이 <b>주소 버스</b>를 타고 메모리로 갑니다. 주소 버스는 항상 CPU→메모리 <b>한 방향</b>입니다.`;
+    await fly($("#regMAR"), $("#decstat"), target, false);
+    $("#regMAR").classList.remove("hotA");
+    await sleep(300);
+
+    // 2) 디코더: 비트 하나당 절반 거르기
+    ex.innerHTML=`<span class="a">② 디코더</span> — 도착한 주소 비트를 <b>위에서부터 하나씩</b> 확인하며 후보를 절반씩 걸러냅니다. 16칸 → 8 → 4 → 2 → <b>1칸</b>.`;
+    for(let k=1;k<=4;k++){
+      const bit=target[k-1];
+      const half = bit==="1"? "아래쪽":"위쪽";
+      const remain = 16>>k;
+      renderMem(k);
+      ds.innerHTML=`bit ${4-k} = <b>${bit}</b> → ${half} 절반만 후보로. 남은 후보 <b>${remain}칸</b>`;
+      await sleep(620);
+    }
+    renderMem(4, ad);
+    ds.innerHTML=`선택 완료 — <b>${target}</b> 단 한 칸만 활성. 어떤 주소든 정확히 <b>4번</b>이면 끝.`;
+    await sleep(700);
+
+    // 3) 데이터 이동
+    $("#laneD").classList.add("don");
+    if(mode==="R"){
+      ex.innerHTML=`<span class="d">③ 데이터 응답</span> — 선택된 칸의 내용 <b>${mem[ad]}</b>이 <b>데이터 버스</b>를 타고 CPU의 MDR로 <b>복사</b>됩니다. 원본은 그대로 남습니다.`;
+      await fly($("#mval"+ad), $("#regMDR"), String(mem[ad]), true);
+      $("#mdrVal").textContent=bin8(mem[ad]);
+      pulse("regMDR"); $("#regMDR").classList.add("hot");
+    }else{
+      ex.innerHTML=`<span class="d">③ 데이터 기록</span> — MDR의 <b>${wv}</b>이 <b>데이터 버스</b>를 타고 가서 선택된 칸을 <b>덮어씁니다</b>. 이전 값 ${mem[ad]}은 사라집니다.`;
+      await fly($("#regMDR"), $("#mval"+ad), String(wv), true);
+      mem[ad]=wv;
+      renderMem(4, ad);
+    }
+    await sleep(900);
+
+    // 마무리
+    $("#laneA").classList.remove("aon");
+    $("#laneD").classList.remove("don");
+    $("#lampR").classList.remove("on"); $("#lampW").classList.remove("on");
+    $("#regMDR").classList.remove("hot");
+    const v=$("#verdict");
+    v.innerHTML =
+      `<b class="fine">${mode==="R"? "읽기":"쓰기"} 완료 — ${ad}번지</b><br>` +
+      `방금의 접근은 <b>검색이 아니었습니다.</b> 디코더는 주소 비트 수만큼(4번)만 갈라졌고, 이 횟수는 <b>0번지든 15번지든 똑같습니다.</b> ` +
+      `어느 칸이든 같은 박자에 닿는다 — 이것이 RAM의 R·A, <b>Random Access(임의 접근)</b>의 뜻입니다.<br>` +
+      (mode==="W"
+        ? `확인해 보세요: 같은 주소로 <b>읽기 ▶</b>를 누르면 방금 쓴 ${wv}이 그대로 돌아옵니다.`
+        : `비교해 보세요: 다른 주소를 골라 다시 읽어도 디코더 단계는 똑같이 4번입니다.`);
+    v.classList.add("show");
+    busy=false;
+    $("#btnRead").disabled=false; $("#btnWrite").disabled=false;
+  }
+
+  /* ── 스케일 위젯 ─────────────────── */
+  function fmtCells(n){
+    const cells=2**n;
+    if(n>=30) return (cells/2**30)+"G칸 ("+cells.toLocaleString()+")";
+    if(n>=20) return (cells/2**20)+"M칸 ("+cells.toLocaleString()+")";
+    if(n>=10) return (cells/2**10)+"K칸 ("+cells.toLocaleString()+")";
+    return cells.toLocaleString()+"칸";
+  }
+  function renderScale(){
+    const n=+$("#scaleN").value;
+    const cells=2**n;
+    let mark="";
+    if(n===4) mark=" — 지금 화면의 메모리";
+    if(n===10) mark=" ≈ 1KB급";
+    if(n===20) mark=" ≈ 1MB급";
+    if(n===30) mark=" ≈ 1GB급";
+    if(n===32) mark=" = 4GB — 32비트 컴퓨터가 4GB 벽에 부딪힌 이유";
+    $("#scaleout").innerHTML=`주소 <b>${n}비트</b> → 2<sup>${n}</sup> = <b>${fmtCells(n)}</b><span class="gb">${mark}</span>`;
+    $("#scalenote").innerHTML =
+      `디코더 단계는 <b>${n}번</b>뿐 — 칸이 ${cells.toLocaleString()}개라도 접근 박자는 주소 비트 수만큼만 늘어납니다. ` +
+      `Day 1에서 읽은 사양표의 <b>메모리 GB 숫자</b>는 결국 "주소 비트가 몇 개인가"의 다른 표현입니다.`;
+  }
+  $("#scaleN").addEventListener("input",renderScale);
+
+  /* ── 초기화 ─────────────────────── */
+  buildMem();
+  renderAddr();
+  renderScale();
+  $("#btnRead").addEventListener("click",()=>access("R"));
+  $("#btnWrite").addEventListener("click",()=>access("W"));
+})();
+</script>
+</body>
+</html>

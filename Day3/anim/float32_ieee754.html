@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>float32 해부도 — IEEE 754 단정밀도</title>
+<style>
+  :root{
+    --bg:#0f141d;
+    --panel:#161d2a;
+    --panel2:#1b2434;
+    --line:#26314a;
+    --ink:#dce6f5;
+    --dim:#7d8ba3;
+    --sign:#ff5d73;      /* 부호 */
+    --expo:#4cc9f0;      /* 지수 */
+    --mant:#ffd166;      /* 가수 */
+    --good:#7ee787;
+    --warn:#ff9f43;
+    --mono:"JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    min-height:100vh; padding:24px 16px 60px;
+  }
+  .wrap{max-width:900px; margin:0 auto;}
+
+  header{margin-bottom:20px;}
+  .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.18em; color:var(--expo); text-transform:uppercase;}
+  h1{font-size:clamp(20px,4vw,28px); font-weight:800; margin-top:6px;}
+  h1 code{font-family:var(--mono); color:var(--mant);}
+  .sub{color:var(--dim); font-size:14px; margin-top:6px; line-height:1.6;}
+  .sub b{color:var(--ink);}
+  .legend{display:flex; gap:16px; margin-top:10px; font-size:12px; color:var(--dim); flex-wrap:wrap;}
+  .legend span::before{content:""; display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:6px; vertical-align:-1px;}
+  .legend .l-s::before{background:var(--sign);}
+  .legend .l-e::before{background:var(--expo);}
+  .legend .l-m::before{background:var(--mant);}
+
+  /* ── 입력 ─────────────────── */
+  .controls{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:14px;}
+  .row{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;}
+  .field{display:flex; flex-direction:column; gap:4px;}
+  .field label{font-size:11px; color:var(--dim); letter-spacing:.06em;}
+  .field input{
+    width:200px; padding:10px 12px; font-family:var(--mono); font-size:18px;
+    background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:8px;
+  }
+  .field input:focus{outline:2px solid var(--expo); outline-offset:1px; border-color:transparent;}
+  .run{
+    padding:11px 22px; border:none; border-radius:8px;
+    background:var(--mant); color:#2a2005; font-weight:800; font-size:15px; cursor:pointer;
+  }
+  .run:disabled{opacity:.45; cursor:default;}
+  .run:focus-visible,.chip:focus-visible{outline:2px solid var(--expo); outline-offset:2px;}
+  .presets{margin-top:12px; display:flex; flex-wrap:wrap; gap:8px;}
+  .presets .cap{width:100%; font-size:11px; color:var(--dim); letter-spacing:.06em;}
+  .chip{
+    font-family:var(--mono); font-size:13px; padding:7px 12px; border-radius:999px;
+    background:var(--panel2); color:var(--ink); border:1px solid var(--line); cursor:pointer;
+  }
+  .chip:hover{border-color:var(--expo);}
+  .chip small{color:var(--dim); font-family:inherit;}
+
+  /* ── 32비트 보드 ───────────── */
+  .board{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px 14px; margin-bottom:14px; overflow-x:auto;}
+  .board-inner{min-width:760px;}
+  .bitrow{display:flex; gap:3px;}
+  .bit{
+    flex:1; min-width:20px; text-align:center; font-family:var(--mono); font-size:15px; font-weight:700;
+    padding:9px 0; border-radius:6px; background:var(--bg); color:#3a465e;
+    border:1px solid transparent; cursor:pointer; user-select:none;
+    transition:background .25s,color .25s,border-color .25s,transform .15s;
+  }
+  .bit:hover{border-color:var(--dim);}
+  .bit.filled.f-s{color:var(--sign);}
+  .bit.filled.f-e{color:var(--expo);}
+  .bit.filled.f-m{color:var(--mant);}
+  .bit.filled.zero{color:var(--dim);}
+  .bit.focus{border-color:currentColor; background:#122433;}
+  .bit.pop{animation:pop .3s ease;}
+  @keyframes pop{from{transform:translateY(6px) scale(.7); opacity:0;} to{transform:none; opacity:1;}}
+  .gap{width:10px; flex:none;}
+  .fieldbar{display:flex; gap:3px; margin-top:8px;}
+  .fb{
+    text-align:center; font-size:11px; color:var(--dim); padding-top:6px; position:relative;
+  }
+  .fb::before{content:""; position:absolute; top:0; left:2px; right:2px; height:3px; border-radius:2px;}
+  .fb.s{flex:1;} .fb.s::before{background:var(--sign);}
+  .fb.e{flex:8;} .fb.e::before{background:var(--expo);}
+  .fb.m{flex:23;} .fb.m::before{background:var(--mant);}
+  .fb b{color:var(--ink);}
+  .idxrow{display:flex; gap:3px; margin-bottom:6px;}
+  .idx{flex:1; min-width:20px; text-align:center; font-family:var(--mono); font-size:9px; color:#3a465e;}
+  .hexline{margin-top:14px; font-family:var(--mono); font-size:14px; color:var(--dim);}
+  .hexline b{color:var(--ink); font-size:16px; letter-spacing:.08em;}
+  .clickhint{margin-top:6px; font-size:11px; color:var(--dim);}
+
+  /* ── 단계 카드 ─────────────── */
+  .steps{display:flex; flex-direction:column; gap:10px; margin-bottom:14px;}
+  .step{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:14px 16px; opacity:0; transform:translateY(8px);
+    transition:opacity .35s ease, transform .35s ease;
+  }
+  .step.show{opacity:1; transform:none;}
+  .step .t{font-weight:800; font-size:14px; margin-bottom:6px;}
+  .step .t .no{font-family:var(--mono); color:var(--dim); margin-right:8px; font-weight:700;}
+  .step .b{font-size:13.5px; color:var(--dim); line-height:1.75;}
+  .step .b b{color:var(--ink);}
+  .step .b code{font-family:var(--mono); background:var(--bg); padding:2px 7px; border-radius:6px; font-size:13px;}
+  .step .b .cs{color:var(--sign);} .step .b .ce{color:var(--expo);} .step .b .cm{color:var(--mant);}
+  .step.acc-s{border-left:3px solid var(--sign);}
+  .step.acc-e{border-left:3px solid var(--expo);}
+  .step.acc-m{border-left:3px solid var(--mant);}
+  .step.acc-n{border-left:3px solid var(--line);}
+
+  /* ── 결과 ─────────────────── */
+  .verdict{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:16px; font-size:14px; line-height:1.8; color:var(--dim); display:none;
+  }
+  .verdict.show{display:block;}
+  .verdict b{color:var(--ink);}
+  .verdict code{font-family:var(--mono); background:var(--bg); padding:2px 7px; border-radius:6px; font-size:13px; word-break:break-all;}
+  .verdict .fine{color:var(--good); font-weight:700;}
+  .verdict .warn{color:var(--warn); font-weight:700;}
+  .formula{
+    font-family:var(--mono); font-size:15px; color:var(--ink); background:var(--bg);
+    border-radius:10px; padding:12px 14px; margin:10px 0; overflow-x:auto; white-space:nowrap;
+  }
+  .formula .cs{color:var(--sign);} .formula .ce{color:var(--expo);} .formula .cm{color:var(--mant);}
+
+  @media (prefers-reduced-motion:reduce){
+    .bit,.step{transition:none;}
+    .bit.pop{animation:none;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">IEEE 754 · Single Precision</div>
+    <h1><code>float32</code> 해부도 — 소수는 어떻게 32비트에 담기나</h1>
+    <p class="sub">숫자를 넣으면 <b>부호 → 2진 전개 → 정규화 → 지수 인코딩 → 가수 채우기</b> 순서로 32비트가 채워지는 과정을 보여줍니다. 완성 후에는 비트를 직접 클릭해 뒤집어 볼 수도 있습니다.</p>
+    <div class="legend">
+      <span class="l-s">부호 S (1비트)</span>
+      <span class="l-e">지수 E (8비트)</span>
+      <span class="l-m">가수 M (23비트)</span>
+    </div>
+  </header>
+
+  <section class="controls" aria-label="입력">
+    <div class="row">
+      <div class="field">
+        <label for="inX">10진수 입력 (예: -6.25, 0.1, 1e39, NaN)</label>
+        <input id="inX" type="text" value="0.1" spellcheck="false">
+      </div>
+      <button class="run" id="btnRun">변환 ▶</button>
+    </div>
+    <div class="presets" id="presets">
+      <span class="cap">대표 사례 — 눌러서 바로 변환</span>
+    </div>
+  </section>
+
+  <section class="board" aria-label="32비트 보드">
+    <div class="board-inner">
+      <div class="idxrow" id="idxrow"></div>
+      <div class="bitrow" id="bitrow"></div>
+      <div class="fieldbar">
+        <div class="fb s"><b>S</b> 부호</div>
+        <div class="fb e"><b>E</b> 지수 (bias +127)</div>
+        <div class="fb m"><b>M</b> 가수 (숨은 1. 제외)</div>
+      </div>
+      <div class="hexline">16진수: <b id="hexOut">0x········</b></div>
+      <div class="clickhint">※ 변환이 끝나면 비트를 클릭해 하나씩 뒤집어 보세요 — 값이 즉시 갱신됩니다.</div>
+    </div>
+  </section>
+
+  <section class="steps" id="steps" aria-label="변환 단계"></section>
+
+  <section class="verdict" id="verdict" aria-live="polite"></section>
+
+</div>
+
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const STEP = reduced ? 0 : 950;
+  const sleep = ms=>new Promise(r=>setTimeout(r,ms));
+
+  const buf = new ArrayBuffer(4);
+  const f32 = new Float32Array(buf);
+  const u32 = new Uint32Array(buf);
+
+  let curBits = 0;
+  let running = false;
+
+  // ── 보드 구성 ───────────────────────
+  const bitrow = $("#bitrow"), idxrow = $("#idxrow");
+  const bitEls = [];
+  for(let i=31;i>=0;i--){
+    if(i===30 || i===22){
+      const g1=document.createElement("div"); g1.className="gap"; bitrow.appendChild(g1);
+      const g2=document.createElement("div"); g2.className="gap"; idxrow.appendChild(g2);
+    }
+    const d=document.createElement("div");
+    d.className="bit"; d.dataset.i=i; d.textContent="·";
+    d.title = "bit "+i;
+    d.addEventListener("click",()=>{ if(!running) toggleBit(i); });
+    bitrow.appendChild(d); bitEls[i]=d;
+    const x=document.createElement("div");
+    x.className="idx"; x.textContent=i;
+    idxrow.appendChild(x);
+  }
+  function fieldOf(i){ return i===31? "s" : i>=23? "e" : "m"; }
+
+  function paintBits(bits, mask){ // mask: 어느 필드까지 채울지 {s,e,m}
+    for(let i=31;i>=0;i--){
+      const f=fieldOf(i), el=bitEls[i];
+      const on = mask[f];
+      el.classList.remove("focus");
+      if(on){
+        const v=(bits>>>i)&1;
+        el.textContent=v;
+        el.className="bit filled f-"+f+(v? "":" zero");
+      }else{
+        el.textContent="·";
+        el.className="bit";
+      }
+    }
+    $("#hexOut").textContent = (mask.s&&mask.e&&mask.m)
+      ? "0x"+(bits>>>0).toString(16).toUpperCase().padStart(8,"0")
+      : "0x········";
+  }
+  function focusField(f){
+    for(let i=31;i>=0;i--) bitEls[i].classList.toggle("focus", fieldOf(i)===f);
+  }
+  function popField(f){
+    for(let i=31;i>=0;i--) if(fieldOf(i)===f){
+      bitEls[i].classList.remove("pop"); void bitEls[i].offsetWidth; bitEls[i].classList.add("pop");
+    }
+  }
+
+  // ── 정확한 10진 표현 (BigInt) ─────────
+  function exactDecimal(bits){
+    const s=(bits>>>31)&1, e=(bits>>>23)&0xFF, m=bits&0x7FFFFF;
+    if(e===255) return m? "NaN" : (s? "-∞":"+∞");
+    let M, E;
+    if(e===0){ M=BigInt(m); E=-149; }
+    else { M=BigInt(m)+(1n<<23n); E=e-150; }
+    if(M===0n) return s? "-0":"0";
+    if(E>=0) return (s?"-":"")+(M<<BigInt(E)).toString();
+    const k=-E;
+    let str=(M*(5n**BigInt(k))).toString().padStart(k+1,"0");
+    const ip=str.slice(0,str.length-k);
+    const fp=str.slice(str.length-k).replace(/0+$/,"");
+    return (s?"-":"")+ip+(fp? "."+fp:"");
+  }
+
+  // ── 입력의 2진 전개 (표시용) ──────────
+  function binExpansion(x){
+    const ax=Math.abs(x);
+    let ip=Math.floor(ax), fr=ax-ip;
+    let is=ip.toString(2), fs="", n=0;
+    while(fr>0 && n<26){ fr*=2; const d=Math.floor(fr); fs+=d; fr-=d; n++; }
+    return {text: is+(fs? "."+fs:"") + (fr>0? "…":""), infinite: fr>0};
+  }
+
+  // ── 단계 카드 ───────────────────────
+  const stepsBox=$("#steps");
+  async function addStep(no, title, html, acc){
+    const d=document.createElement("div");
+    d.className="step acc-"+(acc||"n");
+    d.innerHTML=`<div class="t"><span class="no">${no}</span>${title}</div><div class="b">${html}</div>`;
+    stepsBox.appendChild(d);
+    await sleep(30);
+    d.classList.add("show");
+  }
+
+  // ── 실행 ───────────────────────────
+  async function run(){
+    running=true; $("#btnRun").disabled=true;
+    stepsBox.innerHTML=""; $("#verdict").className="verdict";
+
+    const raw=$("#inX").value.trim();
+    let x = raw==="" ? 0 : Number(raw.replace("−","-"));
+    f32[0]=x;
+    const bits=u32[0]>>>0;
+    curBits=bits;
+    const S=(bits>>>31)&1, E=(bits>>>23)&0xFF, M=bits&0x7FFFFF;
+    const eBin=E.toString(2).padStart(8,"0");
+    const mBin=M.toString(2).padStart(23,"0");
+    const mask={s:false,e:false,m:false};
+    paintBits(bits,mask);
+
+    // 1) 부호
+    focusField("s");
+    await addStep("①","부호 비트 결정",
+      Number.isNaN(x)
+        ? `NaN은 크기가 없는 값이라 부호가 의미 없지만, 칸은 있으므로 <b class="cs">S=${S}</b>로 둡니다.`
+        : (S? `입력이 음수 → <b class="cs">S = 1</b>`
+            : `입력이 0 이상 → <b class="cs">S = 0</b>`),
+      "s");
+    mask.s=true; paintBits(bits,mask); popField("s"); focusField("s");
+    await sleep(STEP);
+
+    const isNaN_=Number.isNaN(x), isInf=!isNaN_&&!isFinite(x);
+    const isZero=E===0&&M===0, isSub=E===0&&M!==0;
+
+    if(isNaN_||isInf||isZero){
+      // 특수값 경로
+      if(isZero){
+        await addStep("②","특수 규약 — 0",
+          `0은 <code>1.xxx × 2^n</code> 꼴로 정규화할 수 없습니다. 그래서 <b>지수와 가수를 전부 0으로 채우는 것</b>이 “0”이라는 약속입니다. 부호 비트 때문에 <b>+0과 −0이 따로 존재</b>합니다.`,"n");
+      }else if(isInf){
+        await addStep("②","특수 규약 — 무한대",
+          `float32가 담을 수 있는 최대값은 약 <b>3.4 × 10<sup>38</sup></b>. 이를 넘으면 <b class="ce">지수를 전부 1</b>, <b class="cm">가수를 전부 0</b>으로 채워 ∞로 처리합니다.`,"e");
+      }else{
+        await addStep("②","특수 규약 — NaN",
+          `0÷0처럼 답이 정의되지 않는 계산의 결과. <b class="ce">지수 전부 1</b> + <b class="cm">가수 ≠ 0</b> 이면 NaN입니다.`,"e");
+      }
+      focusField("e"); await sleep(STEP*0.5);
+      mask.e=true; paintBits(bits,mask); popField("e");
+      await sleep(STEP*0.6);
+      focusField("m");
+      mask.m=true; paintBits(bits,mask); popField("m"); focusField("");
+      await sleep(STEP*0.5);
+      finish(x,bits,raw);
+      running=false; $("#btnRun").disabled=false;
+      return;
+    }
+
+    // 2) 2진 전개
+    const be=binExpansion(x);
+    await addStep("②","|x| 를 2진수로 전개",
+      `|${x}|<sub>10</sub> = <code>${be.text}</code><sub>2</sub>` +
+      (be.infinite? `<br><span class="warn" style="color:var(--warn);font-weight:700;">주의:</span> 이 소수는 2진수로 <b>무한 반복</b>됩니다 — 어딘가에서 잘라야 합니다.`
+                  : `<br>유한한 자리에서 딱 떨어집니다.`),"n");
+    await sleep(STEP);
+
+    // 3) 정규화
+    const eU=isSub? -126 : E-127;
+    if(isSub){
+      await addStep("③","비정규화 수 (subnormal)",
+        `이 값은 너무 작아서 <code>1.xxx</code> 꼴을 만들 수 없습니다. 이때는 예외적으로 <b>숨은 비트를 0</b>으로 두고 <code>0.<span class="cm">가수</span> × 2<sup>−126</sup></code> 으로 읽습니다. (지수 필드 = 00000000)`,"m");
+    }else{
+      await addStep("③","정규화 — 소수점을 옮겨 1.xxx 꼴로",
+        `소수점을 옮겨 정수부가 1이 되게 만듭니다:<br>` +
+        `<code>1.${mBin.replace(/0+$/,"")||"0"}<span style="color:var(--dim)">…</span> × 2<sup>${eU}</sup></code><br>` +
+        `맨 앞의 <b>1은 모든 정규화 수에 공통</b>이므로 저장하지 않습니다 (숨은 비트, 공짜 1비트).`,"n");
+    }
+    await sleep(STEP);
+
+    // 4) 지수
+    focusField("e");
+    await addStep("④","지수 인코딩 — bias +127",
+      isSub
+        ? `비정규화 수의 지수 필드는 약속대로 <b class="ce">00000000</b> 입니다.`
+        : `지수 ${eU}에 <b>127을 더해</b> 저장합니다 (음수 지수도 부호 없이 담기 위한 편향값).<br>` +
+          `<code>${eU} + 127 = ${E}</code> → <b class="ce">${eBin}</b>`,"e");
+    mask.e=true; paintBits(bits,mask); popField("e"); focusField("e");
+    await sleep(STEP);
+
+    // 5) 가수
+    focusField("m");
+    await addStep("⑤","가수 채우기 — 소수점 뒤 23비트",
+      `1. 뒤의 비트를 23칸에 채웁니다` +
+      (be.infinite? ` — 무한 반복이므로 <b>24번째 비트에서 반올림</b>해 잘라냅니다. 여기서 오차가 생깁니다.`
+                  : `. 남는 칸은 0으로 채웁니다.`) +
+      `<br><b class="cm">${mBin}</b>`,"m");
+    mask.m=true; paintBits(bits,mask); popField("m"); focusField("");
+    await sleep(STEP);
+
+    finish(x,bits,raw);
+    running=false; $("#btnRun").disabled=false;
+  }
+
+  // ── 최종 해설 ───────────────────────
+  function finish(x,bits,raw){
+    const S=(bits>>>31)&1, E=(bits>>>23)&0xFF, M=bits&0x7FFFFF;
+    const v=$("#verdict");
+    const stored=exactDecimal(bits);
+    const hex="0x"+(bits>>>0).toString(16).toUpperCase().padStart(8,"0");
+    let body="";
+
+    if(E===255){
+      body = M===0
+        ? `<b>${S?"−∞":"+∞"}</b> — 지수 전부 1, 가수 0. 오버플로의 결과를 담는 그릇입니다.`
+        : `<b>NaN</b> — 지수 전부 1, 가수 ≠ 0. NaN은 <b>자기 자신과도 같지 않은</b> 유일한 값입니다 (<code>NaN == NaN</code> → false).`;
+    }else if(E===0&&M===0){
+      body = `<b>${S? "−0":"+0"}</b> — 모든 비트가 ${S? "부호만 1이고 나머지":"전부"} 0입니다. +0과 −0은 비교하면 같지만 비트는 다릅니다.`;
+    }else{
+      const eU=E===0? -126 : E-127;
+      const hid=E===0? "0":"1";
+      body =
+        `<div class="formula">값 = (−1)<sup><span class="cs">${S}</span></sup> × <span class="cm">${hid}.${(M.toString(2).padStart(23,"0"))}</span><sub>2</sub> × 2<sup><span class="ce">${E}−127</span> = ${eU}</sup></div>` +
+        `저장된 <b>실제 값</b> (정확히): <code>${stored}</code><br>`;
+      const same = String(x)===stored || Number(stored)===x && !/…/.test(stored) && f32[0]===x && Number.isFinite(x) && Math.fround(x)===x && parseFloat(raw)===Number(stored);
+      const exact = Number(stored)===Number(raw) && String(Number(raw))!=="NaN" && stored===trimNum(raw);
+      if(exact){
+        body += `입력 <code>${raw}</code> 과 <span class="fine">정확히 일치</span> — 이 수는 2진 소수로 딱 떨어집니다.`;
+      }else{
+        body += `입력 <code>${raw}</code> 과 <span class="warn">일치하지 않습니다</span> — 32비트에 담는 순간 가장 가까운 표현 가능한 값으로 <b>반올림</b>됐습니다. ` +
+                `<code>0.1 + 0.2 ≠ 0.3</code> 같은 현상이 바로 여기서 나옵니다.`;
+      }
+    }
+    v.innerHTML = `<b>완성 — ${hex}</b><br>${body}`;
+    v.classList.add("show");
+  }
+  function trimNum(s){
+    // 입력 문자열을 표준화해 exactDecimal 출력과 비교
+    const n=Number(s);
+    if(!isFinite(n)) return s;
+    // 지수표기 입력은 비교 포기(반올림 안내로 충분)
+    if(/e/i.test(s)) return "\u0000";
+    let t=s.replace(/^\+/,"");
+    if(t.includes(".")) t=t.replace(/0+$/,"").replace(/\.$/,"");
+    if(t==="-0") return "-0";
+    return t.replace(/^(-?)0+(?=\d)/,"$1");
+  }
+
+  // ── 비트 직접 토글 ───────────────────
+  function toggleBit(i){
+    if($("#hexOut").textContent.includes("·")) return; // 아직 미완성이면 무시
+    curBits = (curBits ^ (1<<i))>>>0;
+    u32[0]=curBits;
+    paintBits(curBits,{s:true,e:true,m:true});
+    const el=bitEls[i]; el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop");
+    stepsBox.innerHTML="";
+    const approx = f32[0];
+    finish(approx, curBits, String(approx));
+    const v=$("#verdict");
+    v.innerHTML = `<b>비트 ${i} 를 직접 뒤집었습니다.</b> 이 패턴을 float32로 읽으면:<br>` + v.innerHTML;
+  }
+
+  // ── 프리셋 ─────────────────────────
+  const PRESETS=[
+    {v:"1",      note:"가장 단순"},
+    {v:"-6.25",  note:"부호+소수"},
+    {v:"0.15625",note:"딱 떨어짐"},
+    {v:"0.1",    note:"무한 반복!"},
+    {v:"0",      note:"특수: ±0"},
+    {v:"1e39",   note:"→ ∞"},
+    {v:"NaN",    note:"숫자 아님"},
+    {v:"1e-42",  note:"비정규화"},
+  ];
+  const pb=$("#presets");
+  PRESETS.forEach(p=>{
+    const b=document.createElement("button");
+    b.className="chip";
+    b.innerHTML=`${p.v} <small>· ${p.note}</small>`;
+    b.addEventListener("click",()=>{ if(running) return; $("#inX").value=p.v; run(); });
+    pb.appendChild(b);
+  });
+
+  $("#btnRun").addEventListener("click",()=>!running&&run());
+  $("#inX").addEventListener("keydown",e=>{ if(e.key==="Enter"&&!running) run(); });
+})();
+</script>
+</body>
+</html>

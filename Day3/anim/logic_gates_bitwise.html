@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>논리 연산 실험대 — AND · OR · NOT · XOR</title>
+<style>
+  :root{
+    --bg:#0f141d;
+    --panel:#161d2a;
+    --panel2:#1b2434;
+    --line:#26314a;
+    --ink:#dce6f5;
+    --dim:#7d8ba3;
+    --bit1:#ffd166;
+    --accent:#4cc9f0;
+    --on:#7ee787;      /* 출력 1 */
+    --mask:#c792ea;    /* B(마스크) 강조 */
+    --bad:#ff5d73;
+    --mono:"JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    min-height:100vh; padding:24px 16px 60px;
+  }
+  .wrap{max-width:880px; margin:0 auto;}
+
+  header{margin-bottom:20px;}
+  .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.18em; color:var(--accent); text-transform:uppercase;}
+  h1{font-size:clamp(20px,4vw,28px); font-weight:800; margin-top:6px;}
+  h1 code{font-family:var(--mono); color:var(--bit1);}
+  .sub{color:var(--dim); font-size:14px; margin-top:6px; line-height:1.6;}
+  .sub b{color:var(--ink);}
+  .secttl{font-size:14px; font-weight:800; margin:22px 0 10px; color:var(--ink);}
+  .secttl .no{font-family:var(--mono); color:var(--accent); margin-right:8px;}
+  .secttl small{color:var(--dim); font-weight:400; margin-left:8px;}
+
+  /* ── ① 진리표 실험대 ───────────── */
+  .gates{display:grid; grid-template-columns:repeat(2,1fr); gap:12px;}
+  @media(max-width:680px){.gates{grid-template-columns:1fr;}}
+  .gate{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px 16px;
+  }
+  .gate .head{display:flex; align-items:baseline; gap:10px; margin-bottom:4px;}
+  .gate .gname{font-family:var(--mono); font-size:18px; font-weight:800;}
+  .gate .gsym{font-family:var(--mono); font-size:14px; color:var(--dim);}
+  .gate .gdesc{font-size:12px; color:var(--dim); margin-bottom:12px; line-height:1.5;}
+  .gate .gdesc b{color:var(--ink);}
+  .lab{display:flex; align-items:center; gap:12px;}
+  .inbtn{
+    width:52px; height:52px; border-radius:12px; border:1px solid var(--line);
+    background:var(--bg); color:var(--dim); font-family:var(--mono); font-size:22px; font-weight:800;
+    cursor:pointer; position:relative; transition:color .2s,border-color .2s;
+  }
+  .inbtn.on{color:var(--bit1); border-color:var(--bit1);}
+  .inbtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .inbtn .tag{position:absolute; top:-8px; left:6px; font-size:10px; color:var(--dim); background:var(--panel); padding:0 4px;}
+  .arrow{color:var(--dim); font-size:18px;}
+  .outlamp{
+    width:52px; height:52px; border-radius:50%; border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-size:22px; font-weight:800; color:var(--dim);
+    background:var(--bg); transition:all .25s;
+  }
+  .outlamp.on{color:#08240f; background:var(--on); box-shadow:0 0 16px rgba(126,231,135,.4); border-color:var(--on);}
+  .outlamp.pop{animation:pop .3s ease;}
+  @keyframes pop{from{transform:scale(.7);} to{transform:scale(1);}}
+  .tt{margin-top:12px; border-collapse:collapse; font-family:var(--mono); font-size:12px; width:100%;}
+  .tt th{color:var(--dim); font-weight:400; padding:3px 0; border-bottom:1px solid var(--line);}
+  .tt td{text-align:center; padding:4px 0; color:var(--dim); border-radius:6px;}
+  .tt tr.cur td{color:var(--ink); background:var(--panel2);}
+  .tt tr.cur td.o1{color:var(--on); font-weight:800;}
+  .tt td.o1{color:#4c7a52;}
+
+  /* ── ② 8비트 일괄 적용 ─────────── */
+  .controls{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:14px;}
+  .row{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;}
+  .field{display:flex; flex-direction:column; gap:4px;}
+  .field label{font-size:11px; color:var(--dim); letter-spacing:.06em;}
+  .field input{
+    width:110px; padding:10px 12px; font-family:var(--mono); font-size:18px;
+    background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:8px;
+  }
+  .field input:disabled{opacity:.35;}
+  .field input:focus{outline:2px solid var(--accent); outline-offset:1px; border-color:transparent;}
+  .op-toggle{display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden;}
+  .op-toggle button{
+    padding:10px 14px; font-family:var(--mono); font-size:14px; font-weight:800;
+    background:var(--bg); color:var(--dim); border:none; cursor:pointer;
+  }
+  .op-toggle button.active{background:var(--accent); color:#06222e;}
+  .op-toggle button:focus-visible{outline:2px solid var(--accent); outline-offset:-2px;}
+  .run{
+    padding:11px 22px; border:none; border-radius:8px;
+    background:var(--bit1); color:#2a2005; font-weight:800; font-size:15px; cursor:pointer;
+  }
+  .run:disabled{opacity:.45; cursor:default;}
+  .run:focus-visible,.chip:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .presets{margin-top:12px; display:flex; flex-wrap:wrap; gap:8px;}
+  .presets .cap{width:100%; font-size:11px; color:var(--dim); letter-spacing:.06em;}
+  .chip{
+    font-family:var(--mono); font-size:13px; padding:7px 12px; border-radius:999px;
+    background:var(--panel2); color:var(--ink); border:1px solid var(--line); cursor:pointer;
+  }
+  .chip:hover{border-color:var(--accent);}
+  .chip small{color:var(--dim); font-family:inherit;}
+
+  .board{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:16px 14px; margin-bottom:14px; overflow-x:auto;
+  }
+  .board-inner{min-width:540px;}
+  .bit-grid{
+    display:grid; grid-template-columns:120px repeat(8,1fr) 110px;
+    gap:4px; align-items:center;
+  }
+  .rowlabel{font-size:12px; color:var(--dim); text-align:right; padding-right:10px;}
+  .rowlabel b{color:var(--ink); font-family:var(--mono); font-size:13px;}
+  .colhead{font-family:var(--mono); font-size:11px; color:var(--dim); text-align:center;}
+  .cell{
+    font-family:var(--mono); font-size:20px; font-weight:700; text-align:center;
+    padding:8px 0; border-radius:8px; background:var(--bg); color:var(--dim);
+    border:1px solid transparent; transition:background .25s,color .25s,border-color .25s;
+  }
+  .cell.one{color:var(--bit1);}
+  .cell.maskon{color:var(--mask);}
+  .cell.hot{border-color:var(--accent); background:#122433;}
+  .cell.res1{color:var(--on);}
+  .cell.pop{animation:cellpop .25s ease;}
+  @keyframes cellpop{from{transform:translateY(5px) scale(.7); opacity:0;} to{transform:none; opacity:1;}}
+  .decread{font-family:var(--mono); font-size:12px; color:var(--dim); text-align:left; padding-left:10px; line-height:1.4;}
+  .decread .u{color:var(--ink);}
+  .hr{grid-column:1/-1; height:1px; background:var(--line); margin:6px 0;}
+  .rulebar{
+    margin-top:12px; font-family:var(--mono); font-size:14px; color:var(--dim);
+    background:var(--bg); border-radius:8px; padding:9px 14px; min-height:38px;
+  }
+  .rulebar b{color:var(--ink);}
+  .rulebar .o1{color:var(--on); font-weight:800;}
+  .rulebar .o0{color:var(--dim);}
+
+  .verdict{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:16px; font-size:14px; line-height:1.8; color:var(--dim); display:none;
+  }
+  .verdict.show{display:block;}
+  .verdict b{color:var(--ink);}
+  .verdict code{font-family:var(--mono); background:var(--bg); padding:2px 7px; border-radius:6px; font-size:13px;}
+  .verdict .fine{color:var(--on); font-weight:700;}
+  .verdict .pv{color:var(--mask); font-weight:700;}
+  .again{
+    margin-top:10px; padding:9px 16px; border:1px solid var(--accent); border-radius:8px;
+    background:transparent; color:var(--accent); font-weight:700; font-size:13px; cursor:pointer;
+  }
+  .again:hover{background:#122433;}
+
+  @media (prefers-reduced-motion:reduce){
+    .cell,.outlamp{transition:none;}
+    .cell.pop,.outlamp.pop{animation:none;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Bitwise Logic · AND OR NOT XOR</div>
+    <h1>논리 연산 실험대 — 비트를 <code>거르고 · 켜고 · 뒤집는</code> 네 가지 도구</h1>
+    <p class="sub">위에서는 <b>1비트짜리 진리표</b>를 직접 눌러 보고, 아래에서는 같은 규칙이 <b>8비트에 한꺼번에</b> 적용되는 과정을 애니메이션으로 봅니다.</p>
+  </header>
+
+  <!-- ① 진리표 실험대 -->
+  <div class="secttl"><span class="no">STAGE 1</span>진리표 실험대 <small>입력 버튼을 눌러 0↔1을 바꿔 보세요</small></div>
+  <section class="gates" id="gates"></section>
+
+  <!-- ② 8비트 일괄 적용 -->
+  <div class="secttl"><span class="no">STAGE 2</span>8비트에 한꺼번에 적용 <small>같은 규칙이 자리마다 독립적으로 실행됩니다</small></div>
+  <section class="controls">
+    <div class="row">
+      <div class="op-toggle" id="opTog" role="group" aria-label="연산 선택">
+        <button data-op="AND" class="active">AND</button>
+        <button data-op="OR">OR</button>
+        <button data-op="XOR">XOR</button>
+        <button data-op="NOT">NOT</button>
+      </div>
+      <div class="field">
+        <label for="inA">A (0 ~ 255)</label>
+        <input id="inA" type="number" min="0" max="255" value="204">
+      </div>
+      <div class="field">
+        <label for="inB" id="labInB">B (0 ~ 255)</label>
+        <input id="inB" type="number" min="0" max="255" value="15">
+      </div>
+      <button class="run" id="btnRun">실행 ▶</button>
+    </div>
+    <div class="presets" id="presets">
+      <span class="cap">실전 용도별 대표 사례 — 눌러서 바로 실행</span>
+    </div>
+  </section>
+
+  <section class="board" aria-label="8비트 보드">
+    <div class="board-inner">
+      <div class="bit-grid" id="grid"></div>
+    </div>
+    <div class="rulebar" id="rulebar">실행하면 자리마다 적용되는 규칙이 여기 표시됩니다.</div>
+  </section>
+
+  <section class="verdict" id="verdict" aria-live="polite"></section>
+
+</div>
+
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const sleep=ms=>new Promise(r=>setTimeout(r, reduced?0:ms));
+  const bits=v=>Array.from({length:8},(_,i)=>(v>>(7-i))&1);
+
+  const OPS={
+    AND:{sym:"∧", js:"&",  fn:(a,b)=>a&b, unary:false,
+         one:"둘 다 1일 때만 1", role:"거르기(마스크)"},
+    OR: {sym:"∨", js:"|",  fn:(a,b)=>a|b, unary:false,
+         one:"하나라도 1이면 1", role:"켜기(세트)"},
+    XOR:{sym:"⊕", js:"^",  fn:(a,b)=>a^b, unary:false,
+         one:"서로 다르면 1", role:"뒤집기(토글)"},
+    NOT:{sym:"¬", js:"~",  fn:(a)=>(~a)&0xFF, unary:true,
+         one:"0↔1 반전", role:"전체 반전"},
+  };
+
+  /* ── STAGE 1 : 진리표 카드 ─────────── */
+  const gateBox=$("#gates");
+  const gateDefs=[
+    {k:"AND", desc:"<b>둘 다 1</b>일 때만 1. 하나라도 0이면 꺼진다 — 통과 조건이 엄격한 <b>필터</b>."},
+    {k:"OR",  desc:"<b>하나라도 1</b>이면 1. 둘 다 0일 때만 꺼진다 — 어느 쪽이든 누르면 켜지는 <b>스위치</b>."},
+    {k:"XOR", desc:"<b>서로 다를 때만</b> 1. 같으면 0 — “다른가?”를 묻는 <b>비교기이자 토글</b>."},
+    {k:"NOT", desc:"입력 하나를 그대로 <b>뒤집는다</b>. 1→0, 0→1."},
+  ];
+  gateDefs.forEach(g=>{
+    const op=OPS[g.k];
+    const d=document.createElement("div");
+    d.className="gate"; d.dataset.k=g.k;
+    const inputs = op.unary
+      ? `<button class="inbtn" data-in="a"><span class="tag">A</span>0</button>`
+      : `<button class="inbtn" data-in="a"><span class="tag">A</span>0</button>
+         <button class="inbtn" data-in="b"><span class="tag">B</span>0</button>`;
+    const ttRows = op.unary
+      ? [[0],[1]].map(([a])=>{const o=op.fn(a); return `<tr data-a="${a}"><td>${a}</td><td class="${o?'o1':''}">${o}</td></tr>`;}).join("")
+      : [[0,0],[0,1],[1,0],[1,1]].map(([a,b])=>{const o=op.fn(a,b); return `<tr data-a="${a}" data-b="${b}"><td>${a}</td><td>${b}</td><td class="${o?'o1':''}">${o}</td></tr>`;}).join("");
+    const ttHead = op.unary? `<tr><th>A</th><th>출력</th></tr>` : `<tr><th>A</th><th>B</th><th>출력</th></tr>`;
+    d.innerHTML=`
+      <div class="head"><span class="gname">${g.k}</span><span class="gsym">${op.sym} · 코드에서는 <b style="color:var(--ink)">${op.js}</b></span></div>
+      <div class="gdesc">${g.desc}</div>
+      <div class="lab">${inputs}<span class="arrow">→</span><div class="outlamp">0</div></div>
+      <table class="tt"><thead>${ttHead}</thead><tbody>${ttRows}</tbody></table>`;
+    gateBox.appendChild(d);
+
+    const st={a:0,b:0};
+    const update=()=>{
+      const o = op.unary? op.fn(st.a) : op.fn(st.a,st.b);
+      d.querySelectorAll(".inbtn").forEach(btn=>{
+        const k=btn.dataset.in;
+        btn.classList.toggle("on", st[k]===1);
+        btn.innerHTML=`<span class="tag">${k.toUpperCase()}</span>${st[k]}`;
+      });
+      const lamp=d.querySelector(".outlamp");
+      lamp.textContent=o;
+      lamp.classList.toggle("on", o===1);
+      lamp.classList.remove("pop"); void lamp.offsetWidth; lamp.classList.add("pop");
+      d.querySelectorAll(".tt tbody tr").forEach(tr=>{
+        const hit = op.unary
+          ? +tr.dataset.a===st.a
+          : +tr.dataset.a===st.a && +tr.dataset.b===st.b;
+        tr.classList.toggle("cur",hit);
+      });
+    };
+    d.querySelectorAll(".inbtn").forEach(btn=>{
+      btn.addEventListener("click",()=>{ const k=btn.dataset.in; st[k]^=1; update(); });
+    });
+    update();
+  });
+
+  /* ── STAGE 2 : 8비트 보드 ──────────── */
+  let op="AND", running=false, lastRun=null;
+
+  const grid=$("#grid");
+  function buildGrid(){
+    grid.innerHTML="";
+    const add=(cls,txt,id)=>{const d=document.createElement("div"); d.className=cls; if(txt!==undefined)d.innerHTML=txt; if(id)d.id=id; grid.appendChild(d); return d;};
+    add("rowlabel","");
+    for(let i=7;i>=0;i--) add("colhead","bit "+i);
+    add("colhead","10진");
+    add("rowlabel","","labA");
+    for(let i=7;i>=0;i--) add("cell","·","a"+i);
+    add("decread","","decA");
+    add("rowlabel","","labB");
+    for(let i=7;i>=0;i--) add("cell","·","b"+i);
+    add("decread","","decB");
+    add("hr","");
+    add("rowlabel","","labR");
+    for(let i=7;i>=0;i--) add("cell","","r"+i);
+    add("decread","","decR");
+  }
+  buildGrid();
+
+  function setOp(o){
+    op=o;
+    document.querySelectorAll("#opTog button").forEach(b=>b.classList.toggle("active",b.dataset.op===o));
+    const unary=OPS[o].unary;
+    $("#inB").disabled=unary;
+    $("#labInB").textContent = unary? "B — NOT은 입력 1개" : (o==="AND"? "B = 마스크" : o==="OR"? "B = 켤 자리" : "B = 뒤집을 자리");
+  }
+  document.querySelectorAll("#opTog button").forEach(b=>{
+    b.addEventListener("click",()=>{ if(!running) setOp(b.dataset.op); });
+  });
+
+  function clearHot(){ document.querySelectorAll(".cell.hot").forEach(c=>c.classList.remove("hot")); }
+
+  async function run(){
+    running=true; $("#btnRun").disabled=true;
+    $("#verdict").className="verdict";
+    const O=OPS[op];
+    const a=Math.min(255,Math.max(0,parseInt($("#inA").value||"0",10)));
+    const b=O.unary? 0 : Math.min(255,Math.max(0,parseInt($("#inB").value||"0",10)));
+    $("#inA").value=a; if(!O.unary) $("#inB").value=b;
+
+    const A=bits(a), B=bits(b);
+    const res = O.unary? O.fn(a) : O.fn(a,b);
+    const R=bits(res);
+
+    // 보드 채우기
+    $("#labA").innerHTML=`A &nbsp;<b>${a}</b>`;
+    $("#labB").innerHTML=O.unary? `` : `${op} B &nbsp;<b>${b}</b>`;
+    $("#labR").innerHTML=`= 결과`;
+    $("#decA").innerHTML=`<span class="u">${a}</span>`;
+    $("#decB").innerHTML=O.unary? "" : `<span class="u">${b}</span>`;
+    $("#decR").innerHTML="";
+    for(let i=0;i<8;i++){
+      const ca=$("#a"+i), cb=$("#b"+i), cr=$("#r"+i);
+      ca.textContent=A[7-i]; ca.className="cell"+(A[7-i]?" one":"");
+      if(O.unary){ cb.textContent="·"; cb.className="cell"; }
+      else{ cb.textContent=B[7-i]; cb.className="cell"+(B[7-i]?" maskon":""); }
+      cr.textContent=""; cr.className="cell";
+    }
+    $("#rulebar").innerHTML=`규칙: <b>${op}</b> — ${O.one}. 자리마다 <b>독립적으로</b>, 자리올림 없이 실행됩니다.`;
+    await sleep(1000);
+
+    // 자리별 애니메이션 (bit7 → bit0, 읽는 순서대로)
+    for(let bit=7;bit>=0;bit--){
+      clearHot();
+      $("#a"+bit).classList.add("hot");
+      if(!O.unary) $("#b"+bit).classList.add("hot");
+      $("#r"+bit).classList.add("hot");
+      const ai=A[7-bit], bi=B[7-bit], ri=R[7-bit];
+      $("#rulebar").innerHTML = O.unary
+        ? `bit ${bit} : ${O.sym}${ai} = <span class="${ri?'o1':'o0'}">${ri}</span>`
+        : `bit ${bit} : ${ai} ${O.sym} ${bi} = <span class="${ri?'o1':'o0'}">${ri}</span>`;
+      await sleep(330);
+      const rc=$("#r"+bit);
+      rc.textContent=ri;
+      rc.className="cell hot pop"+(ri? " res1":"");
+      await sleep(130);
+    }
+    clearHot();
+    $("#decR").innerHTML=`<span class="u">${res}</span>`;
+    $("#rulebar").innerHTML=`완료: <code style="font-family:var(--mono)">${O.unary? "~"+a : a+" "+O.js+" "+b}</code> = <b>${res}</b> &nbsp;(<span style="color:var(--on)">${R.join("")}</span>)`;
+
+    // 판정
+    const v=$("#verdict");
+    let body="";
+    if(op==="AND"){
+      body=`<span class="pv">B가 1인 자리</span>만 A의 비트가 <b>그대로 통과</b>했고, B가 0인 자리는 전부 0으로 지워졌습니다. ` +
+           `그래서 B를 <b>마스크(mask)</b>라고 부릅니다 — 원하는 비트만 걸러내는 필터. ` +
+           `<br>대표 용례: <code>x & 0b00001111</code> → 하위 4비트만 추출, <code>x & 1</code> → 홀짝 판별.`;
+    }else if(op==="OR"){
+      body=`<span class="pv">B가 1인 자리</span>는 A가 뭐였든 <b>무조건 1로 켜졌고</b>, B가 0인 자리는 A가 그대로 보존됐습니다. ` +
+           `<br>대표 용례: <code>x | 0b10000000</code> → bit 7 강제로 켜기. 설정 플래그를 켤 때 씁니다.`;
+    }else if(op==="XOR"){
+      body=`<span class="pv">B가 1인 자리</span>만 A의 비트가 <b>뒤집혔고</b>, B가 0인 자리는 그대로입니다 — 선택적 토글 스위치. ` +
+           `<br>두 가지 놀라운 성질: ① <code>x ^ x = 0</code> (자기 자신과 XOR하면 소거) ` +
+           `② <b>같은 B로 한 번 더 XOR하면 원래 A로 복귀</b> — 간단한 암호화가 이 원리입니다.`;
+      if(lastRun && lastRun.op==="XOR" && lastRun.res===a && lastRun.b===b){
+        body=`<span class="fine">원상복구 확인!</span> 방금 결과(${lastRun.res})를 같은 B(${b})로 다시 XOR하니 처음의 A(${lastRun.a})가 돌아왔습니다. ` +
+             `<code>(A ^ B) ^ B = A</code> — 이것이 XOR 암호화의 전부입니다.<br>`+body;
+      }else if(b!==0){
+        body+=`<br><button class="again" id="btnAgain">결과 ${res}를 같은 B(${b})로 한 번 더 XOR ▶</button>`;
+      }
+    }else{
+      body=`모든 자리가 예외 없이 뒤집혔습니다. ` +
+           `숫자로 보면 <code>A + ~A = ${a} + ${res} = 255</code> — 항상 255(전부 1)입니다. ` +
+           `그래서 <code>~A = 255 − A</code>이고, <b>여기에 1을 더하면 2의 보수(−A)</b> — 지난 시간 뺄셈 회로와 바로 연결됩니다.`;
+    }
+    v.innerHTML=`<b>${op} — ${O.role}</b><br>`+body;
+    v.classList.add("show");
+    const again=document.getElementById("btnAgain");
+    if(again) again.addEventListener("click",()=>{
+      if(running) return;
+      $("#inA").value=res; run();
+    });
+
+    lastRun={op,a,b,res};
+    running=false; $("#btnRun").disabled=false;
+  }
+
+  /* ── 프리셋 ───────────────────────── */
+  const PRESETS=[
+    {op:"AND", a:204, b:15,  label:"204 & 15",  note:"하위 4비트만 추출"},
+    {op:"AND", a:170, b:1,   label:"170 & 1",   note:"홀짝 판별"},
+    {op:"OR",  a:12,  b:128, label:"12 | 128",  note:"bit7 켜기"},
+    {op:"OR",  a:96,  b:96,  label:"96 | 96",   note:"이미 켜진 건 그대로"},
+    {op:"XOR", a:170, b:255, label:"170 ^ 255", note:"전부 토글 = NOT"},
+    {op:"XOR", a:99,  b:99,  label:"99 ^ 99",   note:"자기소거 → 0"},
+    {op:"XOR", a:75,  b:214, label:"75 ^ 214",  note:"XOR 암호화 체험"},
+    {op:"NOT", a:170, b:0,   label:"~170",      note:"전체 반전 → 85"},
+  ];
+  const pb=$("#presets");
+  PRESETS.forEach(p=>{
+    const btn=document.createElement("button");
+    btn.className="chip";
+    btn.innerHTML=`${p.label} <small>· ${p.note}</small>`;
+    btn.addEventListener("click",()=>{
+      if(running) return;
+      setOp(p.op); $("#inA").value=p.a; if(!OPS[p.op].unary) $("#inB").value=p.b;
+      run();
+    });
+    pb.appendChild(btn);
+  });
+
+  $("#btnRun").addEventListener("click",()=>!running&&run());
+  ["inA","inB"].forEach(id=>$("#"+id).addEventListener("keydown",e=>{ if(e.key==="Enter"&&!running) run(); }));
+  setOp("AND");
+})();
+</script>
+</body>
+</html>

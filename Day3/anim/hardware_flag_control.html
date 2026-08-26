@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>하드웨어 플래그 제어 — 비트 연산으로 장치 다루기</title>
+<style>
+  :root{
+    --bg:#0f141d;
+    --panel:#161d2a;
+    --panel2:#1b2434;
+    --line:#26314a;
+    --ink:#dce6f5;
+    --dim:#7d8ba3;
+    --bit1:#ffd166;
+    --accent:#4cc9f0;
+    --on:#7ee787;
+    --mask:#c792ea;
+    --bad:#ff5d73;
+    --mono:"JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    min-height:100vh; padding:24px 16px 60px;
+  }
+  .wrap{max-width:900px; margin:0 auto;}
+
+  header{margin-bottom:20px;}
+  .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.18em; color:var(--accent); text-transform:uppercase;}
+  h1{font-size:clamp(20px,4vw,28px); font-weight:800; margin-top:6px;}
+  h1 code{font-family:var(--mono); color:var(--bit1);}
+  .sub{color:var(--dim); font-size:14px; margin-top:6px; line-height:1.6;}
+  .sub b{color:var(--ink);}
+
+  .secttl{font-size:14px; font-weight:800; margin:20px 0 10px;}
+  .secttl .no{font-family:var(--mono); color:var(--accent); margin-right:8px;}
+  .secttl small{color:var(--dim); font-weight:400; margin-left:8px;}
+
+  /* ── 하드웨어 패널 ─────────────── */
+  .hw{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px 14px; overflow-x:auto;}
+  .hw-inner{min-width:640px;}
+  .devrow{display:flex; gap:6px; margin-bottom:10px;}
+  .dev{
+    flex:1; text-align:center; border:1px solid var(--line); border-radius:12px;
+    padding:10px 4px 8px; background:var(--bg); cursor:pointer; user-select:none;
+    transition:border-color .25s, box-shadow .25s, background .25s;
+  }
+  .dev:hover{border-color:var(--dim);}
+  .dev:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .dev .ico{font-size:22px; filter:grayscale(1) brightness(.55); transition:filter .3s;}
+  .dev .nm{font-size:10.5px; color:var(--dim); margin-top:4px; line-height:1.3;}
+  .dev .st{font-family:var(--mono); font-size:10px; font-weight:800; margin-top:3px; color:#3a465e;}
+  .dev.on{border-color:var(--bit1); background:#1d1a10; box-shadow:0 0 14px rgba(255,209,102,.18);}
+  .dev.on .ico{filter:none;}
+  .dev.on .st{color:var(--bit1);}
+  .dev.sel{border-color:var(--accent);}
+  .regrow{display:flex; gap:6px;}
+  .regbit{
+    flex:1; text-align:center; font-family:var(--mono); font-size:22px; font-weight:800;
+    padding:10px 0; border-radius:10px; background:var(--bg); color:var(--dim);
+    border:1px solid transparent; transition:color .25s, border-color .25s;
+  }
+  .regbit.one{color:var(--bit1);}
+  .regbit.pulse{animation:pulse .45s ease;}
+  @keyframes pulse{0%{transform:scale(1);} 40%{transform:scale(1.18);} 100%{transform:scale(1);}}
+  .regread{margin-top:12px; font-family:var(--mono); font-size:13px; color:var(--dim);}
+  .regread b{color:var(--ink); letter-spacing:.06em;}
+
+  /* ── 제어 패널 ─────────────────── */
+  .controls{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; margin-top:14px;}
+  .row{display:flex; flex-wrap:wrap; gap:12px; align-items:center;}
+  .grp{display:flex; flex-direction:column; gap:6px;}
+  .grp .cap{font-size:11px; color:var(--dim); letter-spacing:.06em;}
+  .op-toggle{display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden;}
+  .op-toggle button{
+    padding:10px 13px; font-size:13px; font-weight:800;
+    background:var(--bg); color:var(--dim); border:none; cursor:pointer;
+  }
+  .op-toggle button.active{background:var(--accent); color:#06222e;}
+  .op-toggle button:focus-visible{outline:2px solid var(--accent); outline-offset:-2px;}
+  .bitpick{display:flex; gap:5px;}
+  .bitpick button{
+    width:36px; height:38px; border-radius:8px; border:1px solid var(--line);
+    background:var(--bg); color:var(--dim); font-family:var(--mono); font-size:15px; font-weight:800; cursor:pointer;
+  }
+  .bitpick button.active{border-color:var(--bit1); color:var(--bit1);}
+  .bitpick button:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .run{
+    padding:11px 22px; border:none; border-radius:8px; align-self:flex-end;
+    background:var(--bit1); color:#2a2005; font-weight:800; font-size:15px; cursor:pointer;
+  }
+  .run:disabled{opacity:.45; cursor:default;}
+  .run:focus-visible,.chip:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .codepreview{
+    margin-top:12px; font-family:var(--mono); font-size:14px; color:var(--ink);
+    background:var(--bg); border-radius:8px; padding:10px 14px;
+  }
+  .codepreview .cm{color:var(--dim);}
+  .presets{margin-top:12px; display:flex; flex-wrap:wrap; gap:8px;}
+  .presets .cap{width:100%; font-size:11px; color:var(--dim); letter-spacing:.06em;}
+  .chip{
+    font-size:13px; padding:7px 12px; border-radius:999px;
+    background:var(--panel2); color:var(--ink); border:1px solid var(--line); cursor:pointer;
+  }
+  .chip:hover{border-color:var(--accent);}
+  .chip small{color:var(--dim);}
+
+  /* ── 작업 보드 ─────────────────── */
+  .board{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:16px 14px; margin-top:14px; overflow-x:auto; display:none;
+  }
+  .board.show{display:block;}
+  .board-inner{min-width:560px;}
+  .bit-grid{display:grid; grid-template-columns:150px repeat(8,1fr) 120px; gap:4px; align-items:center;}
+  .rowlabel{font-size:12px; color:var(--dim); text-align:right; padding-right:10px; line-height:1.35;}
+  .rowlabel b{color:var(--ink); font-family:var(--mono); font-size:12.5px;}
+  .colhead{font-family:var(--mono); font-size:11px; color:var(--dim); text-align:center;}
+  .cell{
+    font-family:var(--mono); font-size:19px; font-weight:700; text-align:center;
+    padding:7px 0; border-radius:8px; background:var(--bg); color:var(--dim);
+    border:1px solid transparent; transition:all .2s;
+  }
+  .cell.one{color:var(--bit1);}
+  .cell.m{color:var(--mask);}
+  .cell.res1{color:var(--on);}
+  .cell.hot{border-color:var(--accent); background:#122433;}
+  .cell.pop{animation:cellpop .25s ease;}
+  @keyframes cellpop{from{transform:translateY(5px) scale(.7); opacity:0;} to{transform:none; opacity:1;}}
+  .decread{font-family:var(--mono); font-size:12px; color:var(--dim); padding-left:10px; line-height:1.4;}
+  .decread b{color:var(--ink);}
+  .hr{grid-column:1/-1; height:1px; background:var(--line); margin:5px 0;}
+  .statline{margin-top:10px; font-family:var(--mono); font-size:13.5px; color:var(--dim); background:var(--bg); border-radius:8px; padding:8px 13px; min-height:35px;}
+  .statline b{color:var(--ink);}
+  .statline .ok{color:var(--on); font-weight:800;}
+  .statline .no{color:var(--bad); font-weight:800;}
+
+  /* ── 코드 로그 ─────────────────── */
+  .log{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:14px 16px; margin-top:14px;
+  }
+  .log .cap{font-size:11px; color:var(--dim); letter-spacing:.06em; margin-bottom:8px;}
+  .logbody{font-family:var(--mono); font-size:13px; line-height:2; color:var(--ink); overflow-x:auto; white-space:nowrap;}
+  .logbody .cm{color:var(--dim);}
+  .logbody .new{color:var(--on);}
+  .logbody:empty::before{content:"아직 실행한 명령이 없습니다."; color:var(--dim); font-family:inherit;}
+
+  .verdict{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:16px; margin-top:14px; font-size:14px; line-height:1.8; color:var(--dim); display:none;
+  }
+  .verdict.show{display:block;}
+  .verdict b{color:var(--ink);}
+  .verdict code{font-family:var(--mono); background:var(--bg); padding:2px 7px; border-radius:6px; font-size:13px;}
+  .verdict .warn{color:var(--bad); font-weight:700;}
+  .verdict .fine{color:var(--on); font-weight:700;}
+
+  @media (prefers-reduced-motion:reduce){
+    .cell,.dev,.regbit{transition:none;}
+    .cell.pop,.regbit.pulse{animation:none;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Hardware Register · Read–Modify–Write</div>
+    <h1>하드웨어 플래그 제어 — 비트 연산으로 장치를 <code>켜고 · 끄고 · 뒤집고 · 확인한다</code></h1>
+    <p class="sub">8비트 제어 레지스터의 각 비트가 장치 하나씩을 담당합니다. MCU 코드가 하는 일은 결국 <b>이 레지스터의 특정 비트만 골라 바꾸는 것</b> — 그 도구가 지난 시간의 AND·OR·XOR·NOT과 시프트(<code>&lt;&lt;</code>)입니다.</p>
+  </header>
+
+  <!-- 하드웨어 패널 -->
+  <div class="secttl"><span class="no">REG</span>제어 레지스터와 연결된 장치 <small>장치를 클릭하면 그 비트가 선택됩니다</small></div>
+  <section class="hw">
+    <div class="hw-inner">
+      <div class="devrow" id="devrow"></div>
+      <div class="regrow" id="regrow"></div>
+      <div class="regread" id="regread"></div>
+    </div>
+  </section>
+
+  <!-- 제어 패널 -->
+  <section class="controls">
+    <div class="row">
+      <div class="grp">
+        <span class="cap">할 일</span>
+        <div class="op-toggle" id="opTog">
+          <button data-op="SET" class="active">켜기</button>
+          <button data-op="CLEAR">끄기</button>
+          <button data-op="TOGGLE">토글</button>
+          <button data-op="TEST">검사</button>
+        </div>
+      </div>
+      <div class="grp">
+        <span class="cap">대상 비트 n</span>
+        <div class="bitpick" id="bitpick"></div>
+      </div>
+      <button class="run" id="btnRun">실행 ▶</button>
+    </div>
+    <div class="codepreview" id="codepreview"></div>
+    <div class="presets" id="presets">
+      <span class="cap">시나리오 — 여러 명령이 순서대로 자동 실행됩니다</span>
+    </div>
+  </section>
+
+  <!-- 작업 보드 -->
+  <section class="board" id="board">
+    <div class="board-inner">
+      <div class="bit-grid" id="grid"></div>
+    </div>
+    <div class="statline" id="statline"></div>
+  </section>
+
+  <!-- 코드 로그 -->
+  <section class="log">
+    <div class="cap">실행된 코드 (누적)</div>
+    <div class="logbody" id="logbody"></div>
+  </section>
+
+  <section class="verdict" id="verdict" aria-live="polite"></section>
+
+</div>
+
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const sleep=ms=>new Promise(r=>setTimeout(r, reduced?0:ms));
+  const bits=v=>Array.from({length:8},(_,i)=>(v>>(7-i))&1);
+  const bin=v=>"0b"+v.toString(2).padStart(8,"0");
+
+  const DEVS=[
+    {bit:7, ico:"🔌", nm:"전원 LED"},
+    {bit:6, ico:"🖥️", nm:"백라이트"},
+    {bit:5, ico:"📡", nm:"센서 전원"},
+    {bit:4, ico:"🌀", nm:"냉각팬"},
+    {bit:3, ico:"🔥", nm:"히터"},
+    {bit:2, ico:"🔔", nm:"부저"},
+    {bit:1, ico:"⚙️", nm:"모터"},
+    {bit:0, ico:"💡", nm:"상태 LED"},
+  ];
+  const devName=n=>DEVS.find(d=>d.bit===n).nm;
+
+  let REG=0;          // 레지스터 상태 (지속됨)
+  let op="SET", selBit=0, running=false;
+
+  /* ── 하드웨어 패널 구성 ───────────── */
+  const devrow=$("#devrow"), regrow=$("#regrow");
+  DEVS.forEach(d=>{
+    const el=document.createElement("button");
+    el.className="dev"; el.dataset.bit=d.bit;
+    el.innerHTML=`<div class="ico">${d.ico}</div><div class="nm">${d.nm}</div><div class="st">OFF</div>`;
+    el.addEventListener("click",()=>{ if(!running){ setBit(d.bit); }});
+    devrow.appendChild(el);
+
+    const rb=document.createElement("div");
+    rb.className="regbit"; rb.id="reg"+d.bit; rb.textContent="0";
+    regrow.appendChild(rb);
+  });
+  function renderReg(changed){
+    for(let i=0;i<8;i++){
+      const v=(REG>>i)&1;
+      const rb=$("#reg"+i);
+      rb.textContent=v;
+      rb.classList.toggle("one",v===1);
+      if(changed===i){ rb.classList.remove("pulse"); void rb.offsetWidth; rb.classList.add("pulse"); }
+      const dv=devrow.querySelector(`[data-bit="${i}"]`);
+      dv.classList.toggle("on",v===1);
+      dv.querySelector(".st").textContent=v? "ON":"OFF";
+    }
+    $("#regread").innerHTML=`REG = <b>${bin(REG)}</b> &nbsp;(= ${REG})`;
+  }
+
+  /* ── 제어 패널 ─────────────────── */
+  const bitpick=$("#bitpick");
+  for(let i=7;i>=0;i--){
+    const b=document.createElement("button");
+    b.textContent=i; b.dataset.bit=i;
+    b.addEventListener("click",()=>{ if(!running) setBit(i); });
+    bitpick.appendChild(b);
+  }
+  function setBit(n){
+    selBit=n;
+    bitpick.querySelectorAll("button").forEach(b=>b.classList.toggle("active",+b.dataset.bit===n));
+    devrow.querySelectorAll(".dev").forEach(d=>d.classList.toggle("sel",+d.dataset.bit===n));
+    preview();
+  }
+  function setOp(o){
+    op=o;
+    document.querySelectorAll("#opTog button").forEach(b=>b.classList.toggle("active",b.dataset.op===o));
+    preview();
+  }
+  document.querySelectorAll("#opTog button").forEach(b=>b.addEventListener("click",()=>{ if(!running) setOp(b.dataset.op); }));
+
+  function codeOf(o,n){
+    return o==="SET"?    `REG |= (1 << ${n});`
+         : o==="CLEAR"?  `REG &= ~(1 << ${n});`
+         : o==="TOGGLE"? `REG ^= (1 << ${n});`
+         :               `if (REG & (1 << ${n})) { ... }`;
+  }
+  function preview(){
+    const verb={SET:"켜기",CLEAR:"끄기",TOGGLE:"토글",TEST:"검사"}[op];
+    $("#codepreview").innerHTML=`${codeOf(op,selBit)} <span class="cm">// ${devName(selBit)} ${verb}</span>`;
+  }
+
+  /* ── 작업 보드 ─────────────────── */
+  const grid=$("#grid");
+  function addRow(id,label){
+    const add=(cls,txt,cid)=>{const d=document.createElement("div"); d.className=cls; if(txt!==undefined)d.innerHTML=txt; if(cid)d.id=cid; grid.appendChild(d);};
+    add("rowlabel",label,"lab_"+id);
+    for(let i=7;i>=0;i--) add("cell","","c_"+id+i);
+    add("decread","","dec_"+id);
+  }
+  function paint(id,arr,cls,popAll){
+    for(let i=0;i<8;i++){
+      const c=$("#c_"+id+(7-i));
+      c.textContent=arr[i];
+      c.className="cell"+(arr[i]===1?(cls?" "+cls:" one"):"")+(popAll?" pop":"");
+    }
+  }
+  function boardHeader(){
+    const add=(cls,txt)=>{const d=document.createElement("div"); d.className=cls; d.textContent=txt; grid.appendChild(d);};
+    add("rowlabel","");
+    for(let i=7;i>=0;i--) add("colhead","bit "+i);
+    add("colhead","값");
+  }
+  function hrRow(){ const d=document.createElement("div"); d.className="hr"; grid.appendChild(d); }
+
+  /* ── 한 번의 연산 실행 ─────────────── */
+  async function runOp(o,n,comment){
+    $("#board").classList.add("show");
+    grid.innerHTML=""; boardHeader();
+    const stat=$("#statline");
+    const mask=(1<<n)&0xFF;
+    const needNot=(o==="CLEAR");
+
+    // 1) 마스크 만들기: 1 << n
+    addRow("m","마스크 <b>1 &lt;&lt; "+n+"</b>");
+    const mArr=[0,0,0,0,0,0,0,1];
+    paint("m",mArr,"m");
+    $("#dec_m").innerHTML="1";
+    stat.innerHTML=`<b>1단계</b> — 숫자 1을 왼쪽으로 ${n}칸 밀어 <b>${devName(n)} 자리에만 1이 있는 마스크</b>를 만듭니다.`;
+    await sleep(750);
+    for(let k=1;k<=n;k++){
+      const arr=[0,0,0,0,0,0,0,0]; arr[7-k]=1;
+      paint("m",arr,"m");
+      const c=$("#c_m"+k); c.classList.add("pop","hot");
+      $("#lab_m").innerHTML=`마스크 <b>1 &lt;&lt; ${k}</b>`;
+      $("#dec_m").innerHTML=String(1<<k);
+      await sleep(210);
+      c.classList.remove("hot");
+    }
+    let maskArr=bits(mask);
+    await sleep(450);
+
+    // 2) CLEAR면 반전
+    if(needNot){
+      addRow("nm","반전 <b>~(1 &lt;&lt; "+n+")</b>");
+      stat.innerHTML=`<b>2단계</b> — 끌 때는 마스크를 <b>NOT으로 뒤집습니다</b>: ${devName(n)} 자리만 0, 나머지는 전부 1.`;
+      await sleep(650);
+      maskArr=bits((~mask)&0xFF);
+      paint("nm",maskArr,"m",true);
+      $("#dec_nm").innerHTML=String((~mask)&0xFF);
+      await sleep(800);
+    }
+
+    // 3) REG와 연산
+    hrRow();
+    const opSym = o==="SET"? "OR ∨" : o==="CLEAR"? "AND ∧" : o==="TOGGLE"? "XOR ⊕" : "AND ∧";
+    addRow("r","현재 <b>REG</b>");
+    paint("r",bits(REG));
+    $("#dec_r").innerHTML=String(REG);
+    addRow("k",`<b>${opSym}</b> 마스크`);
+    paint("k",maskArr,"m");
+    $("#dec_k").innerHTML=String(maskArr.reduce((a,x)=>a*2+x,0));
+    hrRow();
+    addRow("o", o==="TEST"? "= 검사 결과" : "= 새 <b>REG</b>");
+    stat.innerHTML = `<b>${needNot? "3":"2"}단계</b> — REG와 마스크를 <b>${opSym.split(" ")[0]}</b> 합니다. 자리마다 독립 실행.`;
+    await sleep(700);
+
+    const R=bits(REG);
+    const out=[];
+    for(let bit=7;bit>=0;bit--){
+      ["r","k","o"].forEach(p=>$("#c_"+p+bit)?.classList.add("hot"));
+      await sleep(150);
+      const a=R[7-bit], m=maskArr[7-bit];
+      const v = o==="SET"? (a|m) : o==="TOGGLE"? (a^m) : (a&m);
+      out[7-bit]=v;
+      const c=$("#c_o"+bit);
+      c.textContent=v;
+      c.className="cell hot pop"+(v? " res1":"");
+      await sleep(90);
+      ["r","k","o"].forEach(p=>$("#c_"+p+bit)?.classList.remove("hot"));
+    }
+    const outVal=out.reduce((a,x)=>a*2+x,0);
+    $("#dec_o").innerHTML=String(outVal);
+    await sleep(400);
+
+    // 4) 반영/판정
+    const v=$("#verdict");
+    if(o==="TEST"){
+      const onNow=outVal!==0;
+      stat.innerHTML = onNow
+        ? `검사 결과 <b>${outVal} ≠ 0</b> → <span class="ok">참</span> — ${devName(n)}는 켜져 있습니다. <b>REG는 바뀌지 않았습니다.</b>`
+        : `검사 결과 <b>0</b> → <span class="no">거짓</span> — ${devName(n)}는 꺼져 있습니다. <b>REG는 바뀌지 않았습니다.</b>`;
+      v.innerHTML=`<b>검사(TEST)는 읽기만 한다</b><br>` +
+        `<code>REG & (1 << ${n})</code> 의 결과는 0 아니면 ${mask} — <b>1이 아니라 ${mask}인 것에 주의</b>하세요. ` +
+        `그래서 코드는 <code>== 1</code>이 아니라 <b>0인지 아닌지</b>로 판단합니다. 다른 비트는 마스크가 전부 0이라 결과에 끼어들지 못합니다.`;
+      logLine(codeOf(o,n), comment||`${devName(n)} 상태 확인 → ${onNow? "켜짐":"꺼짐"}`, REG);
+    }else{
+      const before=REG;
+      REG=outVal;
+      renderReg(n);
+      const verb={SET:"켜짐",CLEAR:"꺼짐",TOGGLE:"반전됨"}[o];
+      stat.innerHTML=`완료 — <b>${devName(n)}</b> ${verb}. REG: ${bin(before)} → <b>${bin(REG)}</b>`;
+      const others = (before&~mask)===(REG&~mask);
+      v.innerHTML=`<b>핵심: 다른 비트는 손대지 않았다</b><br>` +
+        `bit ${n} 하나만 바뀌고 나머지 7비트는 ${others? `<span class="fine">그대로 보존</span>됐습니다`:"바뀌었습니다"}. ` +
+        `만약 <code>REG = ${mask};</code> 처럼 <span class="warn">통째로 대입</span>했다면 켜져 있던 다른 장치가 전부 꺼졌을 것입니다. ` +
+        `그래서 하드웨어 제어는 항상 <b>읽고(Read) → 비트만 고치고(Modify) → 다시 쓰는(Write)</b> 방식입니다.`;
+      logLine(codeOf(o,n), comment||`${devName(n)} ${{"SET":"켜기","CLEAR":"끄기","TOGGLE":"토글"}[o]}`, REG);
+    }
+    v.classList.add("show");
+  }
+
+  /* ── 코드 로그 ─────────────────── */
+  const logbody=$("#logbody");
+  function logLine(code,comment,regAfter){
+    logbody.querySelectorAll(".new").forEach(e=>e.classList.remove("new"));
+    const d=document.createElement("div");
+    d.className="new";
+    d.innerHTML=`${code.padEnd(24,"\u00A0")} <span class="cm">// ${comment} → REG = ${bin(regAfter)}</span>`;
+    logbody.appendChild(d);
+    while(logbody.children.length>10) logbody.removeChild(logbody.firstChild);
+  }
+
+  /* ── 실행 버튼 / 시나리오 ─────────── */
+  async function manualRun(){
+    running=true; $("#btnRun").disabled=true;
+    await runOp(op,selBit);
+    running=false; $("#btnRun").disabled=false;
+  }
+  $("#btnRun").addEventListener("click",()=>!running&&manualRun());
+
+  const SCENARIOS=[
+    {name:"부팅 시퀀스", note:"켜기 3연속 + 검사",
+     steps:[["SET",7,"전원 LED 켜기"],["SET",5,"센서 전원 켜기"],["SET",0,"상태 LED 켜기"],["TEST",5,"센서 켜졌는지 확인"]]},
+    {name:"경보 발생", note:"부저 켜고 LED 점멸",
+     steps:[["SET",2,"부저 켜기"],["TOGGLE",0,"상태 LED 점멸 ①"],["TOGGLE",0,"상태 LED 점멸 ②"],["TOGGLE",0,"상태 LED 점멸 ③"]]},
+    {name:"과열 대응", note:"히터 끄고 팬 켜기",
+     steps:[["CLEAR",3,"히터 끄기"],["SET",4,"냉각팬 켜기"],["TEST",3,"히터 꺼졌는지 확인"]]},
+    {name:"절전 모드", note:"끄기 4연속 — 전원 LED만 유지",
+     steps:[["CLEAR",6,"백라이트 끄기"],["CLEAR",5,"센서 끄기"],["CLEAR",4,"냉각팬 끄기"],["CLEAR",1,"모터 끄기"]]},
+  ];
+  const pb=$("#presets");
+  SCENARIOS.forEach(s=>{
+    const btn=document.createElement("button");
+    btn.className="chip";
+    btn.innerHTML=`${s.name} <small>· ${s.note}</small>`;
+    btn.addEventListener("click",async()=>{
+      if(running) return;
+      running=true; $("#btnRun").disabled=true;
+      for(const [o,n,c] of s.steps){
+        setOp(o); setBit(n);
+        await runOp(o,n,c);
+        await sleep(1200);
+      }
+      running=false; $("#btnRun").disabled=false;
+    });
+    pb.appendChild(btn);
+  });
+
+  renderReg();
+  setBit(0); setOp("SET");
+})();
+</script>
+</body>
+</html>

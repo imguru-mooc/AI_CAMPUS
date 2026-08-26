@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>컴퓨터 구조 Day 3 — 애니메이션 목차</title>
+<style>
+  :root{
+    --bg:#0f141d;
+    --panel:#161d2a;
+    --panel2:#1b2434;
+    --line:#26314a;
+    --ink:#dce6f5;
+    --dim:#7d8ba3;
+    --bit1:#ffd166;
+    --accent:#4cc9f0;
+    --mask:#c792ea;
+    --on:#7ee787;
+    --mono:"JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    min-height:100vh; padding:28px 16px 70px;
+  }
+  .wrap{max-width:940px; margin:0 auto;}
+
+  header{margin-bottom:22px;}
+  .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.18em; color:var(--accent); text-transform:uppercase;}
+  h1{font-size:clamp(22px,4vw,30px); font-weight:800; margin-top:6px;}
+  h1 code{font-family:var(--mono); color:var(--bit1);}
+  .sub{color:var(--dim); font-size:14px; margin-top:8px; line-height:1.7;}
+  .sub b{color:var(--ink);}
+
+  /* 워크시트 배너 */
+  .ws{
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    background:var(--panel); border:1px solid var(--bit1); border-radius:14px;
+    padding:16px 18px; margin-bottom:26px;
+  }
+  .ws .t{flex:1; min-width:220px;}
+  .ws .t b{color:var(--bit1); font-size:16px;}
+  .ws .t p{color:var(--dim); font-size:13px; margin-top:4px; line-height:1.6;}
+  .ws a.btn{
+    display:inline-block; background:var(--bit1); color:#2a2005; font-weight:800;
+    padding:11px 22px; border-radius:9px; text-decoration:none; font-size:15px;
+  }
+  .ws a.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+
+  .day-arc{
+    font-family:var(--mono); font-size:12.5px; color:var(--dim);
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:12px 16px; margin-bottom:26px; line-height:1.9; overflow-x:auto; white-space:nowrap;
+  }
+  .day-arc b{color:var(--ink);}
+  .day-arc .s{color:var(--accent);}
+
+  .grp{margin-bottom:10px;}
+  .grp h2{font-size:14px; font-weight:800; margin:22px 0 12px; color:var(--ink);}
+  .grp h2 small{color:var(--dim); font-weight:400; margin-left:8px;}
+
+  .cards{display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px;}
+  a.card{
+    display:block; background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:16px 16px 14px; text-decoration:none; color:inherit;
+    transition:border-color .2s, transform .15s;
+  }
+  a.card:hover{border-color:var(--accent); transform:translateY(-2px);}
+  a.card:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .badge{
+    display:inline-block; font-family:var(--mono); font-size:10.5px; font-weight:800;
+    padding:3px 9px; border-radius:999px; margin-bottom:9px; letter-spacing:.06em;
+  }
+  .badge.s1{background:#12303c; color:var(--accent);}
+  .badge.s2{background:#12303c; color:var(--accent);}
+  .badge.s3{background:#12303c; color:var(--accent);}
+  .badge.s4{background:#3a2f12; color:var(--bit1);}
+  .badge.s5{background:#3a2f12; color:var(--bit1);}
+  .badge.s6{background:#241a33; color:var(--mask);}
+  .badge.s7{background:#241a33; color:var(--mask);}
+  .badge.ax{background:#1d2a1f; color:var(--on);}
+  .card .nm{font-size:16px; font-weight:800; color:var(--ink); line-height:1.4;}
+  .card .ds{font-size:12.5px; color:var(--dim); margin-top:6px; line-height:1.65; min-height:3.1em;}
+  .card .fn{font-family:var(--mono); font-size:10.5px; color:#556180; margin-top:10px; word-break:break-all;}
+  .card .go{font-size:12.5px; font-weight:800; color:var(--bit1); margin-top:8px;}
+
+  footer{
+    margin-top:34px; border-top:1px solid var(--line); padding-top:16px;
+    font-size:12px; color:var(--dim); line-height:1.8;
+  }
+  footer b{color:var(--ink);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Computer Architecture · Day 3</div>
+    <h1>컴퓨터 구조 Day 3 — 애니메이션 목차</h1>
+    <p class="sub">모든 자료는 <b>브라우저만 있으면</b> 동작합니다 (무설치 · 오프라인 가능). 수업 규칙: <b>예측 먼저, 화면은 검산</b> — 워크시트의 예측 칸을 먼저 채운 뒤 애니메이션으로 확인하세요.</p>
+  </header>
+
+  <div class="ws">
+    <div class="t">
+      <b>디지털 워크시트 (실습 1~7 + 부록)</b>
+      <p>자동 저장 · 채점 시 예측 잠김 · 완료 화면 캡처 → 노션 제출. 각 실습 상단에도 해당 애니메이션 버튼이 있습니다.</p>
+    </div>
+    <a class="btn" href="day3_worksheet.html">워크시트 열기 ▶</a>
+  </div>
+
+  <div class="day-arc">
+    오늘의 사슬 — <span class="s">S1</span> 게이트 → <span class="s">S2</span> 가산기 → <span class="s">S3</span> 뺄셈 → <span class="s">S4</span> 플래그 → <span class="s">S5</span> 제어 → <span class="s">S6</span> 명령 → <span class="s">S7</span> 실행 → <b>도착점</b>
+  </div>
+
+  <div class="grp">
+    <h2>오전 — 계산기 조립 <small>게이트에서 뺄셈까지</small></h2>
+    <div class="cards">
+      <a class="card" href="anim/logic_gates_bitwise.html">
+        <span class="badge s1">S1 · 실습 1</span>
+        <div class="nm">논리 연산 실험대</div>
+        <div class="ds">AND·OR·NOT·XOR 진리표를 직접 눌러 보고, 8비트에 한꺼번에 적용되는 과정을 자리별로 재생.</div>
+        <div class="fn">anim/logic_gates_bitwise.html</div>
+        <div class="go">열기 ▶</div>
+      </a>
+      <a class="card" href="anim/half_adder.html">
+        <span class="badge s2">S2 · 실습 2</span>
+        <div class="nm">반가산기</div>
+        <div class="ds">게이트 2개(XOR+AND)로 만드는 한 자리 덧셈. 곤란한 행은 1+1 하나뿐 — '반(半)'인 이유까지.</div>
+        <div class="fn">anim/half_adder.html</div>
+        <div class="go">열기 ▶</div>
+      </a>
+      <a class="card" href="anim/full_adder.html">
+        <span class="badge s2">S2 · 실습 2</span>
+        <div class="nm">전가산기</div>
+        <div class="ds">반가산기 2개 + OR. 신호가 게이트를 지나는 순서 그대로 재생 — 전가산기는 '1을 세는 기계'.</div>
+        <div class="fn">anim/full_adder.html</div>
+        <div class="go">열기 ▶</div>
+      </a>
+      <a class="card" href="anim/twos_complement_subtraction.html">
+        <span class="badge s3">S3 · 실습 3</span>
+        <div class="nm">2의 보수 뺄셈</div>
+        <div class="ds">뒤집고, 1 더하고, 그냥 더한다 — 뺄셈 회로 없이 뺄셈하기. 넘친 9번째 비트를 버리는 장면까지.</div>
+        <div class="fn">anim/twos_complement_subtraction.html</div>
+        <div class="go">열기 ▶</div>
+      </a>
+    </div>
+  </div>
+
+  <div class="grp">
+    <h2>오후 ① — 신호와 제어 <small>계산이 남기는 것, 비트로 시키는 것</small></h2>
+    <div class="cards">
+      <a class="card" href="anim/cpu_flags_simulator.html">
+        <span class="badge s4">S4 · 실습 4</span>
+        <div class="nm">상태 플래그 시뮬레이터</div>
+        <div class="ds">CF·ZF·SF·OF가 왜 켜지는지 자리올림 이동과 함께. 핵심: CF는 부호 없는 경고, OF는 부호 있는 경고.</div>
+        <div class="fn">anim/cpu_flags_simulator.html</div>
+        <div class="go">열기 ▶</div>
+      </a>
+      <a class="card" href="anim/hardware_flag_control.html">
+        <span class="badge s5">S5 · 실습 5</span>
+        <div class="nm">하드웨어 플래그 제어</div>
+        <div class="ds">비트 하나 = 장치 하나. 1&lt;&lt;n 마스크로 켜고/끄고/토글/검사 — C 코드 로그와 시나리오 자동 실행.</div>
+        <div class="fn">anim/hardware_flag_control.html</div>
+        <div class="go">열기 ▶</div>
+      </a>
+    </div>
+  </div>
+
+  <div class="grp">
+    <h2>오후 ② — 명령과 실행 <small>인출–해석–실행, 그리고 도착점</small></h2>
+    <div class="cards">
+      <a class="card" href="anim/cpu_memory_addressing.html">
+        <span class="badge s6">S6 · 시연</span>
+        <div class="nm">주소의 원리 (디코더)</div>
+        <div class="ds">주소 비트 하나당 후보를 절반씩 걸러 한 칸만 켜는 원리. 어느 칸이든 같은 박자 — Random Access.</div>
+        <div class="fn">anim/cpu_memory_addressing.html</div>
+        <div class="go">열기 ▶</div>
+      </a>
+      <a class="card" href="anim/memory_row_column_addressing.html">
+        <span class="badge s6">S6 · 시연</span>
+        <div class="nm">날줄과 씨줄 (행×열)</div>
+        <div class="ds">주소가 행·열로 갈라져 두 줄의 교차점 한 칸을 만나는 실물(DRAM) 구조. 64칸을 선 16가닥으로.</div>
+        <div class="fn">anim/memory_row_column_addressing.html</div>
+        <div class="go">열기 ▶</div>
+      </a>
+      <a class="card" href="anim/cpu_instruction_cycle.html">
+        <span class="badge s7">S6·S7 · 실습 6·7</span>
+        <div class="nm">명령 실행 사이클 (미니 CPU)</div>
+        <div class="ds">LOAD→ADD→STORE→HALT를 인출–해석–실행 세 박자로. 두 수를 직접 골라 실행하는 도착점 도구.</div>
+        <div class="fn">anim/cpu_instruction_cycle.html</div>
+        <div class="go">열기 ▶</div>
+      </a>
+    </div>
+  </div>
+
+  <div class="grp">
+    <h2>부록 <small>선택 실습 · Day 2 심화</small></h2>
+    <div class="cards">
+      <a class="card" href="anim/float32_ieee754.html">
+        <span class="badge ax">부록 · Day 2 심화</span>
+        <div class="nm">float32 해부도 (IEEE 754)</div>
+        <div class="ds">소수가 32비트에 담기는 5단계. 0.1을 넣으면 실제 저장된 값이 드러나며 0.1+0.2≠0.3의 이유가 보인다.</div>
+        <div class="fn">anim/float32_ieee754.html</div>
+        <div class="go">열기 ▶</div>
+      </a>
+    </div>
+  </div>
+
+  <footer>
+    <b>배치 안내</b> — 이 파일(index.html)과 day3_worksheet.html을 같은 폴더에, 애니메이션 9종을 anim/ 하위 폴더에 두면 모든 링크가 동작합니다. 슬라이드(pptx)의 ▶ 버튼도 같은 구조를 가정합니다.<br>
+    컴퓨터 구조 Day 3 · 예측 먼저, 화면은 검산
+  </footer>
+
+</div>
+</body>
+</html>

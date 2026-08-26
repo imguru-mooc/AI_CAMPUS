@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>명령 실행 사이클 — 인출 · 해석 · 실행</title>
+<style>
+  :root{
+    --bg:#0f141d;
+    --panel:#161d2a;
+    --panel2:#1b2434;
+    --line:#26314a;
+    --ink:#dce6f5;
+    --dim:#7d8ba3;
+    --bit1:#ffd166;     /* 실행/데이터 */
+    --accent:#4cc9f0;   /* 인출 */
+    --mask:#c792ea;     /* 해석 */
+    --on:#7ee787;
+    --bad:#ff5d73;
+    --mono:"JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    min-height:100vh; padding:24px 16px 60px;
+  }
+  .wrap{max-width:940px; margin:0 auto;}
+
+  header{margin-bottom:18px;}
+  .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.18em; color:var(--accent); text-transform:uppercase;}
+  h1{font-size:clamp(20px,4vw,28px); font-weight:800; margin-top:6px;}
+  h1 code{font-family:var(--mono); color:var(--bit1);}
+  .sub{color:var(--dim); font-size:14px; margin-top:6px; line-height:1.6;}
+  .sub b{color:var(--ink);}
+
+  /* ── 제어 ─────────────────── */
+  .controls{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin-bottom:14px;}
+  .row{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;}
+  .field{display:flex; flex-direction:column; gap:4px;}
+  .field label{font-size:11px; color:var(--dim); letter-spacing:.05em;}
+  .field input{
+    width:96px; padding:9px 11px; font-family:var(--mono); font-size:17px;
+    background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:8px;
+  }
+  .field input:focus{outline:2px solid var(--accent); outline-offset:1px; border-color:transparent;}
+  button{font-family:inherit;}
+  .btn{
+    padding:10px 18px; border:none; border-radius:8px; font-weight:800; font-size:14px; cursor:pointer;
+  }
+  .btn.step{background:var(--bit1); color:#2a2005;}
+  .btn.auto{background:transparent; color:var(--accent); border:1px solid var(--accent);}
+  .btn.reset{background:transparent; color:var(--dim); border:1px solid var(--line);}
+  .btn:disabled{opacity:.4; cursor:default;}
+  .btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+
+  /* ── 본체: 메모리 | CPU ───────── */
+  .machine{display:grid; grid-template-columns:1fr 1.15fr; gap:14px; margin-bottom:14px;}
+  @media(max-width:760px){.machine{grid-template-columns:1fr;}}
+  .panelbox{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px 14px;}
+  .panelbox h2{font-size:13px; font-weight:800; margin-bottom:10px;}
+  .panelbox h2 small{color:var(--dim); font-weight:400; margin-left:6px;}
+
+  /* 메모리 */
+  .mhead,.mrow{display:grid; grid-template-columns:44px 1fr 46px 86px; gap:6px; align-items:center;}
+  .mhead{font-size:10.5px; color:var(--dim); padding:0 8px 6px;}
+  .mrow{
+    padding:7px 8px; border-radius:9px; border:1px solid transparent; margin-bottom:4px;
+    background:var(--bg); transition:border-color .25s, background .25s;
+  }
+  .mrow.pcnow{border-color:var(--accent); background:#122433;}
+  .mrow.touch{border-color:var(--bit1);}
+  .maddr{font-family:var(--mono); font-size:12px; color:var(--dim);}
+  .maddr b{color:var(--ink);}
+  .mval{font-family:var(--mono); font-size:14.5px; font-weight:700; letter-spacing:.05em;}
+  .mval .op{color:var(--mask);} .mval .ar{color:var(--accent);}
+  .mdec{font-family:var(--mono); font-size:11.5px; color:var(--dim); text-align:right;}
+  .mnote{font-family:var(--mono); font-size:11.5px; color:var(--dim);}
+  .mnote.known{color:var(--on);}
+  .mgap{text-align:center; color:var(--dim); font-size:12px; padding:2px 0 6px;}
+  .dict{margin-top:10px; font-family:var(--mono); font-size:11px; color:var(--dim); line-height:1.9; border-top:1px solid var(--line); padding-top:8px;}
+  .dict b{color:var(--mask);}
+  .dict .cap{font-family:"Pretendard","Apple SD Gothic Neo",sans-serif; letter-spacing:.05em;}
+
+  /* CPU */
+  .phases{display:flex; gap:6px; margin-bottom:12px;}
+  .phase{
+    flex:1; text-align:center; font-size:12px; font-weight:800; padding:8px 4px;
+    border-radius:9px; border:1px solid var(--line); color:var(--dim); background:var(--bg);
+    transition:all .25s;
+  }
+  .phase .n{font-family:var(--mono); margin-right:4px;}
+  .phase.cur1{border-color:var(--accent); color:var(--accent); background:#122433;}
+  .phase.cur2{border-color:var(--mask); color:var(--mask); background:#1d1830;}
+  .phase.cur3{border-color:var(--bit1); color:var(--bit1); background:#1d1a10;}
+  .regs{display:flex; flex-direction:column; gap:8px;}
+  .reg{
+    display:grid; grid-template-columns:52px 1fr; gap:10px; align-items:center;
+    background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px;
+    transition:border-color .25s;
+  }
+  .reg.hot{border-color:var(--bit1);}
+  .reg .nm{font-family:var(--mono); font-size:14px; font-weight:800; color:var(--dim);}
+  .reg .vl{font-family:var(--mono); font-size:17px; font-weight:800;}
+  .reg .vl small{font-size:11px; color:var(--dim); font-weight:400; margin-left:8px;}
+  .reg .vl .op{color:var(--mask);} .reg .vl .ar{color:var(--accent);}
+  .reg .meaning{grid-column:1/-1; font-family:var(--mono); font-size:12px; color:var(--on); min-height:0;}
+  .reg.pulse{animation:pulse .45s ease;}
+  @keyframes pulse{0%{transform:scale(1);} 40%{transform:scale(1.03);} 100%{transform:scale(1);}}
+  .alu{
+    margin-top:8px; background:var(--bg); border:1px dashed var(--line); border-radius:10px;
+    padding:9px 12px; font-family:var(--mono); font-size:14px; color:var(--dim); min-height:38px;
+  }
+  .alu b{color:var(--bit1);}
+  .flagrow{display:flex; gap:6px; margin-top:8px;}
+  .fl{
+    flex:1; text-align:center; font-family:var(--mono); font-size:12px; font-weight:800;
+    padding:7px 0; border-radius:8px; background:var(--bg); border:1px solid var(--line); color:#3a465e;
+    transition:all .25s;
+  }
+  .fl.on{color:var(--bad); border-color:var(--bad);}
+  .fl small{display:block; font-size:9px; color:var(--dim); font-weight:400;}
+
+  /* 해설/로그/판정 */
+  .explain{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:13px 16px; margin-bottom:14px; font-size:14px; line-height:1.75; color:var(--dim); min-height:52px;
+  }
+  .explain b{color:var(--ink);}
+  .explain code{font-family:var(--mono); background:var(--bg); padding:2px 7px; border-radius:6px; font-size:13px;}
+  .explain .p1{color:var(--accent); font-weight:800;}
+  .explain .p2{color:var(--mask); font-weight:800;}
+  .explain .p3{color:var(--bit1); font-weight:800;}
+  .log{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:13px 16px; margin-bottom:14px;}
+  .log .cap{font-size:11px; color:var(--dim); letter-spacing:.06em; margin-bottom:6px;}
+  .logbody{font-family:var(--mono); font-size:12.5px; line-height:1.9; color:var(--dim); max-height:170px; overflow-y:auto;}
+  .logbody .new{color:var(--ink);}
+  .logbody:empty::before{content:"아직 실행된 단계가 없습니다."; }
+  .verdict{
+    background:var(--panel); border:1px solid var(--on); border-radius:14px;
+    padding:16px; font-size:14px; line-height:1.8; color:var(--dim); display:none;
+  }
+  .verdict.show{display:block;}
+  .verdict b{color:var(--ink);}
+  .verdict .fine{color:var(--on); font-weight:800;}
+  .verdict code{font-family:var(--mono); background:var(--bg); padding:2px 7px; border-radius:6px; font-size:13px;}
+
+  /* 날아가는 값 */
+  .flychip{
+    position:fixed; z-index:99; transform:translate(-50%,-50%);
+    font-family:var(--mono); font-size:13px; font-weight:800;
+    background:var(--accent); color:#06222e; padding:5px 11px; border-radius:8px;
+    transition:left .55s cubic-bezier(.4,0,.2,1), top .55s cubic-bezier(.4,0,.2,1);
+    pointer-events:none; box-shadow:0 4px 18px rgba(76,201,240,.35);
+  }
+  .flychip.gold{background:var(--bit1); color:#2a2005; box-shadow:0 4px 18px rgba(255,209,102,.35);}
+
+  @media (prefers-reduced-motion:reduce){
+    .mrow,.reg,.phase,.fl{transition:none;}
+    .reg.pulse{animation:none;}
+    .flychip{transition:none;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Fetch · Decode · Execute</div>
+    <h1>명령 실행 사이클 — CPU는 <code>가져오고 · 알아듣고 · 해낸다</code></h1>
+    <p class="sub">메모리에 적힌 숫자(=명령어)를 CPU가 <b>인출→해석→실행</b> 세 박자로 처리하는 과정을 한 단계씩 재생합니다. 프로그램은 이 과정의 최종 목표인 <b>"두 수를 더해 저장하기"</b>입니다.</p>
+  </header>
+
+  <section class="controls">
+    <div class="row">
+      <div class="field">
+        <label for="d1">M[10] — 첫째 수 (0~255)</label>
+        <input id="d1" type="number" min="0" max="255" value="7">
+      </div>
+      <div class="field">
+        <label for="d2">M[11] — 둘째 수 (0~255)</label>
+        <input id="d2" type="number" min="0" max="255" value="5">
+      </div>
+      <button class="btn step" id="btnStep">다음 단계 ▶</button>
+      <button class="btn auto" id="btnAuto">자동 재생 ▶▶</button>
+      <button class="btn reset" id="btnReset">⟲ 처음부터</button>
+    </div>
+  </section>
+
+  <section class="machine">
+    <!-- 메모리 -->
+    <div class="panelbox">
+      <h2>메모리 <small>명령어도, 데이터도, 전부 그냥 숫자</small></h2>
+      <div class="mhead"><div>주소</div><div>내용(2진)</div><div>10진</div><div>뜻</div></div>
+      <div id="memBox"></div>
+      <div class="dict">
+        <div class="cap" style="margin-bottom:2px;">명령어 사전 (해석 규칙) — 상위 4비트=무엇을 · 하위 4비트=어디에</div>
+        <b>0001</b> LOAD n : M[n]을 A로 &nbsp;&nbsp; <b>0010</b> ADD n : A+M[n]을 A로<br>
+        <b>0011</b> STORE n : A를 M[n]으로 &nbsp;&nbsp; <b>1111</b> HALT : 정지
+      </div>
+    </div>
+
+    <!-- CPU -->
+    <div class="panelbox">
+      <h2>CPU <small>레지스터: 손 위의 작은 메모</small></h2>
+      <div class="phases">
+        <div class="phase" id="ph1"><span class="n">①</span>인출</div>
+        <div class="phase" id="ph2"><span class="n">②</span>해석</div>
+        <div class="phase" id="ph3"><span class="n">③</span>실행</div>
+      </div>
+      <div class="regs">
+        <div class="reg" id="regPC">
+          <div class="nm">PC</div>
+          <div class="vl"><span id="pcVal">0</span><small>다음에 가져올 주소</small></div>
+        </div>
+        <div class="reg" id="regIR">
+          <div class="nm">IR</div>
+          <div class="vl"><span id="irVal">········</span><small>지금 처리 중인 명령</small></div>
+          <div class="meaning" id="irMeaning"></div>
+        </div>
+        <div class="reg" id="regA">
+          <div class="nm">A</div>
+          <div class="vl"><span id="aVal">0</span><small id="aBin">00000000</small></div>
+        </div>
+      </div>
+      <div class="alu" id="alu">ALU — 계산이 일어나면 여기 표시됩니다</div>
+      <div class="flagrow">
+        <div class="fl" id="flCF">CF<small>자리올림</small></div>
+        <div class="fl" id="flZF">ZF<small>0인가</small></div>
+        <div class="fl" id="flSF">SF<small>음수인가</small></div>
+        <div class="fl" id="flOF">OF<small>범위초과</small></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="explain" id="explain">
+    <b>다음 단계 ▶</b>를 누르면 한 박자씩, <b>자동 재생 ▶▶</b>은 끝까지 이어서 재생합니다. 지금 PC는 0 — 첫 명령을 가져올 준비가 됐습니다.
+  </section>
+
+  <section class="log">
+    <div class="cap">사이클 기록 (단계별 기록표의 화면판)</div>
+    <div class="logbody" id="logbody"></div>
+  </section>
+
+  <section class="verdict" id="verdict" aria-live="polite"></section>
+
+</div>
+
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const sleep=ms=>new Promise(r=>setTimeout(r, reduced?0:ms));
+  const bin8=v=>v.toString(2).padStart(8,"0");
+
+  const OPS={1:"LOAD",2:"ADD",3:"STORE",15:"HALT"};
+  const ADDRS=[0,1,2,3,10,11,12];   // 표시할 주소
+  let mem={}, pc=0, ir=null, a=0, phase=1, halted=false, autoOn=false, busy=false;
+  let flags={CF:0,ZF:0,SF:0,OF:0};
+  let known={};                      // 해석을 거친 주소 → 뜻 표시
+  let instrCount=0, cycleCount=0;
+
+  /* ── 메모리 UI ───────────────────── */
+  const memBox=$("#memBox");
+  function buildMem(){
+    memBox.innerHTML="";
+    ADDRS.forEach((ad,idx)=>{
+      if(idx===4){
+        const g=document.createElement("div"); g.className="mgap"; g.textContent="⋯";
+        memBox.appendChild(g);
+      }
+      const r=document.createElement("div");
+      r.className="mrow"; r.id="mrow"+ad;
+      r.innerHTML=`<div class="maddr"><b>${String(ad).padStart(2,"0")}</b></div>
+        <div class="mval" id="mval${ad}"></div>
+        <div class="mdec" id="mdec${ad}"></div>
+        <div class="mnote" id="mnote${ad}"></div>`;
+      memBox.appendChild(r);
+    });
+  }
+  function renderMemCell(ad){
+    const v=mem[ad], el=$("#mval"+ad);
+    if(ad<=3 && known[ad]){
+      el.innerHTML=`<span class="op">${bin8(v).slice(0,4)}</span> <span class="ar">${bin8(v).slice(4)}</span>`;
+    }else{
+      el.textContent=bin8(v).slice(0,4)+" "+bin8(v).slice(4);
+    }
+    $("#mdec"+ad).textContent=v;
+    const note=$("#mnote"+ad);
+    if(ad>=10){ note.textContent="데이터"; note.className="mnote"; }
+    else if(known[ad]){ note.textContent=known[ad]; note.className="mnote known"; }
+    else{ note.textContent="?"; note.className="mnote"; }
+  }
+  function renderMemAll(){ ADDRS.forEach(renderMemCell); markPC(); }
+  function markPC(){
+    ADDRS.forEach(ad=>$("#mrow"+ad).classList.remove("pcnow"));
+    if(!halted && mem[pc]!==undefined) $("#mrow"+pc)?.classList.add("pcnow");
+  }
+
+  /* ── CPU UI ─────────────────────── */
+  function renderCPU(){
+    $("#pcVal").textContent=pc;
+    $("#aVal").textContent=a;
+    $("#aBin").textContent=bin8(a);
+    ["CF","ZF","SF","OF"].forEach(k=>$("#fl"+k).classList.toggle("on",flags[k]===1));
+    ["ph1","ph2","ph3"].forEach((id,i)=>{
+      const el=$("#"+id);
+      el.className="phase"+((!halted && phase===i+1)? " cur"+(i+1):"");
+    });
+  }
+  function pulse(id){ const el=$("#"+id); el.classList.remove("pulse"); void el.offsetWidth; el.classList.add("pulse"); }
+
+  /* ── 날아가는 값 ─────────────────── */
+  function fly(fromEl,toEl,text,gold){
+    if(reduced||!fromEl||!toEl) return Promise.resolve();
+    const r1=fromEl.getBoundingClientRect(), r2=toEl.getBoundingClientRect();
+    const chip=document.createElement("div");
+    chip.className="flychip"+(gold?" gold":"");
+    chip.textContent=text;
+    chip.style.left=(r1.left+r1.width/2)+"px";
+    chip.style.top=(r1.top+r1.height/2)+"px";
+    document.body.appendChild(chip);
+    void chip.offsetWidth;
+    chip.style.left=(r2.left+r2.width/2)+"px";
+    chip.style.top=(r2.top+r2.height/2)+"px";
+    return new Promise(r=>setTimeout(()=>{chip.remove(); r();},580));
+  }
+
+  /* ── 로그 ───────────────────────── */
+  function log(txt){
+    const lb=$("#logbody");
+    lb.querySelectorAll(".new").forEach(e=>e.classList.remove("new"));
+    const d=document.createElement("div");
+    d.className="new"; d.textContent=txt;
+    lb.appendChild(d);
+    lb.scrollTop=lb.scrollHeight;
+  }
+
+  /* ── 한 박자 진행 ─────────────────── */
+  async function stepPhase(){
+    if(halted||busy) return;
+    busy=true;
+    const ex=$("#explain");
+    cycleCount++;
+
+    if(phase===1){ /* 인출 */
+      renderCPU();
+      const src=$("#mval"+pc);
+      $("#mrow"+pc).classList.add("touch");
+      ex.innerHTML=`<span class="p1">① 인출</span> — PC가 가리키는 <b>${pc}번지</b>의 내용을 통째로 IR로 복사합니다. CPU는 아직 이게 무슨 뜻인지 <b>모릅니다</b> — 그냥 숫자를 가져올 뿐.`;
+      await sleep(500);
+      await fly(src,$("#regIR"),bin8(mem[pc]));
+      ir=mem[pc];
+      $("#irVal").textContent=bin8(ir).slice(0,4)+" "+bin8(ir).slice(4);
+      $("#irMeaning").textContent="";
+      pulse("regIR");
+      const oldPc=pc; pc=pc+1;
+      renderCPU(); pulse("regPC"); markPC();
+      $("#mrow"+oldPc).classList.remove("touch");
+      log(`[명령 ${instrCount+1} · 인출]  M[${oldPc}] → IR (${bin8(ir)}), PC ${oldPc}→${pc}`);
+      ex.innerHTML+=`<br>동시에 PC는 <b>${pc}</b>로 +1 — 다음 명령을 가리켜 둡니다.`;
+      phase=2;
+    }
+    else if(phase===2){ /* 해석 */
+      renderCPU();
+      const opc=ir>>4, opr=ir&15;
+      const name=OPS[opc]||"???";
+      const meaning = name==="HALT"? "HALT — 정지" : `${name} ${opr}`;
+      $("#irVal").innerHTML=`<span class="op">${bin8(ir).slice(0,4)}</span> <span class="ar">${bin8(ir).slice(4)}</span>`;
+      $("#irMeaning").textContent=`→ ${meaning}`;
+      known[pc-1]=meaning; renderMemCell(pc-1);
+      pulse("regIR");
+      ex.innerHTML=`<span class="p2">② 해석</span> — IR의 비트를 사전대로 쪼갭니다: 상위 4비트 <code>${bin8(ir).slice(0,4)}</code> = <b>${name}</b>(무엇을), 하위 4비트 <code>${bin8(ir).slice(4)}</code> = <b>${opr}</b>(어디에). ` +
+        `숫자였던 것이 이제야 <b>명령</b>이 됐습니다.`;
+      log(`[명령 ${instrCount+1} · 해석]  ${bin8(ir)} → ${meaning}`);
+      phase=3;
+    }
+    else{ /* 실행 */
+      renderCPU();
+      const opc=ir>>4, opr=ir&15, name=OPS[opc];
+      if(name==="LOAD"){
+        $("#mrow"+opr).classList.add("touch");
+        ex.innerHTML=`<span class="p3">③ 실행</span> — <b>LOAD ${opr}</b>: 메모리 ${opr}번지의 값 <b>${mem[opr]}</b>을 레지스터 A에 올립니다. (플래그는 변하지 않음)`;
+        await sleep(400);
+        await fly($("#mval"+opr),$("#regA"),String(mem[opr]),true);
+        a=mem[opr]; renderCPU(); pulse("regA");
+        $("#mrow"+opr).classList.remove("touch");
+        log(`[명령 ${instrCount+1} · 실행]  A ← M[${opr}] = ${a}`);
+      }
+      else if(name==="ADD"){
+        $("#mrow"+opr).classList.add("touch");
+        const before=a, m=mem[opr], sum=before+m, res=sum&0xFF;
+        $("#alu").innerHTML=`A(${before}) + M[${opr}](${m}) = <b>${sum}</b>${sum>255? " → 8비트로 잘려 "+res:""}`;
+        ex.innerHTML=`<span class="p3">③ 실행</span> — <b>ADD ${opr}</b>: ALU가 A와 메모리 ${opr}번지 값을 더해 결과를 다시 A에 둡니다. 덧셈이 끝나면 <b>상태 플래그가 자동으로</b> 남습니다.`;
+        await sleep(500);
+        await fly($("#mval"+opr),$("#alu"),String(m),true);
+        await fly($("#alu"),$("#regA"),String(res),true);
+        // 플래그 계산 (부호 있는 관점 포함)
+        const sa=before>=128?before-256:before, sm=m>=128?m-256:m, ss=sa+sm;
+        flags.CF=sum>255?1:0;
+        flags.ZF=res===0?1:0;
+        flags.SF=(res>>7)&1;
+        flags.OF=(ss<-128||ss>127)?1:0;
+        a=res; renderCPU(); pulse("regA");
+        $("#mrow"+opr).classList.remove("touch");
+        const fset=Object.entries(flags).filter(([k,v])=>v).map(([k])=>k).join("·")||"없음";
+        log(`[명령 ${instrCount+1} · 실행]  A ← ${before}+${m} = ${res}  (플래그: ${fset})`);
+      }
+      else if(name==="STORE"){
+        $("#mrow"+opr).classList.add("touch");
+        ex.innerHTML=`<span class="p3">③ 실행</span> — <b>STORE ${opr}</b>: A의 값 <b>${a}</b>를 메모리 ${opr}번지에 내려놓습니다. 이제 결과가 CPU 밖(메모리)에 <b>남았습니다</b>.`;
+        await sleep(400);
+        await fly($("#regA"),$("#mval"+opr),String(a),true);
+        mem[opr]=a; renderMemCell(opr);
+        $("#mrow"+opr).classList.remove("touch");
+        log(`[명령 ${instrCount+1} · 실행]  M[${opr}] ← A = ${a}`);
+      }
+      else{ /* HALT */
+        halted=true; autoOn=false;
+        ex.innerHTML=`<span class="p3">③ 실행</span> — <b>HALT</b>: 사이클을 멈춥니다.`;
+        log(`[명령 ${instrCount+1} · 실행]  HALT — 정지`);
+        renderCPU(); markPC();
+        const v=$("#verdict");
+        v.innerHTML=`<b class="fine">프로그램 종료</b><br>` +
+          `메모리 12번지에 <b>${mem[12]}</b>가 저장됐습니다 — ${mem[10]} + ${mem[11]}의 답입니다.<br>` +
+          `명령 <b>${instrCount+1}개</b>가 각각 인출→해석→실행 세 박자를 돌아 총 <b>${cycleCount}단계</b>. ` +
+          `CPU가 하는 일의 전부가 이 반복입니다 — 1초에 수십억 번, 단지 아주 빠를 뿐.<br>` +
+          `직접 확인: <code>M[10]</code>·<code>M[11]</code> 값을 바꾸고 ⟲ 처음부터 다시 실행해 보세요. ` +
+          `두 수의 합이 255를 넘으면 <b>CF가 켜지는 것</b>도 관찰할 수 있습니다.`;
+        v.classList.add("show");
+        $("#btnStep").disabled=true; $("#btnAuto").disabled=true;
+        busy=false;
+        return;
+      }
+      instrCount++;
+      phase=1; renderCPU(); markPC();
+    }
+    busy=false;
+  }
+
+  /* ── 자동 재생 ───────────────────── */
+  async function auto(){
+    if(autoOn){ autoOn=false; $("#btnAuto").textContent="자동 재생 ▶▶"; return; }
+    autoOn=true; $("#btnAuto").textContent="⏸ 일시정지";
+    while(autoOn && !halted){
+      await stepPhase();
+      await sleep(750);
+    }
+    if(!halted) $("#btnAuto").textContent="자동 재생 ▶▶";
+  }
+
+  /* ── 리셋 ───────────────────────── */
+  function reset(){
+    autoOn=false; halted=false; busy=false;
+    const d1=Math.min(255,Math.max(0,parseInt($("#d1").value||"0",10)));
+    const d2=Math.min(255,Math.max(0,parseInt($("#d2").value||"0",10)));
+    $("#d1").value=d1; $("#d2").value=d2;
+    mem={0:0b00011010, 1:0b00101011, 2:0b00111100, 3:0b11110000, 10:d1, 11:d2, 12:0};
+    pc=0; ir=null; a=0; phase=1; flags={CF:0,ZF:0,SF:0,OF:0}; known={};
+    instrCount=0; cycleCount=0;
+    renderMemAll(); renderCPU();
+    $("#irVal").textContent="········"; $("#irMeaning").textContent="";
+    $("#alu").textContent="ALU — 계산이 일어나면 여기 표시됩니다";
+    $("#logbody").innerHTML="";
+    $("#verdict").className="verdict";
+    $("#btnStep").disabled=false; $("#btnAuto").disabled=false;
+    $("#btnAuto").textContent="자동 재생 ▶▶";
+    $("#explain").innerHTML=`초기화 완료 — 프로그램은 4개의 명령(LOAD 10 → ADD 11 → STORE 12 → HALT), 데이터는 M[10]=${d1}, M[11]=${d2}. PC가 0번지를 가리키고 있습니다. 메모리의 "뜻" 칸이 <b>?</b>인 이유: 해석하기 전에는 CPU도 우리도 그것이 명령인지 모르기 때문입니다.`;
+  }
+
+  buildMem();
+  $("#btnStep").addEventListener("click",()=>{ if(!autoOn) stepPhase(); });
+  $("#btnAuto").addEventListener("click",auto);
+  $("#btnReset").addEventListener("click",reset);
+  ["d1","d2"].forEach(id=>$("#"+id).addEventListener("change",reset));
+  reset();
+})();
+</script>
+</body>
+</html>

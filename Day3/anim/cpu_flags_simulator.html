@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>상태 플래그 시뮬레이터 — CF · ZF · SF · OF</title>
+<style>
+  :root{
+    --bg:#0f141d;
+    --panel:#161d2a;
+    --panel2:#1b2434;
+    --line:#26314a;
+    --ink:#dce6f5;
+    --dim:#7d8ba3;
+    --bit1:#ffd166;
+    --carry:#ff9f43;
+    --flag-on:#ff5d73;
+    --accent:#4cc9f0;
+    --good:#7ee787;
+    --mono:"JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    min-height:100vh;
+    padding:24px 16px 60px;
+  }
+  .wrap{max-width:860px; margin:0 auto;}
+
+  header{margin-bottom:20px;}
+  .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.18em; color:var(--accent); text-transform:uppercase;}
+  h1{font-size:clamp(20px,4vw,28px); font-weight:800; margin-top:6px;}
+  h1 .flags-inline{font-family:var(--mono); color:var(--bit1);}
+  .sub{color:var(--dim); font-size:14px; margin-top:6px; line-height:1.6;}
+
+  /* ── 입력 ───────────────────────── */
+  .controls{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:16px; margin-bottom:14px;
+  }
+  .row{display:flex; flex-wrap:wrap; gap:10px; align-items:center;}
+  .field{display:flex; flex-direction:column; gap:4px;}
+  .field label{font-size:11px; color:var(--dim); letter-spacing:.06em;}
+  .field input{
+    width:110px; padding:10px 12px; font-family:var(--mono); font-size:18px;
+    background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:8px;
+  }
+  .field input:focus{outline:2px solid var(--accent); outline-offset:1px; border-color:transparent;}
+  .op-toggle{display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; align-self:flex-end;}
+  .op-toggle button{
+    padding:10px 16px; font-family:var(--mono); font-size:18px; font-weight:700;
+    background:var(--bg); color:var(--dim); border:none; cursor:pointer;
+  }
+  .op-toggle button.active{background:var(--accent); color:#06222e;}
+  .run{
+    align-self:flex-end; padding:11px 22px; border:none; border-radius:8px;
+    background:var(--bit1); color:#2a2005; font-weight:800; font-size:15px; cursor:pointer;
+  }
+  .run:disabled{opacity:.45; cursor:default;}
+  .run:focus-visible,.op-toggle button:focus-visible,.chip:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+
+  .presets{margin-top:12px; display:flex; flex-wrap:wrap; gap:8px;}
+  .presets .cap{width:100%; font-size:11px; color:var(--dim); letter-spacing:.06em;}
+  .chip{
+    font-family:var(--mono); font-size:13px; padding:7px 12px; border-radius:999px;
+    background:var(--panel2); color:var(--ink); border:1px solid var(--line); cursor:pointer;
+  }
+  .chip:hover{border-color:var(--accent);}
+  .chip b{color:var(--bit1); font-weight:700;}
+
+  /* ── 비트 보드 ───────────────────── */
+  .board{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:18px 14px 14px; margin-bottom:14px; overflow-x:auto;
+  }
+  .board-inner{min-width:520px;}
+  .bit-grid{
+    display:grid;
+    grid-template-columns:110px repeat(8,1fr) 88px;
+    gap:4px; align-items:center;
+  }
+  .rowlabel{font-size:12px; color:var(--dim); text-align:right; padding-right:10px; line-height:1.35;}
+  .rowlabel b{color:var(--ink); font-family:var(--mono); font-size:13px;}
+  .cell{
+    font-family:var(--mono); font-size:20px; font-weight:700; text-align:center;
+    padding:8px 0; border-radius:8px; background:var(--bg); color:var(--dim);
+    border:1px solid transparent; position:relative;
+    transition:background .25s,color .25s,border-color .25s;
+  }
+  .cell.one{color:var(--bit1);}
+  .cell.hot{border-color:var(--accent); background:#122433;}
+  .cell.carrycell{background:transparent; font-size:14px; color:var(--carry); padding:2px 0;}
+  .cell.carrycell.show{animation:pop .3s ease;}
+  @keyframes pop{from{transform:translateY(6px) scale(.6); opacity:0;} to{transform:none; opacity:1;}}
+  .colhead{font-family:var(--mono); font-size:11px; color:var(--dim); text-align:center;}
+  .decread{font-family:var(--mono); font-size:12px; color:var(--dim); text-align:left; padding-left:10px; line-height:1.4;}
+  .decread .u{color:var(--ink);}
+  .decread .s{color:var(--accent);}
+  .hr{grid-column:1/-1; height:1px; background:var(--line); margin:6px 0;}
+  .plusmark{font-family:var(--mono); color:var(--dim); text-align:right; padding-right:10px; font-size:16px;}
+  .cout-slot{
+    grid-column:2; /* placed manually */
+  }
+  .note-2c{
+    grid-column:1/-1; font-size:12px; color:var(--dim); padding:4px 0 2px 8px; line-height:1.5;
+    display:none;
+  }
+  .note-2c.show{display:block;}
+  .note-2c b{color:var(--accent);}
+
+  /* ── 플래그 ─────────────────────── */
+  .flags{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px;}
+  @media(max-width:640px){.flags{grid-template-columns:repeat(2,1fr);}}
+  .flag{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:14px 12px; transition:border-color .3s, box-shadow .3s;
+  }
+  .flag .top{display:flex; align-items:center; justify-content:space-between;}
+  .flag .name{font-family:var(--mono); font-size:20px; font-weight:800;}
+  .flag .lamp{
+    width:14px; height:14px; border-radius:50%; background:#2a3550;
+    transition:background .3s, box-shadow .3s;
+  }
+  .flag .full{font-size:11px; color:var(--dim); margin-top:2px;}
+  .flag .val{font-family:var(--mono); font-size:26px; font-weight:800; margin-top:8px; color:var(--dim);}
+  .flag .why{font-size:12px; color:var(--dim); margin-top:6px; line-height:1.5; min-height:3.2em;}
+  .flag.set{border-color:var(--flag-on); box-shadow:0 0 18px rgba(255,93,115,.18);}
+  .flag.set .lamp{background:var(--flag-on); box-shadow:0 0 10px var(--flag-on);}
+  .flag.set .val{color:var(--flag-on);}
+  .flag.set .why{color:var(--ink);}
+  .flag.clear .lamp{background:#2a3550;}
+  .flag.clear .val{color:var(--dim);}
+
+  /* ── 해설 ───────────────────────── */
+  .verdict{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:16px; font-size:14px; line-height:1.7; color:var(--dim);
+  }
+  .verdict b{color:var(--ink);}
+  .verdict .tag{font-family:var(--mono); color:var(--bit1);}
+  .verdict .warn{color:var(--flag-on); font-weight:700;}
+  .verdict .fine{color:var(--good); font-weight:700;}
+
+  @media (prefers-reduced-motion:reduce){
+    .cell,.flag,.flag .lamp{transition:none;}
+    .cell.carrycell.show{animation:none;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">8-bit ALU · Status Register</div>
+    <h1>상태 플래그 시뮬레이터 <span class="flags-inline">CF · ZF · SF · OF</span></h1>
+    <p class="sub">두 수를 골라 실행하면, 자리올림이 비트 사이를 이동하는 과정과 함께 4개의 플래그가 왜 켜지고 꺼지는지 보여줍니다. 뺄셈은 CPU가 실제로 하듯 <b>2의 보수 덧셈</b>으로 처리됩니다.</p>
+  </header>
+
+  <section class="controls" aria-label="입력">
+    <div class="row">
+      <div class="field">
+        <label for="inA">A (0 ~ 255)</label>
+        <input id="inA" type="number" min="0" max="255" value="200">
+      </div>
+      <div class="op-toggle" role="group" aria-label="연산 선택">
+        <button id="opAdd" class="active" aria-pressed="true">+</button>
+        <button id="opSub" aria-pressed="false">−</button>
+      </div>
+      <div class="field">
+        <label for="inB">B (0 ~ 255)</label>
+        <input id="inB" type="number" min="0" max="255" value="100">
+      </div>
+      <button class="run" id="btnRun">실행 ▶</button>
+    </div>
+    <div class="presets" id="presets">
+      <span class="cap">플래그별 대표 사례 — 눌러서 바로 실행</span>
+    </div>
+  </section>
+
+  <section class="board" aria-label="비트 계산 보드">
+    <div class="board-inner">
+      <div class="bit-grid" id="grid"></div>
+    </div>
+  </section>
+
+  <section class="flags" id="flagPanel" aria-label="상태 플래그">
+    <!-- JS가 채움 -->
+  </section>
+
+  <section class="verdict" id="verdict">
+    위에서 <b>실행 ▶</b> 을 누르거나 대표 사례를 선택하세요. 계산이 끝나면 이 자리에 “부호 없는 해석”과 “부호 있는 해석” 각각에서 결과를 믿어도 되는지 정리해 드립니다.
+  </section>
+
+</div>
+
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const STEP = reduced ? 0 : 420;
+
+  const FLAG_DEFS = [
+    {k:"CF", full:"Carry Flag · 자리올림/빌림", },
+    {k:"ZF", full:"Zero Flag · 결과가 0", },
+    {k:"SF", full:"Sign Flag · 최상위 비트", },
+    {k:"OF", full:"Overflow Flag · 부호 있는 범위 초과", },
+  ];
+
+  const PRESETS = [
+    {a:255,b:1,op:"+",label:"255 + 1", tags:"CF·ZF"},
+    {a:127,b:1,op:"+",label:"127 + 1", tags:"OF·SF"},
+    {a:200,b:100,op:"+",label:"200 + 100", tags:"CF만"},
+    {a:128,b:128,op:"+",label:"128 + 128", tags:"CF·OF·ZF"},
+    {a:5,b:10,op:"-",label:"5 − 10", tags:"CF·SF"},
+    {a:80,b:80,op:"-",label:"80 − 80", tags:"ZF"},
+  ];
+
+  let op = "+";
+  let running = false;
+
+  // ── DOM 구성 ──────────────────────────
+  const grid = $("#grid");
+  function signed(v){ return v >= 128 ? v - 256 : v; }
+  function bits(v){ return Array.from({length:8},(_,i)=>(v>>(7-i))&1); }
+
+  function buildGrid(){
+    grid.innerHTML = "";
+    const add = (cls, txt, id)=>{
+      const d=document.createElement("div");
+      d.className=cls; if(txt!==undefined) d.textContent=txt; if(id) d.id=id;
+      grid.appendChild(d); return d;
+    };
+    // 열 머리(비트 번호)
+    add("rowlabel","");
+    for(let i=7;i>=0;i--) add("colhead","bit "+i);
+    add("colhead","10진 해석");
+    // 자리올림 행
+    add("rowlabel","자리올림 →", );
+    add("cell carrycell","","cout"); // bit7의 carry-out은 왼쪽 바깥
+    for(let i=6;i>=0;i--) add("cell carrycell","","c"+i);
+    add("decread","","carrynote");
+    // A 행
+    add("rowlabel","", "labA");
+    for(let i=7;i>=0;i--) add("cell","0","a"+i);
+    add("decread","","decA");
+    // B 행
+    add("rowlabel","","labB");
+    for(let i=7;i>=0;i--) add("cell","0","b"+i);
+    add("decread","","decB");
+    // 2의 보수 안내
+    add("note-2c","","note2c");
+    // 구분선
+    add("hr","");
+    // 결과 행
+    add("rowlabel","","labR");
+    for(let i=7;i>=0;i--) add("cell","","r"+i);
+    add("decread","","decR");
+  }
+  buildGrid();
+
+  // 플래그 패널
+  const flagPanel = $("#flagPanel");
+  FLAG_DEFS.forEach(f=>{
+    const d=document.createElement("div");
+    d.className="flag"; d.id="flag"+f.k;
+    d.innerHTML = `<div class="top"><span class="name">${f.k}</span><span class="lamp"></span></div>
+      <div class="full">${f.full}</div>
+      <div class="val">–</div>
+      <div class="why">실행하면 판정 이유가 표시됩니다.</div>`;
+    flagPanel.appendChild(d);
+  });
+
+  // 프리셋 버튼
+  const presetBox = $("#presets");
+  PRESETS.forEach(p=>{
+    const b=document.createElement("button");
+    b.className="chip";
+    b.innerHTML = `${p.label} → <b>${p.tags}</b>`;
+    b.addEventListener("click",()=>{
+      if(running) return;
+      $("#inA").value=p.a; $("#inB").value=p.b; setOp(p.op);
+      run();
+    });
+    presetBox.appendChild(b);
+  });
+
+  // 연산 토글
+  function setOp(o){
+    op=o;
+    $("#opAdd").classList.toggle("active",o==="+");
+    $("#opSub").classList.toggle("active",o==="-");
+    $("#opAdd").setAttribute("aria-pressed",o==="+");
+    $("#opSub").setAttribute("aria-pressed",o==="-");
+  }
+  $("#opAdd").addEventListener("click",()=>!running&&setOp("+"));
+  $("#opSub").addEventListener("click",()=>!running&&setOp("-"));
+  $("#btnRun").addEventListener("click",()=>!running&&run());
+
+  const sleep = ms=>new Promise(r=>setTimeout(r,ms));
+
+  function paintRow(prefix, arr){
+    for(let i=0;i<8;i++){
+      const c=$("#"+prefix+(7-i));
+      c.textContent=arr[i];
+      c.classList.toggle("one",arr[i]===1);
+    }
+  }
+  function clearHot(){
+    document.querySelectorAll(".cell.hot").forEach(c=>c.classList.remove("hot"));
+  }
+
+  // ── 실행 ─────────────────────────────
+  async function run(){
+    running=true; $("#btnRun").disabled=true;
+    const a = Math.min(255,Math.max(0, parseInt($("#inA").value||"0",10)));
+    const b = Math.min(255,Math.max(0, parseInt($("#inB").value||"0",10)));
+    $("#inA").value=a; $("#inB").value=b;
+
+    // 뺄셈이면 실제 가산기에 들어가는 값: A + (~B + 1)
+    const isSub = op==="-";
+    const bEff = isSub ? ((~b + 1) & 0xFF) : b;
+
+    const A = bits(a), B = bits(bEff);
+
+    // 보드 초기화
+    $("#labA").innerHTML = `A &nbsp;<b>${a}</b>`;
+    $("#labB").innerHTML = isSub
+      ? `+ B의 2의 보수&nbsp;<b>${bEff}</b>`
+      : `+ B &nbsp;<b>${b}</b>`;
+    $("#labR").innerHTML = `= 결과 (8비트)`;
+    $("#decA").innerHTML = `<span class="u">부호없음 ${a}</span><br><span class="s">부호있음 ${signed(a)}</span>`;
+    $("#decB").innerHTML = isSub
+      ? `<span class="u">−${b} 대신 +${bEff}</span><br><span class="s">부호있음 ${signed(bEff)}</span>`
+      : `<span class="u">부호없음 ${b}</span><br><span class="s">부호있음 ${signed(b)}</span>`;
+    $("#decR").innerHTML=""; $("#carrynote").innerHTML="";
+    const note=$("#note2c");
+    if(isSub){
+      note.classList.add("show");
+      note.innerHTML=`뺄셈 회로는 따로 없습니다 — CPU는 <b>B의 비트를 전부 뒤집고 1을 더한 값</b>(2의 보수, ${b} → ${bEff})을 더하는 것으로 뺄셈을 처리합니다.`;
+    }else{
+      note.classList.remove("show");
+    }
+    paintRow("a",A); paintRow("b",B);
+    for(let i=0;i<8;i++){ const r=$("#r"+i); r.textContent=""; r.classList.remove("one"); }
+    for(let i=0;i<7;i++){ const c=$("#c"+i); c.textContent=""; c.classList.remove("show"); }
+    const cout=$("#cout"); cout.textContent=""; cout.classList.remove("show");
+    document.querySelectorAll(".flag").forEach(f=>{
+      f.classList.remove("set","clear");
+      f.querySelector(".val").textContent="–";
+      f.querySelector(".why").textContent="계산 중…";
+    });
+    $("#verdict").innerHTML="비트 0부터 차례대로 더하는 중…";
+
+    // 리플 캐리 계산 + 애니메이션 (bit0 → bit7)
+    let carry=0, cin7=0, cout7=0;
+    const R=[0,0,0,0,0,0,0,0];
+    for(let bit=0; bit<8; bit++){
+      const ai=A[7-bit], bi=B[7-bit];
+      clearHot();
+      ["a","b","r"].forEach(p=>$("#"+p+bit).classList.add("hot"));
+      if(bit>0) $("#c"+(bit-1)).classList.add("hot");
+      await sleep(STEP);
+
+      const s = ai+bi+carry;
+      const rbit = s & 1;
+      const cnext = s >> 1;
+      if(bit===7){ cin7=carry; cout7=cnext; }
+      R[7-bit]=rbit;
+      const rc=$("#r"+bit);
+      rc.textContent=rbit; rc.classList.toggle("one",rbit===1);
+
+      if(cnext===1){
+        const tgt = bit===7 ? cout : $("#c"+bit);
+        tgt.textContent="1"; tgt.classList.add("show");
+      }
+      carry=cnext;
+      await sleep(STEP*0.4);
+    }
+    clearHot();
+
+    const result = R.reduce((acc,x)=>acc*2+x,0);
+    $("#decR").innerHTML = `<span class="u">부호없음 ${result}</span><br><span class="s">부호있음 ${signed(result)}</span>`;
+    if(cout7===1){
+      $("#carrynote").innerHTML = isSub
+        ? `<span class="u">맨 끝 자리올림 발생</span>`
+        : `<span class="u">bit 7 밖으로 넘침!</span>`;
+    }
+
+    // ── 플래그 판정 ──
+    const ZF = result===0 ? 1:0;
+    const SF = R[0];
+    const CF = isSub ? (a < b ? 1:0) : cout7;      // 뺄셈은 빌림 기준(x86 방식)
+    const OF = (cin7 ^ cout7);
+
+    const why = {
+      CF: isSub
+        ? (CF? `A(${a}) < B(${b}) — 부호 없는 뺄셈에서 <b>빌림</b>이 발생했습니다.`
+             : `A(${a}) ≥ B(${b}) — 빌림 없이 뺄 수 있었습니다.`)
+        : (CF? `bit 7에서 자리올림이 <b>레지스터 밖으로</b> 나갔습니다. 부호 없는 합이 255를 넘었다는 뜻.`
+             : `bit 7 밖으로 나간 자리올림이 없습니다. 255 이내에서 계산 완료.`),
+      ZF: ZF? `결과의 8비트가 전부 0입니다.` : `결과에 1인 비트가 있습니다 (0이 아님).`,
+      SF: SF? `결과의 bit 7이 1 — 부호 있는 해석으로는 <b>음수(${signed(result)})</b>입니다.`
+            : `결과의 bit 7이 0 — 부호 있는 해석으로 0 이상입니다.`,
+      OF: OF? `bit 7로 들어온 자리올림(${cin7})과 나간 자리올림(${cout7})이 다릅니다 → 부호 있는 범위 <b>−128~127을 벗어남</b>.`
+            : `bit 7의 들어온/나간 자리올림이 같습니다(${cin7}=${cout7}) → 부호 있는 결과가 범위 안.`,
+    };
+
+    const order=[["CF",CF],["ZF",ZF],["SF",SF],["OF",OF]];
+    for(const [k,v] of order){
+      const card=$("#flag"+k);
+      card.classList.add(v? "set":"clear");
+      card.querySelector(".val").textContent=v;
+      card.querySelector(".why").innerHTML=why[k];
+      await sleep(STEP*0.6);
+    }
+
+    // ── 종합 해설 ──
+    const sA=signed(a), sB=signed(bEff), sR=signed(result);
+    const uExpr = isSub ? `${a} − ${b}` : `${a} + ${b}`;
+    const sExpr = isSub ? `${sA} − ${signed(b)}` : `${sA} + ${signed(b)}`;
+    const uOK = CF===0, sOK = OF===0;
+    $("#verdict").innerHTML =
+      `같은 비트 패턴 <span class="tag">${R.join("")}</span> 을 두 가지로 읽을 수 있습니다.<br>` +
+      `① <b>부호 없는 해석</b> — ${uExpr} 의 답으로 <b>${result}</b> 는 ` +
+      (uOK? `<span class="fine">믿어도 됩니다 (CF=0)</span>.`
+          : `<span class="warn">틀렸습니다 (CF=1)</span> — 진짜 답은 8비트에 담기지 않았습니다.`) + `<br>` +
+      `② <b>부호 있는 해석</b> — ${sExpr} 의 답으로 <b>${sR}</b> 는 ` +
+      (sOK? `<span class="fine">믿어도 됩니다 (OF=0)</span>.`
+          : `<span class="warn">틀렸습니다 (OF=1)</span> — −128~127 범위를 벗어났습니다.`) + `<br>` +
+      `핵심: <b>CF는 부호 없는 계산의 경고, OF는 부호 있는 계산의 경고</b>입니다. CPU는 어느 쪽 해석인지 모르므로 둘 다 켜 두고, 판단은 프로그램이 합니다.`;
+
+    running=false; $("#btnRun").disabled=false;
+  }
+})();
+</script>
+</body>
+</html>

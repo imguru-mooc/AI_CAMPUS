@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>정수 뺄셈 해부도 — 2의 보수</title>
+<style>
+  :root{
+    --bg:#0f141d;
+    --panel:#161d2a;
+    --panel2:#1b2434;
+    --line:#26314a;
+    --ink:#dce6f5;
+    --dim:#7d8ba3;
+    --bit1:#ffd166;     /* 1인 비트 */
+    --flip:#c792ea;     /* 반전 강조 */
+    --carry:#ff9f43;    /* 자리올림 */
+    --accent:#4cc9f0;
+    --bad:#ff5d73;
+    --good:#7ee787;
+    --mono:"JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    min-height:100vh; padding:24px 16px 60px;
+  }
+  .wrap{max-width:880px; margin:0 auto;}
+
+  header{margin-bottom:20px;}
+  .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.18em; color:var(--accent); text-transform:uppercase;}
+  h1{font-size:clamp(20px,4vw,28px); font-weight:800; margin-top:6px;}
+  h1 code{font-family:var(--mono); color:var(--bit1);}
+  .sub{color:var(--dim); font-size:14px; margin-top:6px; line-height:1.6;}
+  .sub b{color:var(--ink);}
+
+  /* ── 입력 ─────────────────── */
+  .controls{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:14px;}
+  .row{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;}
+  .field{display:flex; flex-direction:column; gap:4px;}
+  .field label{font-size:11px; color:var(--dim); letter-spacing:.06em;}
+  .field input{
+    width:130px; padding:10px 12px; font-family:var(--mono); font-size:18px;
+    background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:8px;
+  }
+  .field input:focus{outline:2px solid var(--accent); outline-offset:1px; border-color:transparent;}
+  .minus{font-family:var(--mono); font-size:24px; color:var(--dim); padding-bottom:8px;}
+  .run{
+    padding:11px 22px; border:none; border-radius:8px;
+    background:var(--bit1); color:#2a2005; font-weight:800; font-size:15px; cursor:pointer;
+  }
+  .run:disabled{opacity:.45; cursor:default;}
+  .run:focus-visible,.chip:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .presets{margin-top:12px; display:flex; flex-wrap:wrap; gap:8px;}
+  .presets .cap{width:100%; font-size:11px; color:var(--dim); letter-spacing:.06em;}
+  .chip{
+    font-family:var(--mono); font-size:13px; padding:7px 12px; border-radius:999px;
+    background:var(--panel2); color:var(--ink); border:1px solid var(--line); cursor:pointer;
+  }
+  .chip:hover{border-color:var(--accent);}
+  .chip small{color:var(--dim); font-family:inherit;}
+
+  /* ── 보드 ─────────────────── */
+  .board{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:16px 14px; margin-bottom:14px; overflow-x:auto; display:none;
+  }
+  .board.show{display:block;}
+  .board h2{font-size:14px; font-weight:800; margin-bottom:12px;}
+  .board h2 .no{font-family:var(--mono); color:var(--accent); margin-right:8px;}
+  .board-inner{min-width:540px;}
+  .bit-grid{
+    display:grid;
+    grid-template-columns:150px repeat(8,1fr) 120px;
+    gap:4px; align-items:center;
+  }
+  .rowlabel{font-size:12px; color:var(--dim); text-align:right; padding-right:10px; line-height:1.35;}
+  .rowlabel b{color:var(--ink); font-family:var(--mono); font-size:13px;}
+  .colhead{font-family:var(--mono); font-size:11px; color:var(--dim); text-align:center;}
+  .cell{
+    font-family:var(--mono); font-size:20px; font-weight:700; text-align:center;
+    padding:8px 0; border-radius:8px; background:var(--bg); color:var(--dim);
+    border:1px solid transparent; perspective:200px;
+    transition:background .25s,color .25s,border-color .25s;
+  }
+  .cell.one{color:var(--bit1);}
+  .cell.hot{border-color:var(--accent); background:#122433;}
+  .cell.flipmark{color:var(--flip);}
+  .cell.flipping{animation:flip .4s ease;}
+  @keyframes flip{0%{transform:rotateX(0);} 50%{transform:rotateX(90deg);} 100%{transform:rotateX(0);}}
+  .cell.carrycell{background:transparent; font-size:14px; color:var(--carry); padding:2px 0;}
+  .cell.carrycell.show{animation:pop .3s ease;}
+  .cell.discard{color:var(--bad); text-decoration:line-through; text-decoration-thickness:2px;}
+  @keyframes pop{from{transform:translateY(6px) scale(.6); opacity:0;} to{transform:none; opacity:1;}}
+  .decread{font-family:var(--mono); font-size:12px; color:var(--dim); text-align:left; padding-left:10px; line-height:1.4;}
+  .decread .u{color:var(--ink);}
+  .decread .s{color:var(--accent);}
+  .decread .x{color:var(--bad);}
+  .hr{grid-column:1/-1; height:1px; background:var(--line); margin:6px 0;}
+  .gridnote{grid-column:1/-1; font-size:12px; color:var(--dim); padding:6px 0 0 8px; line-height:1.6;}
+  .gridnote b{color:var(--ink);}
+  .hidden-row{display:contents; visibility:hidden;}
+  .hidden-row.show{visibility:visible;}
+
+  /* ── 단계 해설 카드 ─────────── */
+  .steps{display:flex; flex-direction:column; gap:10px; margin-bottom:14px;}
+  .step{
+    background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--accent);
+    border-radius:14px; padding:13px 16px;
+    opacity:0; transform:translateY(8px);
+    transition:opacity .35s ease, transform .35s ease;
+  }
+  .step.show{opacity:1; transform:none;}
+  .step .t{font-weight:800; font-size:14px; margin-bottom:5px;}
+  .step .t .no{font-family:var(--mono); color:var(--dim); margin-right:8px;}
+  .step .b{font-size:13.5px; color:var(--dim); line-height:1.75;}
+  .step .b b{color:var(--ink);}
+  .step .b code{font-family:var(--mono); background:var(--bg); padding:2px 7px; border-radius:6px; font-size:13px;}
+  .step .b .hl{color:var(--flip);}
+  .step .b .cy{color:var(--carry);}
+
+  /* ── 결과 ─────────────────── */
+  .verdict{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:16px; font-size:14px; line-height:1.8; color:var(--dim); display:none;
+  }
+  .verdict.show{display:block;}
+  .verdict b{color:var(--ink);}
+  .verdict code{font-family:var(--mono); background:var(--bg); padding:2px 7px; border-radius:6px; font-size:13px;}
+  .verdict .fine{color:var(--good); font-weight:700;}
+  .verdict .warn{color:var(--bad); font-weight:700;}
+
+  @media (prefers-reduced-motion:reduce){
+    .cell,.step{transition:none;}
+    .cell.flipping,.cell.carrycell.show{animation:none;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">8-bit Integer · Two's Complement</div>
+    <h1>정수 뺄셈 해부도 — CPU는 <code>A − B</code>를 어떻게 계산하나</h1>
+    <p class="sub">CPU에는 뺄셈 회로가 따로 없습니다. <b>B의 비트를 전부 뒤집고 1을 더한 값(2의 보수)을 더하는 것</b>이 뺄셈의 전부입니다. 그 과정을 비트 단위로 재생합니다.</p>
+  </header>
+
+  <section class="controls" aria-label="입력">
+    <div class="row">
+      <div class="field">
+        <label for="inA">A (−128 ~ 127)</label>
+        <input id="inA" type="number" min="-128" max="127" value="7">
+      </div>
+      <div class="minus">−</div>
+      <div class="field">
+        <label for="inB">B (−128 ~ 127)</label>
+        <input id="inB" type="number" min="-128" max="127" value="3">
+      </div>
+      <button class="run" id="btnRun">실행 ▶</button>
+    </div>
+    <div class="presets" id="presets">
+      <span class="cap">대표 사례 — 눌러서 바로 실행</span>
+    </div>
+  </section>
+
+  <!-- ① 2의 보수 만들기 -->
+  <section class="board" id="board1" aria-label="2의 보수 만들기">
+    <h2><span class="no">STAGE 1</span>−B 만들기 : 뒤집고, 1 더하기</h2>
+    <div class="board-inner">
+      <div class="bit-grid" id="grid1"></div>
+    </div>
+  </section>
+
+  <!-- ② 덧셈 -->
+  <section class="board" id="board2" aria-label="덧셈으로 뺄셈하기">
+    <h2><span class="no">STAGE 2</span>이제 그냥 더한다 : A + (−B)</h2>
+    <div class="board-inner">
+      <div class="bit-grid" id="grid2"></div>
+    </div>
+  </section>
+
+  <section class="steps" id="steps" aria-label="해설"></section>
+
+  <section class="verdict" id="verdict" aria-live="polite"></section>
+
+</div>
+
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const T = reduced ? 0 : 1;              // 시간 배율
+  const sleep = ms=>new Promise(r=>setTimeout(r,ms*T));
+
+  let running=false;
+
+  const toU=v=>v&0xFF;                     // 부호 있는 → 8비트 패턴
+  const toS=v=>v>=128? v-256 : v;          // 8비트 패턴 → 부호 있는
+  const bits=v=>Array.from({length:8},(_,i)=>(v>>(7-i))&1);
+
+  // ── 그리드 도우미 ─────────────────────
+  function cellRow(grid, rowId, label, opts={}){
+    // rowLabel + 8 cells + decread. id 규칙: rowId+"7".."0", 라벨 id: "lab_"+rowId, dec id: "dec_"+rowId
+    const wrap=document.createElement("div");
+    wrap.className="hidden-row"; wrap.id="row_"+rowId;
+    const lab=document.createElement("div");
+    lab.className="rowlabel"; lab.id="lab_"+rowId; lab.innerHTML=label;
+    wrap.appendChild(lab);
+    for(let i=7;i>=0;i--){
+      const c=document.createElement("div");
+      c.className="cell"+(opts.carry? " carrycell":"");
+      c.id=rowId+i; c.textContent=opts.carry? "":"·";
+      wrap.appendChild(c);
+    }
+    const dec=document.createElement("div");
+    dec.className="decread"; dec.id="dec_"+rowId;
+    wrap.appendChild(dec);
+    grid.appendChild(wrap);
+  }
+  function header(grid){
+    const wrap=document.createElement("div");
+    wrap.className="hidden-row show";
+    const empty=document.createElement("div"); empty.className="rowlabel"; wrap.appendChild(empty);
+    for(let i=7;i>=0;i--){
+      const h=document.createElement("div"); h.className="colhead"; h.textContent="bit "+i;
+      wrap.appendChild(h);
+    }
+    const e2=document.createElement("div"); e2.className="colhead"; e2.textContent="10진 해석";
+    wrap.appendChild(e2);
+    grid.appendChild(wrap);
+  }
+  function hr(grid){ const d=document.createElement("div"); d.className="hr"; grid.appendChild(d); }
+  function note(grid,id){ const d=document.createElement("div"); d.className="gridnote"; d.id=id; grid.appendChild(d); }
+
+  function buildBoards(){
+    const g1=$("#grid1"); g1.innerHTML="";
+    header(g1);
+    cellRow(g1,"b","");                    // B
+    cellRow(g1,"nb","");                   // ~B
+    cellRow(g1,"cb","");                   // ~B+1
+    note(g1,"note1");
+
+    const g2=$("#grid2"); g2.innerHTML="";
+    header(g2);
+    cellRow(g2,"cy","자리올림 →",{carry:true}); // carry행: cy7=최종 carry-out, cy6..cy0
+    cellRow(g2,"a","");
+    cellRow(g2,"c2","");                   // −B 복사
+    hr(g2);
+    cellRow(g2,"r","");
+    note(g2,"note2");
+  }
+
+  function paint(rowId, arr, cls){
+    for(let i=0;i<8;i++){
+      const c=$("#"+rowId+(7-i));
+      c.textContent=arr[i];
+      c.className="cell"+(arr[i]===1? " one":"")+(cls? " "+cls:"");
+    }
+  }
+  function showRow(rowId){ $("#row_"+rowId).classList.add("show"); }
+  function clearHot(){ document.querySelectorAll(".cell.hot").forEach(c=>c.classList.remove("hot")); }
+
+  const stepsBox=$("#steps");
+  async function addStep(no,title,html){
+    const d=document.createElement("div");
+    d.className="step";
+    d.innerHTML=`<div class="t"><span class="no">${no}</span>${title}</div><div class="b">${html}</div>`;
+    stepsBox.appendChild(d);
+    await sleep(30);
+    d.classList.add("show");
+  }
+  function dec(rowId, uVal, extra){
+    $("#dec_"+rowId).innerHTML =
+      `<span class="u">부호없음 ${uVal}</span><br><span class="s">부호있음 ${toS(uVal)}</span>`+(extra||"");
+  }
+
+  // ── 실행 ────────────────────────────
+  async function run(){
+    running=true; $("#btnRun").disabled=true;
+    stepsBox.innerHTML=""; $("#verdict").className="verdict";
+    buildBoards();
+    $("#board1").classList.add("show");
+    $("#board2").classList.remove("show");
+
+    const a=Math.min(127,Math.max(-128,parseInt($("#inA").value||"0",10)));
+    const b=Math.min(127,Math.max(-128,parseInt($("#inB").value||"0",10)));
+    $("#inA").value=a; $("#inB").value=b;
+
+    const uA=toU(a), uB=toU(b);
+    const nB=(~uB)&0xFF;            // 1의 보수
+    const cB=(nB+1)&0xFF;           // 2의 보수
+    const A=bits(uA), Bb=bits(uB), NB=bits(nB), CB=bits(cB);
+
+    // ── STAGE 1 ──
+    $("#lab_b").innerHTML=`B &nbsp;<b>${b}</b>`;
+    showRow("b"); paint("b",Bb); dec("b",uB);
+    await addStep("①","문제: "+a+" − ("+b+")",
+      `빼는 수 B(${b})의 8비트 패턴은 <code>${Bb.join("")}</code>. 이제 이 B를 <b>−B로 바꿔서 더할 것</b>입니다.`);
+    await sleep(900);
+
+    // 반전 애니메이션
+    $("#lab_nb").innerHTML=`비트 반전 <b>~B</b>`;
+    showRow("nb");
+    for(let bit=7;bit>=0;bit--){       // 왼쪽부터 차례로 뒤집기
+      const src=$("#b"+bit), dst=$("#nb"+bit);
+      src.classList.add("hot");
+      dst.classList.add("flipping");
+      await sleep(120);
+      const v=NB[7-bit];
+      dst.textContent=v;
+      dst.className="cell flipmark"+(v===1? " one":"");
+      dst.style.color = "var(--flip)";
+      src.classList.remove("hot");
+      await sleep(60);
+    }
+    dec("nb",nB);
+    await addStep("②","모든 비트 뒤집기 (1의 보수)",
+      `0↔1을 전부 바꿉니다: <code>${Bb.join("")}</code> → <code class="hl">${NB.join("")}</code><br>` +
+      `이 값의 정체: <b>B + ~B = ${uB} + ${nB} = 255</b> — 어떤 B든 반전과 더하면 <code>11111111</code>이 됩니다.`);
+    await sleep(900);
+
+    // +1
+    $("#lab_cb").innerHTML=`+1 → <b>2의 보수</b>`;
+    showRow("cb");
+    // +1 리플 표시
+    let carry=1;
+    for(let bit=0;bit<8;bit++){
+      const v=NB[7-bit]+carry;
+      const rb=v&1; carry=v>>1;
+      const c=$("#cb"+bit);
+      c.classList.add("hot");
+      await sleep(140);
+      c.textContent=rb;
+      c.className="cell"+(rb===1? " one":"");
+      if(carry===0){ // 나머지는 그대로 복사
+        for(let k=bit+1;k<8;k++){
+          const cc=$("#cb"+k);
+          cc.textContent=NB[7-k];
+          cc.className="cell"+(NB[7-k]===1? " one":"");
+        }
+        break;
+      }
+    }
+    clearHot();
+    dec("cb",cB);
+    $("#note1").innerHTML =
+      `확인: B + (~B + 1) = 255 + 1 = <b>256</b> — 9번째 비트로 넘어가 8비트 세계에서는 <b>0</b>. ` +
+      `그래서 <code>~B+1</code>은 8비트 안에서 정확히 <b>−B 역할</b>을 합니다.`;
+    await addStep("③","1 더하기 — 2의 보수 완성",
+      `<code class="hl">${NB.join("")}</code> + 1 = <code>${CB.join("")}</code> — 부호 있는 해석으로 <b>${toS(cB)}</b>. ` +
+      (toS(cB)===-b? `정확히 −B(${-b})가 만들어졌습니다.` :
+       `<b>주의:</b> B=−128이면 2의 보수가 자기 자신(−128)이 됩니다 — +128은 8비트에 존재하지 않기 때문입니다.`));
+    await sleep(1100);
+
+    // ── STAGE 2 ──
+    $("#board2").classList.add("show");
+    $("#lab_a").innerHTML=`A &nbsp;<b>${a}</b>`;
+    $("#lab_c2").innerHTML=`+ (−B) &nbsp;<b>${toS(cB)}</b>`;
+    $("#lab_r").innerHTML=`= 결과 (8비트)`;
+    showRow("a"); paint("a",A); dec("a",uA);
+    showRow("c2"); paint("c2",CB); dec("c2",cB);
+    showRow("cy"); showRow("r");
+    await addStep("④","뺄셈은 없다 — 그냥 덧셈",
+      `이제 가산기가 <code>${uA} + ${cB}</code>를 계산합니다. STAGE 1의 뺄셈 문제가 <b>완전히 덧셈 문제로 바뀌었습니다.</b>`);
+    await sleep(700);
+
+    // 리플 캐리 덧셈
+    let cin=0, cin7=0, cout7=0;
+    const R=[0,0,0,0,0,0,0,0];
+    for(let bit=0;bit<8;bit++){
+      clearHot();
+      ["a","c2","r"].forEach(p=>$("#"+p+bit).classList.add("hot"));
+      if(bit>0) $("#cy"+(bit-1)).classList.add("hot");
+      await sleep(340);
+      const s=A[7-bit]+CB[7-bit]+cin;
+      const rb=s&1, cn=s>>1;
+      if(bit===7){ cin7=cin; cout7=cn; }
+      R[7-bit]=rb;
+      const rc=$("#r"+bit);
+      rc.textContent=rb; rc.classList.toggle("one",rb===1);
+      if(cn===1){
+        const tgt=$("#cy"+bit);
+        tgt.textContent="1"; tgt.classList.add("show");
+      }
+      cin=cn;
+      await sleep(160);
+    }
+    clearHot();
+    const uR=R.reduce((acc,x)=>acc*2+x,0);
+    dec("r",uR);
+
+    // carry-out 처리
+    if(cout7===1){
+      const co=$("#cy7");
+      await sleep(400);
+      co.classList.add("discard");
+      $("#note2").innerHTML =
+        `<b>9번째 비트(자리올림)는 그냥 버립니다.</b> 레지스터가 8칸뿐이라 담을 곳이 없고, ` +
+        `버리는 행위가 곧 <code>mod 256</code> — 2의 보수가 성립하는 이유 그 자체입니다.`;
+      await addStep("⑤","맨 끝 자리올림 버리기",
+        `합은 ${uA+cB} (= 256 + ${uR}) 이지만 <span class="cy">넘친 1</span>을 버리면 <code>${R.join("")}</code> = ${uR}. ` +
+        `버려진 256이 바로 STAGE 1에서 −B를 만들 때 빌려온 256입니다. <b>장부가 정확히 맞아떨어집니다.</b>`);
+    }else{
+      $("#note2").innerHTML =
+        `이번에는 9번째 비트로 넘어간 자리올림이 없습니다. (부호 없는 관점에서는 이것이 곧 “빌림 발생” 신호 — CF=1)`;
+      await addStep("⑤","자리올림 없음",
+        `합 ${uA+cB}는 256 미만이라 버릴 것이 없습니다. 결과 패턴은 <code>${R.join("")}</code>.`);
+    }
+    await sleep(600);
+
+    // 판정
+    const sR=toS(uR);
+    const trueAns=a-b;
+    const OF=(cin7^cout7);
+    const v=$("#verdict");
+    let body =
+      `계산 결과 패턴 <code>${R.join("")}</code> 을 부호 있는 정수로 읽으면 <b>${sR}</b>.<br>` +
+      `실제 정답 ${a} − (${b}) = <b>${trueAns}</b> → `;
+    if(sR===trueAns){
+      body += `<span class="fine">일치 — 뺄셈 회로 없이 덧셈만으로 뺄셈 완료.</span>`;
+    }else{
+      body += `<span class="warn">불일치! (오버플로, OF=1)</span> 정답 ${trueAns}는 8비트 부호 있는 범위(−128~127)를 벗어났습니다. ` +
+              `bit 7로 들어온 자리올림(${cin7})과 나간 자리올림(${cout7})이 달라 CPU도 이를 감지합니다.`;
+    }
+    body += `<br>핵심 한 줄: <b>“빼기”란 “2의 보수를 더하고, 넘친 비트를 버리는 것”</b> — 그래서 CPU 안에는 가산기 하나면 충분합니다.`;
+    if(b===-128){
+      body += `<br><span class="warn">참고:</span> B=−128은 2의 보수를 취해도 −128 그대로인 특이점입니다 (+128 없음).`;
+    }
+    v.innerHTML=body; v.classList.add("show");
+
+    running=false; $("#btnRun").disabled=false;
+  }
+
+  // ── 프리셋 ─────────────────────────
+  const PRESETS=[
+    {a:7,  b:3,    note:"기본형·캐리 버림"},
+    {a:5,  b:10,   note:"음수 결과"},
+    {a:80, b:80,   note:"정확히 0"},
+    {a:0,  b:1,    note:"전부 1 (−1)"},
+    {a:-100,b:50,  note:"오버플로!"},
+    {a:60, b:-70,  note:"−를 빼면 +"},
+  ];
+  const pb=$("#presets");
+  PRESETS.forEach(p=>{
+    const btn=document.createElement("button");
+    btn.className="chip";
+    const bTxt = p.b<0? `(${p.b})` : p.b;
+    btn.innerHTML=`${p.a} − ${bTxt} <small>· ${p.note}</small>`;
+    btn.addEventListener("click",()=>{ if(running) return; $("#inA").value=p.a; $("#inB").value=p.b; run(); });
+    pb.appendChild(btn);
+  });
+
+  $("#btnRun").addEventListener("click",()=>!running&&run());
+  ["inA","inB"].forEach(id=>$("#"+id).addEventListener("keydown",e=>{ if(e.key==="Enter"&&!running) run(); }));
+})();
+</script>
+</body>
+</html>
