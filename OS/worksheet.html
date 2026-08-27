@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>운영체제 활용 24H · 디지털 워크시트</title><style>
+:root{--navy:#1E2761;--navy2:#2A3578;--navy3:#36429A;--ice:#CADCFC;--white:#FFFFFF;--data:#FFC24B;--ok:#7BE0AD;--warn:#FF8B8B}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--navy);color:var(--ice);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+header{padding:13px 20px;border-bottom:1px solid var(--navy3);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+header h1{font-size:16px;color:var(--white)} header .nm{display:flex;align-items:center;gap:8px;margin-left:auto;font-size:13px}
+input,select,textarea{background:var(--navy);border:1px solid var(--navy3);color:var(--white);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:14px}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid var(--data);outline-offset:2px}
+input:disabled,select:disabled{opacity:.58}
+nav{display:flex;gap:6px;padding:10px 20px;flex-wrap:wrap;border-bottom:1px solid var(--navy3)}
+nav button{background:transparent;color:var(--ice);border:1px solid var(--navy3);border-radius:999px;padding:7px 13px;font-size:12.5px;cursor:pointer;font-family:inherit;font-weight:700}
+nav button.on{background:var(--ice);color:var(--navy);border-color:var(--ice)} nav button.done::after{content:" ✓";color:var(--ok)} nav button.on.done::after{color:#1c7a4d}
+main{flex:1;width:min(920px,95vw);margin:0 auto;padding:18px 0 40px}.sec{display:none}.sec.on{display:block;animation:fd .25s ease}
+@keyframes fd{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+h2{font-size:21px;color:var(--white);margin-bottom:5px}.lead{font-size:13.5px;line-height:1.7;margin:4px 0 12px}
+.tool{display:inline-flex;align-items:center;gap:8px;background:var(--navy2);border:1px solid var(--navy3);border-radius:10px;padding:8px 12px;font-size:12.5px;margin:2px 8px 10px 0}
+.tool a{color:var(--data);font-weight:700;text-decoration:none}
+.rule{background:var(--navy2);border-left:4px solid var(--data);border-radius:0 10px 10px 0;padding:10px 14px;font-size:12.5px;line-height:1.7;margin-bottom:16px}.rule b{color:var(--data)}
+h3{font-size:15px;color:var(--white);margin:20px 0 8px}.wt{width:100%;border-collapse:collapse;font-size:13.5px;margin-bottom:6px}
+.wt th{background:var(--navy2);color:var(--white);font-weight:700;padding:8px 6px;border:1px solid var(--navy3);font-size:12.5px}.wt td{padding:7px;border:1px solid var(--navy3);text-align:center}.wt td.l{text-align:left}
+textarea{width:100%;min-height:74px;resize:vertical;line-height:1.6}
+.fix{color:var(--warn);font-size:12px;margin-left:6px;font-weight:700;white-space:nowrap}.okf{border-color:var(--ok)!important}.bad{border-color:var(--warn)!important}
+.actions{display:flex;gap:10px;margin:18px 0 8px;flex-wrap:wrap}.actions button{border:none;border-radius:9px;padding:11px 18px;font-family:inherit;font-weight:800;font-size:14px;cursor:pointer}
+.actions .grade{background:var(--data);color:#4a3406}.actions .finish{background:var(--ice);color:var(--navy)}.actions button:disabled{opacity:.5;cursor:default}
+.res{font-size:14px;line-height:1.8;background:var(--navy2);border:1px solid var(--navy3);border-radius:10px;padding:12px 14px;display:none;margin-bottom:6px}.res.on{display:block}.res .sc{color:var(--data);font-weight:800;font-size:16px}
+.free{background:var(--navy2);border:1px dashed var(--navy3);border-radius:10px;padding:12px 14px;margin:8px 0}.free .cap{font-size:12px;color:var(--data);font-weight:700;margin-bottom:6px}
+.note{font-size:12px;line-height:1.7;margin-top:8px}.note b{color:var(--white)}
+#done{position:fixed;inset:0;background:rgba(10,14,32,.93);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}#done.on{display:flex}
+.dcard{background:var(--navy2);border:2px solid var(--ice);border-radius:18px;padding:26px 28px;max-width:650px;width:100%;max-height:88vh;overflow:auto}
+.dcard .tag{font-size:12px;color:var(--data);font-weight:800;letter-spacing:.08em}.dcard h2{margin:6px 0 2px}.dcard .meta{font-size:13px;margin-bottom:12px}.dcard .meta b{color:var(--white)}
+.dcard ul{list-style:none;margin:10px 0;border-top:1px solid var(--navy3)}.dcard li{padding:8px 2px;border-bottom:1px solid var(--navy3);font-size:13.5px;line-height:1.6}.dcard li b{color:var(--white)}.dcard li .v{color:var(--data);font-weight:800}
+.dcard .cap-inst{background:var(--navy);border:1px solid var(--data);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--data);font-weight:700;text-align:center;margin:12px 0 6px}
+.dcard .close{margin-top:8px;width:100%;border:none;border-radius:9px;padding:11px;background:var(--ice);color:var(--navy);font-weight:800;font-family:inherit;font-size:14px;cursor:pointer}
+.reset{background:transparent;border:1px solid var(--navy3);color:var(--ice);border-radius:8px;padding:7px 11px;font-size:12px;cursor:pointer;font-family:inherit}
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}.sumcard{background:var(--navy);border:1px solid var(--navy3);border-radius:9px;padding:8px;text-align:center;font-size:12px}.sumcard b{display:block;color:var(--data);font-size:15px}
+@media(max-width:700px){.summary{grid-template-columns:repeat(2,1fr)}}
+</style></head><body>
+<header>
+  <h1>운영체제 활용 24H · 디지털 워크시트</h1>
+  <button class="reset" id="btnReset">전체 초기화</button>
+  <div class="nm"><label for="stuName">이름</label><input id="stuName" style="width:110px" placeholder="이름 입력"></div>
+</header>
+<nav id="tabs"></nav>
+<main>
+<section class="sec" data-w="G">
+  <h2>사용 안내</h2>
+  <div class="rule">오늘의 규칙 — <b>예측 먼저, 애니메이션은 검산.</b> 각 챕터의 답을 먼저 작성한 뒤 <b>채점하기</b>를 누르세요. 채점 후 예측 칸은 잠깁니다.</div>
+  <div class="lead">
+    ① 상단에 <b>이름</b>을 입력합니다.<br>
+    ② 각 챕터에서 <b>예측/판단 → 채점 → 인터랙티브 시뮬레이터로 확인 → 완료 화면 만들기</b> 순서로 진행합니다.<br>
+    ③ 답과 점수는 브라우저의 <b>localStorage에 자동 저장</b>됩니다.<br>
+    ④ 완료 화면을 캡처하면 챕터별 학습 증거로 사용할 수 있습니다.<br>
+    ⑤ Chapter 12 완료 화면에는 <b>전체 12개 챕터 점수 요약</b>이 표시됩니다.
+  </div>
+  <span class="tool">도구 <a href="os_24h_interactive_animations_PRO.html" target="_blank" rel="noopener">▶ 운영체제 PRO 인터랙티브 시뮬레이터 열기</a></span>
+  <div class="note">참고 워크시트와 같은 UX를 유지하되, 운영체제 과정에 맞게 챕터 단위로 재구성했습니다.</div>
+</section>
+
+<section class="sec" data-w="W1">
+  <h2>Chapter 01 · 운영체제 구조와 자원 중재</h2>
+  <span class="tool">도구 <a href="os_24h_interactive_animations_PRO.html" target="_blank" rel="noopener">▶ 운영체제 PRO 인터랙티브 시뮬레이터</a></span>
+  <div class="lead">운영체제가 응용프로그램과 하드웨어 사이에서 자원을 중재하는 흐름을 검증합니다.</div>
+  <div class="rule">애니메이션을 열기 전에 <b>요청 흐름과 OS 역할을 먼저 예측</b>하세요. 채점 후 예측 칸이 잠기면 시뮬레이터에서 같은 흐름을 확인합니다.</div>
+  <h3>① 예측·판단 문제</h3>
+  <table class="wt"><tr><th>문항</th><th style="width:43%">내 답</th></tr><tr><td class="l">응용프로그램의 장치 접근 경로</td><td><select id="w1a"><option value=""></option><option>App → Hardware 직접</option><option>App → Kernel/Driver → Hardware</option><option>App → BIOS → Hardware</option></select></td></tr><tr><td class="l">User Space와 Kernel Space를 나누는 핵심 이유</td><td><select id="w1b"><option value=""></option><option>화면 구성</option><option>보호와 안정성</option><option>저장공간 확대</option></select></td></tr><tr><td class="l">CPU·RAM·Device를 프로그램에 나눠 주는 주체</td><td><select id="w1c"><option value=""></option><option>Compiler</option><option>Operating System</option><option>Browser</option></select></td></tr><tr><td class="l">파일 read() 요청이 보호 자원에 접근할 때 일어나는 것</td><td><select id="w1d"><option value=""></option><option>System Call</option><option>Hard Link</option><option>Context Free</option></select></td></tr><tr><td class="l">AI 앱 CPU 95% 상황에서 먼저 볼 것</td><td><select id="w1e"><option value=""></option><option>파일명</option><option>프로세스 CPU 사용률/스케줄링</option><option>화면 해상도</option></select></td></tr></table>
+  <h3>② 한 줄 설명</h3>
+  <div class="free"><div class="cap">서술 — ‘OS는 자원 관리자다’를 한 문장으로 설명</div><textarea id="w1f"></textarea></div>
+  <div class="actions">
+    <button class="grade" data-g="W1">채점하기 (예측 잠김)</button>
+    <button class="finish" data-f="W1">챕터 완료 화면 만들기</button>
+  </div>
+  <div class="res" id="resW1"></div>
+</section>
+<section class="sec" data-w="W2">
+  <h2>Chapter 02 · Linux 운영환경 탐색</h2>
+  <span class="tool">도구 <a href="os_24h_interactive_animations_PRO.html" target="_blank" rel="noopener">▶ 운영체제 PRO 인터랙티브 시뮬레이터</a></span>
+  <div class="lead">디렉터리, 권한, PATH, /proc, /sys를 실제 문제 상황에 적용합니다.</div>
+  <div class="rule">명령이나 경로를 외우는 것보다 <b>어떤 정보를 어디서 확인해야 하는지</b>를 먼저 판단하세요.</div>
+  <h3>① 예측·판단 문제</h3>
+  <table class="wt"><tr><th>문항</th><th style="width:43%">내 답</th></tr><tr><td class="l">실행 중인 프로세스 정보를 확인하기 좋은 가상 파일시스템</td><td><select id="w2a"><option value=""></option><option>/home</option><option>/proc</option><option>/opt</option></select></td></tr><tr><td class="l">장치/커널 객체 상태를 확인하기 좋은 위치</td><td><select id="w2b"><option value=""></option><option>/sys</option><option>/tmp</option><option>/media</option></select></td></tr><tr><td class="l">장치 노드가 나타나는 대표 위치</td><td><select id="w2c"><option value=""></option><option>/usr</option><option>/dev</option><option>/boot</option></select></td></tr><tr><td class="l">rwxr-xr-x 를 숫자로</td><td><input id="w2d" style="width:150px"></td></tr><tr><td class="l">실행 파일이 있는데 Permission denied가 날 때 먼저 확인</td><td><select id="w2e"><option value=""></option><option>실행 권한(x)</option><option>IP 주소</option><option>CPU 온도</option></select></td></tr><tr><td class="l">명령 이름만 입력했을 때 실행 파일 탐색 기준</td><td><select id="w2f"><option value=""></option><option>HOME</option><option>PATH</option><option>PWD</option></select></td></tr></table>
+  <h3>② 한 줄 설명</h3>
+  <div class="free"><div class="cap">서술 — 절대경로와 상대경로의 차이</div><textarea id="w2g"></textarea></div>
+  <div class="actions">
+    <button class="grade" data-g="W2">채점하기 (예측 잠김)</button>
+    <button class="finish" data-f="W2">챕터 완료 화면 만들기</button>
+  </div>
+  <div class="res" id="resW2"></div>
+</section>
+<section class="sec" data-w="W3">
+  <h2>Chapter 03 · 프로세스와 스레드</h2>
+  <span class="tool">도구 <a href="os_24h_interactive_animations_PRO.html" target="_blank" rel="noopener">▶ 운영체제 PRO 인터랙티브 시뮬레이터</a></span>
+  <div class="lead">프로세스 상태 전이와 fork/exec, 스레드 공유 자원, 동기화를 검증합니다.</div>
+  <div class="rule">각 상태 변화가 <b>왜 일어나는지</b>를 먼저 판단한 뒤 시뮬레이터로 확인하세요.</div>
+  <h3>① 예측·판단 문제</h3>
+  <table class="wt"><tr><th>문항</th><th style="width:43%">내 답</th></tr><tr><td class="l">Ready 상태 프로세스가 CPU를 받으면</td><td><select id="w3a"><option value=""></option><option>Waiting</option><option>Running</option><option>Terminated</option></select></td></tr><tr><td class="l">Running 중 I/O를 요청하면</td><td><select id="w3b"><option value=""></option><option>Waiting</option><option>Ready</option><option>Zombie</option></select></td></tr><tr><td class="l">I/O가 끝난 Waiting 프로세스는</td><td><select id="w3c"><option value=""></option><option>Ready</option><option>New</option><option>Terminated</option></select></td></tr><tr><td class="l">fork()의 효과</td><td><select id="w3d"><option value=""></option><option>자식 프로세스 생성</option><option>파일 삭제</option><option>스레드 잠금</option></select></td></tr><tr><td class="l">exec()의 효과</td><td><select id="w3e"><option value=""></option><option>현재 실행 이미지를 새 프로그램으로 교체</option><option>PID 삭제</option><option>CPU 코어 증가</option></select></td></tr><tr><td class="l">같은 프로세스의 스레드가 공유하지 않는 대표 영역</td><td><select id="w3f"><option value=""></option><option>Heap</option><option>Code</option><option>각 Thread Stack</option></select></td></tr><tr><td class="l">공유 counter 값이 매번 달라지는 Race 해결</td><td><select id="w3g"><option value=""></option><option>Mount</option><option>Mutex/Lock</option><option>Swap</option></select></td></tr></table>
+  <h3>② 한 줄 설명</h3>
+  <div class="free"><div class="cap">서술 — Process와 Thread 차이를 메모리 관점에서 설명</div><textarea id="w3h"></textarea></div>
+  <div class="actions">
+    <button class="grade" data-g="W3">채점하기 (예측 잠김)</button>
+    <button class="finish" data-f="W3">챕터 완료 화면 만들기</button>
+  </div>
+  <div class="res" id="resW3"></div>
+</section>
+<section class="sec" data-w="W4">
+  <h2>Chapter 04 · CPU 스케줄링</h2>
+  <span class="tool">도구 <a href="os_24h_interactive_animations_PRO.html" target="_blank" rel="noopener">▶ 운영체제 PRO 인터랙티브 시뮬레이터</a></span>
+  <div class="lead">FCFS, SJF, Priority, Round Robin과 Context Switch의 의미를 판단합니다.</div>
+  <div class="rule">스케줄링 결과를 <b>직접 계산/예측</b>한 뒤 애니메이션에서 실행 순서와 전환 횟수를 검산하세요.</div>
+  <h3>① 예측·판단 문제</h3>
+  <table class="wt"><tr><th>문항</th><th style="width:43%">내 답</th></tr><tr><td class="l">Time Quantum을 사용하는 대표 방식</td><td><select id="w4a"><option value=""></option><option>FCFS</option><option>SJF</option><option>Round Robin</option></select></td></tr><tr><td class="l">P1=8ms, P2=2ms, P3=4ms 동시 도착 시 SJF 순서</td><td><select id="w4b"><option value=""></option><option>P1 → P2 → P3</option><option>P2 → P3 → P1</option><option>P3 → P2 → P1</option></select></td></tr><tr><td class="l">Quantum이 너무 작을 때 증가하는 것</td><td><select id="w4c"><option value=""></option><option>Context Switch</option><option>RAM 용량</option><option>inode</option></select></td></tr><tr><td class="l">프로세스를 특정 코어에 묶는 개념</td><td><select id="w4d"><option value=""></option><option>CPU Affinity</option><option>Page Fault</option><option>Pipe</option></select></td></tr><tr><td class="l">한 프로세스가 CPU를 독점할 때 우선 확인</td><td><select id="w4e"><option value=""></option><option>우선순위/스케줄링 정책</option><option>DNS</option><option>파일 확장자</option></select></td></tr></table>
+  <h3>② 한 줄 설명</h3>
+  <div class="free"><div class="cap">서술 — Context Switch가 너무 많으면 성능이 떨어지는 이유</div><textarea id="w4f"></textarea></div>
+  <div class="actions">
+    <button class="grade" data-g="W4">채점하기 (예측 잠김)</button>
+    <button class="finish" data-f="W4">챕터 완료 화면 만들기</button>
+  </div>
+  <div class="res" id="resW4"></div>
+</section>
+<section class="sec" data-w="W5">
+  <h2>Chapter 05 · 메모리 관리</h2>
+  <span class="tool">도구 <a href="os_24h_interactive_animations_PRO.html" target="_blank" rel="noopener">▶ 운영체제 PRO 인터랙티브 시뮬레이터</a></span>
+  <div class="lead">Stack/Heap, Virtual Memory, Paging, Page Fault, Swap/OOM을 연결해 판단합니다.</div>
+  <div class="rule">메모리 문제는 지표를 함께 봐야 합니다. <b>원인 → OS 동작 → 증상</b> 순으로 생각하세요.</div>
+  <h3>① 예측·판단 문제</h3>
+  <table class="wt"><tr><th>문항</th><th style="width:43%">내 답</th></tr><tr><td class="l">함수 호출 프레임이 쌓이는 영역</td><td><select id="w5a"><option value=""></option><option>Heap</option><option>Stack</option><option>Swap</option></select></td></tr><tr><td class="l">malloc() 동적 할당 영역</td><td><select id="w5b"><option value=""></option><option>Heap</option><option>Stack</option><option>Text</option></select></td></tr><tr><td class="l">Virtual Page가 RAM에 없을 때</td><td><select id="w5c"><option value=""></option><option>Page Fault</option><option>Pipe</option><option>Interrupt</option></select></td></tr><tr><td class="l">RAM 부족 시 보조 저장장치를 임시 메모리처럼 쓰는 것</td><td><select id="w5d"><option value=""></option><option>Swap</option><option>inode</option><option>Socket</option></select></td></tr><tr><td class="l">RAM 98%, Swap 증가, 앱 매우 느림의 가장 가능성 높은 원인</td><td><select id="w5e"><option value=""></option><option>메모리 압박/스와핑</option><option>Port 충돌</option><option>DNS</option></select></td></tr><tr><td class="l">메모리 확보 실패 시 프로세스를 종료할 수 있는 주체</td><td><select id="w5f"><option value=""></option><option>OOM Killer</option><option>Bootloader</option><option>Shell</option></select></td></tr></table>
+  <h3>② 한 줄 설명</h3>
+  <div class="free"><div class="cap">서술 — Virtual Memory가 필요한 이유</div><textarea id="w5g"></textarea></div>
+  <div class="actions">
+    <button class="grade" data-g="W5">채점하기 (예측 잠김)</button>
+    <button class="finish" data-f="W5">챕터 완료 화면 만들기</button>
+  </div>
+  <div class="res" id="resW5"></div>
+</section>
+<section class="sec" data-w="W6">
+  <h2>Chapter 06 · 파일시스템</h2>
+  <span class="tool">도구 <a href="os_24h_interactive_animations_PRO.html" target="_blank" rel="noopener">▶ 운영체제 PRO 인터랙티브 시뮬레이터</a></span>
+  <div class="lead">파일명, inode, Data Block, Link, Mount/Delete 관계를 검증합니다.</div>
+  <div class="rule">파일을 읽고 지우는 과정에서 <b>이름·메타데이터·실제 데이터</b>가 각각 어디에 있는지 구분하세요.</div>
+  <h3>① 예측·판단 문제</h3>
+  <table class="wt"><tr><th>문항</th><th style="width:43%">내 답</th></tr><tr><td class="l">파일명에서 실제 메타데이터를 찾기 위해 연결되는 것</td><td><select id="w6a"><option value=""></option><option>inode</option><option>CPU</option><option>Socket</option></select></td></tr><tr><td class="l">파일 내용이 실제로 저장되는 곳</td><td><select id="w6b"><option value=""></option><option>Data Block</option><option>PATH</option><option>PID</option></select></td></tr><tr><td class="l">Hard Link의 특징</td><td><select id="w6c"><option value=""></option><option>같은 inode를 가리킨다</option><option>항상 다른 디스크</option><option>파일을 압축한다</option></select></td></tr><tr><td class="l">USB 파일시스템을 디렉터리 트리에 붙이는 작업</td><td><select id="w6d"><option value=""></option><option>mount</option><option>fork</option><option>nice</option></select></td></tr><tr><td class="l">디스크 공간은 남았는데 새 파일 생성 실패 시 확인 가치가 높은 것</td><td><select id="w6e"><option value=""></option><option>inode 사용량</option><option>GPU 온도</option><option>TCP 상태</option></select></td></tr><tr><td class="l">파일 삭제 시 가능한 변화</td><td><select id="w6f"><option value=""></option><option>Directory Entry 제거/Block 반환</option><option>CPU 코어 삭제</option><option>IP 변경</option></select></td></tr></table>
+  <h3>② 한 줄 설명</h3>
+  <div class="free"><div class="cap">서술 — df와 du의 차이</div><textarea id="w6g"></textarea></div>
+  <div class="actions">
+    <button class="grade" data-g="W6">채점하기 (예측 잠김)</button>
+    <button class="finish" data-f="W6">챕터 완료 화면 만들기</button>
+  </div>
+  <div class="res" id="resW6"></div>
+</section>
+<section class="sec" data-w="W7">
+  <h2>Chapter 07 · 장치와 I/O</h2>
+  <span class="tool">도구 <a href="os_24h_interactive_animations_PRO.html" target="_blank" rel="noopener">▶ 운영체제 PRO 인터랙티브 시뮬레이터</a></span>
+  <div class="lead">Device Driver, Polling, Interrupt, DMA, Buffer Overflow를 실제 데이터 흐름 관점에서 검증합니다.</div>
+  <div class="rule">카메라 같은 입력 장치에서 <b>생산 속도와 소비 속도</b>가 다를 때 어떤 문제가 생기는지 판단하세요.</div>
+  <h3>① 예측·판단 문제</h3>
+  <table class="wt"><tr><th>문항</th><th style="width:43%">내 답</th></tr><tr><td class="l">카메라 하드웨어와 OS 사이에서 장치 특성을 처리하는 계층</td><td><select id="w7a"><option value=""></option><option>Device Driver</option><option>Compiler</option><option>Filesystem</option></select></td></tr><tr><td class="l">CPU가 장치 상태를 계속 반복 확인하는 방식</td><td><select id="w7b"><option value=""></option><option>DMA</option><option>Polling</option><option>Mount</option></select></td></tr><tr><td class="l">장치 이벤트가 있을 때 CPU에 알리는 방식</td><td><select id="w7c"><option value=""></option><option>Interrupt</option><option>Hard Link</option><option>Swap</option></select></td></tr><tr><td class="l">장치↔RAM 전송에서 CPU 개입을 줄이는 기술</td><td><select id="w7d"><option value=""></option><option>DMA</option><option>PATH</option><option>exec</option></select></td></tr><tr><td class="l">Input 60 FPS, 처리 20 FPS일 때 예상</td><td><select id="w7e"><option value=""></option><option>Buffer 누적 후 Frame Drop</option><option>CPU 코어 증가</option><option>inode 삭제</option></select></td></tr><tr><td class="l">Polling보다 Interrupt가 효율적일 수 있는 이유</td><td><select id="w7f"><option value=""></option><option>이벤트가 있을 때만 CPU에 알림</option><option>항상 RAM을 안 씀</option><option>Port를 안 씀</option></select></td></tr></table>
+  <h3>② 한 줄 설명</h3>
+  <div class="free"><div class="cap">서술 — Buffer Overflow가 왜 Frame Drop으로 이어지는지</div><textarea id="w7g"></textarea></div>
+  <div class="actions">
+    <button class="grade" data-g="W7">채점하기 (예측 잠김)</button>
+    <button class="finish" data-f="W7">챕터 완료 화면 만들기</button>
+  </div>
+  <div class="res" id="resW7"></div>
+</section>
+<section class="sec" data-w="W8">
+  <h2>Chapter 08 · 시스템 콜과 프로그램 실행</h2>
+  <span class="tool">도구 <a href="os_24h_interactive_animations_PRO.html" target="_blank" rel="noopener">▶ 운영체제 PRO 인터랙티브 시뮬레이터</a></span>
+  <div class="lead">Loader, System Call, File Descriptor, Pipe를 프로그램 실행 흐름으로 묶어 검증합니다.</div>
+  <div class="rule">응용프로그램 코드가 <b>언제 커널 기능을 호출하는지</b>를 중심으로 판단하세요.</div>
+  <h3>① 예측·판단 문제</h3>
+  <table class="wt"><tr><th>문항</th><th style="width:43%">내 답</th></tr><tr><td class="l">실행 파일을 메모리에 배치하는 핵심 구성요소</td><td><select id="w8a"><option value=""></option><option>Loader</option><option>DNS</option><option>inode</option></select></td></tr><tr><td class="l">read()가 System Call인 핵심 이유</td><td><select id="w8b"><option value=""></option><option>보호 자원 접근을 커널에 요청</option><option>파일명 변경</option><option>CPU 제조</option></select></td></tr><tr><td class="l">stdin의 일반적인 fd 번호</td><td><input id="w8c" style="width:150px"></td></tr><tr><td class="l">stdout의 일반적인 fd 번호</td><td><input id="w8d" style="width:150px"></td></tr><tr><td class="l">stderr의 일반적인 fd 번호</td><td><input id="w8e" style="width:150px"></td></tr><tr><td class="l">System Call 추적 대표 도구</td><td><select id="w8f"><option value=""></option><option>strace</option><option>df</option><option>ping</option></select></td></tr><tr><td class="l">프로세스 간 스트림 데이터 전달에 쓰는 것</td><td><select id="w8g"><option value=""></option><option>Pipe</option><option>Page Table</option><option>Bootloader</option></select></td></tr></table>
+  <h3>② 한 줄 설명</h3>
+  <div class="free"><div class="cap">서술 — Library Call과 System Call의 차이</div><textarea id="w8h"></textarea></div>
+  <div class="actions">
+    <button class="grade" data-g="W8">채점하기 (예측 잠김)</button>
+    <button class="finish" data-f="W8">챕터 완료 화면 만들기</button>
+  </div>
+  <div class="res" id="resW8"></div>
+</section>
+<section class="sec" data-w="W9">
+  <h2>Chapter 09 · 부팅과 서비스</h2>
+  <span class="tool">도구 <a href="os_24h_interactive_animations_PRO.html" target="_blank" rel="noopener">▶ 운영체제 PRO 인터랙티브 시뮬레이터</a></span>
+  <div class="lead">Firmware→Bootloader→Kernel→systemd→Service 흐름과 서비스 장애 분석을 검증합니다.</div>
+  <div class="rule">부팅/서비스 문제는 <b>앞 단계가 준비되지 않으면 뒤 단계가 실패</b>할 수 있다는 의존성을 중심으로 봅니다.</div>
+  <h3>① 예측·판단 문제</h3>
+  <table class="wt"><tr><th>문항</th><th style="width:43%">내 답</th></tr><tr><td class="l">Firmware 다음 단계</td><td><select id="w9a"><option value=""></option><option>Kernel</option><option>Bootloader</option><option>Service</option></select></td></tr><tr><td class="l">Bootloader 다음 핵심 단계</td><td><select id="w9b"><option value=""></option><option>Kernel</option><option>Browser</option><option>User App</option></select></td></tr><tr><td class="l">Linux에서 PID 1로 서비스 관리를 맡는 대표 구성요소</td><td><select id="w9c"><option value=""></option><option>systemd</option><option>gcc</option><option>ssh client</option></select></td></tr><tr><td class="l">서비스 로그 확인 대표 명령</td><td><select id="w9d"><option value=""></option><option>journalctl</option><option>chmod</option><option>pwd</option></select></td></tr><tr><td class="l">camera.service가 재시작 반복 시 우선 확인</td><td><select id="w9e"><option value=""></option><option>로그와 Restart 정책</option><option>폰트</option><option>화면 밝기</option></select></td></tr><tr><td class="l">선행 서비스 실패로 후속 서비스가 시작 못 하는 관계</td><td><select id="w9f"><option value=""></option><option>Dependency</option><option>Paging</option><option>Pipe</option></select></td></tr></table>
+  <h3>② 한 줄 설명</h3>
+  <div class="free"><div class="cap">서술 — 서비스 의존성(dependency)을 한 문장으로 설명</div><textarea id="w9g"></textarea></div>
+  <div class="actions">
+    <button class="grade" data-g="W9">채점하기 (예측 잠김)</button>
+    <button class="finish" data-f="W9">챕터 완료 화면 만들기</button>
+  </div>
+  <div class="res" id="resW9"></div>
+</section>
+<section class="sec" data-w="W10">
+  <h2>Chapter 10 · 네트워크와 OS</h2>
+  <span class="tool">도구 <a href="os_24h_interactive_animations_PRO.html" target="_blank" rel="noopener">▶ 운영체제 PRO 인터랙티브 시뮬레이터</a></span>
+  <div class="lead">Socket, TCP Handshake, Packet Loss, Port Bind를 OS 관점에서 검증합니다.</div>
+  <div class="rule">네트워크 장애는 <b>프로세스가 살아 있는지 → Port가 열렸는지 → 패킷이 오가는지</b> 단계로 좁혀가세요.</div>
+  <h3>① 예측·판단 문제</h3>
+  <table class="wt"><tr><th>문항</th><th style="width:43%">내 답</th></tr><tr><td class="l">TCP 3-Way Handshake 첫 패킷</td><td><select id="w10a"><option value=""></option><option>ACK</option><option>SYN</option><option>FIN</option></select></td></tr><tr><td class="l">두 번째 패킷</td><td><select id="w10b"><option value=""></option><option>SYN/ACK</option><option>RST</option><option>DATA</option></select></td></tr><tr><td class="l">세 번째 패킷</td><td><select id="w10c"><option value=""></option><option>ACK</option><option>SYN</option><option>FIN</option></select></td></tr><tr><td class="l">Packet Loss가 TCP에서 유발할 수 있는 것</td><td><select id="w10d"><option value=""></option><option>재전송/지연 증가</option><option>CPU 코어 증가</option><option>inode 증가</option></select></td></tr><tr><td class="l">Address already in use의 전형적 원인</td><td><select id="w10e"><option value=""></option><option>같은 Port가 이미 bind됨</option><option>RAM이 비어 있음</option><option>파일이 644</option></select></td></tr><tr><td class="l">서버가 살아 있는데 연결 안 될 때 우선 확인</td><td><select id="w10f"><option value=""></option><option>LISTEN Port/Socket 상태</option><option>Stack 크기만</option><option>GPU 팬</option></select></td></tr></table>
+  <h3>② 한 줄 설명</h3>
+  <div class="free"><div class="cap">서술 — IP와 Port가 각각 무엇을 식별하는지</div><textarea id="w10g"></textarea></div>
+  <div class="actions">
+    <button class="grade" data-g="W10">채점하기 (예측 잠김)</button>
+    <button class="finish" data-f="W10">챕터 완료 화면 만들기</button>
+  </div>
+  <div class="res" id="resW10"></div>
+</section>
+<section class="sec" data-w="W11">
+  <h2>Chapter 11 · 온디바이스 AI 자원 관리</h2>
+  <span class="tool">도구 <a href="os_24h_interactive_animations_PRO.html" target="_blank" rel="noopener">▶ 운영체제 PRO 인터랙티브 시뮬레이터</a></span>
+  <div class="lead">CPU/GPU/NPU, RAM, FPS, Latency, Thermal, Bottleneck을 운영체제 자원 관점에서 검증합니다.</div>
+  <div class="rule">한 지표만 보지 말고 <b>사용률·Queue·FPS·Latency·온도</b>를 같이 해석하세요.</div>
+  <h3>① 예측·판단 문제</h3>
+  <table class="wt"><tr><th>문항</th><th style="width:43%">내 답</th></tr><tr><td class="l">모델이 커질수록 직접 증가 가능성이 높은 자원</td><td><select id="w11a"><option value=""></option><option>메모리 사용량</option><option>IP 주소</option><option>inode 이름 길이</option></select></td></tr><tr><td class="l">Thermal Throttling의 전형적인 결과</td><td><select id="w11b"><option value=""></option><option>Clock 감소/FPS 저하</option><option>RAM 증가</option><option>Port 변경</option></select></td></tr><tr><td class="l">GPU 30%, CPU 95%, 입력 Queue 증가 시 병목</td><td><select id="w11c"><option value=""></option><option>GPU 추론</option><option>CPU 전처리</option><option>DNS</option></select></td></tr><tr><td class="l">FPS의 의미</td><td><select id="w11d"><option value=""></option><option>한 프레임 처리 시간</option><option>초당 처리 프레임 수</option><option>메모리 크기</option></select></td></tr><tr><td class="l">Latency의 의미</td><td><select id="w11e"><option value=""></option><option>한 입력 처리에 걸린 시간</option><option>초당 패킷 수</option><option>디스크 용량</option></select></td></tr><tr><td class="l">병목 판단에 같이 볼 것</td><td><select id="w11f"><option value=""></option><option>CPU/GPU/NPU 사용률 + RAM/Swap + Input/Output FPS</option><option>배경색</option><option>파일 확장자</option></select></td></tr></table>
+  <h3>② 한 줄 설명</h3>
+  <div class="free"><div class="cap">서술 — FPS와 Latency의 차이를 한 문장으로 설명</div><textarea id="w11g"></textarea></div>
+  <div class="actions">
+    <button class="grade" data-g="W11">채점하기 (예측 잠김)</button>
+    <button class="finish" data-f="W11">챕터 완료 화면 만들기</button>
+  </div>
+  <div class="res" id="resW11"></div>
+</section>
+<section class="sec" data-w="W12">
+  <h2>Chapter 12 · 종합 장애 분석 도착점</h2>
+  <span class="tool">도구 <a href="os_24h_interactive_animations_PRO.html" target="_blank" rel="noopener">▶ 운영체제 PRO 인터랙티브 시뮬레이터</a></span>
+  <div class="lead">CPU, Memory, Disk, Device, Service, AI 지표를 조합해 원인을 좁혀 갑니다.</div>
+  <div class="rule">마지막 챕터입니다. <b>증상 → 지표 → 로그 → 가설 → 검증</b> 순서로 원인을 찾고, 완료 화면에서 전체 챕터 점수를 확인합니다.</div>
+  <h3>① 예측·판단 문제</h3>
+  <table class="wt"><tr><th>문항</th><th style="width:43%">내 답</th></tr><tr><td class="l">CPU 35%, RAM 96%, Swap 2GB, allocation failure의 원인</td><td><select id="w12a"><option value=""></option><option>CPU 과부하</option><option>메모리 부족</option><option>Port 충돌</option></select></td></tr><tr><td class="l">AI FPS 0, /dev/video0 사라짐의 1순위 의심</td><td><select id="w12b"><option value=""></option><option>카메라/드라이버 장치 문제</option><option>SJF</option><option>Hard Link</option></select></td></tr><tr><td class="l">서비스 반복 재시작 + 장치 정상 + RAM 충분할 때 다음 확인</td><td><select id="w12c"><option value=""></option><option>서비스 로그/설정</option><option>화면 색상</option><option>파일명 길이</option></select></td></tr><tr><td class="l">좋은 장애 분석 방식</td><td><select id="w12d"><option value=""></option><option>무조건 재부팅</option><option>한 번에 하나의 가설을 검증</option><option>여러 설정 동시 변경</option></select></td></tr><tr><td class="l">증상과 원인을 구분해야 하는 이유</td><td><select id="w12e"><option value=""></option><option>근본 원인을 찾아 잘못된 처방을 피하기 위해</option><option>점수를 올리기 위해</option><option>CPU를 늘리기 위해</option></select></td></tr></table>
+  <h3>② 한 줄 설명</h3>
+  <div class="free"><div class="cap">서술 — 실제 장애 분석 시 내가 사용할 5단계 진단 순서를 적으세요</div><textarea id="w12f"></textarea></div>
+  <div class="actions">
+    <button class="grade" data-g="W12">채점하기 (예측 잠김)</button>
+    <button class="finish" data-f="W12">도착점 완료 화면 만들기</button>
+  </div>
+  <div class="res" id="resW12"></div>
+</section>
+</main>
+<div id="done"><div class="dcard">
+  <div class="tag">운영체제 활용 · 24H</div>
+  <h2 id="dTitle"></h2>
+  <div class="meta">이름 <b id="dName"></b> · 완료 시각 <b id="dTime"></b></div>
+  <ul id="dList"></ul>
+  <div id="allSummary"></div>
+  <div class="cap-inst">이 화면을 캡처해 학습 결과로 제출하세요</div>
+  <button class="close" id="dClose">닫기</button>
+</div></div>
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const P="osws_";
+const SECS=[["G", "안내"], ["W1", "C01 OS 구조"], ["W2", "C02 Linux 환경"], ["W3", "C03 Process"], ["W4", "C04 Scheduling"], ["W5", "C05 Memory"], ["W6", "C06 File System"], ["W7", "C07 Device I/O"], ["W8", "C08 Syscall"], ["W9", "C09 Boot/Service"], ["W10", "C10 Network"], ["W11", "C11 On-device AI"], ["W12", "C12 장애 분석"]];
+const ANSWERS={"W1": {"w1a": "App → Kernel/Driver → Hardware", "w1b": "보호와 안정성", "w1c": "Operating System", "w1d": "System Call", "w1e": "프로세스 CPU 사용률/스케줄링"}, "W2": {"w2a": "/proc", "w2b": "/sys", "w2c": "/dev", "w2d": "755", "w2e": "실행 권한(x)", "w2f": "PATH"}, "W3": {"w3a": "Running", "w3b": "Waiting", "w3c": "Ready", "w3d": "자식 프로세스 생성", "w3e": "현재 실행 이미지를 새 프로그램으로 교체", "w3f": "각 Thread Stack", "w3g": "Mutex/Lock"}, "W4": {"w4a": "Round Robin", "w4b": "P2 → P3 → P1", "w4c": "Context Switch", "w4d": "CPU Affinity", "w4e": "우선순위/스케줄링 정책"}, "W5": {"w5a": "Stack", "w5b": "Heap", "w5c": "Page Fault", "w5d": "Swap", "w5e": "메모리 압박/스와핑", "w5f": "OOM Killer"}, "W6": {"w6a": "inode", "w6b": "Data Block", "w6c": "같은 inode를 가리킨다", "w6d": "mount", "w6e": "inode 사용량", "w6f": "Directory Entry 제거/Block 반환"}, "W7": {"w7a": "Device Driver", "w7b": "Polling", "w7c": "Interrupt", "w7d": "DMA", "w7e": "Buffer 누적 후 Frame Drop", "w7f": "이벤트가 있을 때만 CPU에 알림"}, "W8": {"w8a": "Loader", "w8b": "보호 자원 접근을 커널에 요청", "w8c": "0", "w8d": "1", "w8e": "2", "w8f": "strace", "w8g": "Pipe"}, "W9": {"w9a": "Bootloader", "w9b": "Kernel", "w9c": "systemd", "w9d": "journalctl", "w9e": "로그와 Restart 정책", "w9f": "Dependency"}, "W10": {"w10a": "SYN", "w10b": "SYN/ACK", "w10c": "ACK", "w10d": "재전송/지연 증가", "w10e": "같은 Port가 이미 bind됨", "w10f": "LISTEN Port/Socket 상태"}, "W11": {"w11a": "메모리 사용량", "w11b": "Clock 감소/FPS 저하", "w11c": "CPU 전처리", "w11d": "초당 처리 프레임 수", "w11e": "한 입력 처리에 걸린 시간", "w11f": "CPU/GPU/NPU 사용률 + RAM/Swap + Input/Output FPS"}, "W12": {"w12a": "메모리 부족", "w12b": "카메라/드라이버 장치 문제", "w12c": "서비스 로그/설정", "w12d": "한 번에 하나의 가설을 검증", "w12e": "근본 원인을 찾아 잘못된 처방을 피하기 위해"}};
+const IDS={"W1": ["w1a", "w1b", "w1c", "w1d", "w1e"], "W2": ["w2a", "w2b", "w2c", "w2d", "w2e", "w2f"], "W3": ["w3a", "w3b", "w3c", "w3d", "w3e", "w3f", "w3g"], "W4": ["w4a", "w4b", "w4c", "w4d", "w4e"], "W5": ["w5a", "w5b", "w5c", "w5d", "w5e", "w5f"], "W6": ["w6a", "w6b", "w6c", "w6d", "w6e", "w6f"], "W7": ["w7a", "w7b", "w7c", "w7d", "w7e", "w7f"], "W8": ["w8a", "w8b", "w8c", "w8d", "w8e", "w8f", "w8g"], "W9": ["w9a", "w9b", "w9c", "w9d", "w9e", "w9f"], "W10": ["w10a", "w10b", "w10c", "w10d", "w10e", "w10f"], "W11": ["w11a", "w11b", "w11c", "w11d", "w11e", "w11f"], "W12": ["w12a", "w12b", "w12c", "w12d", "w12e"]};
+const TITLES={"W1": "Chapter 01 · 운영체제 구조와 자원 중재", "W2": "Chapter 02 · Linux 운영환경 탐색", "W3": "Chapter 03 · 프로세스와 스레드", "W4": "Chapter 04 · CPU 스케줄링", "W5": "Chapter 05 · 메모리 관리", "W6": "Chapter 06 · 파일시스템", "W7": "Chapter 07 · 장치와 I/O", "W8": "Chapter 08 · 시스템 콜과 프로그램 실행", "W9": "Chapter 09 · 부팅과 서비스", "W10": "Chapter 10 · 네트워크와 OS", "W11": "Chapter 11 · 온디바이스 AI 자원 관리", "W12": "Chapter 12 · 종합 장애 분석 도착점"};
+
+const nav=$("#tabs");
+SECS.forEach(([k,label])=>{
+  const b=document.createElement("button");
+  b.textContent=label; b.dataset.k=k;
+  b.addEventListener("click",()=>show(k)); nav.appendChild(b);
+});
+function show(k){
+  document.querySelectorAll(".sec").forEach(s=>s.classList.toggle("on",s.dataset.w===k));
+  nav.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.k===k));
+  localStorage.setItem(P+"tab",k);
+}
+function markDone(k){
+  nav.querySelector(`[data-k="${k}"]`)?.classList.add("done");
+  localStorage.setItem(P+"done_"+k,"1");
+}
+function saveField(el){
+  localStorage.setItem(P+el.id, el.type==="checkbox"?(el.checked?"1":""):el.value);
+}
+document.querySelectorAll("input,select,textarea").forEach(el=>{
+  if(!el.id)return;
+  const ev=(el.tagName==="SELECT"||el.type==="checkbox")?"change":"input";
+  el.addEventListener(ev,()=>saveField(el));
+});
+function lock(w){
+  (IDS[w]||[]).forEach(id=>{const e=$("#"+id); if(e)e.disabled=true;});
+  const b=document.querySelector(`[data-g="${w}"]`); if(b)b.disabled=true;
+}
+function restore(){
+  document.querySelectorAll("input,select,textarea").forEach(el=>{
+    if(!el.id)return;
+    const v=localStorage.getItem(P+el.id);
+    if(v!==null){if(el.type==="checkbox")el.checked=v==="1";else el.value=v;}
+  });
+  SECS.forEach(([k])=>{if(localStorage.getItem(P+"done_"+k))nav.querySelector(`[data-k="${k}"]`)?.classList.add("done");});
+  Object.keys(ANSWERS).forEach(w=>{if(localStorage.getItem(P+"lock_"+w))lock(w);});
+  show(localStorage.getItem(P+"tab")||"G");
+}
+function mark(id,ok,ans){
+  const el=$("#"+id); if(!el)return 0;
+  el.classList.toggle("okf",ok); el.classList.toggle("bad",!ok);
+  let n=el.nextElementSibling; if(n&&n.classList&&n.classList.contains("fix"))n.remove();
+  if(!ok){
+    const sp=document.createElement("span");sp.className="fix";sp.textContent="→ "+ans;el.after(sp);
+  }
+  return ok?1:0;
+}
+function grade(w){
+  let good=0,total=0;
+  Object.entries(ANSWERS[w]).forEach(([id,ans])=>{
+    total++; const el=$("#"+id); const v=(el?.value||"").trim();
+    good+=mark(id,v===String(ans),ans);
+  });
+  const pct=Math.round(good/total*100);
+  const r=$("#res"+w);r.classList.add("on");
+  r.innerHTML=`채점 결과 <span class="sc">${good} / ${total} (${pct}%)</span> — 틀린 칸에는 바른 답이 표시됩니다. 이제 시뮬레이터로 원리를 확인하세요.`;
+  localStorage.setItem(P+"score_"+w,`${good}/${total} (${pct}%)`);
+  localStorage.setItem(P+"lock_"+w,"1");lock(w);
+}
+document.querySelectorAll("[data-g]").forEach(b=>b.addEventListener("click",()=>grade(b.dataset.g)));
+
+function finish(w){
+  const name=($("#stuName").value||"").trim();
+  if(!name){alert("상단에 이름을 먼저 입력하세요.");show("G");$("#stuName").focus();return;}
+  const sc=localStorage.getItem(P+"score_"+w);
+  if(!sc){alert("먼저 「채점하기」를 눌러 주세요.");return;}
+  $("#dTitle").textContent=TITLES[w]+" 완료";
+  $("#dName").textContent=name;$("#dTime").textContent=new Date().toLocaleString("ko-KR");
+  const ul=$("#dList");ul.innerHTML="";
+  const li=(k,v)=>{const d=document.createElement("li");d.innerHTML=`<b>${k}</b> — <span class="v">${v}</span>`;ul.appendChild(d);};
+  li("채점 점수",sc);
+  const free=document.querySelector(`[data-w="${w}"] textarea`);
+  if(free&&free.value.trim())li("한 줄 설명",free.value.trim());
+  $("#allSummary").innerHTML="";
+  if(w==="W12"){
+    const scores=[];
+    for(let n=1;n<=12;n++){const k="W"+n; scores.push([k,localStorage.getItem(P+"score_"+k)||"미완료"]);}
+    const box=document.createElement("div");box.className="summary";
+    box.innerHTML=scores.map(([k,s])=>`<div class="sumcard">${TITLES[k].split(" · ")[0]}<b>${s}</b></div>`).join("");
+    $("#allSummary").appendChild(box);
+  }
+  $("#done").classList.add("on");markDone(w);
+}
+document.querySelectorAll("[data-f]").forEach(b=>b.addEventListener("click",()=>finish(b.dataset.f)));
+$("#dClose").addEventListener("click",()=>$("#done").classList.remove("on"));
+$("#btnReset").addEventListener("click",()=>{
+  if(!confirm("모든 답과 완료 기록을 지웁니다. 계속할까요?"))return;
+  Object.keys(localStorage).filter(k=>k.startsWith(P)).forEach(k=>localStorage.removeItem(k));location.reload();
+});
+restore();
+})();
+</script></body></html>
