@@ -1,0 +1,56 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>동시 재생 경주 — GUI vs CLI</title><link rel="stylesheet" href="style.css"></head><body>
+<div class="wrap">
+<a class="back" href="index.html">← 애니메이션 목록</a>
+<header><div class="eyebrow">OS · Day 1 · S7 도구 · CMD 표기 — Shell 확정 시 고정</div>
+<h1>동시 재생 경주 — <b>GUI vs CLI</b></h1>
+<p class="sub">과제: 📁 docs · 📁 photos · 📁 backup 생성 + report.txt를 backup에 복사 <b>(과제 구조는 강사 확정 시 교체)</b>. 두 방법이 같은 결과물을 향해 동시에 출발합니다 — 실습 후 회고의 근거 화면.</p></header>
+
+<section class="panel"><div class="row">
+<button class="run" id="btnGo">▶ 동시 출발</button>
+<button class="run sec" id="btnReset">초기화</button>
+</div></section>
+
+<div class="row" style="align-items:stretch;gap:14px">
+<section class="panel" style="flex:1;min-width:280px;margin:0">
+<div class="top" style="display:flex;justify-content:space-between"><b>GUI — File Explorer</b>
+<span class="mono" style="font-size:12.5px">⏱ <span id="gt">0.0</span>s · 🖱 <span id="gc">0</span>회</span></div>
+<div id="glog" style="min-height:190px;font-size:13.5px;line-height:2;color:var(--ink);margin-top:8px"></div></section>
+<section class="panel" style="flex:1;min-width:280px;margin:0">
+<div class="top" style="display:flex;justify-content:space-between"><b>CLI — Terminal</b>
+<span class="mono" style="font-size:12.5px">⏱ <span id="ct">0.0</span>s · ⌨ <span id="cc">0</span>줄</span></div>
+<div class="term" id="clog" style="min-height:190px;margin-top:8px"></div></section>
+</div>
+<div class="verdict" id="v" style="margin-top:14px">두 선수가 같은 결과물을 향해 출발합니다 — 클릭 수와 명령 줄 수를 지켜보세요.</div>
+</div>
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const G=[["우클릭 → 새로 만들기 → 폴더",3],["이름 입력: docs",1],["우클릭 → 새로 만들기 → 폴더",3],
+["이름 입력: photos",1],["우클릭 → 새로 만들기 → 폴더",3],["이름 입력: backup",1],
+["report.txt 우클릭 → 복사",2],["backup 더블클릭 → 붙여넣기",3]];
+const C=["mkdir docs","mkdir photos","mkdir backup","copy report.txt backup\\"];
+let racing=false;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function reset(){$("#glog").innerHTML="";$("#clog").innerHTML="";
+ ["gt","gc","ct","cc"].forEach(id=>$("#"+id).textContent=id[1]==="t"?"0.0":"0");
+ $("#v").innerHTML="두 선수가 같은 결과물을 향해 출발합니다 — 클릭 수와 명령 줄 수를 지켜보세요.";}
+$("#btnReset").addEventListener("click",()=>{if(!racing)reset();});
+$("#btnGo").addEventListener("click",async()=>{
+ if(racing)return;racing=true;$("#btnGo").disabled=true;reset();
+ let gDone=false,cDone=false,gc=0,cc=0,gt=0,ct=0;
+ (async()=>{for(const[s,k]of G){await sleep(reduced?0:1050);gt+=1.05;gc+=k;
+   $("#glog").innerHTML+="· "+s+"<br>";
+   $("#gt").textContent=gt.toFixed(1);$("#gc").textContent=gc;}
+  $("#glog").innerHTML+="<span class='good'>완료</span>";gDone=true;fin();})();
+ (async()=>{for(const s of C){$("#clog").innerHTML+="<span class='p'>C:\\work&gt;</span> ";
+   for(const ch of s){$("#clog").innerHTML+=ch;await sleep(reduced?0:45);ct+=.045;
+    $("#ct").textContent=ct.toFixed(1);}
+   $("#clog").innerHTML+="<br>";cc++;$("#cc").textContent=cc;await sleep(reduced?0:260);ct+=.26;}
+  $("#clog").innerHTML+="<span class='p'>완료</span>";cDone=true;fin();})();
+ function fin(){if(gDone&&cDone){racing=false;$("#btnGo").disabled=false;
+  $("#v").innerHTML=`<span class='good'>결과물은 동일</span> — 그러나 과정은 GUI <b>${$("#gc").textContent}클릭 / ${$("#gt").textContent}초</b> vs CLI <b>${C.length}줄 / ${$("#ct").textContent}초</b>. 워크시트 ① 소요 시간 칸에 <b>내 실제 기록</b>을 적고, 이 차이가 100개가 되면 어떻게 될지 「100배 스케일」로 이어가세요.`;}}});
+})();
+</script></body></html>

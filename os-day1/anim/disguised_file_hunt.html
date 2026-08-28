@@ -1,0 +1,60 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>위장 파일 찾기 — 이중 확장자 사냥</title><link rel="stylesheet" href="style.css"></head><body>
+<div class="wrap">
+<a class="back" href="index.html">← 애니메이션 목록</a>
+<header><div class="eyebrow">OS · Day 1 · S4 도구</div>
+<h1>위장 파일 찾기 — <b>이중 확장자 사냥</b></h1>
+<p class="sub">이 중 실행 파일 2개가 문서·이미지로 위장해 있습니다. 1단계는 감으로(대부분 실패하도록 설계됨), 2단계는 확장자 표시를 켜고.</p></header>
+
+<section class="panel">
+<div class="row">
+<button class="run sec" id="btnShow" aria-pressed="false">확장자 표시: OFF</button>
+<span class="sub" style="margin:0">— File Explorer의 「파일 확장명」 체크박스와 같은 스위치</span>
+</div></section>
+
+<section class="board">
+<div id="list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:9px"></div>
+</section>
+<div class="verdict" id="v">의심되는 파일을 클릭하세요 — 아이콘과 이름만 보입니다</div>
+</div>
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const F=[
+ {s:"회의록.txt",r:"회의록.txt",i:"📝",bad:false},
+ {s:"가족사진.jpg",r:"가족사진.jpg",i:"🖼️",bad:false},
+ {s:"이력서.pdf",r:"이력서.pdf.exe",i:"📕",bad:true},
+ {s:"발표자료.pptx",r:"발표자료.pptx",i:"📊",bad:false},
+ {s:"견적서.xlsx",r:"견적서.xlsx",i:"📈",bad:false},
+ {s:"안내문.hwp",r:"안내문.hwp",i:"📄",bad:false},
+ {s:"무료쿠폰.jpg",r:"무료쿠폰.jpg.exe",i:"🖼️",bad:true},
+ {s:"노래.mp3",r:"노래.mp3",i:"🎵",bad:false}];
+let on=false,found=0;
+const list=$("#list");
+F.forEach((f,idx)=>{
+ const c=document.createElement("button");c.className="chip";c.dataset.i=idx;
+ c.style.cssText="text-align:left;border-radius:12px;padding:11px 13px";
+ c.innerHTML=`<span style="font-size:19px">${f.i}</span> <span class="nm">${f.s}</span>`;
+ c.addEventListener("click",()=>{
+  if(!on){c.classList.add("shake");setTimeout(()=>c.classList.remove("shake"),400);
+   $("#v").innerHTML="<span class='bad'>판별 불가.</span> 아이콘도 이름도 정상처럼 보입니다 — 이것이 위장의 핵심. <b>확장자 표시를 켜세요.</b>";return;}
+  if(f.bad&&!c.classList.contains("caught")){c.classList.add("caught");
+   c.style.borderColor="var(--hot)";c.style.color="var(--hot)";found++;
+   $("#v").innerHTML=found<2
+    ?"<span class='good'>하나 발견!</span> 진짜 확장자는 <b>맨 끝</b> — 위장 파일이 하나 더 있습니다."
+    :"<span class='good'>둘 다 발견!</span> <b>.pdf.exe · .jpg.exe</b> — 끝이 .exe면 실행 파일입니다. 확장자 표시를 항상 켜 두는 이유이며, 워크시트 실습 4 「여는 프로그램」 칸을 실제 PC에서 확인할 때도 같은 스위치를 씁니다.";}
+  else if(!f.bad){c.classList.add("shake");setTimeout(()=>c.classList.remove("shake"),400);
+   $("#v").innerHTML="<span class='bad'>정상 파일.</span> 확장자를 <b>끝까지</b> 읽어 보세요 — .exe로 끝나는 것이 사냥감.";}});
+ list.appendChild(c);});
+$("#btnShow").addEventListener("click",()=>{
+ on=!on;
+ $("#btnShow").textContent="확장자 표시: "+(on?"ON":"OFF");
+ $("#btnShow").setAttribute("aria-pressed",on);
+ $("#btnShow").classList.toggle("sec",!on);
+ list.querySelectorAll(".chip").forEach((c,i)=>{
+  c.querySelector(".nm").textContent=on?F[i].r:F[i].s;
+  c.style.boxShadow=(on&&F[i].bad&&!c.classList.contains("caught"))?"0 0 0 2px var(--warnc)":"";});
+ $("#v").innerHTML=on?"확장자가 드러났습니다 — <b>끝이 .exe인 것</b>을 찾아 클릭하세요":"의심되는 파일을 클릭하세요 — 아이콘과 이름만 보입니다";});
+})();
+</script></body></html>

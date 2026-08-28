@@ -1,0 +1,80 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>명령 미리보기 — mkdir · copy · move · ren · del</title><link rel="stylesheet" href="style.css"></head><body>
+<div class="wrap">
+<a class="back" href="index.html">← 애니메이션 목록</a>
+<header><div class="eyebrow">OS · Day 1 · S6 도구 · CMD 표기 — Shell 확정 시 고정</div>
+<h1>명령 미리보기 — <b>실행 전에 결과를 예측</b></h1>
+<p class="sub">워크시트 실습 6에서 적은 5개 명령을 순서대로 재생하며 대조하세요. <b>미리보기(점선) → 실행(실체화)</b> 2단계 — 실전에서 del 앞에 dir을 치는 습관과 같은 원리입니다.</p></header>
+
+<section class="panel">
+<div class="presets"><span class="cap">명령 선택 — 워크시트 순서대로</span>
+<button class="chip on" data-c="0">① mkdir → <b>생성</b></button>
+<button class="chip" data-c="1">② copy → <b>원본 유지</b></button>
+<button class="chip" data-c="2">③ move → <b>원본 사라짐</b></button>
+<button class="chip" data-c="3">④ ren → <b>move와 같은 원리</b></button>
+<button class="chip" data-c="4">⑤ del → <b>복원 불가</b></button>
+</div>
+<div class="term" id="line" style="margin-top:10px;min-height:0"></div>
+<div class="row" style="margin-top:10px">
+<button class="run sec" id="btnPrev">👁 미리보기</button>
+<button class="run" id="btnExec" disabled>▶ 실행</button>
+<button class="run sec" id="btnReset">이 단계 초기화</button>
+</div></section>
+
+<section class="board tree" id="tree"></section>
+<div class="verdict" id="v">현재 위치 <b>C:\work</b> — 미리보기를 먼저 눌러 무슨 일이 벌어질지 확인하세요</div>
+</div>
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const S=[
+ {line:"mkdir backup",base:{f:["report.txt","photo.jpg"],b:null},
+  ghost:"📁 backup (점선) — work 안에 생성 예정",
+  after:{f:["report.txt","photo.jpg"],b:[]},
+  done:"<span class='good'>실행 완료.</span> 📁 backup 생성 — 워크시트 ①과 명령이 같은지 대조."},
+ {line:"copy report.txt backup\\",base:{f:["report.txt","photo.jpg"],b:[]},
+  ghost:"report.txt의 <b>복사본</b>(점선)이 backup으로 — 원본은 남음",
+  after:{f:["report.txt","photo.jpg"],b:["report.txt"]},
+  done:"<span class='good'>실행 완료.</span> 원본과 사본이 <b>둘 다</b> 존재 — copy의 정의."},
+ {line:"move photo.jpg backup\\",base:{f:["report.txt","photo.jpg"],b:["report.txt"]},
+  ghost:"photo.jpg가 backup으로 <b>이동</b> — 원래 자리에서 사라짐",
+  after:{f:["report.txt"],b:["report.txt","photo.jpg"]},
+  done:"<span class='good'>실행 완료.</span> 원래 자리에 <b>남지 않음</b> — copy와의 결정적 차이."},
+ {line:"ren report.txt final.txt",base:{f:["report.txt"],b:["report.txt","photo.jpg"]},
+  ghost:"report.txt → final.txt — <b>자리는 그대로, 이름만</b> (같은 directory 안으로의 move)",
+  after:{f:["final.txt"],b:["report.txt","photo.jpg"]},
+  done:"<span class='good'>실행 완료.</span> ren은 「같은 directory 안으로의 move」 — 두 명령이 같은 원리인 이유."},
+ {line:"del final.txt",base:{f:["final.txt"],b:["report.txt","photo.jpg"]},
+  ghost:"⚠️ final.txt 삭제 예정 — <b>휴지통 없이 즉시, 복원 불가</b>",
+  after:{f:[],b:["report.txt","photo.jpg"]},
+  done:"<span class='bad'>실행 완료 — 되돌릴 수 없습니다.</span> 그래서 del 앞에는 항상 dir로 대상 확인. 워크시트 ② 서술의 재료."}];
+let ci=0,pv=false;
+function drawFS(st,ghost){
+ let h="📁 work<ul>";
+ st.f.forEach(f=>h+=`<li>📄 ${f}</li>`);
+ if(st.b!==null){h+="<li>📁 backup<ul>";st.b.forEach(f=>h+=`<li>📄 ${f}</li>`);
+  if(!st.b.length)h+="<li style='color:var(--dim)'>(비어 있음)</li>";h+="</ul></li>";}
+ h+="</ul>";
+ if(ghost)h+=`<div class="ghost pop" style="margin-top:10px;display:inline-block;font-size:12.5px">${ghost}</div>`;
+ $("#tree").innerHTML=h;}
+function load(){const s=S[ci];pv=false;
+ $("#line").innerHTML="<span class='p'>C:\\work&gt;</span> "+s.line;
+ drawFS(JSON.parse(JSON.stringify(s.base)),null);
+ $("#btnExec").disabled=true;
+ $("#v").innerHTML="현재 위치 <b>C:\\work</b> — 미리보기를 먼저 눌러 무슨 일이 벌어질지 확인하세요";
+ document.querySelectorAll("[data-c]").forEach(c=>c.classList.toggle("on",+c.dataset.c===ci));
+ document.querySelectorAll("[data-c]").forEach(c=>{
+  c.style.borderColor=+c.dataset.c===ci?"var(--accent)":"";});}
+$("#btnPrev").addEventListener("click",()=>{const s=S[ci];pv=true;
+ drawFS(JSON.parse(JSON.stringify(s.base)),s.ghost);$("#btnExec").disabled=false;
+ $("#v").innerHTML="미리보기 — 점선이 <b>실행하면 벌어질 일</b>입니다. 예상과 같으면 실행.";});
+$("#btnExec").addEventListener("click",()=>{if(!pv)return;const s=S[ci];
+ drawFS(JSON.parse(JSON.stringify(s.after)),null);
+ $("#v").innerHTML=s.done+(ci<4?" 다음 명령으로 진행하세요.":"");
+ $("#btnExec").disabled=true;});
+$("#btnReset").addEventListener("click",load);
+document.querySelectorAll("[data-c]").forEach(c=>c.addEventListener("click",()=>{ci=+c.dataset.c;load();}));
+load();
+})();
+</script></body></html>

@@ -1,0 +1,61 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>따옴표 실험실 — Shell이 공백을 자르는 순간</title><link rel="stylesheet" href="style.css"></head><body>
+<div class="wrap">
+<a class="back" href="index.html">← 애니메이션 목록</a>
+<header><div class="eyebrow">OS · Day 1 · S6 도구 · CMD 표기 — Shell 확정 시 고정</div>
+<h1>따옴표 실험실 — <b>Shell이 공백을 자르는 순간</b></h1>
+<p class="sub">Shell은 공백을 <b>인자 구분자</b>로 읽습니다. 같은 명령을 따옴표 없이/있이 실행해 토큰이 잘리는 과정을 봅니다. 워크시트 실습 6 ⑤의 검산 도구.</p></header>
+
+<section class="panel">
+<div class="row">
+<button class="run sec" id="btnQ" aria-pressed="false">따옴표: OFF</button>
+<button class="run" id="btnRun">▶ 실행</button>
+</div>
+<div class="term" id="line" style="margin-top:10px;min-height:0"></div>
+<div class="presets"><span class="cap">프리셋</span>
+<button class="chip" data-q="0">따옴표 없이 → <b>directory 2개</b></button>
+<button class="chip" data-q="1">따옴표 씌우고 → <b>directory 1개</b></button>
+</div></section>
+
+<section class="board">
+<div class="presets" style="margin:0 0 8px"><span class="cap">Shell의 해석 (토큰)</span></div>
+<div id="tok" style="min-height:46px"></div>
+<div class="presets" style="margin:12px 0 8px"><span class="cap">결과</span></div>
+<div class="tree" id="res" style="min-height:46px;color:var(--dim)">실행을 눌러 보세요</div>
+</section>
+<div class="verdict" id="v">따옴표는 <b>공백을 묶어 하나의 인자</b>로 만듭니다 — 두 결과를 반복 대조하세요.</div>
+</div>
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const STEP=reduced?0:380;
+let q=false,running=false;
+function drawLine(){$("#line").innerHTML="<span class='p'>C:\\work&gt;</span> mkdir "+(q?'"My Folder"':"My Folder");
+ $("#btnQ").textContent="따옴표: "+(q?"ON":"OFF");
+ $("#btnQ").setAttribute("aria-pressed",q);
+ $("#tok").innerHTML="";$("#res").innerHTML="실행을 눌러 보세요";$("#res").style.color="var(--dim)";}
+$("#btnQ").addEventListener("click",()=>{if(!running){q=!q;drawLine();}});
+async function run(){
+ if(running)return;running=true;$("#btnRun").disabled=true;
+ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+ const toks=q?["mkdir","My Folder"]:["mkdir","My","Folder"];
+ $("#tok").innerHTML="";
+ for(let i=0;i<toks.length;i++){
+  $("#tok").insertAdjacentHTML("beforeend",
+   `<span class="chip pop" style="cursor:default;border-color:${i===0?"var(--amber)":"var(--accent)"}">${i===0?"명령":"인자"+i}: <b style="color:var(--ink)">${toks[i]}</b></span> `);
+  await sleep(STEP);}
+ await sleep(STEP);
+ const r=$("#res");r.style.color="var(--ink)";
+ if(q){r.innerHTML="📁 <b>My Folder</b> — directory <b>1개</b> 정상 생성 <span class='good'>✓</span>";
+  $("#v").innerHTML="<span class='good'>판정: 의도대로.</span> 따옴표가 공백을 묶어 「My Folder」가 <b>하나의 인자</b>로 전달됐습니다.";}
+ else{r.innerHTML="📁 <b>My</b> &nbsp; 📁 <b>Folder</b> — directory <b>2개</b> 생성됨 <span class='bad'>✗</span>";
+  $("#v").innerHTML="<span class='bad'>판정: 의도와 다름.</span> Shell이 공백에서 잘라 <b>인자 2개</b>로 읽었습니다 — mkdir은 인자마다 directory를 만드니 2개가 생겼습니다. 따옴표를 켜고 재실행해 대조하세요.";}
+ running=false;$("#btnRun").disabled=false;}
+$("#btnRun").addEventListener("click",run);
+document.querySelectorAll("[data-q]").forEach(c=>c.addEventListener("click",()=>{
+ if(running)return;q=c.dataset.q==="1";drawLine();run();}));
+drawLine();
+})();
+</script></body></html>

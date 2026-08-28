@@ -1,0 +1,46 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>부품 복습 퍼즐 — 4대 부품 × 비유</title><link rel="stylesheet" href="style.css"></head><body>
+<div class="wrap">
+<a class="back" href="index.html">← 애니메이션 목록</a>
+<header><div class="eyebrow">OS · Day 1 · S1 도구</div>
+<h1>부품 복습 퍼즐 — <b>4대 부품 × 비유</b></h1>
+<p class="sub">앞 과목의 기억 소환 — 부품을 먼저 클릭하고 짝이 되는 비유를 클릭하세요. 워크시트 실습 1을 채점한 뒤 손 풀기로 사용합니다.</p></header>
+
+<section class="panel" aria-label="퍼즐">
+<div class="row" style="align-items:stretch">
+<div style="flex:1;min-width:220px"><div class="presets"><span class="cap">부품</span></div><div id="left"></div></div>
+<div style="flex:1;min-width:220px"><div class="presets"><span class="cap">비유</span></div><div id="right"></div></div>
+</div></section>
+
+<div class="cards" id="doneCards"></div>
+<div class="verdict" id="v">완성한 짝: <b>0 / 4</b></div>
+</div>
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const PAIRS=[["CPU","일하는 손","계산과 명령 처리"],["Memory (RAM)","작업대","지금 쓰는 것을 올려두는 곳"],
+["Storage (SSD/HDD)","창고","꺼도 남는 곳 — 파일 보관"],["I/O 장치","출입구","컴퓨터로 들어가고 나오는 문"]];
+let sel=null,done=0;
+function chip(box,txt,side){const b=document.createElement("button");b.className="chip";
+ b.style.cssText="display:block;width:100%;text-align:left;margin:6px 0";b.textContent=txt;
+ b.addEventListener("click",()=>{
+  if(b.classList.contains("used"))return;
+  if(side==="L"){document.querySelectorAll("#left .chip").forEach(x=>x.style.borderColor="");
+   sel=b;b.style.borderColor="var(--accent)";return;}
+  if(!sel){b.classList.add("shake");setTimeout(()=>b.classList.remove("shake"),400);return;}
+  const p=PAIRS.find(p=>p[0]===sel.textContent);
+  if(p[1]===txt){sel.classList.add("used");b.classList.add("used");done++;
+   const c=document.createElement("div");c.className="card ok pop";
+   c.innerHTML=`<div class="top"><span class="name">${p[0]}</span><span class="lamp"></span></div>
+   <div class="full">${p[1]}</div><div class="why">${p[2]}</div>`;
+   $("#doneCards").appendChild(c);sel=null;
+   $("#v").innerHTML=done<4?`완성한 짝: <b>${done} / 4</b>`
+    :`<span class="good">4쌍 완성!</span> 이 부품들에게 일을 시키고 자원을 나눠 주는 소프트웨어 — 그것이 오늘의 주인공, <b>Operating System</b>입니다.`;}
+  else{b.classList.add("shake");setTimeout(()=>b.classList.remove("shake"),400);
+   $("#v").innerHTML=`<span class="bad">그 짝이 아닙니다.</span> ${sel.textContent}의 비유를 다시 떠올려 보세요 — 힌트: 역할을 먼저 생각하면 비유가 따라옵니다.`;}});
+ box.appendChild(b);}
+PAIRS.forEach(p=>chip($("#left"),p[0],"L"));
+[...PAIRS.map(p=>p[1])].sort(()=>Math.random()-.5).forEach(m=>chip($("#right"),m,"R"));
+})();
+</script></body></html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>가상 Terminal — cd · dir · pwd 미션</title><link rel="stylesheet" href="style.css"></head><body>
+<div class="wrap">
+<a class="back" href="index.html">← 애니메이션 목록</a>
+<header><div class="eyebrow">OS · Day 1 · S5 도구 · CMD 표기(ls·pwd 허용) — Shell 확정 시 고정</div>
+<h1>가상 Terminal — <b>cd · dir · pwd 미션</b></h1>
+<p class="sub">워크시트 실습 5에서 적은 명령을 <b>여기에 직접 입력해 검산</b>하세요. 오른쪽 미니맵에서 현재 위치가 실제로 움직입니다. 미션 3곳 방문이 목표.</p></header>
+
+<div class="row" style="align-items:stretch;gap:14px">
+<section class="panel" style="flex:1.2;min-width:300px;margin:0">
+<div class="term" id="out" style="height:270px;overflow-y:auto" aria-live="polite"></div>
+<div class="term" style="margin-top:8px;display:flex;gap:6px">
+<span class="p" id="ps">C:\Users\student&gt;</span><input id="cmd" autocomplete="off" spellcheck="false" aria-label="명령 입력"></div>
+</section>
+<section class="panel" style="flex:1;min-width:260px;margin:0">
+<div class="presets" style="margin:0 0 8px"><span class="cap">미니맵 — 현재 위치</span></div>
+<div class="tree" id="map" style="max-height:190px;overflow:auto"></div>
+<div class="presets" style="margin-top:10px"><span class="cap">미션 — 3곳 방문</span></div>
+<div id="mis" style="font-size:13px;line-height:2"></div>
+</section>
+</div>
+<div class="verdict" id="v" style="margin-top:14px">사용 가능: <b>cd · dir(ls) · pwd · cls</b> — 에러가 나면 대소문자 → separator → 공백 순으로 점검</div>
+</div>
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const VFS={"C:":{"Users":{"student":{"Documents":{"_f":["report.txt","memo.txt"]},"Downloads":{"_f":["setup.exe"]},"Pictures":{"trip":{"_f":["sea.jpg"]}}}},"Windows":{"_f":["notepad.exe"]},"Program Files":{}}};
+let cwd=["C:","Users","student"];
+const MIS=[{p:["C:","Users","student","Pictures","trip"],d:false,l:"C:\\Users\\student\\Pictures\\trip"},
+{p:["C:","Windows"],d:false,l:"C:\\Windows"},
+{p:["C:","Users","student","Documents"],d:false,l:"C:\\Users\\student\\Documents"}];
+const node=p=>{let n=VFS;for(const s of p){n=n[s];if(!n)return null;}return n;};
+const abs=a=>a[0]+"\\"+a.slice(1).join("\\");
+function print(h){const o=$("#out");o.innerHTML+=h+"<br>";o.scrollTop=o.scrollHeight;}
+function map(){
+ function r(p){const n=node(p);const c=p.join("|")===cwd.join("|");
+  let h=`<span class="nd ${c?"cur":""}">📁 ${p[p.length-1]}${c?" ◀":""}</span>`;
+  const ds=Object.keys(n).filter(k=>k!=="_f").map(d=>"<li>"+r([...p,d])+"</li>").join("");
+  if(ds)h+="<ul>"+ds+"</ul>";return h;}
+ $("#map").innerHTML=r(["C:"]);
+ $("#mis").innerHTML=MIS.map(m=>`${m.d?"✅":"⬜"} <span class="mono" style="font-size:11.5px">${m.l}</span>`).join("<br>");
+ MIS.forEach(m=>{if(!m.d&&m.p.join("|")===cwd.join("|")){m.d=true;
+  print("<span class='p'>🎯 미션 지점 도착!</span>");map();}});
+ if(MIS.every(m=>m.d))$("#v").innerHTML="<span class='good'>미션 3곳 완료!</span> 워크시트 실습 5 ② Prompt 칸은 <b>실제 Terminal</b>을 열어 옮겨 적으세요 — 이 가상 창의 Prompt와 형태가 같은지도 비교해 보세요.";}
+function run(line){
+ print("<span class='p'>"+abs(cwd)+"&gt;</span> "+line.replace(/</g,"&lt;"));
+ const[cmd,...rest]=line.trim().split(/\s+/);const arg=rest.join(" ");
+ if(!cmd)return;
+ if(cmd==="cls"){$("#out").innerHTML="";return;}
+ if(cmd==="pwd"||(cmd==="cd"&&!arg)){print(abs(cwd));return;}
+ if(cmd==="dir"||cmd==="ls"){const n=node(cwd);
+  const ds=Object.keys(n).filter(k=>k!=="_f").map(d=>"&lt;DIR&gt;  "+d);
+  const fs=(n._f||[]).map(f=>"       "+f);
+  print([...ds,...fs].join("<br>")||"(비어 있음)");return;}
+ if(cmd==="cd"){const a=arg.replace(/^"|"$/g,"");
+  let t=/^[A-Za-z]:\\/.test(a)?a.split("\\").filter(Boolean).map((s,i)=>i===0?s.toUpperCase():s)
+   :[...cwd,...a.split("\\").filter(Boolean)];
+  const res=[];for(const s of t){if(s==="..")res.pop();else res.push(s);}
+  if(res.length&&node(res)){cwd=res;$("#ps").textContent=abs(cwd)+">";map();}
+  else print("<span class='err'>지정된 경로를 찾을 수 없습니다.</span> (점검: 대소문자 → separator(\\) → 공백·따옴표)");
+  return;}
+ print("<span class='err'>'"+cmd+"'은(는) 인식되지 않는 명령입니다.</span> 사용 가능: cd · dir · ls · pwd · cls");}
+$("#cmd").addEventListener("keydown",e=>{if(e.key==="Enter"){run(e.target.value);e.target.value="";}});
+print("가상 Terminal — 워크시트에 적은 명령을 그대로 입력해 검산하세요");
+map();
+})();
+</script></body></html>

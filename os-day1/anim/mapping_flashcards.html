@@ -1,0 +1,51 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>대응표 뒤집기 — GUI 동작 ↔ CLI 명령</title><link rel="stylesheet" href="style.css"></head><body>
+<div class="wrap">
+<a class="back" href="index.html">← 애니메이션 목록</a>
+<header><div class="eyebrow">OS · Day 1 · S8 도구 · CMD 표기 — Shell 확정 시 고정</div>
+<h1>대응표 뒤집기 — <b>GUI 동작 ↔ CLI 명령</b></h1>
+<p class="sub">워크시트 실습 9를 채점한 뒤 최종 점검 — 카드를 클릭하면 대응하는 CLI 명령이 뒤집혀 나옵니다.</p></header>
+
+<section class="panel"><div class="row">
+<button class="run sec" id="btnShuffle">🔀 섞고 전부 앞면으로</button>
+</div></section>
+
+<section class="board">
+<div id="cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px"></div>
+</section>
+<div class="verdict" id="v">뒤집은 카드: <b>0 / 5</b></div>
+</div>
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const C=[["새 폴더 만들기","mkdir","새 이름의 directory 생성"],
+["복사 → 붙여넣기","copy","원본 유지, 사본 생성"],
+["잘라내기 → 붙여넣기","move","원래 자리에서 사라짐"],
+["이름 바꾸기","ren","자리 이동 없는 move"],
+["삭제","del","휴지통 없이 즉시 — 복원 불가"]];
+let flipped=0;
+function draw(order){
+ const box=$("#cards");box.innerHTML="";flipped=0;
+ $("#v").innerHTML="뒤집은 카드: <b>0 / 5</b>";
+ order.forEach(i=>{const[g,c,note]=C[i];
+  const d=document.createElement("button");
+  d.style.cssText="perspective:600px;height:118px;background:none;border:0;cursor:pointer;padding:0;font-family:inherit";
+  d.setAttribute("aria-label",g+" 카드");
+  d.innerHTML=`<div class="in" style="position:relative;width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d">
+   <div style="position:absolute;inset:0;backface-visibility:hidden;background:var(--panel);border:1px solid var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--ink);font-weight:800;font-size:14.5px;padding:8px">${g}</div>
+   <div style="position:absolute;inset:0;backface-visibility:hidden;transform:rotateY(180deg);background:var(--panel2);border:1px solid var(--amber);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
+   <span class="mono" style="color:var(--amber);font-size:19px;font-weight:800">${c}</span>
+   <span style="color:var(--dim);font-size:11.5px">${note}</span></div></div>`;
+  let f=false;
+  d.addEventListener("click",()=>{f=!f;
+   d.querySelector(".in").style.transform=f?"rotateY(180deg)":"";
+   if(f){flipped++;
+    $("#v").innerHTML=flipped>=5
+     ?"<span class='good'>5쌍 확인 완료!</span> 이제 짝에게 「GUI와 CLI가 같은 OS를 부르는 두 창구인 이유」를 1분 설명하고, 워크시트에서 체크 → <b>도착점 완료 화면</b>을 만드세요."
+     :`뒤집은 카드: <b>${flipped} / 5</b>`;}});
+  box.appendChild(d);});}
+draw([0,1,2,3,4]);
+$("#btnShuffle").addEventListener("click",()=>draw([0,1,2,3,4].sort(()=>Math.random()-.5)));
+})();
+</script></body></html>

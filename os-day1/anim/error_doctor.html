@@ -1,0 +1,49 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>에러 진단기 — 실패 원인 5문항</title><link rel="stylesheet" href="style.css"></head><body>
+<div class="wrap">
+<a class="back" href="index.html">← 애니메이션 목록</a>
+<header><div class="eyebrow">OS · Day 1 · S5 도구 · CMD 표기 — Shell 확정 시 고정</div>
+<h1>에러 진단기 — <b>실패 원인 5문항</b></h1>
+<p class="sub">점검 루틴은 항상 같은 순서: <b>① 오타·대소문자 → ② separator(\) → ③ 공백·따옴표</b>. 원인을 맞히면 고쳐진 명령이 타이핑되어 성공합니다.</p></header>
+<div id="qs"></div>
+<div class="verdict" id="v">정답: <b>0 / 5</b></div>
+</div>
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const QS=[
+ {c:"cd C:\\Users\\studnet\\Documents",e:"지정된 경로를 찾을 수 없습니다.",
+  o:["directory 이름 오타 (studnet)","separator가 잘못됨","따옴표가 없어서"],a:0,f:"cd C:\\Users\\student\\Documents"},
+ {c:"cd C:/Users/student",e:"경로 해석 오류 (일부 Shell)",
+  o:["cd 뒤에는 파일명이 와야 한다","separator가 / — Windows는 \\","drive 문자가 빠졌다"],a:1,f:"cd C:\\Users\\student"},
+ {c:"cd My Folder",e:"지정된 경로를 찾을 수 없습니다.",
+  o:["My라는 drive가 없다","폴더가 숨김 상태다","공백에서 두 인자로 잘림 — 따옴표 필요"],a:2,f:'cd "My Folder"'},
+ {c:"dri",e:"'dri'은(는) 내부 또는 외부 명령이 아닙니다.",
+  o:["명령어 오타 — dir","권한이 없다","directory가 비어 있다"],a:0,f:"dir"},
+ {c:"cd ..\\..\\..\\..",e:"(에러 없이 Root에서 멈춤 — 의도와 다른 결과)",
+  o:["..은 하위로 내려가는 표기다","Root 위로는 못 감 — .. 개수 과다","separator 오류"],a:1,f:"cd ..\\.."}];
+let sc=0;
+QS.forEach(q=>{
+ const p=document.createElement("section");p.className="panel";
+ p.innerHTML=`<div class="term"><span class="p">C:\\&gt;</span> ${q.c.replace(/</g,"&lt;")}<br><span class="err">${q.e}</span></div>
+ <div class="presets" style="margin-top:10px">${q.o.map((o,i)=>
+  `<button class="chip" data-i="${i}" style="width:100%;text-align:left">${"①②③"[i]} ${o}</button>`).join("")}</div>
+ <div class="fixbox" style="display:none;margin-top:10px"></div>`;
+ p.querySelectorAll(".chip").forEach(b=>b.addEventListener("click",()=>{
+  if(+b.dataset.i===q.a){
+   p.querySelectorAll(".chip").forEach(x=>x.classList.add("used"));
+   b.classList.remove("used");b.style.borderColor="var(--good)";b.style.color="var(--good)";
+   sc++;$("#v").innerHTML=sc<5?`정답: <b>${sc} / 5</b>`
+    :"<span class='good'>5문항 완료!</span> 이 점검 루틴(오타 → separator → 따옴표)을 실제 Terminal에서 에러를 만날 때마다 그대로 쓰세요.";
+   const f=p.querySelector(".fixbox");f.style.display="block";
+   f.innerHTML=`<div class="term"><span class="p">C:\\&gt;</span> <span class="tt"></span></div>`;
+   const tt=f.querySelector(".tt");let k=0;
+   if(reduced){tt.textContent=q.f;tt.insertAdjacentHTML("afterend","<br><span class='p'>✓ 성공</span>");}
+   else{const iv=setInterval(()=>{tt.textContent+=q.f[k++];
+    if(k>=q.f.length){clearInterval(iv);tt.insertAdjacentHTML("afterend","<br><span class='p'>✓ 성공</span>");}},48);}}
+  else{b.classList.add("shake");setTimeout(()=>b.classList.remove("shake"),400);}}));
+ $("#qs").appendChild(p);});
+})();
+</script></body></html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>주소 조립 게임 — 절대 → 상대</title><link rel="stylesheet" href="style.css"></head><body>
+<div class="wrap">
+<a class="back" href="index.html">← 애니메이션 목록</a>
+<header><div class="eyebrow">OS · Day 1 · S3 도구</div>
+<h1>주소 조립 게임 — <b>절대 → 상대 2라운드</b></h1>
+<p class="sub">path 조각을 Root부터 순서대로 클릭해 주소를 완성합니다. 틀린 조각은 <b>왜 아닌지</b>를 알려줍니다.</p></header>
+
+<section class="panel">
+<div id="desc" class="sub" style="margin:0 0 10px;color:var(--ink)"></div>
+<div class="mono" id="build" style="background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:11px 13px;font-size:15px;min-height:44px;color:var(--amber)" aria-live="polite">&nbsp;</div>
+<div id="chips" style="margin-top:12px"></div>
+<div class="row" style="margin-top:10px"><button class="run sec" id="btnRe">이 라운드 다시</button></div>
+</section>
+<div class="verdict" id="v">라운드 1부터 시작합니다</div>
+</div>
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const R=[
+ {desc:"라운드 1 · 절대 경로 — 목표: <b>report.txt</b> (경로: C:\\ → Users → student → Documents)",
+  ans:["C:","\\","Users","\\","student","\\","Documents","\\","report.txt"],
+  extra:["Downloads","Windows","/"],
+  why:{"/":"그건 macOS·Linux의 separator — Windows는 \\","Downloads":"report.txt는 Documents 안에 있습니다","Windows":"사용자 파일은 Users 아래 — Windows는 시스템 폴더"}},
+ {desc:"라운드 2 · 상대 경로 — Working Directory: <b>C:\\Users\\student\\Downloads</b> · 같은 report.txt를 상대 경로로",
+  ans:["..","\\","Documents","\\","report.txt"],
+  extra:["C:","student","."],
+  why:{"C:":"상대 경로는 Root(C:\\)에서 시작하지 않습니다 — 지금 위치가 기준","student":"..으로 이미 student까지 올라왔습니다 — 다시 들어갈 필요 없음",".":".은 「지금 위치」 — 상위로 가려면 .."}}];
+let ri=0,qi=0;
+function draw(){const r=R[ri];qi=0;
+ $("#desc").innerHTML=r.desc;$("#build").textContent="";
+ $("#v").innerHTML=ri===0?"Root(C:\\)부터 — separator도 하나의 조각입니다":"현재 위치에서 출발 — 첫 조각은 무엇일까요";
+ const box=$("#chips");box.innerHTML="";
+ [...r.ans,...r.extra].map(v=>({v,k:Math.random()})).sort((a,b)=>a.k-b.k).forEach(o=>{
+  const c=document.createElement("button");c.className="chip";c.textContent=o.v;
+  c.addEventListener("click",()=>{
+   const need=r.ans[qi];
+   if(o.v===need&&!c.classList.contains("used")){c.classList.add("used");qi++;
+    $("#build").textContent+=o.v;$("#build").classList.add("pop");
+    setTimeout(()=>$("#build").classList.remove("pop"),300);
+    if(qi===r.ans.length){
+     if(ri===0){$("#v").innerHTML="<span class='good'>라운드 1 완성!</span> 같은 파일을 이번엔 <b>상대 경로</b>로 — 기준 위치가 주어집니다";
+      ri=1;setTimeout(draw,1500);}
+     else $("#v").innerHTML="<span class='good'>2라운드 모두 완성!</span> 같은 파일, 다른 주소 — <b>기준이 바뀌면 주소가 바뀐다</b>는 것이 상대 경로의 전부입니다. 워크시트 실습 3 ④를 다시 확인하세요.";}}
+   else{c.classList.add("shake");setTimeout(()=>c.classList.remove("shake"),400);
+    const why=r.why[o.v];
+    $("#v").innerHTML=`<span class='bad'>「${o.v}」 아님.</span> ${why?why:`지금 자리에는 「${need}」 — 순서대로!`}`;}});
+  box.appendChild(c);});}
+$("#btnRe").addEventListener("click",draw);draw();
+})();
+</script></body></html>

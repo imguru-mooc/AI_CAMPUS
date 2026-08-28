@@ -1,0 +1,69 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Tree 탐험기 — Path 실시간 조립</title><link rel="stylesheet" href="style.css"></head><body>
+<div class="wrap">
+<a class="back" href="index.html">← 애니메이션 목록</a>
+<header><div class="eyebrow">OS · Day 1 · S3 도구</div>
+<h1>Tree 탐험기 — <b>path 실시간 조립</b></h1>
+<p class="sub">노드를 클릭하며 이동하면 상단 path가 조립됩니다. 워크시트 실습 3 채점 후, 같은 파일을 여기서 클릭해 <b>내 답과 화면의 path를 대조</b>하세요.</p></header>
+
+<section class="panel">
+<div class="mono" id="pathbar" style="background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:11px 13px;font-size:15px" aria-live="polite">C:\</div>
+<div class="row" style="margin-top:10px">
+<button class="run" id="btnRel">📍 여기서부터 (상대 경로 모드)</button>
+<button class="run sec" id="btnAbs">절대 경로 모드로</button></div>
+<div class="presets"><span class="cap">검산 프리셋 — 워크시트 문항의 파일로 바로 이동</span>
+<button class="chip" data-t="C:|Users|student|Documents|report.txt">① report.txt</button>
+<button class="chip" data-t="C:|Users|student|Pictures|trip|sea.jpg">② sea.jpg</button>
+<button class="chip" data-t="C:|Windows|notepad.exe">③ notepad.exe</button>
+<button class="chip" data-t="rel">④ 상대: Downloads 기준 → report.txt</button>
+</div></section>
+
+<section class="board tree" id="tree"></section>
+<div class="verdict" id="v">현재 위치: <b>C:\ (Root)</b></div>
+</div>
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const FS={name:"C:",dirs:{
+ "Users":{dirs:{"student":{dirs:{
+  "Documents":{dirs:{},files:["report.txt","memo.txt"]},
+  "Downloads":{dirs:{},files:["setup.exe"]},
+  "Pictures":{dirs:{"trip":{dirs:{},files:["sea.jpg"]}},files:[]}
+ },files:[]}},files:[]},
+ "Windows":{dirs:{},files:["notepad.exe"]}},files:[]};
+let cur=["C:"],wd=null;
+const node=p=>{let n=FS;for(let i=1;i<p.length;i++)n=n.dirs[p[i]];return n;};
+const abs=p=>p[0]+"\\"+p.slice(1).join("\\");
+function rel(from,to){let i=0;while(i<from.length&&i<to.length&&from[i]===to[i])i++;
+ const seg=[...Array(from.length-i).fill(".."),...to.slice(i)];
+ return seg.length?seg.join("\\"):".";}
+function draw(){
+ function r(p){const n=node(p);
+  const isCur=p.join("|")===cur.join("|"), isWD=wd&&p.join("|")===wd.join("|");
+  let h=`<span class="nd ${isCur?"cur":""}" data-p="${p.join("|")}">📁 ${p[p.length-1]}${p.length===1?"\\ (Root)":""}${isWD?' <span class="mono" style="color:var(--amber);font-size:11px">◀ 기준</span>':""}</span>`;
+  const kids=Object.keys(n.dirs).map(d=>"<li>"+r([...p,d])+"</li>").join("");
+  const files=n.files.map(f=>`<li><span class="nd file" data-f="${[...p,f].join("|")}">📄 ${f}</span></li>`).join("");
+  if(kids||files)h+="<ul>"+kids+files+"</ul>";return h;}
+ $("#tree").innerHTML=r(["C:"]);
+ $("#tree").querySelectorAll(".nd").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();
+  if(el.dataset.f)show(el.dataset.f.split("|"),true);
+  else{cur=el.dataset.p.split("|");draw();show(cur,false);}}));}
+function show(p,isFile){
+ const bar=$("#pathbar"),v=$("#v");
+ if(wd){bar.innerHTML=`<span style="color:var(--dim)">기준 ${abs(wd)} →</span> <span style="color:var(--amber)">${rel(wd,p)}</span>`;
+  v.innerHTML=isFile?`상대 경로 완성 — 기준(${abs(wd)})이 다르면 <b>같은 파일도 주소가 달라집니다.</b> 워크시트 ④와 대조하세요.`
+   :`현재 위치(상대 표기): <b>${rel(wd,p)}</b>`;}
+ else{bar.innerHTML=`<span style="color:var(--amber)">${abs(p)}</span>`;
+  v.innerHTML=isFile?`절대 경로 완성 — Root(C:\\)부터 파일까지의 전체 주소입니다. 워크시트 답과 <b>글자·separator까지</b> 대조하세요.`
+   :`현재 위치: <b>${abs(p)}</b>`;}
+ bar.classList.add("pop");setTimeout(()=>bar.classList.remove("pop"),300);}
+$("#btnRel").addEventListener("click",()=>{wd=[...cur];draw();show(cur,false);});
+$("#btnAbs").addEventListener("click",()=>{wd=null;draw();show(cur,false);});
+document.querySelectorAll("[data-t]").forEach(c=>c.addEventListener("click",()=>{
+ if(c.dataset.t==="rel"){cur=["C:","Users","student","Downloads"];wd=[...cur];draw();
+  show(["C:","Users","student","Documents","report.txt"],true);}
+ else{wd=null;const p=c.dataset.t.split("|");cur=p.slice(0,-1);draw();show(p,true);}}));
+draw();show(cur,false);
+})();
+</script></body></html>

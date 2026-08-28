@@ -1,0 +1,56 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>확장자 룰렛 — 내용은 고정, 해석만 변경</title><link rel="stylesheet" href="style.css"></head><body>
+<div class="wrap">
+<a class="back" href="index.html">← 애니메이션 목록</a>
+<header><div class="eyebrow">OS · Day 1 · S4 도구</div>
+<h1>확장자 룰렛 — <b>내용은 고정, 해석만 변경</b></h1>
+<p class="sub">파일의 바이트는 절대 변하지 않습니다. 확장자만 바꿨을 때 OS가 어느 프로그램으로 해석을 시도하고, 무슨 일이 벌어지는지 봅니다.</p></header>
+
+<section class="panel">
+<div class="row">
+<button class="run" id="btnSpin">▶ 룰렛 돌리기</button>
+<div class="presets" style="margin:0"><span class="cap" style="width:auto">직접 선택 —</span>
+<button class="chip" data-e="0">.txt → <b>정상</b></button>
+<button class="chip" data-e="1">.jpg → <b>해석 실패</b></button>
+<button class="chip" data-e="2">.zip → <b>손상 판정</b></button>
+<button class="chip" data-e="3">.exe → <b>실행 거부</b></button>
+</div></div></section>
+
+<section class="board" style="text-align:center">
+<div class="mono" style="display:inline-block;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 18px;font-size:13px;color:var(--dim)">
+48 65 6C 6C 6F 20 4F 53 21<br><span style="font-size:11px">↑ 파일의 실제 내용(바이트) — <b style="color:var(--good)">고정</b></span></div>
+<div class="mono" style="font-size:26px;font-weight:800;margin-top:14px">data<span id="ext" style="color:var(--amber)">.txt</span></div>
+</section>
+
+<div class="cards">
+<div class="card" id="cApp"><div class="top"><span class="name" id="appName">메모장</span><span class="lamp"></span></div>
+<div class="full">OS가 연결한 프로그램</div><div class="why" id="appWhy">룰렛을 돌리거나 확장자를 선택하세요</div></div>
+<div class="card ok"><div class="top"><span class="name">바이트</span><span class="lamp"></span></div>
+<div class="full">파일의 실제 내용</div><div class="why">어떤 확장자에서도 <b>변하지 않음</b></div></div>
+</div>
+<div class="verdict" id="v">확장자는 내용이 아니라 <b>「어떤 프로그램으로 해석할 것인가」</b>를 바꿉니다 — 워크시트 실습 4 ② 한 줄 정리의 재료.</div>
+</div>
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const E=[
+ ["txt","메모장","ok","바이트를 글자로 해석 → <b>\"Hello OS!\"</b> 정상 표시","<span class='good'>판정: 정상.</span> 이 바이트들은 우연히도 글자 규칙(ASCII)에 맞아 메모장이 읽어냅니다."],
+ ["jpg","이미지 뷰어","set","그림 형식(JPEG 규격)이 아님 → <span class='bad'>\"파일을 열 수 없습니다\"</span>","<span class='bad'>판정: 해석 실패.</span> 내용은 그대로인데 <b>그림으로 읽으려 하니</b> 실패 — 확장자가 바꾼 것은 해석 방법뿐."],
+ ["zip","압축 프로그램","set","압축 규격 시그니처가 없음 → <span class='bad'>\"손상되었거나 알 수 없는 형식\"</span>","<span class='bad'>판정: 손상 취급.</span> 파일은 멀쩡합니다 — 압축 규격으로 읽으니 손상처럼 보일 뿐."],
+ ["exe","OS 로더","set","실행 파일 형식이 아님 → <span class='bad'>실행 거부</span>","<span class='bad'>판정: 실행 거부.</span> 확장자를 .exe로 바꿔도 <b>실행 파일이 되지는 않습니다</b> — 반대로 진짜 .exe가 문서로 위장하는 것이 위험한 이유."]];
+let now=0,spin=false;
+function apply(i){now=i;const[e,app,cls,why,vd]=E[i];
+ $("#ext").textContent="."+e;
+ const c=$("#cApp");c.classList.remove("ok","set");c.classList.add(cls);
+ $("#appName").textContent=app;$("#appWhy").innerHTML=why;$("#v").innerHTML=vd;}
+$("#btnSpin").addEventListener("click",()=>{
+ if(spin)return;spin=true;
+ let n=reduced?1:(Math.floor(Math.random()*3)+4),i=now;
+ const iv=setInterval(()=>{i=(i+1)%4;$("#ext").textContent="."+E[i][0];
+  if(--n<=0){clearInterval(iv);apply(i);spin=false;}},reduced?0:240);});
+document.querySelectorAll("[data-e]").forEach(c=>c.addEventListener("click",()=>!spin&&apply(+c.dataset.e)));
+apply(0);
+})();
+</script></body></html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>100배 스케일 — Day 3 Script 예고</title><link rel="stylesheet" href="style.css"></head><body>
+<div class="wrap">
+<a class="back" href="index.html">← 애니메이션 목록</a>
+<header><div class="eyebrow">OS · Day 1 · S7 도구</div>
+<h1>100배 스케일 — <b>Day 3 Script 예고</b></h1>
+<p class="sub">directory 개수를 1 → 100으로 늘려 보세요. 두 방법의 부담이 어떻게 자라는지 — 워크시트 ③ 회고(「100개라면?」)의 근거 화면.</p></header>
+
+<section class="panel">
+<div class="row">
+<input type="range" id="n" min="1" max="100" value="1" style="flex:1;padding:0" aria-label="directory 개수">
+<span class="mono" id="lab" style="font-size:20px;font-weight:800;width:90px;text-align:right">1개</span>
+</div>
+<div class="presets"><span class="cap">프리셋</span>
+<button class="chip" data-n="1">1개 → <b>둘 다 간단</b></button>
+<button class="chip" data-n="10">10개 → <b>차이 시작</b></button>
+<button class="chip" data-n="100">100개 → <b>Script 등장</b></button>
+</div></section>
+
+<div class="row" style="align-items:stretch;gap:14px">
+<section class="panel" style="flex:1;min-width:260px;margin:0"><b>GUI</b>
+<div class="bar" style="margin:10px 0"><i id="gb" style="background:var(--warnc);width:4%"></i></div>
+<div id="gtxt" style="font-size:13.5px;line-height:1.7"></div></section>
+<section class="panel" style="flex:1;min-width:260px;margin:0"><b>CLI</b>
+<div class="bar" style="margin:10px 0"><i id="cb" style="background:var(--good);width:4%"></i></div>
+<div id="ctxt" style="font-size:13.5px;line-height:1.7"></div></section>
+</div>
+
+<section class="panel" id="tease" style="display:none;text-align:center;margin-top:14px">
+<div style="font-size:32px">📜🔒</div>
+<b>이 100줄을 한 파일로 묶는다면?</b>
+<p class="sub" style="margin-top:4px">그것이 <b style="color:var(--amber)">Script</b> — Day 3에 이 잠금을 엽니다.</p></section>
+<div class="verdict" id="v" style="margin-top:14px">슬라이더를 끝까지 밀어 보세요.</div>
+</div>
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+function draw(){const v=+$("#n").value;
+ $("#lab").textContent=v+"개";
+ const clicks=v*4,secs=Math.round(v*7);
+ $("#gb").style.width=Math.min(100,v)+"%";
+ $("#cb").style.width=Math.min(100,v*.55)+"%";
+ $("#gtxt").innerHTML=`클릭 약 <b class="mono">${clicks}회</b> · 예상 <b class="mono">${secs>=60?Math.round(secs/60)+"분":secs+"초"}</b><br><span style="color:var(--dim);font-size:12.5px">개수만큼 손이 반복됩니다 — 지루함과 실수율이 함께 상승</span>`;
+ $("#ctxt").innerHTML=`명령 <b class="mono">${v}줄</b> (mkdir ×${v})<br><span style="color:var(--dim);font-size:12.5px">줄은 늘지만 — 전부 타이핑하지 않고 실행할 방법이 있다면?</span>`;
+ $("#tease").style.display=v>=100?"block":"none";
+ $("#v").innerHTML=v>=100
+  ?"<span class='good'>도착.</span> 명령 여러 줄을 <b>파일 하나</b>에 적어 한 번에 실행하는 것 — Day 3의 주제입니다. 이 예감을 워크시트 ③ 회고에 자기 말로 적으세요."
+  :(v>=10?"차이가 벌어지기 시작합니다 — 계속 밀어 보세요.":"슬라이더를 끝까지 밀어 보세요.");}
+$("#n").addEventListener("input",draw);
+document.querySelectorAll("[data-n]").forEach(c=>c.addEventListener("click",()=>{$("#n").value=c.dataset.n;draw();}));
+draw();
+})();
+</script></body></html>

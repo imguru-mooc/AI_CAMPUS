@@ -1,0 +1,109 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>OS가 없다면 — Memory 충돌 시뮬레이터</title><link rel="stylesheet" href="style.css"></head><body>
+<div class="wrap">
+<a class="back" href="index.html">← 애니메이션 목록</a>
+<header><div class="eyebrow">OS · Day 1 · S2 도구</div>
+<h1>OS가 없다면 — <b>Memory 충돌 시뮬레이터</b></h1>
+<p class="sub">프로그램 두 개가 같은 Memory를 원할 때, 관리자(OS)가 있는 경우와 없는 경우를 단계별로 재생합니다.</p></header>
+
+<section class="panel" aria-label="입력">
+<div class="row">
+<div class="field"><label>OS (자원 관리자)</label>
+<div class="row" style="gap:0;border:1px solid var(--line);border-radius:8px;overflow:hidden">
+<button class="run sec" id="osOff" style="border:0;border-radius:0">OFF</button>
+<button class="run sec" id="osOn" style="border:0;border-radius:0">ON</button></div></div>
+<button class="run" id="btnRun">▶ 두 프로그램 실행</button>
+<button class="run sec" id="btnReset">초기화</button>
+</div>
+<div class="presets"><span class="cap">프리셋 — 예상 결과가 함께 표시됩니다</span>
+<button class="chip" data-os="0">OS OFF → <b>충돌·정지</b></button>
+<button class="chip" data-os="1">OS ON → <b>구획 배정·정상</b></button>
+</div></section>
+
+<section class="board" aria-label="Memory 보드">
+<div class="mono" style="font-size:12px;color:var(--dim);margin-bottom:8px">Memory (작업대) — 8칸</div>
+<div id="mem" style="display:grid;grid-template-columns:repeat(8,1fr);gap:5px">
+</div>
+<div id="log" class="term" style="margin-top:12px">대기 중 — OS 스위치를 고르고 실행하세요</div>
+</section>
+
+<div class="cards">
+<div class="card" id="cA"><div class="top"><span class="name">music.exe</span><span class="lamp"></span></div>
+<div class="full">프로그램 A</div><div class="why">대기</div></div>
+<div class="card" id="cB"><div class="top"><span class="name">doc.exe</span><span class="lamp"></span></div>
+<div class="full">프로그램 B</div><div class="why">대기</div></div>
+<div class="card" id="cOS"><div class="top"><span class="name">OS</span><span class="lamp"></span></div>
+<div class="full">자원 관리자</div><div class="why">스위치로 켜고 끕니다</div></div>
+</div>
+<div class="verdict" id="v">같은 실험을 <b>OFF → ON</b> 순서로 두 번 실행해 보세요 — 워크시트 실습 2 「한 줄 정리」의 재료가 됩니다.</div>
+</div>
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const STEP=reduced?0:520;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+let os=false,running=false;
+const mem=$("#mem");
+for(let i=0;i<8;i++){const d=document.createElement("div");
+ d.className="mono";d.id="m"+i;
+ d.style.cssText="height:56px;border:1px solid var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--dim);transition:all .3s";
+ d.textContent="빈";mem.appendChild(d);}
+function setOS(v){os=v;
+ $("#osOff").style.background=v?"var(--panel2)":"var(--hot)";
+ $("#osOff").style.color=v?"var(--ink)":"#fff";
+ $("#osOn").style.background=v?"var(--good)":"var(--panel2)";
+ $("#osOn").style.color=v?"#0d3324":"var(--ink)";
+ const c=$("#cOS");c.classList.toggle("ok",v);c.classList.remove("set");
+ c.querySelector(".why").textContent=v?"ON — 실행 요청이 오면 빈 구획을 찾아 배정합니다":"OFF — 아무도 자리를 정해 주지 않습니다";}
+$("#osOff").addEventListener("click",()=>!running&&setOS(false));
+$("#osOn").addEventListener("click",()=>!running&&setOS(true));
+function cell(i,txt,color){const d=$("#m"+i);d.textContent=txt;
+ d.style.borderColor=color;d.style.color=color;d.classList.add("pop");
+ setTimeout(()=>d.classList.remove("pop"),300);}
+function reset(){for(let i=0;i<8;i++){const d=$("#m"+i);d.textContent="빈";
+ d.style.borderColor="var(--line)";d.style.color="var(--dim)";}
+ ["cA","cB"].forEach(id=>{const c=$("#"+id);c.classList.remove("set","ok");c.querySelector(".why").textContent="대기";});
+ $("#log").innerHTML="대기 중 — OS 스위치를 고르고 실행하세요";}
+$("#btnReset").addEventListener("click",()=>{if(!running)reset();});
+async function run(){
+ if(running)return;running=true;$("#btnRun").disabled=true;reset();
+ const log=$("#log");log.innerHTML="";
+ const w=t=>{log.innerHTML+=t+"<br>";};
+ if(!os){
+  w("<span class='p'>music.exe 실행 요청…</span> 관리자 없음 → 스스로 3~5번 칸을 차지");
+  await sleep(STEP);[3,4,5].forEach(i=>cell(i,"🎵","var(--amber)"));
+  $("#cA").classList.add("ok");$("#cA").querySelector(".why").textContent="3~5번 칸 사용 중 (임의 점유)";
+  await sleep(STEP);
+  w("<span class='p'>doc.exe 실행 요청…</span> 관리자 없음 → 마찬가지로 4~6번 칸을 차지");
+  await sleep(STEP);[4,5,6].forEach(i=>cell(i,"📄","var(--accent)"));
+  await sleep(STEP);
+  [4,5].forEach(i=>cell(i,"💥","var(--hot)"));
+  mem.classList.add("shake");setTimeout(()=>mem.classList.remove("shake"),400);
+  ["cA","cB"].forEach(id=>{const c=$("#"+id);c.classList.remove("ok");c.classList.add("set");
+   c.querySelector(".why").textContent="4·5번 칸에서 서로의 데이터를 덮어씀 — 정지";});
+  w("<span class='err'>💥 충돌 — 4·5번 칸을 두 프로그램이 동시에 사용, 둘 다 정지</span>");
+  $("#v").innerHTML="<span class='bad'>판정: 충돌.</span> 교통정리할 관리자가 없으면 프로그램들은 같은 Memory를 덮어씁니다. 이제 <b>OS를 ON</b>으로 바꾸고 다시 실행해 비교하세요.";
+ }else{
+  w("<span class='p'>music.exe 실행 요청…</span> OS가 빈 구획 확인 → <b>0~2번 배정</b>");
+  $("#cOS").querySelector(".why").textContent="배정 중 — 0~2번을 music.exe에";
+  await sleep(STEP);[0,1,2].forEach(i=>cell(i,"🎵","var(--amber)"));
+  $("#cA").classList.add("ok");$("#cA").querySelector(".why").textContent="0~2번 칸 사용 (OS 배정)";
+  await sleep(STEP);
+  w("<span class='p'>doc.exe 실행 요청…</span> OS가 빈 구획 확인 → <b>4~6번 배정</b>");
+  $("#cOS").querySelector(".why").textContent="배정 중 — 4~6번을 doc.exe에";
+  await sleep(STEP);[4,5,6].forEach(i=>cell(i,"📄","var(--accent)"));
+  $("#cB").classList.add("ok");$("#cB").querySelector(".why").textContent="4~6번 칸 사용 (OS 배정)";
+  await sleep(STEP);
+  w("<span class='p'>✓ 두 프로그램 모두 정상 동작 — 겹치는 칸 없음</span>");
+  $("#cOS").querySelector(".why").textContent="ON — 구획을 나눠 배정했고, 끝나면 회수합니다";
+  $("#v").innerHTML="<span class='good'>판정: 정상.</span> 같은 요청이었지만 OS가 <b>서로 다른 구획을 배정</b>해 충돌이 없습니다. 이것이 OS의 Memory 관리 — 내일(Day 2) 이 장부를 직접 읽습니다.";
+ }
+ running=false;$("#btnRun").disabled=false;}
+$("#btnRun").addEventListener("click",run);
+document.querySelectorAll("[data-os]").forEach(c=>c.addEventListener("click",()=>{
+ if(running)return;setOS(c.dataset.os==="1");run();}));
+setOS(false);
+})();
+</script></body></html>
