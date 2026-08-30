@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>운영체제 활용 Day 2 — 도구 모음</title>
+<style>
+:root{
+  --bg:#0f141d;--panel:#161d2a;--panel2:#1b2434;--line:#26314a;
+  --ink:#dce6f5;--dim:#7d8ba3;--amber:#ffd166;--accent:#4cc9f0;
+  --good:#7ee787;--purple:#c3a6ff;--hot:#ff5d73;--rose:#f9a8d4;--warnc:#ff9f43;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);min-height:100vh;padding:26px 16px 70px;
+ font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+.wrap{max-width:980px;margin:0 auto}
+header{margin-bottom:20px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+h1{font-size:clamp(21px,4.2vw,29px);font-weight:800;margin-top:6px}
+h1 b{color:var(--amber)}
+.sub{color:var(--dim);font-size:14px;margin-top:7px;line-height:1.65}
+.ws{display:block;background:linear-gradient(135deg,#241f06,#1b2434);border:2px solid var(--amber);
+ border-radius:16px;padding:18px 20px;margin:18px 0 22px;text-decoration:none;color:var(--ink);transition:transform .15s}
+.ws:hover{transform:translateY(-2px)}
+.ws .t{font-size:17px;font-weight:800}
+.ws .t b{color:var(--amber)}
+.ws .d{font-size:13px;color:var(--dim);margin-top:5px;line-height:1.6}
+h2{font-family:var(--mono);font-size:13px;letter-spacing:.1em;color:var(--accent);
+ margin:22px 0 10px;display:flex;align-items:center;gap:10px}
+h2::after{content:"";flex:1;border-top:1px solid var(--line)}
+h2 .n{color:var(--dim);font-size:11px;letter-spacing:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(285px,1fr));gap:10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:13px 15px;
+ text-decoration:none;color:var(--ink);display:block;transition:transform .15s,border-color .15s;position:relative}
+.card:hover{transform:translateY(-2px);border-color:var(--accent)}
+.card .no{font-family:var(--mono);font-size:10.5px;color:var(--dim)}
+.card .t{font-size:14.5px;font-weight:800;margin:3px 0 5px}
+.card .d{font-size:12px;color:var(--dim);line-height:1.55}
+.card .open{position:absolute;top:12px;right:13px;font-family:var(--mono);font-size:11px;color:var(--accent)}
+.card.adv{border-style:dashed}
+.card.adv .t::after{content:" 심화";font-size:10px;color:var(--purple);font-weight:400;vertical-align:middle;
+ border:1px solid var(--purple);border-radius:99px;padding:1px 7px;margin-left:6px}
+.cat-p .t{color:var(--good)}
+.cat-s .t{color:var(--accent)}
+.cat-m .t{color:var(--amber)}
+.cat-v .t{color:var(--rose)}
+.cat-t .t{color:var(--purple)}
+footer{margin-top:26px;font-size:11.5px;color:var(--dim);border-top:1px solid var(--line);padding-top:12px;line-height:1.7}
+footer b{color:var(--warnc)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<div class="eyebrow">운영체제 활용 · Day 2 · 도구 모음 (17)</div>
+<h1>프로세스와 자원의 하루 — <b>대화형 애니메이션 팩</b></h1>
+<p class="sub">모든 도구는 인터넷 없이 브라우저만으로 열립니다. 사용법은 전부 같습니다 —
+시나리오 칩을 고르고 <b style="color:var(--amber)">「다음 단계 ▶」</b>로 한 걸음씩,
+각 단계에서 <b style="color:var(--ink)">다음에 벌어질 일을 먼저 예측</b>한 뒤 진행하세요.
+시나리오가 끝나면 자유 모드가 열립니다.</p>
+</header>
+
+<a class="ws" href="운영체제_Day2_워크시트.html">
+<div class="t">📋 Day 2 워크시트 — <b>여기서 시작하세요</b></div>
+<div class="d">S1~S8 세션 순서대로 도구를 열어 답을 채우고, 마지막 S8 「명령 한 줄의 여행」으로 하루를 닫습니다. 자동 저장 · 채점 · 인쇄 지원.</div>
+</a>
+
+<h2>PROCESS — 태어나고, 변신하고, 거두어지다 <span class="n">S1~S3</span></h2>
+<div class="grid">
+<a class="card cat-p" href="linux_process_lifecycle.html"><span class="open">열기 ▶</span>
+<div class="no">S1</div><div class="t">프로세스 생명주기</div>
+<div class="d">R·S·Z 상태와 ps 화면, 좀비의 정체와 systemd — 프로세스 표를 읽는 법.</div></a>
+<a class="card cat-p" href="fork_cpu_memory.html"><span class="open">열기 ▶</span>
+<div class="no">S2</div><div class="t">fork() 해부</div>
+<div class="d">CPU·Memory가 통째로 복제되는 순간 — 반환값 한 칸이 부모/자식의 길을 가른다.</div></a>
+<a class="card cat-p" href="execve_cpu_memory.html"><span class="open">열기 ▶</span>
+<div class="no">S3</div><div class="t">execve() 해부</div>
+<div class="d">Memory 철거→적재→PC 재설정. 성공한 execve는 영원히 돌아오지 않는다.</div></a>
+<a class="card cat-p" href="wait_internals.html"><span class="open">열기 ▶</span>
+<div class="no">S3</div><div class="t">wait() 해부</div>
+<div class="d">잠든 부모, 좀비의 성적표 회수, 고아 입양 — Shell 3박자의 마지막 박.</div></a>
+</div>
+
+<h2>CPU 스케줄러 — 차례를 나누는 세 가지 방법 <span class="n">S4~S5</span></h2>
+<div class="grid">
+<a class="card cat-s" href="linux_on_scheduler.html"><span class="open">열기 ▶</span>
+<div class="no">S4</div><div class="t">O(n) 스케줄러</div>
+<div class="d">전원 훑어 goodness 최고를 뽑는 정직한 방법 — task가 늘면 무슨 일이.</div></a>
+<a class="card cat-s" href="linux_o1_scheduler.html"><span class="open">열기 ▶</span>
+<div class="no">S4</div><div class="t">O(1) 스케줄러</div>
+<div class="d">비트맵 find-first-bit와 active/expired 배열 교체 — 1,000개여도 연산 2회.</div></a>
+<a class="card cat-s" href="linux_cfs_scheduler.html"><span class="open">열기 ▶</span>
+<div class="no">S5</div><div class="t">CFS 스케줄러</div>
+<div class="d">vruntime 경주 — 가장 적게 받은 자가 다음 주자. nice는 시계 속도다.</div></a>
+</div>
+
+<h2>MEMORY 배급 — 도매상과 소매점, 그리고 내쫓기 <span class="n">S6·S7</span></h2>
+<div class="grid">
+<a class="card cat-m" href="buddy_system.html"><span class="open">열기 ▶</span>
+<div class="no">S6</div><div class="t">buddy 해부</div>
+<div class="d">반으로 쪼개 주고 XOR 한 번으로 짝을 찾아 합친다 — 2의 거듭제곱의 이유.</div></a>
+<a class="card cat-m" href="buddy_alloc_free.html"><span class="open">열기 ▶</span>
+<div class="no">S6</div><div class="t">buddy 운용 (할당·해지)</div>
+<div class="d">반납 순서에 따라 병합이 열리고 닫힌다 — 128K 통짜 복구에 도전.</div></a>
+<a class="card cat-m" href="slab_allocator.html"><span class="open">열기 ▶</span>
+<div class="no">S6</div><div class="t">slab allocator</div>
+<div class="d">페이지를 임대해 작은 물건으로 재단 — partial/full/empty 진열대의 경제학.</div></a>
+<a class="card cat-m" href="linux_lru.html"><span class="open">열기 ▶</span>
+<div class="no">S7</div><div class="t">LRU 페이지 회수</div>
+<div class="d">R비트와 두 줄(active/inactive), second chance와 refault — 누구를 내쫓나.</div></a>
+</div>
+
+<h2>가상 메모리 — 주소는 값이 아니라 경로다 <span class="n">S7</span></h2>
+<div class="grid">
+<a class="card cat-v" href="x86_2level_pgd_pte.html"><span class="open">열기 ▶</span>
+<div class="no">S7</div><div class="t">x86 2단 (PGD·PTE)</div>
+<div class="d">10+10+12의 산수, 접힌 층(folding), 4B 엔트리가 만든 4GB의 벽.</div></a>
+<a class="card cat-v" href="x86_paging_map.html"><span class="open">열기 ▶</span>
+<div class="no">S7</div><div class="t">주소 변환 · TLB · #PF</div>
+<div class="d">walk와 지름길(TLB), Page Fault와 buddy의 연결, CR3가 만드는 격리.</div></a>
+<a class="card cat-v" href="vma_interval_tree.html"><span class="open">열기 ▶</span>
+<div class="no">S7</div><div class="t">VMA 에뮬레이터</div>
+<div class="d">mmap 틈 찾기, find_vma와 SIGSEGV, 고정 주소 충돌 거부 — 주소 공간 운용.</div></a>
+</div>
+
+<h2>자료구조 심화 — 커널을 떠받치는 나무들 <span class="n">선택</span></h2>
+<div class="grid">
+<a class="card cat-t adv" href="rb_tree_insert_delete.html"><span class="open">열기 ▶</span>
+<div class="no">S5 심화</div><div class="t">레드블랙 트리</div>
+<div class="d">삽입 4케이스·삭제 3케이스 — 색과 회전으로 균형을 지키는 CFS의 심장.</div></a>
+<a class="card cat-t adv" href="interval_tree_ops.html"><span class="open">열기 ▶</span>
+<div class="no">S7 심화</div><div class="t">interval tree 연산</div>
+<div class="d">천장(maxHi)의 전파와 하강, 가지치기 검색 — 증강값이 검색을 만든다.</div></a>
+</div>
+
+<footer>
+사용 안내 — 이 폴더의 파일들을 같은 위치에 두면 워크시트의 도구 ▶ 버튼이 그대로 열립니다.
+답은 브라우저에 자동 저장됩니다(컴퓨터가 바뀌면 이어지지 않습니다).
+<b>[강사 확정]</b> 세션 배치는 도구 기반 제안이며 Day 2 시간별 섹션 확정 시 조정될 수 있습니다.
+</footer>
+</div>
+</body>
+</html>
