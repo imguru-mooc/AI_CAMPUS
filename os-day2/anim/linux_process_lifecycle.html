@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux Process 생명주기 — 생성 · 실행 · 잠듦 · 소멸</title>
+<style>
+:root{
+  --bg:#0f141d;--panel:#161d2a;--panel2:#1b2434;--line:#26314a;
+  --ink:#dce6f5;--dim:#7d8ba3;--amber:#ffd166;--warnc:#ff9f43;
+  --hot:#ff5d73;--accent:#4cc9f0;--good:#7ee787;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);min-height:100vh;padding:24px 16px 60px;
+ font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+.wrap{max-width:920px;margin:0 auto}
+header{margin-bottom:18px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+h1{font-size:clamp(20px,4vw,28px);font-weight:800;margin-top:6px}
+h1 b{font-family:var(--mono);color:var(--amber)}
+.sub{color:var(--dim);font-size:14px;margin-top:6px;line-height:1.6}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.run{padding:11px 22px;border:none;border-radius:8px;background:var(--amber);color:#2a2005;
+ font-weight:800;font-size:15px;cursor:pointer;font-family:inherit}
+.run:disabled{opacity:.4;cursor:default}
+.run.sec{background:var(--panel2);color:var(--ink);border:1px solid var(--line);font-size:13.5px}
+.run:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.presets{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px}
+.presets .cap{width:100%;font-size:11px;color:var(--dim);letter-spacing:.06em}
+.chip{font-family:var(--mono);font-size:13px;padding:7px 12px;border-radius:999px;
+ background:var(--panel2);color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+.chip b{color:var(--amber);font-weight:700}
+/* 상태 다이어그램 */
+.board{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+ padding:18px 16px;margin-bottom:14px;overflow-x:auto}
+.diagram{min-width:760px}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:4px}
+.node{flex:1;min-width:110px;background:var(--panel2);border:2px solid var(--line);border-radius:12px;
+ padding:12px 8px;text-align:center;transition:border-color .3s,box-shadow .3s}
+.node .st{font-family:var(--mono);font-size:12px;color:var(--dim)}
+.node .nm{font-weight:800;font-size:15px;margin-top:2px}
+.node .ps{font-family:var(--mono);font-size:11px;color:var(--amber);margin-top:3px;min-height:14px}
+.node.on{border-color:var(--accent);box-shadow:0 0 14px rgba(76,201,240,.45)}
+.node.dead{opacity:.45}
+.arr{width:64px;text-align:center;flex:0 0 auto}
+.arr .a{font-size:18px;color:var(--dim)}
+.arr .lb{font-family:var(--mono);font-size:10px;color:var(--dim);line-height:1.3}
+.arr.on .a,.arr.on .lb{color:var(--amber)}
+.downrow{display:flex;margin-top:6px}
+.downrow .spacer{flex:1}
+.vlink{flex:0 0 auto;width:290px;display:flex;flex-direction:column;align-items:center}
+.vlink .lb{font-family:var(--mono);font-size:10px;color:var(--dim)}
+.vlink .a{color:var(--dim)}
+.vlink.on .lb,.vlink.on .a{color:var(--amber)}
+/* 표 + 로그 */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+@media(max-width:720px){.grid2{grid-template-columns:1fr}}
+.pt{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:13px}
+.pt th{color:var(--dim);font-weight:700;text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);font-size:11.5px}
+.pt td{padding:6px 8px;border-bottom:1px solid var(--line)}
+.pt tr.hl td{background:#122433}
+.stat{display:inline-block;min-width:26px;text-align:center;border-radius:6px;padding:1px 6px;font-weight:800}
+.stR{background:#123524;color:var(--good)}
+.stS{background:#2a2340;color:#c3a6ff}
+.stZ{background:#3a1b22;color:var(--hot)}
+.stN{background:#2a2005;color:var(--amber)}
+.cpu{font-size:10px;color:#06222e;background:var(--accent);border-radius:5px;padding:1px 5px;font-weight:800;margin-left:5px}
+.term{background:#0a0f18;border:1px solid var(--line);border-radius:10px;padding:12px 14px;
+ font-family:var(--mono);font-size:12.5px;line-height:1.75;height:190px;overflow-y:auto}
+.term .p{color:var(--good)}.term .sys{color:var(--accent)}.term .warn{color:var(--warnc)}.term .err{color:var(--hot)}
+/* 상태 카드 */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.card .top{display:flex;justify-content:space-between;align-items:center}
+.card .name{font-family:var(--mono);font-weight:800;font-size:14px}
+.card .lamp{width:11px;height:11px;border-radius:50%;background:#2a3550}
+.card.set{border-color:var(--accent)}.card.set .lamp{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+.card .full{font-size:11px;color:var(--dim);margin:4px 0}
+.card .why{font-size:12px;line-height:1.5;color:var(--ink);min-height:52px}
+.verdict{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+ padding:13px 15px;font-size:13.5px;line-height:1.7}
+.verdict b{color:var(--amber)}
+.good{color:var(--good);font-weight:800}.bad{color:var(--hot);font-weight:800}
+.pulse{animation:pl .5s ease}
+@keyframes pl{0%{transform:scale(.96)}60%{transform:scale(1.02)}100%{transform:scale(1)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<div class="eyebrow">OS · Day 2 예고 · Linux Process</div>
+<h1>Process 생명주기 — <b>생성 · 실행 · 잠듦 · 소멸</b></h1>
+<p class="sub">Linux에서 프로세스는 <b>fork()</b>로 태어나 스케줄러의 선택으로 CPU를 얻고, 기다릴 일이 생기면 잠들고(S),
+<b>exit()</b>로 끝난 뒤에도 부모가 <b>wait()</b>로 거둘 때까지 좀비(Z)로 남습니다. 그 전 과정을 단계별로 봅니다.</p>
+</header>
+
+<!-- 조작 -->
+<section class="panel" aria-label="조작">
+<div class="row">
+<button class="run" id="btnStep">다음 단계 ▶</button>
+<button class="run sec" id="btnReset">처음부터</button>
+<span class="sub" style="margin:0" id="stepCap">시나리오를 고르거나 「다음 단계」로 기본 일생을 시작하세요</span>
+</div>
+<div class="presets"><span class="cap">시나리오 — 예상 결과가 함께 표시됩니다</span>
+<button class="chip" data-sc="0">① 한 프로세스의 일생 → <b>NEW→R→Z→소멸</b></button>
+<button class="chip" data-sc="1">② 잠들고 깨어나기 → <b>S 상태 왕복</b></button>
+<button class="chip" data-sc="2">③ 좀비 체험 → <b>wait() 전까지 Z 잔류</b></button>
+</div>
+<div class="presets"><span class="cap">수동 조작 — 현재 상태에서 가능한 것만 켜집니다</span>
+<button class="run sec" id="mFork">fork()</button>
+<button class="run sec" id="mSleep">read() 대기</button>
+<button class="run sec" id="mWake">데이터 도착</button>
+<button class="run sec" id="mExit">exit()</button>
+<button class="run sec" id="mWait">wait() — 부모가 거둠</button>
+</div>
+</section>
+
+<!-- 상태 다이어그램 -->
+<section class="board" aria-label="상태 다이어그램">
+<div class="diagram">
+<div class="srow">
+<div class="node" id="nNEW"><div class="st">생성</div><div class="nm">NEW</div><div class="ps">fork() 직후</div></div>
+<div class="arr" id="aNR"><div class="a">→</div><div class="lb">준비 완료</div></div>
+<div class="node" id="nREADY"><div class="st">준비 · STAT R</div><div class="nm">READY</div><div class="ps">CPU 대기 줄</div></div>
+<div class="arr" id="aRR"><div class="a">⇄</div><div class="lb">스케줄러 선택<br>/ 시간 조각 만료</div></div>
+<div class="node" id="nRUN"><div class="st">실행 · STAT R</div><div class="nm">RUNNING</div><div class="ps">CPU 사용 중</div></div>
+<div class="arr" id="aRZ"><div class="a">→</div><div class="lb">exit()</div></div>
+<div class="node" id="nZ"><div class="st">좀비 · STAT Z</div><div class="nm">ZOMBIE</div><div class="ps">종료값만 남음</div></div>
+<div class="arr" id="aZG"><div class="a">→</div><div class="lb">wait() 회수</div></div>
+<div class="node" id="nGONE"><div class="st">소멸</div><div class="nm">사라짐</div><div class="ps">표에서 제거</div></div>
+</div>
+<div class="downrow">
+<div class="spacer"></div>
+<div class="vlink" id="vSleep">
+<div class="lb">이벤트 대기 read() ↓ &nbsp;&nbsp; ↑ 이벤트 도착</div>
+<div class="a">⇵</div>
+<div class="node" id="nSLEEP" style="max-width:220px"><div class="st">잠듦 · STAT S</div><div class="nm">SLEEPING</div><div class="ps">CPU를 쓰지 않음</div></div>
+</div>
+<div class="spacer"></div>
+</div>
+</div>
+</section>
+
+<!-- ps 표 + syscall 로그 -->
+<div class="grid2">
+<section class="panel" style="margin:0" aria-label="프로세스 표">
+<div class="presets" style="margin:0 0 6px"><span class="cap">ps 로 보는 프로세스 표 — Linux는 준비·실행을 모두 R로 표시 (실행 중은 CPU 배지)</span></div>
+<table class="pt">
+<tr><th>PID</th><th>PPID</th><th>이름</th><th>STAT</th></tr>
+<tr><td>1</td><td>0</td><td>systemd</td><td><span class="stat stS">S</span></td></tr>
+<tr><td>1000</td><td>1</td><td>bash (부모)</td><td id="pStat"><span class="stat stS">S</span></td></tr>
+<tr id="childRow" style="display:none"><td id="cPid">—</td><td>1000</td><td>myapp (자식)</td><td id="cStat">—</td></tr>
+</table>
+<p class="sub" style="margin-top:8px;font-size:12px" id="tblNote">아직 자식 프로세스가 없습니다 — fork()로 태어납니다</p>
+</section>
+<section class="panel" style="margin:0" aria-label="시스템 콜 로그">
+<div class="presets" style="margin:0 0 6px"><span class="cap">syscall 로그</span></div>
+<div class="term" id="log" aria-live="polite">대기 중 — 프로세스의 일생이 여기에 기록됩니다</div>
+</section>
+</div>
+
+<!-- 4단계 카드 -->
+<div class="cards">
+<div class="card" id="cdNEW"><div class="top"><span class="name">생성</span><span class="lamp"></span></div>
+<div class="full">fork() · PID 부여</div><div class="why">부모가 자신을 복제해 자식을 만들고, OS가 새 PID를 부여합니다.</div></div>
+<div class="card" id="cdRUN"><div class="top"><span class="name">실행</span><span class="lamp"></span></div>
+<div class="full">READY ⇄ RUNNING</div><div class="why">스케줄러가 대기 줄(R)에서 골라 CPU를 줍니다 — 시간 조각이 끝나면 다시 줄로.</div></div>
+<div class="card" id="cdSLEEP"><div class="top"><span class="name">잠듦</span><span class="lamp"></span></div>
+<div class="full">STAT S · 이벤트 대기</div><div class="why">기다릴 일(입력·디스크·시간)이 생기면 CPU를 반납하고 잠듭니다 — 낭비가 아니라 양보.</div></div>
+<div class="card" id="cdEND"><div class="top"><span class="name">소멸</span><span class="lamp"></span></div>
+<div class="full">exit() → Z → wait()</div><div class="why">exit()해도 종료값 전달을 위해 좀비(Z)로 남고, 부모가 wait()로 거둬야 사라집니다.</div></div>
+</div>
+
+<div class="verdict" id="v">규칙은 워크시트와 같습니다 — <b>예측 먼저, 화면은 검산.</b> 각 단계에서 「다음에 STAT이 무엇이 될지」 먼저 말한 뒤 버튼을 누르세요.</div>
+</div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ── 상태 기계 ── */
+let ST="NONE";          // NONE→NEW→READY→RUN→(SLEEP)→ZOMBIE→GONE
+let queue=[];           // 시나리오 단계 큐
+const PID=1234;
+
+function log(h){const o=$("#log");
+ if(o.textContent.startsWith("대기 중"))o.innerHTML="";
+ o.innerHTML+=h+"<br>";o.scrollTop=o.scrollHeight;}
+function lamp(id,on){const c=$("#"+id);c.classList.toggle("set",on);}
+function node(id){["nNEW","nREADY","nRUN","nSLEEP","nZ","nGONE"].forEach(n=>{
+ const el=$("#"+n);el.classList.toggle("on",n===id);
+ if(!reduced&&n===id){el.classList.remove("pulse");void el.offsetWidth;el.classList.add("pulse");}});}
+function arrow(id){["aNR","aRR","aRZ","aZG","vSleep"].forEach(a=>$("#"+a).classList.toggle("on",a===id));}
+function stat(html,note){
+ $("#childRow").style.display="";
+ $("#cPid").textContent=PID;
+ $("#cStat").innerHTML=html;
+ if(note)$("#tblNote").textContent=note;}
+function cap(t){$("#stepCap").textContent=t;}
+function verdict(h){$("#v").innerHTML=h;}
+function manual(){ // 현재 상태에 맞는 수동 버튼 활성화
+ $("#mFork").disabled=!(ST==="NONE");
+ $("#mSleep").disabled=!(ST==="RUN");
+ $("#mWake").disabled=!(ST==="SLEEP");
+ $("#mExit").disabled=!(ST==="RUN");
+ $("#mWait").disabled=!(ST==="ZOMBIE");}
+
+/* ── 전이 정의 ── */
+const T={
+ fork(){ST="NEW";node("nNEW");arrow("aNR");lamp("cdNEW",true);
+  log("<span class='p'>bash(1000)$</span> ./myapp &");
+  log("<span class='sys'>fork()</span> → 자식 생성, <b>PID "+PID+"</b> 부여 (PPID 1000)");
+  stat("<span class='stat stN'>NEW</span>","fork() 직후 — 곧 준비 줄(R)로 들어갑니다");
+  cap("생성 — 부모(bash)가 자신을 복제했습니다. 다음: 준비 줄로");
+  verdict("<b>생성.</b> 새 프로세스는 하늘에서 떨어지지 않습니다 — 반드시 부모의 fork()에서 태어나고, 그래서 모든 프로세스에 PPID(부모 PID)가 있습니다.");},
+ ready(){ST="READY";node("nREADY");arrow("aRR");
+  log("스케줄러 대기 줄 진입 — STAT <b>R</b>");
+  stat("<span class='stat stR'>R</span>","R = runnable. CPU를 기다리는 중 — Linux는 준비·실행을 모두 R로 표시");
+  cap("준비 — CPU 대기 줄에 섰습니다. 다음: 스케줄러의 선택");
+  verdict("<b>준비(R).</b> R은 '지금 당장 CPU만 주면 달릴 수 있다'는 뜻입니다. 준비와 실행이 같은 글자 R인 이유 — 둘의 차이는 오직 「지금 CPU를 쥐고 있는가」뿐.");},
+ sched(){ST="RUN";node("nRUN");arrow("aRR");lamp("cdRUN",true);
+  log("<span class='sys'>스케줄러</span> → PID "+PID+" 선택, CPU 배정");
+  stat("<span class='stat stR'>R</span><span class='cpu'>CPU</span>","같은 R — 그러나 지금은 CPU를 쥐고 실행 중");
+  cap("실행 — CPU 위에서 명령을 처리 중입니다");
+  verdict("<b>실행.</b> 컴퓨터 구조에서 본 「CPU가 명령을 한 줄씩 처리」가 바로 지금 벌어지는 일 — 표에서는 CPU 배지만 다르고 STAT은 그대로 R입니다.");},
+ slice(){ST="READY";node("nREADY");arrow("aRR");
+  log("<span class='warn'>시간 조각 만료</span> → CPU 반납, 대기 줄 뒤로");
+  stat("<span class='stat stR'>R</span>","시간 조각이 끝나 다시 대기 줄 — 곧 다시 선택됩니다");
+  cap("시간 조각 만료 — 준비 줄로 돌아갔습니다. 다음: 다시 선택");
+  verdict("<b>교대.</b> 프로그램 여러 개가 '동시에' 도는 것처럼 보이는 비밀 — 스케줄러가 아주 짧은 시간 조각 단위로 CPU를 돌려가며 나눠 줍니다.");},
+ sleep(){ST="SLEEP";node("nSLEEP");arrow("vSleep");lamp("cdSLEEP",true);
+  log("<span class='sys'>read()</span> — 키보드 입력 대기 → STAT <b>S</b>, CPU 반납");
+  stat("<span class='stat stS'>S</span>","S = interruptible sleep. 이벤트가 올 때까지 CPU를 쓰지 않음");
+  cap("잠듦 — 기다릴 일이 생겨 스스로 CPU를 내려놓았습니다. 다음: 이벤트 도착");
+  verdict("<b>잠듦(S).</b> 기다리는 동안 CPU를 붙잡고 있으면 낭비 — 그래서 잠듭니다. Task Manager·ps에서 대부분의 프로세스가 S인 이유가 바로 이것: 다들 무언가를 기다리는 중.");},
+ wake(){ST="READY";node("nREADY");arrow("vSleep");
+  log("<span class='p'>이벤트 도착</span> (키 입력) → 깨어남 → 대기 줄(R) 복귀");
+  stat("<span class='stat stR'>R</span>","깨어났지만 바로 실행은 아님 — 먼저 대기 줄에");
+  cap("깨어남 — 바로 실행이 아니라 준비 줄(R)로 갑니다. 다음: 스케줄러 선택");
+  verdict("<b>기상.</b> 잠에서 깨면 바로 CPU를 잡는 게 아니라 <b>준비 줄부터</b> — 실행 여부는 언제나 스케줄러가 결정합니다.");},
+ exit(){ST="ZOMBIE";node("nZ");arrow("aRZ");
+  log("<span class='sys'>exit(0)</span> — 코드·데이터 반납, 종료값만 남김 → STAT <b>Z</b>");
+  stat("<span class='stat stZ'>Z</span>","좀비 — 일은 끝났지만 표에서 아직 안 사라짐");
+  cap("종료 — 그런데 표에서 사라지지 않았습니다. 왜일까요?");
+  verdict("<b>좀비(Z).</b> exit()로 Memory는 반납했지만, <b>종료값(성공/실패)을 부모에게 전할 때까지</b> 표의 한 줄로 남습니다 — 부모가 wait()로 확인해 줘야 완전히 소멸.");},
+ wait(){ST="GONE";node("nGONE");arrow("aZG");lamp("cdEND",true);
+  log("<span class='sys'>wait()</span> — 부모(bash)가 종료값 0 수거");
+  log("<span class='p'>PID "+PID+" 소멸 — 프로세스 표에서 제거</span>");
+  $("#cStat").innerHTML="—";$("#cPid").textContent="—";
+  setTimeout(()=>{$("#childRow").style.display="none";},reduced?0:600);
+  $("#tblNote").textContent="자식이 완전히 소멸했습니다 — 한 일생이 끝났습니다";
+  cap("소멸 — 한 프로세스의 일생이 끝났습니다. 「처음부터」로 다시");
+  verdict("<span class='good'>일생 완주.</span> 생성(fork) → 준비/실행(R) → 잠듦(S) → 종료(exit) → 좀비(Z) → 회수(wait) — 내일 Task Manager와 Day 2 실습에서 이 상태들을 <b>실제 표에서</b> 직접 찾습니다.");},
+ zwarn(){ // 좀비 방치 안내 (시나리오 3 전용)
+  log("<span class='warn'>부모가 wait()를 부르지 않음 — Z가 표에 계속 잔류</span>");
+  cap("좀비 잔류 중 — 「wait() — 부모가 거둠」 버튼을 직접 눌러 회수하세요");
+  verdict("<span class='bad'>좀비 잔류.</span> 좀비는 CPU도 Memory도 거의 안 쓰지만 <b>PID 한 자리를 계속 차지</b>합니다 — 부모가 wait()를 게을리하면 표가 좀비로 쌓입니다. 수동 버튼으로 직접 거둬 보세요.");}
+};
+
+/* ── 시나리오 ── */
+const SC=[
+ ["기본 일생",["fork","ready","sched","slice","sched","exit","wait"]],
+ ["잠들고 깨어나기",["fork","ready","sched","sleep","wake","sched","exit","wait"]],
+ ["좀비 체험",["fork","ready","sched","exit","zwarn"]]  // wait는 수동으로
+];
+function loadSc(i){reset(false);
+ queue=[...SC[i][1]];
+ log("<span class='p'>── 시나리오 "+(i+1)+" · "+SC[i][0]+" ──</span>");
+ cap("시나리오 「"+SC[i][0]+"」 — 「다음 단계 ▶」로 진행 ("+queue.length+"단계)");
+ manual();}
+function step(){
+ if(!queue.length){
+  if(ST==="NONE"){loadSc(0);return;}
+  cap("시나리오가 끝났습니다 — 수동 버튼 또는 「처음부터」");return;}
+ T[queue.shift()]();manual();
+ if(!queue.length&&ST!=="GONE")cap($("#stepCap").textContent+"  (시나리오 종료 — 이후는 수동)");}
+function reset(clearLog){
+ ST="NONE";queue=[];
+ node("");arrow("");
+ ["cdNEW","cdRUN","cdSLEEP","cdEND"].forEach(id=>lamp(id,false));
+ $("#childRow").style.display="none";$("#cStat").innerHTML="—";$("#cPid").textContent="—";
+ $("#tblNote").textContent="아직 자식 프로세스가 없습니다 — fork()로 태어납니다";
+ if(clearLog!==false)$("#log").innerHTML="대기 중 — 프로세스의 일생이 여기에 기록됩니다";
+ cap("시나리오를 고르거나 「다음 단계」로 기본 일생을 시작하세요");
+ verdict("규칙은 워크시트와 같습니다 — <b>예측 먼저, 화면은 검산.</b> 각 단계에서 「다음에 STAT이 무엇이 될지」 먼저 말한 뒤 버튼을 누르세요.");
+ manual();}
+
+$("#btnStep").addEventListener("click",step);
+$("#btnReset").addEventListener("click",()=>reset(true));
+document.querySelectorAll("[data-sc]").forEach(c=>c.addEventListener("click",()=>loadSc(+c.dataset.sc)));
+$("#mFork").addEventListener("click",()=>{queue=[];T.fork();queue=["ready","sched"];manual();});
+$("#mSleep").addEventListener("click",()=>{queue=[];T.sleep();manual();});
+$("#mWake").addEventListener("click",()=>{queue=["sched"];T.wake();manual();});
+$("#mExit").addEventListener("click",()=>{queue=[];T.exit();manual();});
+$("#mWait").addEventListener("click",()=>{queue=[];T.wait();manual();});
+reset(true);
+})();
+</script>
+</body>
+</html>

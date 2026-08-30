@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux O(n) 스케줄러 해부 — 전부 훑고, 제일 좋은 놈을 고른다</title>
+<style>
+:root{
+  --bg:#0f141d;--panel:#161d2a;--panel2:#1b2434;--line:#26314a;
+  --ink:#dce6f5;--dim:#7d8ba3;--amber:#ffd166;--warnc:#ff9f43;
+  --hot:#ff5d73;--accent:#4cc9f0;--good:#7ee787;--purple:#c3a6ff;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);min-height:100vh;padding:24px 16px 60px;
+ font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+.wrap{max-width:1020px;margin:0 auto}
+header{margin-bottom:18px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+h1{font-size:clamp(20px,4vw,27px);font-weight:800;margin-top:6px}
+h1 b{font-family:var(--mono);color:var(--amber)}
+.sub{color:var(--dim);font-size:14px;margin-top:6px;line-height:1.6}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.run{padding:11px 22px;border:none;border-radius:8px;background:var(--amber);color:#2a2005;
+ font-weight:800;font-size:15px;cursor:pointer;font-family:inherit}
+.run:disabled{opacity:.4;cursor:default}
+.run.sec{background:var(--panel2);color:var(--ink);border:1px solid var(--line);font-size:13.5px}
+.run:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.presets{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px}
+.presets .cap{width:100%;font-size:11px;color:var(--dim);letter-spacing:.06em}
+.chip{font-family:var(--mono);font-size:12.5px;padding:7px 12px;border-radius:999px;
+ background:var(--panel2);color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.chip:hover:not(:disabled){border-color:var(--accent)}
+.chip:disabled{opacity:.4;cursor:default}
+.chip b{color:var(--amber);font-weight:700}
+/* CPU */
+.cpu{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px;
+ display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.cpu .t{font-size:11px;color:var(--dim);letter-spacing:.06em}
+.cpu .now{font-family:var(--mono);font-size:16px;font-weight:800;min-width:150px}
+.ticks{display:flex;gap:4px}
+.tick{width:16px;height:22px;border-radius:4px;border:1px solid var(--line);background:var(--panel2);transition:all .2s}
+.tick.onT{background:#3a3208;border-color:#5c4d10}
+.tick.burn{background:transparent;border-style:dashed;opacity:.4}
+.cmp{margin-left:auto;font-family:var(--mono);font-size:12.5px;color:var(--dim)}
+.cmp b{color:var(--warnc);font-size:16px}
+/* runqueue */
+.rq{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.rq .t{font-size:11px;color:var(--dim);letter-spacing:.06em;margin-bottom:10px}
+.rq .t b{color:var(--ink)}
+.tasks{display:flex;flex-wrap:wrap;gap:8px}
+.task{width:108px;background:var(--panel2);border:1.5px solid var(--line);border-radius:10px;
+ padding:8px 9px;font-family:var(--mono);transition:all .25s;cursor:default;position:relative}
+.task .nm{font-size:13px;font-weight:800;display:flex;justify-content:space-between}
+.task .ln{font-size:10.5px;color:var(--dim);margin-top:3px;display:flex;justify-content:space-between}
+.task .gd{margin-top:5px;font-size:11px;min-height:16px;color:var(--accent);font-weight:800}
+.task.scan{border-color:var(--accent);box-shadow:0 0 10px rgba(76,201,240,.35)}
+.task.best{border-color:var(--good)}
+.task.pick{border-color:var(--good);box-shadow:0 0 14px rgba(126,231,135,.5)}
+.task.spent{opacity:.45}
+.task.spent .nm::after{content:" ⌛"}
+.task.sleep{border-style:dashed;border-color:var(--purple);opacity:.7}
+.task.clickable{cursor:pointer}
+.task.recharge{animation:rc .6s ease}
+@keyframes rc{30%{border-color:var(--amber);box-shadow:0 0 12px rgba(255,209,102,.5)}}
+.sleepbox{margin-top:12px;border:1px dashed var(--purple);border-radius:10px;padding:8px 10px;min-height:40px}
+.sleepbox .t2{font-size:10.5px;color:var(--purple);margin-bottom:6px;font-family:var(--mono)}
+/* 로그·카드·판정 */
+.grid2{display:grid;grid-template-columns:1fr 1.25fr;gap:14px;margin-bottom:14px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}}
+.fl{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12.5px}
+.fl th{color:var(--dim);font-weight:700;text-align:left;padding:4px 8px;border-bottom:1px solid var(--line);font-size:11px}
+.fl td{padding:5px 8px;border-bottom:1px solid var(--line)}
+.fl td.hl{color:var(--warnc);font-weight:800}
+.term{background:#0a0f18;border:1px solid var(--line);border-radius:10px;padding:12px 14px;
+ font-family:var(--mono);font-size:12.5px;line-height:1.75;height:196px;overflow-y:auto}
+.term .p{color:var(--good)}.term .sys{color:var(--accent)}.term .warn{color:var(--warnc)}.term .err{color:var(--hot)}
+.term .z{color:var(--purple)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.card .top{display:flex;justify-content:space-between;align-items:center}
+.card .name{font-family:var(--mono);font-weight:800;font-size:12.5px}
+.card .lamp{width:11px;height:11px;border-radius:50%;background:#2a3550}
+.card.set{border-color:var(--accent)}.card.set .lamp{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+.card .why{font-size:12px;line-height:1.5;color:var(--ink);margin-top:6px;min-height:48px}
+.verdict{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+ padding:13px 15px;font-size:13.5px;line-height:1.7}
+.verdict b{color:var(--amber)}
+.good{color:var(--good);font-weight:800}.bad{color:var(--hot);font-weight:800}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<div class="eyebrow">OS · CPU 스케줄링 · 심화 · Linux 2.4 (초창기)</div>
+<h1>O(n) 스케줄러 해부 — <b>전부 훑고, 제일 좋은 놈을 고른다</b></h1>
+<p class="sub">초창기 Linux의 방식은 우직합니다 — <b>runqueue 하나</b>에 모든 task를 세워 두고, schedule()이 불릴 때마다
+<b>전원을 한 명씩 훑으며 goodness(= counter + priority) 점수</b>를 매겨 최고점에게 CPU를 줍니다.
+전원이 timeslice를 다 쓰면 <b>epoch 재충전: counter = counter/2 + priority</b> — 잠든 task는 남은 절반을 보너스로 챙깁니다.</p>
+</header>
+
+<section class="panel">
+<div class="row">
+<button class="run" id="btnStep">다음 단계 ▶</button>
+<button class="run sec" id="btnReset">전체 초기화</button>
+<span class="sub" style="margin:0" id="cap">시나리오 ①부터 — 각 단계에서 다음에 벌어질 일을 먼저 예측!</span>
+</div>
+<div class="presets"><span class="cap">시나리오 — 예상 결과가 함께 표시됩니다</span>
+<button class="chip" data-sc="0">① 한 epoch → <b>스캔·선택·소진 반복</b></button>
+<button class="chip" data-sc="1">② 잠든 task의 보너스 → <b>counter/2 + priority</b></button>
+<button class="chip" data-sc="2">③ task를 늘리면 → <b>비교 횟수도 선형 증가</b></button>
+</div>
+<div class="presets"><span class="cap">자유 모드 — task 카드를 클릭하면 재우기/깨우기</span>
+<button class="chip fm" id="fmAdd">+ task 추가</button>
+<button class="chip fm" id="fmSched">schedule() 한 번 실행</button>
+</div>
+</section>
+
+<section class="cpu">
+<div><div class="t">CPU — 실행 중</div><div class="now" id="now">idle</div></div>
+<div><div class="t">남은 timeslice (counter)</div><div class="ticks" id="ticks"></div></div>
+<div class="cmp">이번 schedule() 비교 <b id="nCmp">0</b>회 · 누적 <span id="nCmpT">0</span>회</div>
+</section>
+
+<section class="rq">
+<div class="t">전역 <b>runqueue</b> — 자료구조는 이거 하나 · ⌛ = counter 소진(이번 epoch 선택 불가)</div>
+<div class="tasks" id="tasks"></div>
+<div class="sleepbox"><div class="t2">잠듦(S) — 스캔에서 제외, 그러나 epoch 재충전에는 포함</div>
+<div class="tasks" id="sleepers"></div></div>
+</section>
+
+<div class="grid2">
+<section class="panel" style="margin:0">
+<div class="rq t" style="margin-bottom:6px;padding:0;border:0;background:none">점수판 — goodness = counter + priority</div>
+<table class="fl" id="score"></table>
+</section>
+<section class="panel" style="margin:0">
+<div class="rq t" style="margin-bottom:6px;padding:0;border:0;background:none">동작 로그 — 스캔·선택·tick·재충전</div>
+<div class="term" id="log" aria-live="polite">대기 중 — 스케줄러의 순회가 여기에 기록됩니다</div>
+</section>
+</div>
+
+<div class="cards">
+<div class="card" id="k1"><div class="top"><span class="name">runqueue 하나</span><span class="lamp"></span></div>
+<div class="why">모든 runnable task가 한 줄에 — 단순하지만, 고를 때마다 전원을 봐야 합니다.</div></div>
+<div class="card" id="k2"><div class="top"><span class="name">goodness 전수 계산</span><span class="lamp"></span></div>
+<div class="why">schedule()마다 task 수만큼 비교 — 그래서 이름이 O(n).</div></div>
+<div class="card" id="k3"><div class="top"><span class="name">epoch 재충전</span><span class="lamp"></span></div>
+<div class="why">전원 소진 시 counter = counter/2 + priority — 이때도 전체(잠든 것 포함)를 순회.</div></div>
+<div class="card" id="k4"><div class="top"><span class="name">잠꾸러기 보너스</span><span class="lamp"></span></div>
+<div class="why">잠들어 counter를 아낀 task는 절반을 이월 — 키보드를 기다리던 대화형이 깨자마자 이깁니다.</div></div>
+</div>
+
+<div class="verdict" id="v">예측 질문 — task가 <b>1,000개</b>라면, CPU 주인을 한 번 고르는 데 비교를 몇 번 해야 할까요? 답을 정한 뒤 시작하세요.</div>
+</div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const WAIT=reduced?0:460;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+let tasks=[],queue=[],busy=false,freeMode=false,sc=null;
+let cmpTotal=0,nextId=4;
+let scanId=null,bestId=null,pickId=null,rcSet=null;
+
+function mk(name,prio,kind){return{id:name,prio,counter:prio,state:"R",kind};}
+function runnable(){return tasks.filter(t=>t.state==="R");}
+function log(h){const o=$("#log");
+ if(o.textContent.startsWith("대기 중"))o.innerHTML="";
+ o.innerHTML+=h+"<br>";o.scrollTop=o.scrollHeight;}
+function cap(t){$("#cap").textContent=t;}
+function verdict(h){$("#v").innerHTML=h;}
+function lamp(id){$("#"+id).classList.add("set");}
+
+function render(goodMap){
+ const rq=$("#tasks"),sl=$("#sleepers");rq.innerHTML="";sl.innerHTML="";
+ tasks.forEach(t=>{
+  const d=document.createElement("div");
+  d.className="task"+(t.state==="S"?" sleep":"")+(t.counter===0&&t.state==="R"?" spent":"")
+   +(scanId===t.id?" scan":"")+(bestId===t.id?" best":"")+(pickId===t.id?" pick":"")
+   +(rcSet&&rcSet.has(t.id)?" recharge":"")+(freeMode&&pickId!==t.id?" clickable":"");
+  d.innerHTML=`<div class="nm"><span>${t.id}</span><span style="color:var(--dim)">${t.kind}</span></div>
+   <div class="ln"><span>prio ${t.prio}</span><span>cnt ${t.counter}</span></div>
+   <div class="gd">${goodMap&&goodMap[t.id]!==undefined?("g="+goodMap[t.id]):""}</div>`;
+  if(freeMode)d.addEventListener("click",()=>{
+   if(busy||pickId===t.id)return;
+   t.state=t.state==="R"?"S":"R";
+   log(t.state==="S"?`<span class='z'>${t.id} 잠듦(S)</span> — 스캔 제외, counter ${t.counter} 보존`
+    :`<span class='p'>${t.id} 깨어남(R)</span> — counter ${t.counter}로 복귀`);
+   render();});
+  (t.state==="S"?sl:rq).appendChild(d);});
+ if(!sl.children.length)sl.innerHTML="<span style='font-family:var(--mono);font-size:11px;color:#3a445e'>(없음)</span>";
+ // 점수판
+ const sb=$("#score");
+ sb.innerHTML="<tr><th>task</th><th>prio</th><th>counter</th><th>goodness</th></tr>";
+ tasks.forEach(t=>{sb.insertAdjacentHTML("beforeend",
+  `<tr><td>${t.id}${t.state==="S"?" (S)":""}</td><td>${t.prio}</td><td>${t.counter}</td>
+   <td class="${t.state==="R"&&t.counter>0?"hl":""}">${t.state==="R"?(t.counter>0?t.counter+t.prio:"0 (소진)"):"— 스캔 제외"}</td></tr>`);});
+ scanId=bestId=pickId=null;rcSet=null;}
+function ticks(n,total){const b=$("#ticks");b.innerHTML="";
+ for(let i=0;i<total;i++){const d=document.createElement("div");
+  d.className="tick "+(i<n?"onT":"burn");b.appendChild(d);}}
+
+/* ── schedule(): 전수 스캔 + 선택 + slice 소진 ── */
+async function schedule(){
+ busy=true;lock(true);
+ const cand=runnable().filter(t=>t.counter>0);
+ log(`<span class='sys'>schedule()</span> — runqueue 전수 스캔 시작 (runnable ${runnable().length}개)`);
+ let best=null,cmp=0;
+ $("#nCmp").textContent="0";
+ const goodMap={};
+ for(const t of runnable()){
+  cmp++;cmpTotal++;
+  const g=t.counter>0?t.counter+t.prio:0;
+  goodMap[t.id]=g;
+  scanId=t.id;bestId=best?best.id:null;
+  render(goodMap);
+  $("#nCmp").textContent=cmp;$("#nCmpT").textContent=cmpTotal;
+  log(`&nbsp;&nbsp;${t.id}: goodness = ${t.counter>0?t.counter+"+"+t.prio+" = <b>"+g+"</b>":"<span class='warn'>0 (counter 소진)</span>"}`);
+  if(g>(best?best.counter+best.prio:0)&&g>0)best=t;
+  await sleep(WAIT*.8);}
+ if(!best){log("<span class='warn'>선택 가능한 task 없음 — 전원 소진 → epoch 종료</span>");
+  busy=false;lock(false);render();return null;}
+ pickId=best.id;render(goodMap);
+ log(`<span class='p'>선택 → ${best.id}</span> (비교 ${cmp}회 후)`);
+ $("#now").textContent=best.id+" 실행";
+ // slice 소진
+ const total=best.counter;
+ for(let i=best.counter;i>0;i--){ticks(i,total);await sleep(WAIT*.5);best.counter--;pickId=best.id;render();$("#now").textContent=best.id+" 실행";}
+ ticks(0,total);
+ log(`${best.id} — timeslice 소진 (tick ${total}회) → <span class='warn'>⌛ 이번 epoch 선택 불가</span>`);
+ $("#now").textContent="idle (다음 schedule 대기)";
+ render();
+ busy=false;lock(false);return best;}
+
+/* ── epoch 재충전 ── */
+async function recalc(){
+ busy=true;lock(true);
+ log("<span class='warn'>epoch 종료</span> — <b>모든 task</b>(잠든 것 포함)를 순회하며 재충전:");
+ rcSet=new Set(tasks.map(t=>t.id));
+ for(const t of tasks){
+  const old=t.counter;
+  t.counter=Math.floor(t.counter/2)+t.prio;
+  cmpTotal++;$("#nCmpT").textContent=cmpTotal;
+  log(`&nbsp;&nbsp;${t.id}${t.state==="S"?" (잠듦)":""}: ${old}/2 + ${t.prio} = <b>${t.counter}</b>`+
+   (t.state==="S"&&old>0?` <span class='z'>← 아껴 둔 절반이 보너스</span>`:""));
+  await sleep(WAIT*.6);}
+ rcSet=new Set(tasks.map(t=>t.id));render();
+ busy=false;lock(false);}
+
+function lock(on){$("#btnStep").disabled=on;
+ document.querySelectorAll(".chip").forEach(c=>c.disabled=on);}
+
+/* ── 시나리오 ── */
+const SC=[
+ [ /* ① 한 epoch */
+  {fn:schedule,cap:"schedule() 1회 — 세 명 전원의 점수를 계산한 뒤에야 선택합니다",
+   vd:"<b>전수 스캔.</b> B가 뽑히는 걸 알면서도 스케줄러는 <b>반드시 셋 다</b> 훑습니다 — 자료구조가 한 줄짜리 runqueue뿐이라 지름길이 없습니다. 이것이 O(n)의 정체."},
+  {fn:schedule,cap:"두 번째 선택 — B는 ⌛, 이제 누가 이길까요?",
+   vd:"<b>소진의 효과.</b> counter가 0이 된 task는 goodness 0 — 자연스럽게 <b>아직 몫이 남은 task</b>에게 차례가 갑니다. timeslice가 공평함의 화폐인 셈."},
+  {fn:schedule,cap:"세 번째 선택 — 남은 건 C뿐, 그래도 스캔은 전원",
+   vd:"주목 — 후보가 하나뿐이어도 <b>비교는 여전히 3회.</b> 스캔 비용은 「후보 수」가 아니라 <b>「전체 수」</b>를 따라갑니다."},
+  {fn:recalc,cap:"전원 소진 — epoch가 끝나고 재충전 공식이 돕니다",
+   vd:"<span class='good'>① 완료.</span> counter = counter/2 + priority — 전원이 0이었으니 사실상 <b>counter = priority로 리셋.</b> 그리고 이 재충전도 <b>전체 순회(O(n))</b>라는 점을 기억해 두세요. ②에서 이 공식의 숨은 의도가 드러납니다."}],
+ [ /* ② 잠꾸러기 보너스 */
+  {fn:schedule,cap:"A(대화형)가 먼저 실행됩니다 — 지켜보세요, 곧 잠듭니다",
+   vd:"A와 B는 priority가 같습니다(4:4) — 지금은 대등. 차이는 A가 <b>키보드를 기다리는 대화형</b>이라는 것."},
+  {fn:async()=>{const a=tasks.find(t=>t.id==="A");a.state="S";a.counter=2;
+    log("<span class='z'>A — read() 키 입력 대기 → 잠듦(S)</span> · counter <b>2 남긴 채</b> 보존");
+    render();},
+   cap:"A가 counter 2를 남기고 잠들었습니다 — 이 2가 나중에 무엇이 될까요?",
+   vd:"<b>잠들면 스캔에서 빠집니다</b> — CPU를 조르지 않는 착한 시민. 그리고 남긴 counter 2는 사라지지 않고 장부에 그대로."},
+  {fn:schedule,cap:"A가 자는 동안 — B가 남은 CPU를 씁니다",
+   vd:"스캔 대상이 B·C뿐인 것을 확인하세요(비교 2회) — 잠든 A는 건너뜁니다."},
+  {fn:schedule,cap:"C까지 소진 — runnable 전원이 ⌛가 됐습니다",
+   vd:"B·C 모두 소진 — epoch 종료 조건 성립. 재충전에서 <b>잠든 A도 포함</b>된다는 것이 이 시나리오의 핵심입니다."},
+  {fn:recalc,cap:"재충전 — A의 줄을 주목: 2/2 + 4 = 5",
+   vd:"<b>보너스의 정체.</b> A는 아껴 둔 2의 절반(1)을 이월받아 counter 5 — 처음부터 다시 받는 B(4)보다 <b>한 발 앞섭니다.</b>"},
+  {fn:async()=>{const a=tasks.find(t=>t.id==="A");a.state="R";
+    log("<span class='p'>키 입력 도착 — A 깨어남(R)</span> · counter 5");render();},
+   cap:"키가 눌렸습니다 — A가 깨어나 줄에 복귀. 다음 schedule의 승자는?",
+   vd:"이제 점수판을 보세요 — A: 5+4=<b>9</b>, B: 4+4=8. 같은 priority인데 A가 앞섭니다."},
+  {fn:schedule,cap:"schedule() — 방금 깨어난 A가 이깁니다",
+   vd:"<span class='good'>② 완료 — 설계의 의도.</span> 잠 잘 자는(=I/O를 기다리는) <b>대화형 task가 깨자마자 CPU를 잡게</b> 만드는 것이 counter/2 이월의 목적 — 키보드 반응이 빠르게 느껴지는 이유입니다. 공식 한 줄에 정책이 들어 있습니다."}],
+ [ /* ③ O(n)의 대가 */
+  {fn:schedule,cap:"기준점 — task 3개일 때 비교 3회",
+   vd:"먼저 기준을 잡습니다 — n=3, 비교 3회. 이제 task를 늘려 봅니다."},
+  {fn:async()=>{["D","E","F","G","H"].forEach((n,i)=>tasks.push(mk(n,2+(i%3),"CPU형")));
+    log("<span class='warn'>task 5개 추가 — 총 8개</span>");render();},
+   cap:"서버처럼 task가 늘었습니다(8개) — 다음 선택의 비교 횟수를 예측하세요",
+   vd:"task는 프로그램을 여는 것만으로 늘어납니다 — 초창기라고 8개가 많은 게 아닙니다."},
+  {fn:schedule,cap:"비교 8회 — 상단 카운터가 정직하게 늘었습니다",
+   vd:"<b>선형 증가.</b> n=8 → 비교 8회. tick마다도 아니고 <b>선택 한 번마다</b> 이 비용입니다. n=1,000이면? — 시작 예측 질문의 답: <b>1,000회.</b>"},
+  {fn:recalc,cap:"epoch 재충전도 8명 전원 순회 — 이중의 O(n)",
+   vd:"<span class='good'>③ 완료 — 그리고 역사.</span> 선택도 O(n), 재충전도 O(n), 게다가 runqueue가 하나라 CPU가 여러 개면 <b>줄 서서 잠금을 다퉜습니다.</b> 그래서 Linux 2.6이 O(1) 스케줄러로, 이후 CFS(레드블랙 트리, O(log n))로 교체됩니다 — 알고리즘 수업의 복잡도가 커널 역사를 실제로 바꾼 사례. 자유 모드에서 task를 더 늘려 체감해 보세요."}]];
+
+function baseTasks(i){
+ if(i===1)return[mk("A",4,"대화형"),mk("B",4,"CPU형"),mk("C",2,"CPU형")];
+ return[mk("A",3,"CPU형"),mk("B",5,"CPU형"),mk("C",2,"CPU형")];}
+function loadSc(i){
+ if(busy)return;
+ freeMode=false;sc=i;
+ tasks=baseTasks(i);nextId=4;cmpTotal=0;
+ $("#nCmp").textContent="0";$("#nCmpT").textContent="0";
+ $("#now").textContent="idle";ticks(0,0);
+ $("#log").innerHTML="";
+ log("<span class='p'>── 시나리오 "+(i+1)+" ──</span>");
+ queue=[...SC[i]];
+ lamp(i===0?"k1":i===1?"k4":"k2");if(i===0)lamp("k2");if(i===1)lamp("k3");if(i===2)lamp("k3");
+ render();
+ cap("시나리오 준비 완료 — 「다음 단계 ▶」 ("+queue.length+"단계, 단계마다 자동 재생)");
+ verdict(["예측 — schedule()은 승자가 뻔해 보여도 몇 번을 비교할까요?",
+  "예측 — priority가 같은 A(대화형)와 B(CPU형), epoch가 한 번 돌고 나면 누가 유리할까요?",
+  "예측 — task가 3개→8개가 되면 선택 한 번의 비교는 몇 회가 될까요?"][i]);}
+async function step(){
+ if(busy)return;
+ if(!queue.length){
+  if(sc===null){loadSc(0);return;}
+  freeMode=true;render();
+  cap("시나리오 종료 — 자유 모드: task 추가 · 카드 클릭(재우기/깨우기) · schedule() 실행");
+  return;}
+ const st=queue.shift();cap(st.cap);verdict(st.vd);
+ await st.fn();
+ if(!queue.length){freeMode=true;render();
+  cap($("#cap").textContent+"  — 시나리오 끝: 자유 모드 사용 가능");}}
+$("#btnStep").addEventListener("click",step);
+$("#btnReset").addEventListener("click",()=>{if(busy)return;
+ tasks=baseTasks(0);queue=[];sc=null;freeMode=true;cmpTotal=0;nextId=4;
+ $("#nCmp").textContent="0";$("#nCmpT").textContent="0";
+ $("#now").textContent="idle";ticks(0,0);
+ ["k1","k2","k3","k4"].forEach(id=>$("#"+id).classList.remove("set"));
+ $("#log").innerHTML="대기 중 — 스케줄러의 순회가 여기에 기록됩니다";
+ cap("초기화 완료 — 시나리오를 고르거나 자유 모드로 실험하세요");
+ verdict("예측 질문 — task가 <b>1,000개</b>라면, CPU 주인을 한 번 고르는 데 비교를 몇 번 해야 할까요?");
+ render();});
+document.querySelectorAll("[data-sc]").forEach(c=>c.addEventListener("click",()=>loadSc(+c.dataset.sc)));
+$("#fmAdd").addEventListener("click",()=>{if(busy)return;freeMode=true;
+ const nm=String.fromCharCode(64+nextId++);
+ if(nextId>90-64+27){log("<span class='err'>task가 너무 많습니다</span>");return;}
+ tasks.push(mk(nm,2+(tasks.length%4),"CPU형"));
+ log(`<span class='warn'>+ task ${nm} 추가</span> — runnable ${runnable().length}개`);render();});
+$("#fmSched").addEventListener("click",async()=>{if(busy)return;freeMode=true;
+ const cand=runnable().filter(t=>t.counter>0);
+ if(!cand.length&&runnable().length){await recalc();return;}
+ await schedule();
+ cap("schedule() 완료 — 전원 소진 시 한 번 더 누르면 epoch 재충전이 돕니다");});
+// 초기 화면
+tasks=baseTasks(0);freeMode=true;render();ticks(0,0);
+})();
+</script>
+</body>
+</html>

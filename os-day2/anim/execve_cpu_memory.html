@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>execve() 해부 — 같은 PID, 새 프로그램</title>
+<style>
+:root{
+  --bg:#0f141d;--panel:#161d2a;--panel2:#1b2434;--line:#26314a;
+  --ink:#dce6f5;--dim:#7d8ba3;--amber:#ffd166;--warnc:#ff9f43;
+  --hot:#ff5d73;--accent:#4cc9f0;--good:#7ee787;--purple:#c3a6ff;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);min-height:100vh;padding:24px 16px 60px;
+ font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+.wrap{max-width:980px;margin:0 auto}
+header{margin-bottom:18px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+h1{font-size:clamp(20px,4vw,28px);font-weight:800;margin-top:6px}
+h1 b{font-family:var(--mono);color:var(--amber)}
+.sub{color:var(--dim);font-size:14px;margin-top:6px;line-height:1.6}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.run{padding:11px 22px;border:none;border-radius:8px;background:var(--amber);color:#2a2005;
+ font-weight:800;font-size:15px;cursor:pointer;font-family:inherit}
+.run:disabled{opacity:.4;cursor:default}
+.run.sec{background:var(--panel2);color:var(--ink);border:1px solid var(--line);font-size:13.5px}
+.run:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.presets{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px}
+.presets .cap{width:100%;font-size:11px;color:var(--dim);letter-spacing:.06em}
+.chip{font-family:var(--mono);font-size:13px;padding:7px 12px;border-radius:999px;
+ background:var(--panel2);color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+.chip b{color:var(--amber);font-weight:700}
+/* 코드 리스트 */
+.code{background:#0a0f18;border:1px solid var(--line);border-radius:10px;
+ font-family:var(--mono);font-size:13.5px;line-height:1.9;padding:10px 0;margin-bottom:14px}
+.code .ln{display:flex;padding:0 14px}
+.code .no{width:26px;color:var(--dim);flex:0 0 auto}
+.code .tx{flex:1;white-space:pre}
+.code .cm{color:var(--dim)}
+.code .fn{color:var(--amber)}
+.code .ln .mk{width:70px;flex:0 0 auto;text-align:right;font-size:11px;color:var(--good);font-weight:800}
+.code .ln.hl{background:rgba(126,231,135,.08)}
+.code .ln.never .tx{color:#4a5674;text-decoration:line-through}
+.code .ln.never .no{color:#3a445e}
+/* 3열 보드: Storage | 프로세스 | 부모(옵션) */
+.board{display:grid;grid-template-columns:.72fr 1.15fr 1.05fr;gap:14px;margin-bottom:14px}
+@media(max-width:820px){.board{grid-template-columns:1fr}}
+.proc{background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:14px;transition:opacity .4s,border-color .3s}
+.proc.ghost{opacity:.18;pointer-events:none}
+.proc.on{border-color:var(--accent)}
+.proc h2{font-size:14.5px;display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.proc h2 .pid{font-family:var(--mono);font-size:12px;color:var(--amber)}
+.sec-t{font-size:11px;color:var(--dim);letter-spacing:.06em;margin:10px 0 6px}
+.reg{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12.5px;
+ padding:5px 8px;border:1px solid var(--line);border-radius:7px;margin-bottom:6px;transition:border-color .3s,background .3s}
+.reg .k{color:var(--dim)}.reg .v{font-weight:800}
+.reg.hl{border-color:var(--amber);background:#221c08}
+.reg.keep{border-color:var(--good);background:#0f2417}
+.blk{border:1px solid var(--line);border-radius:8px;padding:7px 10px;margin-bottom:6px;
+ font-family:var(--mono);font-size:12px;position:relative;transition:all .35s}
+.blk .bt{color:var(--dim);font-size:10.5px}
+.blk .bv{font-weight:800;margin-top:1px}
+.blk.copy{animation:cp .55s ease}
+@keyframes cp{0%{transform:translateX(-52px);opacity:0}100%{transform:none;opacity:1}}
+.blk.demol{border-style:dashed;border-color:#3a445e;background:transparent}
+.blk.demol .bv{color:#4a5674;text-decoration:line-through}
+.blk.demol::after{content:"철거됨";position:absolute;right:8px;top:7px;font-size:9.5px;color:var(--hot)}
+.blk.fresh{border-color:var(--good)}
+.blk.fresh::after{content:"새로 적재";position:absolute;right:8px;top:7px;font-size:9.5px;color:var(--good)}
+.file{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px;
+ font-family:var(--mono);font-size:12px}
+.file.hl{border-color:var(--amber);background:#221c08}
+.file.miss{border-style:dashed;color:#4a5674}
+/* 카드/로그/판정 */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.card .top{display:flex;justify-content:space-between;align-items:center}
+.card .name{font-family:var(--mono);font-weight:800;font-size:13.5px}
+.card .lamp{width:11px;height:11px;border-radius:50%;background:#2a3550}
+.card.set{border-color:var(--accent)}.card.set .lamp{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+.card .why{font-size:12px;line-height:1.5;color:var(--ink);margin-top:6px;min-height:48px}
+.term{background:#0a0f18;border:1px solid var(--line);border-radius:10px;padding:12px 14px;
+ font-family:var(--mono);font-size:12.5px;line-height:1.75;height:118px;overflow-y:auto;margin-bottom:14px}
+.term .p{color:var(--good)}.term .sys{color:var(--accent)}.term .warn{color:var(--warnc)}.term .err{color:var(--hot)}
+.verdict{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+ padding:13px 15px;font-size:13.5px;line-height:1.7}
+.verdict b{color:var(--amber)}
+.good{color:var(--good);font-weight:800}.bad{color:var(--hot);font-weight:800}
+.pulse{animation:pl .5s ease}
+@keyframes pl{0%{transform:scale(.97)}60%{transform:scale(1.015)}100%{transform:scale(1)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<div class="eyebrow">OS · Linux Process · 심화</div>
+<h1>execve() 해부 — <b>같은 PID, 새 프로그램</b></h1>
+<p class="sub">fork()가 「복사기」라면 execve()는 「이식 수술」입니다 — 프로세스는 그대로 두고,
+그 안의 Memory(Code·Data·Stack)를 <b>Storage의 실행 파일로 통째로 교체</b>하고 CPU의 PC를 새 프로그램의 시작점으로 되돌립니다.
+그래서 <b>성공한 execve()는 돌아오지 않습니다.</b></p>
+</header>
+
+<section class="panel">
+<div class="row">
+<button class="run" id="btnStep">다음 단계 ▶</button>
+<button class="run sec" id="btnReset">처음부터</button>
+<span class="sub" style="margin:0" id="cap">「다음 단계」로 기본 시나리오를 시작하세요 — 다음에 벌어질 일을 먼저 예측!</span>
+</div>
+<div class="presets"><span class="cap">시나리오 — 예상 결과가 함께 표시됩니다</span>
+<button class="chip" data-sc="0">① execve 기본 → <b>Memory 교체 · PID 유지</b></button>
+<button class="chip" data-sc="1">② fork + execve → <b>Shell이 명령을 실행하는 법</b></button>
+<button class="chip" data-sc="2">③ 실패하면 → <b>그때만 return −1</b></button>
+</div>
+</section>
+
+<div class="code" id="codeBox"></div>
+
+<div class="board">
+<!-- Storage -->
+<section class="proc on" id="pS">
+<h2>Storage (창고) <span class="pid">실행 파일들</span></h2>
+<div class="sec-t">디스크의 프로그램 파일</div>
+<div class="file" id="fLs">📄 /bin/ls<br><span style="color:var(--dim)">Code + 초기 Data 설계도</span></div>
+<div class="file" id="fApp">📄 /home/myapp</div>
+<div class="file miss" id="fNone" style="display:none">📄 /bin/none — 존재하지 않음</div>
+</section>
+<!-- 주인공 프로세스 -->
+<section class="proc on" id="pM">
+<h2><span id="mName">myapp 프로세스</span> <span class="pid" id="mPid">PID 1234</span></h2>
+<div class="sec-t">CPU (레지스터)</div>
+<div class="reg" id="mPC"><span class="k">PC</span><span class="v" id="mPCv">1행</span></div>
+<div class="reg" id="mRet"><span class="k">execve 반환값</span><span class="v" id="mRetv">—</span></div>
+<div class="sec-t">Memory (주소 공간)</div>
+<div class="blk" id="mCode"><div class="bt">Code</div><div class="bv" id="mCodev">myapp 명령들</div></div>
+<div class="blk" id="mData"><div class="bt">Data</div><div class="bv" id="mDatav">myapp 변수들</div></div>
+<div class="blk" id="mStk"><div class="bt">Stack</div><div class="bv" id="mStkv">myapp 호출 기록</div></div>
+</section>
+<!-- 부모 (시나리오 ②) -->
+<section class="proc ghost" id="pP">
+<h2>bash (부모) <span class="pid">PID 1000</span></h2>
+<div class="sec-t">CPU</div>
+<div class="reg"><span class="k">상태</span><span class="v" id="pStat">—</span></div>
+<div class="sec-t">Memory</div>
+<div class="blk"><div class="bt">Code</div><div class="bv">bash 명령들</div></div>
+<div class="blk"><div class="bt">Data · Stack</div><div class="bv">bash의 것 — 그대로</div></div>
+</section>
+</div>
+
+<div class="term" id="log" aria-live="polite">대기 중 — execve()의 안쪽이 여기에 기록됩니다</div>
+
+<div class="cards">
+<div class="card" id="k1"><div class="top"><span class="name">같은 PID</span><span class="lamp"></span></div>
+<div class="why">새 프로세스가 생기지 않습니다 — 표의 같은 줄(PID)이 유지된 채 내용물만 바뀝니다.</div></div>
+<div class="card" id="k2"><div class="top"><span class="name">Memory 교체</span><span class="lamp"></span></div>
+<div class="why">기존 Code·Data·Stack 철거 → Storage의 실행 파일에서 새 주소 공간 적재.</div></div>
+<div class="card" id="k3"><div class="top"><span class="name">PC 재설정</span><span class="lamp"></span></div>
+<div class="why">CPU의 PC가 새 프로그램의 시작점으로 — 이어달리기가 아니라 새 출발.</div></div>
+<div class="card" id="k4"><div class="top"><span class="name">돌아오지 않음</span><span class="lamp"></span></div>
+<div class="why">다음 줄을 실행할 Code 자체가 사라졌으므로 — return은 실패(−1)했을 때만.</div></div>
+</div>
+
+<div class="verdict" id="v">예측 질문 — execve() <b>다음 줄의 print는 실행될까요?</b> 답을 정한 뒤 시작하세요.</div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+let queue=[],sc=0;
+
+/* 코드 리스트 (시나리오별) */
+const CODES=[
+ [["1",'print("A");            <span class="cm">// myapp</span>'],
+  ["2",'<span class="fn">execve</span>("/bin/ls");     <span class="cm">// 이식 수술</span>'],
+  ["3",'print("B");            <span class="cm">// 이 줄의 운명은?</span>']],
+ [["1",'pid = <span class="fn">fork</span>();           <span class="cm">// bash가 자신을 복제</span>'],
+  ["2",'if (pid == 0)'],
+  ["3",'    <span class="fn">execve</span>("/bin/ls"); <span class="cm">// 자식: ls로 변신</span>'],
+  ["4",'else  <span class="fn">wait</span>();          <span class="cm">// 부모: 끝나길 기다림</span>']],
+ [["1",'print("A");'],
+  ["2",'ret = <span class="fn">execve</span>("/bin/none"); <span class="cm">// 없는 파일!</span>'],
+  ["3",'print("실패:", ret);   <span class="cm">// 이 줄의 운명은?</span>']]];
+function renderCode(i){$("#codeBox").innerHTML=CODES[i].map(l=>
+ `<div class="ln" data-l="${l[0]}"><span class="no">${l[0]}</span><span class="tx">${l[1]}</span><span class="mk"></span></div>`).join("");}
+function mark(l,label){document.querySelectorAll(".code .ln").forEach(ln=>{
+ const on=ln.dataset.l===String(l);
+ ln.classList.toggle("hl",on);
+ ln.querySelector(".mk").textContent=on?("◀ "+(label||"PC")):"";});}
+function never(l){const ln=document.querySelector('.code .ln[data-l="'+l+'"]');
+ if(ln){ln.classList.add("never");ln.querySelector(".mk").textContent="✕ 영원히 미실행";
+  ln.querySelector(".mk").style.color="var(--hot)";}}
+
+function log(h){const o=$("#log");
+ if(o.textContent.startsWith("대기 중"))o.innerHTML="";
+ o.innerHTML+=h+"<br>";o.scrollTop=o.scrollHeight;}
+function cap(t){$("#cap").textContent=t;}
+function verdict(h){$("#v").innerHTML=h;}
+function lamp(id,on){$("#"+id).classList.toggle("set",on);}
+function pulse(id){if(reduced)return;const e=$("#"+id);
+ e.classList.remove("pulse");void e.offsetWidth;e.classList.add("pulse");}
+function mem(code,data,stk,cls){
+ [["mCode",code],["mData",data],["mStk",stk]].forEach(([id,v],i)=>{
+  const b=$("#"+id);b.classList.remove("demol","fresh","copy");
+  if(cls)setTimeout(()=>{b.classList.add(cls);if(cls==="fresh")b.classList.add("copy");},reduced?0:i*160);
+  $("#"+id+"v").textContent=v;});}
+
+/* ── 단계 ── */
+const T={
+ runA(){mark(1);$("#mPCv").textContent="1행";
+  log("<span class='p'>myapp(1234)</span> 1행 — \"A\" 출력");
+  cap("myapp이 자기 Code를 실행 중 — 다음: 2행 execve() 진입");
+  verdict("지금 Memory의 Code·Data·Stack은 전부 <b>myapp의 것</b> — PID 1234라는 이름표가 붙은 방입니다.");},
+ trap(){mark(2);$("#mPCv").textContent="2행";
+  $("#fLs").classList.add("hl");
+  log("<span class='sys'>execve(\"/bin/ls\")</span> — OS 진입, Storage에서 /bin/ls 확인");
+  cap("execve 진입 — OS가 Storage에서 새 프로그램 파일을 찾았습니다. 다음: 철거");
+  verdict("execve()도 <b>system call</b> — Memory를 갈아끼울 권한은 OS에게만 있습니다. 첫 작업은 Storage(창고)에서 실행 파일 확인.");},
+ demol(){mem("myapp 명령들","myapp 변수들","myapp 호출 기록","demol");
+  log("<span class='warn'>철거</span> — 기존 주소 공간(Code·Data·Stack) 해체");
+  cap("철거 — myapp의 흔적이 사라집니다. 3행 print(\"B\")의 운명은? 다음: 적재");
+  verdict("<b>Memory 관점 ①.</b> 기존 공간이 철거됩니다 — 3행을 담고 있던 Code도 함께. <b>돌아갈 집이 사라지는 중</b>입니다.");},
+ load(){mem("ls 명령들","ls 초기 변수","새 Stack (빈 상태)","fresh");
+  log("<span class='sys'>적재</span> — Storage의 /bin/ls → Memory로 (컴퓨터 구조 S5: 창고→작업대)");
+  lamp("k2",true);
+  cap("적재 — 같은 방(PID 1234)에 새 세간이 들어왔습니다. 다음: PC 재설정");
+  verdict("<b>Memory 관점 ②.</b> Storage의 실행 파일이 Memory로 올라옵니다 — 컴퓨터 구조 Day 1에서 본 「창고→작업대」 흐름이 바로 이 순간. 방(PID)은 그대로, 세간만 전부 교체.");},
+ pc(){$("#mPCv").textContent="ls 시작점";$("#mPC").classList.add("hl");
+  $("#mName").textContent="ls 프로세스 (이름만 바뀜)";
+  $("#mPid").classList.add ? null : null;
+  $("#mPid").parentElement && ($("#mPid").style.color="var(--good)");
+  pulse("mPid");
+  document.querySelectorAll(".code .ln").forEach(ln=>{ln.classList.remove("hl");ln.querySelector(".mk").textContent="";});
+  log("<span class='sys'>PC 재설정</span> — 새 프로그램의 시작점으로 · <b>PID 1234 유지</b>");
+  lamp("k1",true);lamp("k3",true);
+  cap("PC 재설정 — 이어달리기가 아니라 새 출발. PID는 그대로 1234. 다음: 실행");
+  verdict("<b>CPU 관점.</b> fork()는 PC를 「복사」해 같은 지점에서 깨어났지만, execve()는 PC를 <b>새 프로그램의 시작점으로 재설정</b>합니다. 그리고 표를 보세요 — <b>PID는 여전히 1234.</b> 새 프로세스가 태어난 것이 아닙니다.");},
+ runLs(){$("#mPC").classList.remove("hl");
+  log("<span class='p'>ls(1234)</span> 실행 — 파일 목록 출력");
+  never(3);lamp("k4",true);
+  cap("ls가 실행 중 — 그리고 3행 print(\"B\")는 영원히 실행되지 않습니다");
+  verdict("<span class='good'>핵심.</span> 성공한 execve()는 <b>돌아오지 않습니다</b> — \"B\"를 출력할 3행이 담긴 Code가 철거됐기 때문. return할 곳 자체가 없는 것이지, 규칙으로 금지한 것이 아닙니다.");},
+ /* 시나리오 ② */
+ fork2(){mark(1);$("#pStat").textContent="실행 중";
+  log("<span class='p'>bash(1000)$</span> ls ⏎");
+  log("<span class='sys'>fork()</span> — bash가 자신을 복제 → 자식 PID 1234 (내용은 아직 bash)");
+  $("#mName").textContent="자식 (bash 복사본)";
+  mem("bash 명령들 (복사)","bash 변수들 (복사)","bash 호출 기록 (복사)","fresh");
+  cap("fork 완료 — 자식은 아직 bash의 복사본입니다. 다음: 자식만 execve");
+  verdict("Shell의 1단계 — fork()로 <b>일단 복사</b>. 그런데 우리가 원한 건 bash가 두 개가 아니라 <b>ls</b>입니다. 그래서 2단계가 필요합니다.");},
+ exec2(){mark(3);$("#fLs").classList.add("hl");
+  log("<span class='sys'>자식(1234): execve(\"/bin/ls\")</span> — 자식의 Memory만 ls로 교체");
+  mem("ls 명령들","ls 초기 변수","새 Stack","fresh");
+  $("#mName").textContent="ls 프로세스";$("#mPCv").textContent="ls 시작점";
+  lamp("k1",true);lamp("k2",true);lamp("k3",true);
+  cap("자식만 변신 — 부모 bash의 Memory는 손대지 않았습니다. 다음: 부모는 wait");
+  verdict("<b>fork + execve = Shell의 비밀.</b> 복사본(자식) 위에서만 이식 수술을 하므로 <b>부모 bash는 무사</b>합니다 — 이것이 명령을 칠 때마다 bash가 죽지 않고 살아남는 이유.");},
+ wait2(){mark(4);$("#pStat").textContent="wait() — S (잠듦)";
+  log("<span class='sys'>부모: wait()</span> — 자식이 끝날 때까지 잠듦(S)");
+  log("<span class='p'>ls(1234)</span> 목록 출력 후 exit → 부모가 회수 → Prompt 복귀");
+  lamp("k4",true);
+  cap("한 사이클 완성 — 명령 하나가 fork→execve→wait로 처리됐습니다");
+  verdict("<span class='good'>완성.</span> Terminal에 명령을 칠 때마다 이 3박자가 돕니다 — <b>fork(복사) → execve(변신) → wait(회수)</b>. 생명주기 애니메이션의 S(잠듦)·Z(회수)가 여기서 재등장합니다.");},
+ /* 시나리오 ③ */
+ trap3(){mark(2);$("#mPCv").textContent="2행";
+  $("#fNone").style.display="";pulse("fNone");
+  log("<span class='sys'>execve(\"/bin/none\")</span> — Storage 확인… <span class='err'>파일 없음</span>");
+  cap("파일이 없습니다 — 철거가 일어날까요? 다음 단계");
+  verdict("OS는 <b>철거 전에 먼저 확인</b>합니다 — 새 프로그램을 적재할 수 없다면 기존 집을 부수면 안 되니까.");},
+ fail3(){$("#mRetv").textContent="−1";$("#mRet").classList.add("hl");pulse("mRet");
+  log("<span class='err'>execve 실패 — Memory 교체 없음, return −1</span>");
+  cap("실패 — 이번에는 돌아왔습니다. 다음: 3행 실행");
+  verdict("<b>실패했을 때만 return.</b> 집이 그대로이므로 돌아갈 곳이 있습니다 — 반환값 −1이 CPU의 레지스터에 실려 돌아옵니다.");},
+ after3(){mark(3);$("#mPCv").textContent="3행";$("#mRet").classList.remove("hl");
+  log("<span class='p'>myapp(1234)</span> 3행 — \"실패: −1\" 출력 (이번엔 실행됨!)");
+  lamp("k4",true);
+  cap("3행이 실행됐습니다 — 시나리오 ①과의 결정적 차이");
+  verdict("<span class='good'>대조 완성.</span> 시나리오 ①의 3행은 <b>영원히 미실행</b>, ③의 3행은 <b>실행됨</b> — 차이는 단 하나, Memory 교체가 일어났는가. \"execve 다음 줄은 실패 처리 코드\"라는 실무 관습이 여기서 나옵니다.");}
+};
+
+/* ── 시나리오 ── */
+const SC=[
+ ["execve 기본",["runA","trap","demol","load","pc","runLs"],0],
+ ["fork + execve (Shell)",["fork2","exec2","wait2"],1],
+ ["실패하면 −1",["runA","trap3","fail3","after3"],2]];
+function loadSc(i){reset(false);sc=i;renderCode(SC[i][2]);
+ if(i===1){$("#pP").classList.remove("ghost");$("#pP").classList.add("on");
+  $("#mName").textContent="자식 (아직 없음)";
+  mem("—","—","—");["mCode","mData","mStk"].forEach(id=>$("#"+id).style.opacity=".35");}
+ queue=[...SC[i][1]];
+ log("<span class='p'>── 시나리오 "+(i+1)+" · "+SC[i][0]+" ──</span>");
+ cap("시나리오 「"+SC[i][0]+"」 — 「다음 단계 ▶」로 진행 ("+queue.length+"단계)");}
+function step(){
+ if(!queue.length){
+  if($("#mRetv").textContent==="—"&&$("#mCodev").textContent==="myapp 명령들"&&sc===0&&!document.querySelector(".code .ln")){loadSc(0);return;}
+  if(!document.querySelector(".code .ln")){loadSc(0);return;}
+  cap("시나리오가 끝났습니다 — 다른 시나리오 또는 「처음부터」");return;}
+ ["mCode","mData","mStk"].forEach(id=>$("#"+id).style.opacity="");
+ T[queue.shift()]();}
+function reset(clearLog){
+ queue=[];sc=0;renderCode(0);
+ $("#pP").classList.add("ghost");$("#pP").classList.remove("on");
+ $("#pStat").textContent="—";
+ $("#mName").textContent="myapp 프로세스";$("#mPid").style.color="";
+ $("#mPCv").textContent="1행";$("#mRetv").textContent="—";
+ $("#mPC").classList.remove("hl");$("#mRet").classList.remove("hl");
+ mem("myapp 명령들","myapp 변수들","myapp 호출 기록");
+ ["mCode","mData","mStk"].forEach(id=>{$("#"+id).classList.remove("demol","fresh","copy");$("#"+id).style.opacity="";});
+ $("#fLs").classList.remove("hl");$("#fNone").style.display="none";
+ ["k1","k2","k3","k4"].forEach(id=>lamp(id,false));
+ if(clearLog!==false)$("#log").innerHTML="대기 중 — execve()의 안쪽이 여기에 기록됩니다";
+ cap("「다음 단계」로 기본 시나리오를 시작하세요 — 다음에 벌어질 일을 먼저 예측!");
+ verdict("예측 질문 — execve() <b>다음 줄의 print는 실행될까요?</b> 답을 정한 뒤 시작하세요.");}
+$("#btnStep").addEventListener("click",step);
+$("#btnReset").addEventListener("click",()=>reset(true));
+document.querySelectorAll("[data-sc]").forEach(c=>c.addEventListener("click",()=>loadSc(+c.dataset.sc)));
+reset(true);
+})();
+</script>
+</body>
+</html>

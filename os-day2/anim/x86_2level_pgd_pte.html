@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>x86 2단 페이징 해부 — PGD와 PTE, 그리고 접힌 층</title>
+<style>
+:root{
+  --bg:#0f141d;--panel:#161d2a;--panel2:#1b2434;--line:#26314a;
+  --ink:#dce6f5;--dim:#7d8ba3;--amber:#ffd166;--warnc:#ff9f43;
+  --hot:#ff5d73;--accent:#4cc9f0;--good:#7ee787;--purple:#c3a6ff;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);min-height:100vh;padding:24px 16px 60px;
+ font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+.wrap{max-width:1040px;margin:0 auto}
+header{margin-bottom:18px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+h1{font-size:clamp(20px,4vw,27px);font-weight:800;margin-top:6px}
+h1 b{font-family:var(--mono);color:var(--amber)}
+.sub{color:var(--dim);font-size:14px;margin-top:6px;line-height:1.6}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.run{padding:11px 22px;border:none;border-radius:8px;background:var(--amber);color:#2a2005;
+ font-weight:800;font-size:15px;cursor:pointer;font-family:inherit}
+.run:disabled{opacity:.4;cursor:default}
+.run.sec{background:var(--panel2);color:var(--ink);border:1px solid var(--line);font-size:13.5px}
+.run:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.presets{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px}
+.presets .cap{width:100%;font-size:11px;color:var(--dim);letter-spacing:.06em}
+.chip{font-family:var(--mono);font-size:12.5px;padding:7px 12px;border-radius:999px;
+ background:var(--panel2);color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.chip:hover:not(:disabled){border-color:var(--accent)}
+.chip:disabled{opacity:.4;cursor:default}
+.chip b{color:var(--amber);font-weight:700}
+.caption{background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+ padding:10px 14px;font-size:13.5px;line-height:1.6;margin-top:12px;min-height:44px}
+.caption b{color:var(--amber)}
+/* VA 분해 */
+.vaBox{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.vaBox .t{font-size:11px;color:var(--dim);letter-spacing:.06em;margin-bottom:8px}
+.vaBox .t b{color:var(--ink)}
+.fields{display:flex;border-radius:10px;overflow:hidden;border:1px solid var(--line);font-family:var(--mono)}
+.fld{padding:9px 6px;text-align:center;transition:all .3s;opacity:.4}
+.fld .lb{font-size:10px}
+.fld .bv{font-size:14px;font-weight:800;margin-top:2px}
+.fld.f0{flex:10;background:#0e3542;color:var(--accent)}
+.fld.f1{flex:10;background:#3a1b2c;color:#f9a8d4}
+.fld.f2{flex:12;background:#3a3208;color:var(--amber)}
+.fld.on{opacity:1;box-shadow:inset 0 0 0 2px currentColor}
+.arrowline{font-size:10.5px;color:var(--dim);text-align:center;font-family:var(--mono);margin-top:4px}
+/* walk 그리드 */
+.walk{display:grid;grid-template-columns:1.1fr .55fr .55fr 1.1fr 1.15fr;gap:10px;margin-bottom:14px}
+.walk.nofold{grid-template-columns:1.1fr 1.1fr 1.15fr}
+@media(max-width:900px){.walk,.walk.nofold{grid-template-columns:1fr 1fr}}
+.col{background:var(--panel);border:2px solid var(--line);border-radius:13px;padding:10px;transition:all .3s}
+.col.onC{border-color:var(--good)}
+.col.fold{opacity:.55;border-style:dashed;border-color:#3a3555}
+.col.fold.onC{opacity:.9;border-color:var(--purple)}
+.col h3{font-family:var(--mono);font-size:11.5px;color:var(--dim);margin-bottom:7px;display:flex;justify-content:space-between}
+.col h3 b{color:var(--ink)}
+.col.fold h3 b{color:var(--purple)}
+.col h3 .lvl{font-size:9.5px}
+.tt{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11.5px}
+.tt th{color:var(--dim);font-weight:700;text-align:left;padding:3px 5px;border-bottom:1px solid var(--line);font-size:10px}
+.tt td{padding:4px 5px;border-bottom:1px solid var(--line);transition:background .3s;color:var(--dim)}
+.tt tr.on td{background:#0f2417;color:var(--ink)}
+.tt tr.onF td{background:#221b33;color:var(--ink)}
+.tt tr.bad td{background:#2a141a;color:var(--ink)}
+.tt td.p1{color:var(--good);font-weight:800}
+.tt td.p0{color:var(--hot);font-weight:800}
+.cr3{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;
+ padding:6px 9px;border:1px solid var(--accent);border-radius:8px;margin-bottom:7px;transition:all .3s}
+.cr3 .k{color:var(--dim)}.cr3 .v{font-weight:800}
+.cr3.hl{background:#0f2417;border-color:var(--good)}
+.frame{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:11.5px;
+ border:1px solid var(--line);border-radius:8px;padding:5px 8px;margin-bottom:5px;color:var(--dim);transition:all .3s}
+.frame b{font-weight:800;color:var(--ink)}
+.frame.kern{border-color:#5c4d10;color:var(--warnc)}
+.frame.oA{border-color:#5c4d10;background:#241f06;color:var(--amber)}
+.frame.tbl{border-color:#2b3a5e;background:#141c30;color:var(--accent)}
+.frame.on{box-shadow:inset 0 0 0 2px var(--good)}
+.frame.newly{box-shadow:inset 0 0 0 2px var(--warnc)}
+.pa{font-family:var(--mono);font-size:12px;background:#0a0f18;border:1px solid var(--line);
+ border-radius:8px;padding:7px 9px;margin-top:5px;min-height:36px;color:var(--dim)}
+.pa b{color:var(--good)}
+/* 로그·카드·판정 */
+.term{background:#0a0f18;border:1px solid var(--line);border-radius:10px;padding:12px 14px;
+ font-family:var(--mono);font-size:12.5px;line-height:1.75;height:160px;overflow-y:auto;margin-bottom:14px}
+.term .p{color:var(--good)}.term .sys{color:var(--accent)}.term .warn{color:var(--warnc)}
+.term .err{color:var(--hot)}.term .z{color:var(--purple)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.card .top{display:flex;justify-content:space-between;align-items:center}
+.card .name{font-family:var(--mono);font-weight:800;font-size:12.5px}
+.card .lamp{width:11px;height:11px;border-radius:50%;background:#2a3550}
+.card.set{border-color:var(--accent)}.card.set .lamp{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+.card .why{font-size:12px;line-height:1.5;color:var(--ink);margin-top:6px;min-height:48px}
+.verdict{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+ padding:13px 15px;font-size:13.5px;line-height:1.7}
+.verdict b{color:var(--amber)}
+.good{color:var(--good);font-weight:800}.bad{color:var(--hot);font-weight:800}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<div class="eyebrow">OS · 가상 메모리 · x86 32bit · 2-Level Paging</div>
+<h1>x86 2단 페이징 해부 — <b>PGD와 PTE, 그리고 접힌 층</b></h1>
+<p class="sub">32비트 x86의 원형입니다 — 가상 주소를 <b>10+10+12비트</b>로 쪼개 <b>PGD → PTE 표</b> 두 장만 걷습니다.
+이 편의 질문 셋: 왜 하필 10비트인가(<b>표 1장 = 페이지 1장</b>이 되는 산수),
+리눅스의 4단 코드는 어떻게 2단 하드웨어에서 도는가(<b>접힌 층, folding</b>),
+그리고 엔트리 4바이트가 남긴 <b>물리 4GB의 한계</b> — 3단(PAE)·4단으로 이어지는 출발점.</p>
+</header>
+
+<section class="panel">
+<div class="row">
+<button class="run" id="btnStep">다음 단계 ▶</button>
+<button class="run sec" id="btnReset">처음부터</button>
+<span class="sub" style="margin:0" id="prog"></span>
+</div>
+<div class="presets"><span class="cap">시나리오 — 예상 결과가 함께 표시됩니다</span>
+<button class="chip" data-sc="0">① 2단 walk → <b>표 2장 = 접근 2회</b></button>
+<button class="chip" data-sc="1">② 접힌 층 → <b>4단 코드가 2단에서 도는 법</b></button>
+<button class="chip" data-sc="2">③ 산수와 한계 → <b>10비트의 이유, 4GB의 벽</b></button>
+</div>
+<div class="presets"><span class="cap">자유 모드 — 주소를 골라 walk 재생</span>
+<button class="chip fm" data-va="code">walk: code 주소</button>
+<button class="chip fm" data-va="stack">walk: stack 주소</button>
+<button class="chip fm" data-va="miss">walk: 미매핑 → <b>표 성장</b></button>
+<button class="chip fm" id="fmFold">접힌 층 보기 켜기/끄기</button>
+</div>
+<div class="caption" id="cap">시나리오 ①부터 — 각 단계에서 다음에 벌어질 일을 먼저 예측하세요!</div>
+</section>
+
+<section class="vaBox">
+<div class="t">가상 주소 <b id="vaHex">—</b> (32비트) · 각 인덱스 10비트 = 0~1023 · 접근 주체: <b>프로세스 A</b></div>
+<div class="fields">
+<div class="fld f0" id="fd0"><div class="lb">PGD 인덱스 · 10bit</div><div class="bv" id="fv0">—</div></div>
+<div class="fld f1" id="fd1"><div class="lb">PTE 인덱스 · 10bit</div><div class="bv" id="fv1">—</div></div>
+<div class="fld f2" id="fd2"><div class="lb">offset · 12bit</div><div class="bv" id="fv2">—</div></div>
+</div>
+<div class="arrowline">큰 지도 몇 칸? ─── 작은 지도 몇 칸? ─── 페이지 안 몇 걸음?</div>
+</section>
+
+<div class="walk nofold" id="walkG">
+<section class="col" id="cPGD">
+<h3><b>PGD</b> <span class="lvl">1단 · 1024칸 × 4B = 4KB</span></h3>
+<div class="cr3" id="cr3"><span class="k">CR3</span><span class="v">PGD_A 위치</span></div>
+<table class="tt" id="tPGD"></table>
+</section>
+<section class="col fold" id="cPUD" style="display:none">
+<h3><b>PUD</b> <span class="lvl">접힘 · 1칸</span></h3>
+<table class="tt" id="tPUD"></table>
+</section>
+<section class="col fold" id="cPMD" style="display:none">
+<h3><b>PMD</b> <span class="lvl">접힘 · 1칸</span></h3>
+<table class="tt" id="tPMD"></table>
+</section>
+<section class="col" id="cPTE">
+<h3><b id="nPTE">PTE 표</b> <span class="lvl">2단 · 1024칸 × 4B = 4KB</span></h3>
+<table class="tt" id="tPTE"></table>
+</section>
+<section class="col" id="cRAM">
+<h3><b>물리 RAM</b> <span class="lvl">frame 4K</span></h3>
+<div id="frames"></div>
+<div class="pa" id="paBox">PA = frame 시작 + offset</div>
+</section>
+</div>
+
+<div class="term" id="log" aria-live="polite">대기 중 — MMU의 걸음이 여기에 기록됩니다</div>
+
+<div class="cards">
+<div class="card" id="k1"><div class="top"><span class="name">주소 = 10+10+12</span><span class="lamp"></span></div>
+<div class="why">32비트가 세 조각으로 — 두 지도의 칸 번호와 페이지 안 걸음 수.</div></div>
+<div class="card" id="k2"><div class="top"><span class="name">표 1장 = 페이지 1장</span><span class="lamp"></span></div>
+<div class="why">4KB ÷ 엔트리 4B = 1024칸 = 10비트 — 10이라는 숫자는 취향이 아니라 산수다.</div></div>
+<div class="card" id="k3"><div class="top"><span class="name">접힌 층 folding</span><span class="lamp"></span></div>
+<div class="why">리눅스의 pgd→pud→pmd→pte 코드에서 PUD·PMD를 1칸짜리 투명 층으로 — 한 코드가 모든 단수를 커버.</div></div>
+<div class="card" id="k4"><div class="top"><span class="name">4B 엔트리 = 4GB 벽</span><span class="lamp"></span></div>
+<div class="why">엔트리에 frame 번호 20비트뿐 → 물리 최대 4GB — 3단(PAE)·4단이 태어난 이유.</div></div>
+</div>
+
+<div class="verdict" id="v">예측 질문 — PGD 표 한 장은 몇 칸일까요? 힌트: 표 자체도 <b>4KB 페이지 1장</b>이고, 칸 하나(엔트리)는 <b>4바이트</b>입니다.</div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const WAIT=reduced?0:820;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* 체인: code VA 0x00C01234 → PGD 3, PTE 1, off 0x234 → frame 5
+   stack VA 0xBFA03FF0 → PGD 766, PTE 515, off 0xFF0 → frame 3
+   miss VA 0x014000AB → PGD 5 (P=0!) → 표 성장 → PTE_N[0] → frame 7 */
+const CH={
+ code:{va:"0x00C0_1234",idx:[3,1,"0x234"],pte:"PTE_A",frame:5,fname:"A의 code"},
+ stack:{va:"0xBFA0_3FF0",idx:[766,515,"0xFF0"],pte:"PTE_S",frame:3,fname:"A의 stack"},
+ miss:{va:"0x0140_00AB",idx:[5,0,"0x0AB"],pte:"PTE_N",frame:7,fname:"A의 data(new)"}};
+let ptenCreated=false, foldView=false;
+const FRAMES=()=>[
+ ["1","커널","kern"],["2","PGD_A (표! 4KB 한 장)","tbl"],["3","A의 stack","oA"],
+ ["4","PTE_A · PTE_S (표들)","tbl"],["5","A의 code","oA"],
+ ["6",ptenCreated?"PTE_N (새 표)":"free",ptenCreated?"tbl":""],
+ ["7",ptenCreated?"A의 data(new)":"free",ptenCreated?"oA":""]];
+
+function log(h){const o=$("#log");
+ if(o.textContent.startsWith("대기 중"))o.innerHTML="";
+ o.innerHTML+=h+"<br>";o.scrollTop=o.scrollHeight;}
+function cap(h){$("#cap").innerHTML=h;}
+function verdict(h){$("#v").innerHTML=h;}
+function lamp(id){$("#"+id).classList.add("set");}
+function prog(t){$("#prog").textContent=t;}
+
+function setFold(on){
+ foldView=on;
+ $("#cPUD").style.display=on?"":"none";
+ $("#cPMD").style.display=on?"":"none";
+ $("#walkG").classList.toggle("nofold",!on);
+ tbl("tPUD",[["0","그대로 통과","1"]]);
+ tbl("tPMD",[["0","그대로 통과","1"]]);}
+function fields(ch,onIdx){
+ const c=CH[ch];
+ $("#vaHex").textContent=c.va;
+ for(let i=0;i<3;i++){
+  $("#fv"+i).textContent=c.idx[i];
+  $("#fd"+i).classList.toggle("on",onIdx==="all"||onIdx===i);}}
+function tbl(id,rows,onIdx,badIdx,foldOn){
+ const t=$("#"+id);
+ t.innerHTML="<tr><th>idx</th><th>가리킴</th><th>P</th></tr>";
+ rows.forEach(r=>{t.insertAdjacentHTML("beforeend",
+  `<tr class="${String(r[0])===String(onIdx)?(foldOn?"onF":"on"):(String(r[0])===String(badIdx)?"bad":"")}">
+   <td>${r[0]}</td><td>${r[1]}</td><td class="${r[2]==="1"?"p1":"p0"}">${r[2]}</td></tr>`);});
+ if(id==="tPGD"||id==="tPTE")
+  t.insertAdjacentHTML("beforeend","<tr><td colspan='3' style='color:#3a445e'>… 1024칸</td></tr>");}
+function colState(states){
+ ["PGD","PUD","PMD","PTE","RAM"].forEach(k=>{
+  $("#c"+k).classList.toggle("onC",states[k]==="on");});}
+function frames(on,newly){
+ const b=$("#frames");b.innerHTML="";
+ FRAMES().forEach(f=>{b.insertAdjacentHTML("beforeend",
+  `<div class="frame ${f[2]} ${String(on)===f[0]?"on":""} ${String(newly)===f[0]?"newly":""}">
+   <span>frame <b>${f[0]}</b></span><span>${f[1]}</span></div>`);});}
+function pa(h){$("#paBox").innerHTML=h;}
+function basePGD(onIdx,badIdx){
+ tbl("tPGD",[["3","PTE_A","1"],["5",ptenCreated?"PTE_N":"—",ptenCreated?"1":"0"],["766","PTE_S","1"],["768+","(커널 영역)","1"]],onIdx,badIdx);}
+function basePTE(ch,onIdx){
+ const c=CH[ch];
+ if(c.pte==="PTE_S")tbl("tPTE",[["515","frame 3","1"],["516","—","0"]],onIdx);
+ else if(c.pte==="PTE_N")tbl("tPTE",ptenCreated?[["0","frame 7","1"],["1","—","0"]]:[["—","(표 없음)","0"]],onIdx);
+ else tbl("tPTE",[["1","frame 5","1"],["2","—","0"]],onIdx);
+ $("#nPTE").textContent=c.pte;}
+function baseView(ch){
+ fields(ch,null);basePGD();basePTE(ch);frames();colState({});
+ pa("PA = frame 시작 + offset");}
+
+/* ── walk 재생 ── */
+async function walk(ch){
+ const c=CH[ch];let access=0;
+ const bump=()=>{access++;prog("이번 walk 메모리 접근 "+access+"회");};
+ baseView(ch);
+ log(`<span class='sys'>MMU</span> VA ${c.va} 분해 → PGD <b>${c.idx[0]}</b> · PTE <b>${c.idx[1]}</b> · offset <b>${c.idx[2]}</b>`);
+ fields(ch,"all");await sleep(WAIT);
+ // 1단 PGD
+ $("#cr3").classList.add("hl");colState({PGD:"on"});fields(ch,0);
+ if(ch==="miss"&&!ptenCreated){
+  basePGD(null,"5");bump();
+  log(`1단 — CR3→PGD_A[5] 읽음 (RAM 접근 ①) → <span class='err'>P=0: PTE 표 자체가 없다!</span> → #PF`);
+  await sleep(WAIT);
+  log(`<span class='sys'>OS</span> — <b>표(PTE_N)용 4KB 페이지를 buddy에서 수령(frame 6)</b> → PGD_A[5]=PTE_N·P=1`);
+  ptenCreated=true;
+  basePGD("5");frames(null,"6");await sleep(WAIT);
+  log(`<span class='sys'>OS</span> — 데이터용 frame 7도 할당, PTE_N[0]에 기록 → 명령 재시도`);
+  frames(null,"7");await sleep(WAIT);}
+ else{
+  basePGD(String(c.idx[0]));bump();
+  log(`1단 — CR3→PGD_A[${c.idx[0]}] 읽음 (RAM 접근 ①) → ${c.pte}`);
+  await sleep(WAIT);}
+ $("#cr3").classList.remove("hl");
+ // 접힌 층 (보기 켜짐 시)
+ if(foldView){
+  colState({PGD:"",PUD:"on"});
+  tbl("tPUD",[["0","그대로 통과","1"]],"0",null,true);
+  log(`<span class='z'>pud_offset()</span> — 접힌 층: 칸 1개, <b>PGD 값 그대로 통과</b> (컴파일 때 사라지는 코드 · RAM 접근 0회)`);
+  await sleep(WAIT*.8);
+  colState({PUD:"",PMD:"on"});
+  tbl("tPMD",[["0","그대로 통과","1"]],"0",null,true);
+  log(`<span class='z'>pmd_offset()</span> — 접힌 층: 역시 통과 (하드웨어는 모르는, 소스 코드만의 층)`);
+  await sleep(WAIT*.8);}
+ // 2단 PTE
+ colState({PGD:"",PUD:"",PMD:"",PTE:"on"});fields(ch,1);
+ basePTE(ch,String(c.idx[1]));bump();
+ log(`2단 — ${c.pte}[${c.idx[1]}] 읽음 (RAM 접근 ②) → frame <b>${c.frame}</b>`);
+ await sleep(WAIT);
+ // 합성
+ colState({PTE:"",RAM:"on"});fields(ch,2);
+ frames(String(c.frame));
+ pa(`frame <b>${c.frame}</b> 시작 + offset ${c.idx[2]} = <b>PA 완성</b> ✓`);
+ log(`<span class='p'>변환 완료</span> — 표 접근 ${access}회 (4단의 절반 · TLB 히트면 0회)`);
+}
+
+/* ── 시나리오 ── */
+let queue=[],busy=false,sc=null,freeMode=false;
+const SC=[
+ [ // ① 2단 walk
+  {fn:()=>walk("code"),cap:"code 주소 하나를 읽습니다 — 표 두 장의 릴레이, 접근 횟수를 세어 보세요",
+   vd:"<b>2단 릴레이.</b> PGD는 「어느 PTE 표인가」만, PTE가 진짜 frame을 줍니다 — 데이터 1회를 위해 표 접근 <b>2회.</b> 4단(접근 4회)보다 싸지만, 대신 이 구조가 감당하는 공간은 32비트 = 4GB뿐입니다."},
+  {fn:()=>walk("stack"),cap:"stack 주소 — PGD 766번, 반대편 끝의 체인입니다",
+   vd:"<span class='good'>① 완료.</span> code(PGD 3)와 stack(PGD 766) 사이의 수백 칸은 전부 <b>P=0 빈칸</b> — 2단에서도 「빈 영역은 상위 표 한 칸」이라는 희소성 원리는 똑같이 작동합니다."}],
+ [ // ② 접힌 층
+  {fn:async()=>{setFold(true);baseView("code");
+    log("<span class='z'>접힌 층 보기 ON</span> — 리눅스 소스의 시점: pgd → <b>pud → pmd</b> → pte (4층 코드)");
+    log("그런데 이 CPU(2단 하드웨어)에는 PUD·PMD가 없다 — 리눅스의 답: <b>1칸짜리 투명 층으로 접는다</b>");
+    await sleep(WAIT*.6);},
+   cap:"보라색 점선 열 두 개가 나타났습니다 — 하드웨어에는 없는, 소스 코드만의 층입니다",
+   vd:"<b>folding.</b> 리눅스 커널은 페이지 테이블 코드를 <b>항상 pgd→pud→pmd→pte 4층</b>으로 씁니다. 2단 하드웨어에서는 PUD·PMD를 「칸 1개, 값은 그대로 통과」로 정의 — 컴파일러가 이 통과 코드를 지워 버려 <b>비용도 0</b>입니다."},
+  {fn:()=>walk("code"),cap:"같은 code walk를 접힌 층 시점으로 재생 — 통과 단계의 RAM 접근 횟수를 보세요",
+   vd:"<span class='good'>② 완료 — 한 코드, 모든 단수.</span> pud_offset·pmd_offset이 「통과」로 지나가며 <b>RAM 접근 0회</b> — 그래서 같은 커널 소스가 2단(구형 x86)·3단(PAE)·4단(x86-64)·5단(최신 서버)에서 그대로 돕니다. 이식성의 비밀은 하드웨어 흉내가 아니라 <b>접을 수 있는 추상화.</b>"}],
+ [ // ③ 산수와 한계
+  {fn:async()=>{setFold(false);baseView("code");
+    log("<span class='sys'>산수 ①</span> — 표 1장을 <b>페이지 1장(4KB)</b>에 맞추자: 4KB ÷ 엔트리 4B = <b>1024칸 = 10비트</b>");
+    log("<span class='sys'>산수 ②</span> — 32 = 10(PGD) + 10(PTE) + 12(offset) : 남김없이 딱 떨어짐");
+    await sleep(WAIT*.6);},
+   cap:"시작 예측 질문의 답 — 1024칸. 10이라는 숫자가 어디서 왔는지 로그를 보세요",
+   vd:"<b>설계가 아니라 산수.</b> 「표도 페이지다」를 지키는 순간(표 할당·해제를 buddy 페이지 단위로!) 칸수는 4KB÷4B=1024로 <b>강제</b>되고, 10+10+12 분해는 그 결과일 뿐입니다 — 4단 편의 9비트(4KB÷8B=512)도 같은 산수였습니다."},
+  {fn:async()=>{
+    log("<span class='warn'>한계</span> — 엔트리 4B(32비트) 중 하위 12비트는 P·R/W 등 속성 → frame 번호는 <b>20비트</b>");
+    log("→ frame 2²⁰개 × 4KB = <b>물리 최대 4GB.</b> RAM이 4GB를 넘던 2000년대, 이 벽에 부딪힘");
+    await sleep(WAIT*.6);},
+   cap:"4B 엔트리가 만든 벽 — 물리 4GB. 해법은 무엇이었을까요?",
+   vd:"<span class='good'>③ 완성 — 역사로 이어지는 다리.</span> 해법은 <b>엔트리를 8B로</b> 키우는 것 — 그러면 4KB÷8B=512칸=9비트가 되어 10+10이 무너지고, <b>3단(PAE: 2+9+9+12, 물리 36비트)</b>이 태어납니다. 그리고 64비트로 넘어가며 같은 산수로 <b>9×4단</b>이 — 우리가 4단 편에서 본 그 구조입니다. 2단의 산수 하나가 세대 전체를 설명합니다."}]];
+function loadSc(i){
+ if(busy)return;
+ sc=i;freeMode=false;queue=[...SC[i]];ptenCreated=false;
+ setFold(i===1);
+ $("#log").innerHTML="";
+ log("<span class='p'>── 시나리오 "+(i+1)+" ──</span>");
+ baseView("code");
+ lamp(i===0?"k1":i===1?"k3":"k2");if(i===2)lamp("k4");
+ cap("시나리오 준비 완료 — 「다음 단계 ▶」 ("+queue.length+"단계, 단계마다 자동 재생)");
+ prog("");
+ verdict(["예측 — 데이터 한 번을 읽기 위해 표를 몇 번 읽게 될까요? 4단과 비교하면?",
+  "예측 — 리눅스 소스는 pgd→pud→pmd→pte 4층인데, 이 CPU에는 2층뿐 — 어떻게 같은 코드가 돌까요?",
+  "예측 — PGD 한 칸(엔트리)은 4바이트 — 그 안에 물리 frame 번호는 몇 비트나 들어갈까요?"][i]);}
+async function step(){
+ if(busy)return;
+ if(!queue.length){
+  if(sc===null){loadSc(0);return;}
+  freeMode=true;
+  cap("시나리오 종료 — 자유 모드: 주소 칩 walk · 접힌 층 보기 토글");
+  prog("자유 모드");
+  return;}
+ busy=true;lock(true);
+ const st=queue.shift();cap(st.cap);verdict(st.vd);
+ await st.fn();
+ busy=false;lock(false);
+ if(!queue.length){freeMode=true;
+  cap($("#cap").innerHTML+"  — 시나리오 끝: 자유 모드 사용 가능");}}
+function lock(on){$("#btnStep").disabled=on;
+ document.querySelectorAll(".chip").forEach(c=>c.disabled=on);}
+$("#btnStep").addEventListener("click",step);
+$("#btnReset").addEventListener("click",()=>{if(busy)return;
+ queue=[];sc=null;freeMode=true;ptenCreated=false;setFold(false);
+ ["k1","k2","k3","k4"].forEach(id=>$("#"+id).classList.remove("set"));
+ $("#log").innerHTML="대기 중 — MMU의 걸음이 여기에 기록됩니다";
+ cap("초기화 완료 — 시나리오를 고르거나 자유 모드로 walk를 재생하세요");prog("");
+ verdict("예측 질문 — PGD 표 한 장은 몇 칸일까요? 힌트: 표 자체도 <b>4KB 페이지 1장</b>이고, 칸 하나(엔트리)는 <b>4바이트</b>입니다.");
+ baseView("code");});
+document.querySelectorAll("[data-sc]").forEach(c=>c.addEventListener("click",()=>loadSc(+c.dataset.sc)));
+document.querySelectorAll("[data-va]").forEach(c=>c.addEventListener("click",async()=>{
+ if(busy)return;freeMode=true;busy=true;lock(true);
+ log("<span class='p'>── 자유 walk: "+c.dataset.va+" ──</span>");
+ await walk(c.dataset.va);
+ busy=false;lock(false);}));
+$("#fmFold").addEventListener("click",()=>{
+ if(busy)return;freeMode=true;
+ setFold(!foldView);
+ log(foldView?"<span class='z'>접힌 층 보기 ON — 리눅스 소스 시점(pgd→pud→pmd→pte)</span>"
+  :"<span class='sys'>접힌 층 보기 OFF — 하드웨어 시점(PGD→PTE)</span>");});
+baseView("code");
+})();
+</script>
+</body>
+</html>

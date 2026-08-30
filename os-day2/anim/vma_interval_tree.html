@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interval Tree 가상 메모리 에뮬레이터 — 구간으로 다스리는 주소 공간</title>
+<style>
+:root{
+  --bg:#0f141d;--panel:#161d2a;--panel2:#1b2434;--line:#26314a;
+  --ink:#dce6f5;--dim:#7d8ba3;--amber:#ffd166;--warnc:#ff9f43;
+  --hot:#ff5d73;--accent:#4cc9f0;--good:#7ee787;--purple:#c3a6ff;--rose:#f9a8d4;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);min-height:100vh;padding:24px 16px 60px;
+ font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+.wrap{max-width:1040px;margin:0 auto}
+header{margin-bottom:18px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+h1{font-size:clamp(20px,4vw,27px);font-weight:800;margin-top:6px}
+h1 b{font-family:var(--mono);color:var(--amber)}
+.sub{color:var(--dim);font-size:14px;margin-top:6px;line-height:1.6}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.run{padding:11px 22px;border:none;border-radius:8px;background:var(--amber);color:#2a2005;
+ font-weight:800;font-size:15px;cursor:pointer;font-family:inherit}
+.run:disabled{opacity:.4;cursor:default}
+.run.sec{background:var(--panel2);color:var(--ink);border:1px solid var(--line);font-size:13.5px}
+.run:focus-visible,.chip:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.presets{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.presets .cap{width:100%;font-size:11px;color:var(--dim);letter-spacing:.06em}
+.chip{font-family:var(--mono);font-size:12.5px;padding:7px 12px;border-radius:999px;
+ background:var(--panel2);color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.chip:hover:not(:disabled){border-color:var(--accent)}
+.chip:disabled{opacity:.4;cursor:default}
+.chip b{color:var(--amber);font-weight:700}
+input[type=number]{width:78px;padding:8px 10px;font-family:var(--mono);font-size:14px;
+ background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px}
+.caption{background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+ padding:10px 14px;font-size:13.5px;line-height:1.6;margin-top:12px;min-height:44px}
+.caption b{color:var(--amber)}
+/* 주소 공간 막대 */
+.space{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.space .t{font-size:11px;color:var(--dim);letter-spacing:.06em;margin-bottom:8px}
+.space .t b{color:var(--ink)}
+.bar{position:relative;height:58px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg{position:absolute;top:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+ font-family:var(--mono);font-size:10.5px;border-left:1px solid var(--bg);border-right:1px solid var(--bg);
+ transition:all .3s;line-height:1.35}
+.seg b{font-size:11.5px}
+.seg.vma{cursor:default}
+.seg.freeg{color:#3e4a68}
+.seg.scan{outline:2px dashed var(--warnc);outline-offset:-3px;color:var(--warnc)}
+.seg.hitS{outline:2.5px solid var(--good);outline-offset:-3px;z-index:1}
+.seg.badS{outline:2.5px solid var(--hot);outline-offset:-3px;z-index:1}
+.seg.clickable{cursor:pointer}
+.seg.clickable:hover{filter:brightness(1.3)}
+.addrmark{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--good);z-index:2;transition:left .3s}
+.addrmark::after{content:attr(data-a);position:absolute;top:-16px;left:-14px;font-family:var(--mono);font-size:10px;color:var(--good)}
+.ruler{display:flex;font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:4px}
+.ruler span{flex:1}.ruler span:last-child{flex:0}
+/* 트리 */
+.treeP{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px;overflow-x:auto}
+.treeP .t{font-size:11px;color:var(--dim);letter-spacing:.06em;margin-bottom:12px}
+.treeP .t b{color:var(--ink)}
+.treewrap{display:flex;justify-content:center;min-height:110px}
+.nchip{font-family:var(--mono);font-weight:800;width:86px;border-radius:10px;padding:5px 0;
+ display:flex;flex-direction:column;align-items:center;gap:1px;transition:all .3s;position:absolute;z-index:1}
+.nchip .iv{font-size:12px}
+.nchip .nm{font-size:9.5px;font-weight:400;opacity:.85}
+.nchip .mx{font-size:9px;color:var(--amber);font-weight:700}
+.nchip.redN{background:#4a1420;border:2px solid #ff5d73;color:#ffd7de}
+.nchip.blackN{background:#131a28;border:2px solid #5a6788;color:var(--ink)}
+.nchip.hlCur{box-shadow:0 0 0 3px var(--good),0 0 14px rgba(126,231,135,.5)}
+.nchip.hlHit{box-shadow:0 0 0 3px var(--good),0 0 18px rgba(126,231,135,.8)}
+.nchip.hlBad{box-shadow:0 0 0 3px var(--hot),0 0 14px rgba(255,93,115,.6)}
+.nchip.dimmed{opacity:.18;filter:grayscale(1)}
+.nchip.hlNew{animation:pop .45s ease}
+@keyframes pop{from{transform:scale(.3);opacity:0}}
+/* 로그·카드·판정 */
+.term{background:#0a0f18;border:1px solid var(--line);border-radius:10px;padding:12px 14px;
+ font-family:var(--mono);font-size:12.5px;line-height:1.75;height:172px;overflow-y:auto;margin-bottom:14px}
+.term .p{color:var(--good)}.term .sys{color:var(--accent)}.term .warn{color:var(--warnc)}
+.term .err{color:var(--hot)}.term .z{color:var(--purple)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.card .top{display:flex;justify-content:space-between;align-items:center}
+.card .name{font-family:var(--mono);font-weight:800;font-size:12.5px}
+.card .lamp{width:11px;height:11px;border-radius:50%;background:#2a3550}
+.card.set{border-color:var(--accent)}.card.set .lamp{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+.card .why{font-size:12px;line-height:1.5;color:var(--ink);margin-top:6px;min-height:48px}
+.verdict{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+ padding:13px 15px;font-size:13.5px;line-height:1.7}
+.verdict b{color:var(--amber)}
+.good{color:var(--good);font-weight:800}.bad{color:var(--hot);font-weight:800}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<div class="eyebrow">OS · 가상 메모리 · 심화 · VMA + Interval Tree</div>
+<h1>Interval Tree 에뮬레이터 — <b>구간으로 다스리는 주소 공간</b></h1>
+<p class="sub">프로세스의 가상 주소 공간은 <b>VMA(구간)들의 집합</b>입니다 — code, heap, stack, mmap….
+커널은 이 구간들을 <b>시작 주소를 key로, 서브트리 최대 끝(maxHi)을 증강값으로</b> 단 RB 트리(interval tree)에 담아
+「이 주소는 누구 땅인가(find_vma)」와 「이 구간, 겹치나」를 <b>가지치기 O(log n)</b>으로 답합니다.
+x86 페이징 편의 Page Fault가 던진 첫 질문의 자료구조가 바로 이것입니다.</p>
+</header>
+
+<section class="panel">
+<div class="row">
+<button class="run" id="btnStep">다음 단계 ▶</button>
+<button class="run sec" id="btnReset">전체 초기화</button>
+<span class="sub" style="margin:0" id="prog"></span>
+</div>
+<div class="presets"><span class="cap">시나리오 — 예상 결과가 함께 표시됩니다</span>
+<button class="chip" data-sc="0">① 프로세스의 지도 → <b>VMA 심기와 mmap 틈 찾기</b></button>
+<button class="chip" data-sc="1">② find_vma → <b>가지치기, 그리고 SIGSEGV</b></button>
+<button class="chip" data-sc="2">③ 해제·재사용·충돌 → <b>겹침 검사가 막는다</b></button>
+</div>
+<div class="presets"><span class="cap">자유 모드 — 전부 직접 (할당된 조각 클릭 = munmap)</span>
+<button class="chip fm" data-mm="16">mmap 16K</button>
+<button class="chip fm" data-mm="32">mmap 32K</button>
+<button class="chip fm" data-mm="64">mmap 64K</button>
+<span class="sub" style="margin:0">| find_vma:</span>
+<input type="number" id="fq" min="0" max="255" value="100" aria-label="주소">
+<button class="chip fm" id="fmFind">조회</button>
+<span class="sub" style="margin:0">| 고정 주소:</span>
+<input type="number" id="flo" min="0" max="255" value="48" aria-label="시작">
+<input type="number" id="fsz" min="4" max="128" value="32" aria-label="크기">
+<button class="chip fm" id="fmFixed">mmap_fixed</button>
+</div>
+<div class="caption" id="cap">시나리오 ①부터 — 각 단계에서 다음에 벌어질 일을 먼저 예측하세요!</div>
+</section>
+
+<section class="space">
+<div class="t"><b>가상 주소 공간 0 ~ 256K</b> — 색 = VMA · 어두움 = 빈 틈 · 주황 점선 = 틈 검사 중 · 초록 실선 = 결과</div>
+<div class="bar" id="bar"></div>
+<div class="ruler"><span>0</span><span>64K</span><span>128K</span><span>192K</span><span>256K</span></div>
+</section>
+
+<section class="treeP">
+<div class="t"><b>Interval Tree</b> — 노드 = [시작,끝) · 아래 작은 <span style="color:var(--amber)">≤maxHi</span> = 이 서브트리에서 가장 멀리 뻗은 끝 · <span style="color:var(--good)">초록 = 방문/발견</span> · 흐림 = <b>가지치기로 건너뛴 서브트리</b></div>
+<div class="treewrap" id="tree"></div>
+</section>
+
+<div class="term" id="log" aria-live="polite">대기 중 — 삽입·탐색·가지치기가 여기에 기록됩니다</div>
+
+<div class="cards">
+<div class="card" id="k1"><div class="top"><span class="name">VMA = 구간</span><span class="lamp"></span></div>
+<div class="why">주소 공간 관리 = 구간들의 삽입·삭제·질의 — 문제 자체가 interval 문제입니다.</div></div>
+<div class="card" id="k2"><div class="top"><span class="name">key=시작 · 증강=maxHi</span><span class="lamp"></span></div>
+<div class="why">RB 트리에 값 하나(서브트리 최대 끝)를 더 얹으면 겹침 질의가 가능해집니다.</div></div>
+<div class="card" id="k3"><div class="top"><span class="name">가지치기 탐색</span><span class="lamp"></span></div>
+<div class="why">왼쪽의 maxHi가 질의 시작보다 작으면 — 왼쪽 전체를 안 보고 건너뜁니다.</div></div>
+<div class="card" id="k4"><div class="top"><span class="name">할당 = 틈 · 해제 = 제거</span><span class="lamp"></span></div>
+<div class="why">mmap은 빈 틈을 찾아 구간을 심고, munmap은 노드를 뽑아 틈을 되살립니다.</div></div>
+</div>
+
+<div class="verdict" id="v">예측 질문 — VMA가 <b>1,000개</b>인 프로세스에서, 주소 하나가 유효한지(find_vma) 확인하는 데 비교 몇 번이면 될까요?</div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const WAIT=reduced?0:640;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const TOTAL=256;
+
+/* ══ 검증 완료된 Interval Tree 엔진 (RB + maxHi 증강) ══ */
+function makeIVT(){
+ const NIL={red:false,lo:null,hi:-Infinity,maxHi:-Infinity};NIL.l=NIL;NIL.r=NIL;NIL.p=NIL;
+ let root=NIL;
+ function upd(n){if(n!==NIL)n.maxHi=Math.max(n.hi,n.l.maxHi,n.r.maxHi);}
+ function updAll(n){if(n===NIL)return;updAll(n.l);updAll(n.r);upd(n);}
+ function rotL(x){const y=x.r;x.r=y.l;if(y.l!==NIL)y.l.p=x;
+  y.p=x.p;if(x.p===NIL)root=y;else if(x===x.p.l)x.p.l=y;else x.p.r=y;
+  y.l=x;x.p=y;upd(x);upd(y);}
+ function rotR(x){const y=x.l;x.l=y.r;if(y.r!==NIL)y.r.p=x;
+  y.p=x.p;if(x.p===NIL)root=y;else if(x===x.p.r)x.p.r=y;else x.p.l=y;
+  y.r=x;x.p=y;upd(x);upd(y);}
+ function insert(lo,hi,name){
+  let y=NIL,x=root;
+  while(x!==NIL){y=x;x=lo<x.lo?x.l:x.r;}
+  const z={lo,hi,name,red:true,l:NIL,r:NIL,p:y,maxHi:hi};
+  if(y===NIL)root=z;else if(lo<y.lo)y.l=z;else y.r=z;
+  insFix(z);root.red=false;updAll(root);}
+ function insFix(z){
+  while(z.p.red){
+   const g=z.p.p, left=(z.p===g.l), u=left?g.r:g.l;
+   if(u.red){z.p.red=false;u.red=false;g.red=true;z=g;}
+   else{
+    if(left&&z===z.p.r){z=z.p;rotL(z);}
+    else if(!left&&z===z.p.l){z=z.p;rotR(z);}
+    z.p.red=false;g.red=true;left?rotR(g):rotL(g);}}}
+ function mini(n){while(n.l!==NIL)n=n.l;return n;}
+ function transplant(u,w){if(u.p===NIL)root=w;else if(u===u.p.l)u.p.l=w;else u.p.r=w;w.p=u.p;}
+ function findKey(lo){let x=root;while(x!==NIL&&x.lo!==lo)x=lo<x.lo?x.l:x.r;return x;}
+ function del(lo){
+  const z=findKey(lo);if(z===NIL)return false;
+  let y=z,yRed=y.red,x;
+  if(z.l===NIL){x=z.r;transplant(z,z.r);}
+  else if(z.r===NIL){x=z.l;transplant(z,z.l);}
+  else{y=mini(z.r);yRed=y.red;x=y.r;
+   if(y.p===z){x.p=y;}
+   else{transplant(y,y.r);y.r=z.r;y.r.p=y;}
+   transplant(z,y);y.l=z.l;y.l.p=y;y.red=z.red;}
+  if(!yRed)delFix(x);
+  root.red=false;updAll(root);return true;}
+ function delFix(x){
+  while(x!==root&&!x.red){
+   const left=(x===x.p.l);
+   let w=left?x.p.r:x.p.l;
+   if(w.red){w.red=false;x.p.red=true;left?rotL(x.p):rotR(x.p);w=left?x.p.r:x.p.l;}
+   const near=left?w.l:w.r, far=left?w.r:w.l;
+   if(!near.red&&!far.red){w.red=true;x=x.p;}
+   else{
+    if(!far.red){near.red=false;w.red=true;left?rotR(w):rotL(w);w=left?x.p.r:x.p.l;}
+    w.red=x.p.red;x.p.red=false;(left?w.r:w.l).red=false;left?rotL(x.p):rotR(x.p);x=root;}}
+  x.red=false;}
+ function overlap(lo,hi){
+  const steps=[];let x=root;
+  while(x!==NIL){
+   if(x.lo<hi&&lo<x.hi){steps.push({lo:x.lo,act:"hit"});return {found:{lo:x.lo,hi:x.hi,name:x.name},steps};}
+   steps.push({lo:x.lo,act:"check"});
+   if(x.l!==NIL&&x.l.maxHi>lo){steps.push({lo:x.lo,act:"goL",lm:x.l.maxHi});x=x.l;}
+   else{steps.push({lo:x.lo,act:"prune",lm:x.l===NIL?null:x.l.maxHi});x=x.r;}}
+  return {found:null,steps};}
+ function list(){const out=[];(function w(n){if(n===NIL)return;w(n.l);out.push({lo:n.lo,hi:n.hi,name:n.name});w(n.r);})(root);return out;}
+ function ser(n){return n===NIL?null:{lo:n.lo,hi:n.hi,name:n.name,red:n.red,maxHi:n.maxHi,l:ser(n.l),r:ser(n.r)};}
+ return {insert,del,overlap,list,get snap(){return ser(root)}};
+}
+
+/* ══ UI ══ */
+let T=makeIVT();
+let queue=[],busy=false,sc=null,mmSeq=1;
+const COLORS={code:["#3a3208","var(--amber)"],heap:["#123524","var(--good)"],stack:["#0e3542","var(--accent)"]};
+const MCOL=[["#2a2340","var(--purple)"],["#3a1b2c","var(--rose)"]];
+function colOf(name){if(COLORS[name])return COLORS[name];
+ return MCOL[(name.charCodeAt(name.length-1))%2];}
+
+function log(h){const o=$("#log");
+ if(o.textContent.startsWith("대기 중"))o.innerHTML="";
+ o.innerHTML+=h+"<br>";o.scrollTop=o.scrollHeight;}
+function cap(h){$("#cap").innerHTML=h;}
+function verdict(h){$("#v").innerHTML=h;}
+function lamp(id){$("#"+id).classList.add("set");}
+function prog(t){$("#prog").textContent=t;}
+
+function renderBar(o){ // o: {scan:[a,b], hit:[a,b], bad:[a,b], mark:addr}
+ o=o||{};
+ const bar=$("#bar");bar.innerHTML="";
+ const vs=T.list();let pos=0;
+ const segs=[];
+ vs.forEach(v=>{if(v.lo>pos)segs.push({a:pos,b:v.lo,free:true});
+  segs.push({a:v.lo,b:v.hi,free:false,name:v.name});pos=v.hi;});
+ if(pos<TOTAL)segs.push({a:pos,b:TOTAL,free:true});
+ segs.forEach(s=>{
+  const d=document.createElement("div");
+  const cls=s.free?"seg freeg":"seg vma";
+  d.className=cls;
+  d.style.left=(s.a/TOTAL*100)+"%";d.style.width=((s.b-s.a)/TOTAL*100)+"%";
+  if(!s.free){const[bg,fg]=colOf(s.name);d.style.background=bg;d.style.color=fg;
+   d.innerHTML=`<b>${s.name}</b><span>[${s.a},${s.b})</span>`;
+   if(freeModeOn())d.classList.add("clickable"),
+    d.addEventListener("click",()=>{if(!busy)opMunmap(s.a,true);});}
+  else d.innerHTML=`<span>틈 ${s.b-s.a}K</span>`;
+  const eq=(x,r)=>r&&x.a===r[0]&&x.b===r[1];
+  if(eq(s,o.scan))d.classList.add("scan");
+  if(eq(s,o.hit))d.classList.add("hitS");
+  if(eq(s,o.bad))d.classList.add("badS");
+  bar.appendChild(d);});
+ if(o.mark!==undefined&&o.mark!==null){
+  const m=document.createElement("div");m.className="addrmark";
+  m.style.left=(o.mark/TOTAL*100)+"%";m.dataset.a=o.mark+"K";bar.appendChild(m);}}
+
+function renderTree(hl){ // hl:{cur,hit,bad,dim:Set(lo),newN}
+ hl=hl||{};
+ const w=$("#tree");w.innerHTML="";
+ const t=T.snap;
+ if(!t){w.innerHTML="<span style='font-family:var(--mono);font-size:12px;color:#3a445e'>(빈 트리)</span>";return;}
+ const NW=86,XG=96,YG=76,PAD=10,NH=52;
+ let ix=0,maxD=0;const nodes=[];
+ (function walk(n,d,par){if(!n)return;
+  walk(n.l,d+1,n);
+  n._x=ix++;n._d=d;if(d>maxD)maxD=d;nodes.push({n,par});
+  walk(n.r,d+1,n);})(t,0,null);
+ const W=ix*XG+PAD*2, H=maxD*YG+NH+PAD;
+ const box=document.createElement("div");
+ box.style.cssText=`position:relative;width:${W}px;height:${H}px`;
+ const cx=n=>PAD+n._x*XG+NW/2, cy=n=>n._d*YG+NH/2;
+ const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+ svg.setAttribute("width",W);svg.setAttribute("height",H);
+ svg.style.cssText="position:absolute;inset:0;z-index:0";
+ nodes.forEach(({n,par})=>{if(!par)return;
+  const ln=document.createElementNS(svg.namespaceURI,"line");
+  ln.setAttribute("x1",cx(par));ln.setAttribute("y1",cy(par));
+  ln.setAttribute("x2",cx(n));ln.setAttribute("y2",cy(n));
+  const dm=hl.dim&&(hl.dim.has(n.lo));
+  ln.setAttribute("stroke",dm?"#232b40":"#3a4a6e");ln.setAttribute("stroke-width","1.6");
+  svg.appendChild(ln);});
+ box.appendChild(svg);
+ nodes.forEach(({n})=>{
+  const c=document.createElement("span");
+  c.className="nchip "+(n.red?"redN":"blackN");
+  if(hl.dim&&hl.dim.has(n.lo))c.classList.add("dimmed");
+  if(hl.cur===n.lo)c.classList.add("hlCur");
+  if(hl.hit===n.lo)c.classList.add("hlHit");
+  if(hl.bad===n.lo)c.classList.add("hlBad");
+  if(!reduced&&hl.newN===n.lo)c.classList.add("hlNew");
+  c.style.left=(PAD+n._x*XG)+"px";c.style.top=(n._d*YG)+"px";
+  c.innerHTML=`<span class="iv">[${n.lo},${n.hi})</span><span class="nm">${n.name}</span><span class="mx">≤${n.maxHi}</span>`;
+  box.appendChild(c);});
+ w.appendChild(box);}
+
+function subKeys(lo){ // 스냅샷에서 lo 노드의 왼쪽 서브트리 key 집합
+ const out=new Set();
+ (function find(n){if(!n)return null;
+  if(n.lo===lo){(function g(m){if(!m)return;out.add(m.lo);g(m.l);g(m.r);})(n.l);return n;}
+  return find(n.l)||find(n.r);})(T.snap);
+ return out;}
+
+/* ── 연산 (내부 자동 재생) ── */
+async function opInsertFixed(lo,hi,name,quiet){
+ T.insert(lo,hi,name);
+ renderBar({hit:[lo,hi]});renderTree({newN:lo,hit:lo});
+ if(!quiet)log(`<span class='p'>VMA 심기</span> [${lo},${hi}) ${name} — RB 삽입 (회전·색 수선은 앞 편의 규칙대로 자동) · maxHi 갱신`);
+ await sleep(WAIT*.8);}
+async function opMmap(size){
+ busy=true;lock(true);
+ log(`<span class='sys'>mmap(${size}K)</span> — 빈 틈을 주소 순서로 검사 (first-fit)`);
+ const vs=T.list();let pos=0;const gaps=[];
+ vs.forEach(v=>{if(v.lo>pos)gaps.push([pos,v.lo]);pos=v.hi;});
+ if(pos<TOTAL)gaps.push([pos,TOTAL]);
+ let picked=null;
+ for(const g of gaps){
+  renderBar({scan:g});renderTree({});
+  const ok=g[1]-g[0]>=size;
+  log(`&nbsp;&nbsp;틈 [${g[0]},${g[1]}) = ${g[1]-g[0]}K → ${ok?"<span class='p'>충분!</span>":"부족"}`);
+  await sleep(WAIT*.8);
+  if(ok){picked=g;break;}}
+ if(!picked){log(`<span class='err'>실패 — ${size}K짜리 연속 틈이 없습니다 (가상 공간에도 단편화가 있다!)</span>`);
+  renderBar({});busy=false;lock(false);return null;}
+ const name="mmap"+String.fromCharCode(64+mmSeq++);
+ await opInsertFixed(picked[0],picked[0]+size,name);
+ log(`&nbsp;&nbsp;<span class='z'>참고 — 실제 커널은 「서브트리 최대 틈」도 트리에 증강해 이 탐색까지 O(log n)으로 합니다</span>`);
+ busy=false;lock(false);return name;}
+async function opMunmap(lo,manual){
+ busy=true;lock(true);
+ const v=T.list().find(x=>x.lo===lo);
+ if(v){renderBar({bad:[v.lo,v.hi]});renderTree({bad:lo});
+  log(`<span class='warn'>munmap</span> [${v.lo},${v.hi}) ${v.name} — 트리에서 노드 제거`);
+  await sleep(WAIT*.8);
+  T.del(lo);
+  renderBar({hit:[v.lo,v.hi]});renderTree({});
+  log(`&nbsp;&nbsp;<span class='p'>틈 부활</span> — [${v.lo},${v.hi}) ${v.hi-v.lo}K가 다시 비었습니다`);}
+ if(manual)cap("해제 완료 — mmap으로 이 틈이 재사용되는지 실험해 보세요");
+ busy=false;lock(false);}
+async function opQuery(qlo,qhi,label){
+ busy=true;lock(true);
+ log(`<span class='sys'>${label}</span> — 질의 구간 [${qlo},${qhi})`);
+ renderBar({mark:label.startsWith("find")?qlo:null});
+ const r=T.overlap(qlo,qhi);
+ const dim=new Set();
+ for(const s of r.steps){
+  if(s.act==="check"){renderTree({cur:s.lo,dim});
+   log(`&nbsp;&nbsp;[${s.lo},…) 방문 — 겹침? 아니오 → 어느 쪽으로?`);}
+  else if(s.act==="goL"){renderTree({cur:s.lo,dim});
+   log(`&nbsp;&nbsp;왼쪽 maxHi=${s.lm} > ${qlo} → <b>왼쪽에 겹칠 가능성 있음</b> — 왼쪽으로`);}
+  else if(s.act==="prune"){subKeys(s.lo).forEach(k=>dim.add(k));
+   renderTree({cur:s.lo,dim});
+   log(`&nbsp;&nbsp;${s.lm===null?"왼쪽 없음":"왼쪽 maxHi="+s.lm+" ≤ "+qlo} → <span class='warn'>왼쪽 서브트리 통째로 가지치기</span> — 오른쪽으로`);}
+  else if(s.act==="hit"){renderTree({hit:s.lo,dim});}
+  await sleep(WAIT);}
+ renderBar(r.found?{hit:[r.found.lo,r.found.hi],mark:label.startsWith("find")?qlo:null}
+  :{mark:label.startsWith("find")?qlo:null});
+ busy=false;lock(false);
+ return r;}
+function lock(on){$("#btnStep").disabled=on;
+ document.querySelectorAll(".chip").forEach(c=>c.disabled=on);}
+let _free=false;function freeModeOn(){return _free;}
+function setFree(v){_free=v;renderBar({});}
+
+/* ── 시나리오 ── */
+const SC=[
+ [ // ① 프로세스의 지도
+  {fn:()=>opInsertFixed(0,32,"code"),cap:"code [0,32) 심기 — 첫 VMA가 루트가 됩니다",
+   vd:"<b>지도의 시작.</b> execve가 끝난 직후의 주소 공간을 만들어 봅니다 — VMA 하나가 트리 노드 하나. key는 시작 주소, 노드 아래 <b>≤maxHi</b>가 증강값입니다."},
+  {fn:()=>opInsertFixed(32,64,"heap"),cap:"heap [32,64) — 트리가 자라며 maxHi가 위로 전파됩니다",
+   vd:"<b>증강의 전파.</b> 자식의 끝(64)이 부모의 maxHi에 반영됩니다 — 「내 서브트리는 최대 어디까지 뻗어 있나」를 모든 노드가 알고 있게 하는 것이 뒤의 가지치기의 재료."},
+  {fn:()=>opInsertFixed(224,256,"stack"),cap:"stack [224,256) — 높은 주소 끝에. 이제 지도의 뼈대 완성",
+   vd:"code·heap은 낮은 곳, stack은 높은 곳 — 실제 프로세스 배치 그대로입니다. 가운데의 넓은 어둠이 mmap이 들어갈 빈 땅."},
+  {fn:()=>opMmap(64),cap:"mmap(64K) — 라이브러리를 올릴 틈을 first-fit으로 찾습니다",
+   vd:"<span class='good'>① 완료.</span> 틈 [32?…] 검사 로그를 보세요 — 주소 순서로 훑어 첫 충분한 틈 [64,128)에 심었습니다. 삽입 자체는 앞 편에서 검증한 <b>RB 규칙</b> 그대로라 트리는 절대 기울지 않습니다."}],
+ [ // ② find_vma
+  {fn:()=>opQuery(100,101,"find_vma(100)"),cap:"주소 100 접근 — Page Fault가 커널에 물었습니다: 이 주소, 유효한가?",
+   vd:"<b>가지치기를 보세요.</b> 방문 노드마다 「왼쪽 maxHi vs 100」 한 번의 비교로 <b>서브트리 전체</b>의 운명이 갈립니다(흐려진 부분 = 안 본 곳). mmapA [64,128) 발견 — x86 페이징 편의 그 다음 장면(frame 배정, P=1)으로 이어집니다."},
+  {fn:()=>opQuery(200,201,"find_vma(200)"),cap:"이번엔 주소 200 — 지도의 어느 구간에도 없는 곳입니다",
+   vd:"<span class='bad'>SIGSEGV의 정체.</span> 트리를 끝까지 내려가도 겹치는 VMA가 없음 — 커널은 이때 demand paging 대신 <b>Segmentation Fault</b>를 보냅니다. 「잘못된 주소」 판정이 바로 이 트리 탐색의 <b>미발견</b>입니다."}],
+ [ // ③ 해제·재사용·충돌
+  {fn:()=>opMunmap(64),cap:"munmap(mmapA) — 노드가 뽑히고 틈이 부활합니다",
+   vd:"<b>해제 = 노드 제거.</b> RB 삭제(이중 흑 수선 포함)가 돌고, 주소 막대에는 64K 틈이 되살아납니다 — 트리와 지도는 항상 같은 사실의 두 표현."},
+  {fn:async()=>{const r=await opQuery(48,80,"mmap_fixed(48, 32K) 충돌 검사");
+    if(r.found){renderTree({bad:r.found.lo});renderBar({bad:[r.found.lo,r.found.hi]});
+     log(`<span class='err'>거부 — [48,80)이 ${r.found.name} [${r.found.lo},${r.found.hi})과 겹칩니다</span>`);}},
+   cap:"고정 주소 요청 [48,80) — 심기 전에 겹침 검사부터. heap과 어떻게 되나요?",
+   vd:"<b>interval tree 본연의 임무.</b> 겹침 질의가 heap [32,64)를 찾아내 요청을 <b>거부</b>합니다 — 이미 있는 매핑을 덮어쓰는 사고를 트리가 막는 순간입니다."},
+  {fn:async()=>{const r=await opQuery(128,192,"mmap_fixed(128, 64K) 충돌 검사");
+    if(!r.found){log("<span class='p'>겹침 없음 — 심기 진행</span>");await opInsertFixed(128,192,"mmapB");}},
+   cap:"이번엔 [128,192) — 빈 땅입니다. 검사 통과 후 심기",
+   vd:"검사에서 <b>미발견 = 안전</b> — mmapB가 심어집니다. 같은 탐색이 ②에서는 SIGSEGV 판정에, 여기서는 안전 확인에 쓰입니다."},
+  {fn:()=>opMmap(64),cap:"마지막 — mmap(64K)가 아까 해제된 자리를 다시 씁니다",
+   vd:"<span class='good'>③ 완성.</span> first-fit이 부활한 틈 [64,128)을 재사용 — <b>할당은 틈 찾기, 해제는 노드 제거, 안전은 겹침 질의.</b> 커널의 실제 mm은 여기에 「최대 틈」 증강을 더해 셋 모두 O(log n)이며, 최근엔 같은 임무가 maple tree로 이어지고 있습니다. 자유 모드로 직접 운용해 보세요."}]];
+
+function loadSc(i){
+ if(busy)return;
+ sc=i;setFree(false);mmSeq=1;
+ if(i===0)T=makeIVT();
+ else{T=makeIVT();
+  T.insert(0,32,"code");T.insert(32,64,"heap");T.insert(224,256,"stack");T.insert(64,128,"mmapA");
+  if(i===2)mmSeq=2;}
+ queue=[...SC[i]];
+ $("#log").innerHTML="";
+ log("<span class='p'>── 시나리오 "+(i+1)+" ──</span>");
+ if(i>0)log("전제 — ①의 결과(code·heap·mmapA·stack)에서 시작");
+ lamp(i===0?"k1":i===1?"k3":"k4");if(i===0)lamp("k2");
+ renderBar({});renderTree({});
+ cap("시나리오 준비 완료 — 「다음 단계 ▶」 ("+queue.length+"단계, 단계마다 자동 재생)");
+ prog("남은 단계 "+queue.length);
+ verdict(["예측 — VMA를 하나씩 심을 때, 트리의 maxHi 값들은 어떻게 변할까요?",
+  "예측 — 주소 100의 유효성 검사에서, 트리의 몇 개 노드를 실제로 방문하게 될까요?",
+  "예측 — 이미 heap이 있는 자리에 고정 주소로 mmap을 요청하면 무슨 일이 벌어질까요?"][i]);}
+async function step(){
+ if(busy)return;
+ if(!queue.length){
+  if(sc===null){loadSc(0);return;}
+  setFree(true);
+  cap("시나리오 종료 — 자유 모드: mmap 칩 · find_vma · mmap_fixed · 조각 클릭(munmap)");
+  prog("자유 모드");
+  return;}
+ const st=queue.shift();cap(st.cap);verdict(st.vd);
+ await st.fn();
+ prog(queue.length?("남은 단계 "+queue.length):"시나리오 끝 — 한 번 더 누르면 자유 모드");
+ if(!queue.length){setFree(true);}}
+$("#btnStep").addEventListener("click",step);
+$("#btnReset").addEventListener("click",()=>{if(busy)return;
+ T=makeIVT();queue=[];ops=[];sc=null;mmSeq=1;setFree(true);
+ ["k1","k2","k3","k4"].forEach(id=>$("#"+id).classList.remove("set"));
+ $("#log").innerHTML="대기 중 — 삽입·탐색·가지치기가 여기에 기록됩니다";
+ cap("초기화 완료 — 빈 주소 공간에서 직접 시작하거나 시나리오를 고르세요");prog("");
+ verdict("예측 질문 — VMA가 <b>1,000개</b>인 프로세스에서, 주소 하나가 유효한지(find_vma) 확인하는 데 비교 몇 번이면 될까요?");
+ renderBar({});renderTree({});});
+let ops=[];
+document.querySelectorAll("[data-sc]").forEach(c=>c.addEventListener("click",()=>loadSc(+c.dataset.sc)));
+document.querySelectorAll("[data-mm]").forEach(c=>c.addEventListener("click",()=>{
+ if(busy)return;setFree(true);
+ if(T.list().length>=12){log("<span class='err'>VMA가 너무 많습니다(12개 제한)</span>");return;}
+ opMmap(+c.dataset.mm);}));
+$("#fmFind").addEventListener("click",async()=>{
+ if(busy)return;setFree(true);
+ const a=+$("#fq").value;
+ const r=await opQuery(a,a+1,"find_vma("+a+")");
+ cap(r.found?`<span style="color:var(--good)">유효 주소</span> — ${r.found.name} [${r.found.lo},${r.found.hi}) 소속 → demand paging 진행`
+  :`<span style="color:var(--hot)">어느 VMA에도 없음 — SIGSEGV!</span>`);});
+$("#fmFixed").addEventListener("click",async()=>{
+ if(busy)return;setFree(true);
+ const lo=+$("#flo").value,sz=+$("#fsz").value,hi=lo+sz;
+ if(hi>TOTAL){log("<span class='err'>공간을 벗어납니다</span>");return;}
+ if(T.list().length>=12){log("<span class='err'>VMA가 너무 많습니다(12개 제한)</span>");return;}
+ const r=await opQuery(lo,hi,`mmap_fixed(${lo}, ${sz}K) 충돌 검사`);
+ if(r.found){renderTree({bad:r.found.lo});renderBar({bad:[r.found.lo,r.found.hi]});
+  log(`<span class='err'>거부 — ${r.found.name} [${r.found.lo},${r.found.hi})과 겹침</span>`);
+  cap(`<span style="color:var(--hot)">거부</span> — 기존 매핑과 겹칩니다`);}
+ else{busy=true;lock(true);await opInsertFixed(lo,hi,"mmap"+String.fromCharCode(64+mmSeq++));
+  busy=false;lock(false);
+  cap("겹침 없음 — 심기 완료");}});
+// 초기 상태: 자유 모드 빈 공간
+setFree(true);renderBar({});renderTree({});
+})();
+</script>
+</body>
+</html>

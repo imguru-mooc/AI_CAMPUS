@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux CFS 해부 — 가장 적게 받은 사람이 다음 주자</title>
+<style>
+:root{
+  --bg:#0f141d;--panel:#161d2a;--panel2:#1b2434;--line:#26314a;
+  --ink:#dce6f5;--dim:#7d8ba3;--amber:#ffd166;--warnc:#ff9f43;
+  --hot:#ff5d73;--accent:#4cc9f0;--good:#7ee787;--purple:#c3a6ff;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);min-height:100vh;padding:24px 16px 60px;
+ font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+.wrap{max-width:1030px;margin:0 auto}
+header{margin-bottom:18px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+h1{font-size:clamp(20px,4vw,27px);font-weight:800;margin-top:6px}
+h1 b{font-family:var(--mono);color:var(--amber)}
+.sub{color:var(--dim);font-size:14px;margin-top:6px;line-height:1.6}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.run{padding:11px 22px;border:none;border-radius:8px;background:var(--amber);color:#2a2005;
+ font-weight:800;font-size:15px;cursor:pointer;font-family:inherit}
+.run:disabled{opacity:.4;cursor:default}
+.run.sec{background:var(--panel2);color:var(--ink);border:1px solid var(--line);font-size:13.5px}
+.run:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.presets{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px}
+.presets .cap{width:100%;font-size:11px;color:var(--dim);letter-spacing:.06em}
+.chip{font-family:var(--mono);font-size:12.5px;padding:7px 12px;border-radius:999px;
+ background:var(--panel2);color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.chip:hover:not(:disabled){border-color:var(--accent)}
+.chip:disabled{opacity:.4;cursor:default}
+.chip b{color:var(--amber);font-weight:700}
+/* CPU */
+.cpu{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px;
+ display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.cpu .t{font-size:11px;color:var(--dim);letter-spacing:.06em}
+.cpu .now{font-family:var(--mono);font-size:16px;font-weight:800;min-width:130px}
+.cmp{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--dim);text-align:right;line-height:1.7}
+.cmp b{color:var(--good)}
+/* 경주 트랙 */
+.race{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.race .t{font-size:11px;color:var(--dim);letter-spacing:.06em;margin-bottom:10px}
+.race .t b{color:var(--ink)}
+.lane{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.lane .who{width:118px;font-family:var(--mono);font-size:12px;font-weight:800;display:flex;gap:6px;align-items:center;cursor:default}
+.lane .who .nice{font-size:9.5px;padding:1px 5px;border-radius:5px;border:1px solid var(--line);color:var(--dim)}
+.lane .who .nice.hi{border-color:var(--good);color:var(--good)}
+.lane .who .nice.lo{border-color:var(--hot);color:var(--hot)}
+.lane.clickable .who{cursor:pointer}
+.track{flex:1;position:relative;height:24px;background:var(--panel2);border-radius:7px;overflow:hidden}
+.vbar{position:absolute;left:0;top:0;bottom:0;background:#0e3542;border-right:2px solid var(--accent);transition:width .3s}
+.lane.runL .vbar{background:#123524;border-right-color:var(--good)}
+.lane.sleepL .vbar{background:#221b33;border-right-color:var(--purple)}
+.vlab{position:absolute;right:6px;top:0;bottom:0;display:flex;align-items:center;
+ font-family:var(--mono);font-size:11px;color:var(--dim)}
+.lane .vr{width:78px;font-family:var(--mono);font-size:12px;text-align:right}
+.lane.runL .vr{color:var(--good);font-weight:800}
+.lane.sleepL .vr{color:var(--purple)}
+.minline{font-size:10.5px;color:var(--dim);font-family:var(--mono);margin-top:2px}
+/* 트리 */
+.treeP{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px;overflow-x:auto}
+.treeP .t{font-size:11px;color:var(--dim);letter-spacing:.06em;margin-bottom:12px}
+.treeP .t b{color:var(--ink)}
+.tnode{display:flex;flex-direction:column;align-items:center;min-width:64px}
+.tkids{display:flex;gap:14px;margin-top:14px;position:relative}
+.tkids::before{content:"";position:absolute;top:-8px;left:20%;right:20%;border-top:1px solid var(--line)}
+.nchip{font-family:var(--mono);font-size:11.5px;font-weight:800;padding:6px 10px;border-radius:999px;
+ border:2px solid #555;background:var(--panel2);transition:all .3s;white-space:nowrap}
+.nchip.blackN{border-color:#5a6788}
+.nchip.redN{border-color:#a34655}
+.nchip.leftmost{border-color:var(--good);box-shadow:0 0 12px rgba(126,231,135,.45);color:var(--good)}
+.nchip.gone{opacity:.25}
+.treewrap{display:flex;justify-content:center}
+/* 로그·카드·판정 */
+.term{background:#0a0f18;border:1px solid var(--line);border-radius:10px;padding:12px 14px;
+ font-family:var(--mono);font-size:12.5px;line-height:1.75;height:170px;overflow-y:auto;margin-bottom:14px}
+.term .p{color:var(--good)}.term .sys{color:var(--accent)}.term .warn{color:var(--warnc)}
+.term .err{color:var(--hot)}.term .z{color:var(--purple)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.card .top{display:flex;justify-content:space-between;align-items:center}
+.card .name{font-family:var(--mono);font-weight:800;font-size:12.5px}
+.card .lamp{width:11px;height:11px;border-radius:50%;background:#2a3550}
+.card.set{border-color:var(--accent)}.card.set .lamp{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+.card .why{font-size:12px;line-height:1.5;color:var(--ink);margin-top:6px;min-height:48px}
+.verdict{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+ padding:13px 15px;font-size:13.5px;line-height:1.7}
+.verdict b{color:var(--amber)}
+.good{color:var(--good);font-weight:800}.bad{color:var(--hot);font-weight:800}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<div class="eyebrow">OS · CPU 스케줄링 · 심화 · Linux CFS (2.6.23~)</div>
+<h1>CFS 해부 — <b>가장 적게 받은 사람이 다음 주자</b></h1>
+<p class="sub">O(1)의 휴리스틱 뭉치를 버리고, CFS는 원리 하나로 돌아갑니다 — 모든 task에 <b>vruntime(지금까지 받은 CPU 시간의 장부)</b>를 달고,
+<b>가장 작은 값</b>이 다음에 달립니다. 그 정렬을 담는 자료구조가 <b>레드블랙 트리</b> — 맨 왼쪽 노드가 곧 다음 주자.
+우선순위(nice)는 별도 규칙이 아니라 <b>이 시계가 가는 속도</b>로 녹아 있습니다.</p>
+</header>
+
+<section class="panel">
+<div class="row">
+<button class="run" id="btnStep">다음 단계 ▶</button>
+<button class="run sec" id="btnReset">전체 초기화</button>
+<span class="sub" style="margin:0" id="cap">시나리오 ①부터 — 각 단계에서 다음에 벌어질 일을 먼저 예측!</span>
+</div>
+<div class="presets"><span class="cap">시나리오 — 예상 결과가 함께 표시됩니다</span>
+<button class="chip" data-sc="0">① 공평의 시계 → <b>차례가 저절로 돈다</b></button>
+<button class="chip" data-sc="1">② nice = 시계 속도 → <b>천천히 늙는 자가 더 받는다</b></button>
+<button class="chip" data-sc="2">③ 잠꾸러기 보정 → <b>깨우되, 독점은 막는다</b></button>
+</div>
+<div class="presets"><span class="cap">자유 모드 — task 이름을 클릭하면 재우기/깨우기</span>
+<button class="chip fm" data-n="-5">+ nice −5 task (높은 우선순위)</button>
+<button class="chip fm" data-n="0">+ nice 0 task</button>
+<button class="chip fm" data-n="5">+ nice +5 task (낮은 우선순위)</button>
+<button class="chip fm" id="fmSched">schedule() 한 번 실행</button>
+</div>
+</section>
+
+<section class="cpu">
+<div><div class="t">CPU — 실행 중</div><div class="now" id="now">idle</div></div>
+<div><div class="t">이번 슬라이스</div><div class="now" style="font-size:13px;color:var(--dim)" id="sliceInfo">목표 지연 ÷ 주자 수</div></div>
+<div class="cmp">다음 주자 찾기: <b>맨 왼쪽 노드 (캐시 O(1))</b><br>다 뛴 뒤 재삽입: <b>O(log n)</b></div>
+</section>
+
+<section class="race">
+<div class="t"><b>vruntime 경주 트랙</b> — 막대가 짧을수록(적게 받았을수록) 다음 차례 · 초록 = 실행 중 · 보라 = 잠듦(시계 정지)</div>
+<div id="lanes"></div>
+<div class="minline" id="minline"></div>
+</section>
+
+<section class="treeP">
+<div class="t"><b>레드블랙 트리</b> — vruntime 순서로 정렬 · <span style="color:var(--good)">맨 왼쪽 = 다음 주자</span> · 빨강/검정은 트리가 스스로 균형을 잡기 위한 표식(단순화 표시)</div>
+<div class="treewrap" id="tree"></div>
+</section>
+
+<div class="term" id="log" aria-live="polite">대기 중 — vruntime의 흐름이 여기에 기록됩니다</div>
+
+<div class="cards">
+<div class="card" id="k1"><div class="top"><span class="name">vruntime 장부</span><span class="lamp"></span></div>
+<div class="why">받은 CPU 시간을 각자 기록 — 스케줄링이 「최솟값 고르기」 문제로 바뀝니다.</div></div>
+<div class="card" id="k2"><div class="top"><span class="name">레드블랙 트리</span><span class="lamp"></span></div>
+<div class="why">정렬을 유지하는 균형 트리 — 맨 왼쪽은 캐시해 O(1), 재삽입은 O(log n).</div></div>
+<div class="card" id="k3"><div class="top"><span class="name">nice = 시계 속도</span><span class="lamp"></span></div>
+<div class="why">nice가 낮으면(무거우면) vruntime이 천천히 증가 → 저절로 더 자주·오래 선택.</div></div>
+<div class="card" id="k4"><div class="top"><span class="name">잠꾸러기 보정</span><span class="lamp"></span></div>
+<div class="why">잠든 동안 시계 정지 — 깨울 때 min 근처로 맞춰, 곧 뛰게 하되 독점은 차단.</div></div>
+</div>
+
+<div class="verdict" id="v">예측 질문 — 시계(vruntime)가 <b>가장 느리게 가는</b> task는 결국 CPU를 더 받을까요, 덜 받을까요? 답을 정한 뒤 시작하세요.</div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const WAIT=reduced?0:430;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+let tasks=[],queue=[],busy=false,freeMode=false,sc=null,nextCh=68;
+let runningId=null;
+
+function factor(n){return n<0?0.5:(n>0?2:1);} // vruntime 증가 배율
+function mk(id,nice,kind){return{id,nice,vr:0,ran:0,state:"R",kind:kind||""};}
+function runnable(){return tasks.filter(t=>t.state==="R");}
+function minVr(){const r=runnable();return r.length?Math.min(...r.map(t=>t.vr)):0;}
+function log(h){const o=$("#log");
+ if(o.textContent.startsWith("대기 중"))o.innerHTML="";
+ o.innerHTML+=h+"<br>";o.scrollTop=o.scrollHeight;}
+function cap(t){$("#cap").textContent=t;}
+function verdict(h){$("#v").innerHTML=h;}
+function lamp(id){$("#"+id).classList.add("set");}
+
+function render(){
+ // 트랙
+ const L=$("#lanes");L.innerHTML="";
+ const maxVr=Math.max(60,...tasks.map(t=>t.vr))*1.15;
+ tasks.forEach(t=>{
+  const lane=document.createElement("div");
+  lane.className="lane"+(t.id===runningId?" runL":"")+(t.state==="S"?" sleepL":"")+(freeMode?" clickable":"");
+  const nc=t.nice<0?"hi":(t.nice>0?"lo":"");
+  lane.innerHTML=`<span class="who"><span>${t.id}${t.state==="S"?" ❄":""}</span>
+   <span class="nice ${nc}">nice ${t.nice>0?"+":""}${t.nice}</span>${t.kind?`<span style="color:var(--dim);font-size:10px">${t.kind}</span>`:""}</span>
+   <span class="track"><span class="vbar" style="width:${Math.min(100,t.vr/maxVr*100)}%"></span>
+   <span class="vlab">받은 실시간 ${t.ran}</span></span>
+   <span class="vr">vr ${t.vr}</span>`;
+  if(freeMode)lane.querySelector(".who").addEventListener("click",()=>{
+   if(busy||t.id===runningId)return;
+   if(t.state==="R"){t.state="S";
+    log(`<span class='z'>${t.id} 잠듦(S)</span> — vruntime ${t.vr}에서 <b>시계 정지</b>`);}
+   else wake(t);
+   render();});
+  L.appendChild(lane);});
+ $("#minline").textContent="min_vruntime = "+minVr()+"  (트리 맨 왼쪽의 값)";
+ // 트리 (runnable을 vr 정렬 → 균형 BST)
+ const r=[...runnable()].sort((a,b)=>a.vr-b.vr||a.id.localeCompare(b.id));
+ const leftmost=r.length?r[0].id:null;
+ function build(arr,depth){
+  if(!arr.length)return null;
+  const m=Math.floor(arr.length/2);
+  const d=document.createElement("div");d.className="tnode";
+  const n=document.createElement("span");
+  n.className="nchip "+(depth%2?"redN":"blackN")+(arr[m].id===leftmost?" leftmost":"");
+  n.textContent=arr[m].id+" · "+arr[m].vr;
+  d.appendChild(n);
+  const lk=build(arr.slice(0,m),depth+1),rk=build(arr.slice(m+1),depth+1);
+  if(lk||rk){const kids=document.createElement("div");kids.className="tkids";
+   kids.appendChild(lk||emptyN());kids.appendChild(rk||emptyN());d.appendChild(kids);}
+  return d;}
+ function emptyN(){const e=document.createElement("div");e.className="tnode";
+  e.innerHTML='<span class="nchip gone">·</span>';return e;}
+ const T=$("#tree");T.innerHTML="";
+ if(r.length)T.appendChild(build(r,0));
+ else T.innerHTML="<span style='font-family:var(--mono);font-size:12px;color:#3a445e'>(runnable 없음)</span>";}
+
+function wake(t){
+ const mv=minVr();
+ const old=t.vr;
+ if(t.vr<mv-6){t.vr=mv-6;
+  log(`<span class='p'>${t.id} 깨어남</span> — vr ${old}은 너무 과거 → <span class='sys'>보정: min(${mv}) − 6 = <b>${t.vr}</b></span> (곧 뛰되, 독점 금지)`);}
+ else log(`<span class='p'>${t.id} 깨어남</span> — vr ${t.vr} 그대로 복귀`);
+ t.state="R";}
+
+/* ── schedule(): leftmost 선택 → 슬라이스 실행 → 재삽입 ── */
+async function schedule(nTicks){
+ busy=true;lock(true);
+ const r=runnable();
+ if(!r.length){log("<span class='err'>runnable이 없습니다</span>");busy=false;lock(false);return;}
+ const slice=nTicks||3;
+ $("#sliceInfo").textContent="목표 지연 ÷ "+r.length+"명 ≈ "+slice+" tick";
+ log(`<span class='sys'>schedule()</span> — 트리 <b>맨 왼쪽</b> 조회 (캐시, O(1))`);
+ render();await sleep(WAIT*.8);
+ const t=[...r].sort((a,b)=>a.vr-b.vr||a.id.localeCompare(b.id))[0];
+ runningId=t.id;render();
+ log(`<span class='p'>선택 → ${t.id}</span> (vr ${t.vr} = 최솟값) · 트리에서 제거 후 실행`);
+ $("#now").textContent=t.id+" 실행";
+ for(let i=0;i<slice;i++){
+  await sleep(WAIT*.55);
+  t.vr+=Math.round(10*factor(t.nice));t.ran+=10;
+  render();$("#now").textContent=t.id+" 실행";}
+ log(`${t.id} — tick ${slice}회 · vr +${Math.round(10*factor(t.nice))}×${slice} → <b>${t.vr}</b>`+
+  (t.nice!==0?` <span class='warn'>(nice ${t.nice>0?"+":""}${t.nice}: 시계 ×${factor(t.nice)})</span>`:""));
+ runningId=null;
+ log(`<span class='sys'>재삽입</span> — 새 vr 위치로 트리에 O(log n) 삽입 · 맨 왼쪽이 바뀌었는지 확인하세요`);
+ $("#now").textContent="idle";
+ render();
+ busy=false;lock(false);}
+
+function lock(on){$("#btnStep").disabled=on;
+ document.querySelectorAll(".chip").forEach(c=>c.disabled=on);}
+
+/* ── 시나리오 ── */
+const SC=[
+ [ /* ① 공평의 시계 */
+  {fn:()=>schedule(),cap:"첫 선택 — 셋 다 vr 0, 동률이면 이름순. 실행 후 트리의 변화를 보세요",
+   vd:"<b>규칙은 하나.</b> 최솟값(맨 왼쪽)이 뛴다 — timeslice 장부도, 소진(⌛) 표시도, epoch도 없습니다. A가 뛰고 나면 A의 vr만 커져 <b>트리 오른쪽으로 밀려나고</b>, 다음 최솟값이 자동으로 떠오릅니다."},
+  {fn:()=>schedule(),cap:"두 번째 — 이제 맨 왼쪽은 누구입니까?",
+   vd:"<b>차례가 저절로 돈다.</b> 누가 얼마나 받았는지가 vr에 남아 있으므로, 「다음 차례」는 관리하는 게 아니라 <b>정렬에서 저절로 나옵니다</b> — O(1) 스케줄러의 FIFO·배열 이동이 전부 사라진 이유."},
+  {fn:()=>schedule(),cap:"세 번째 — 트랙의 세 막대가 거의 나란해집니다",
+   vd:"<span class='good'>① 완료.</span> 세 바퀴 만에 vr이 30·30·30 — <b>완전 공평(Completely Fair)</b>이라는 이름 그대로, 장기적으로 모두가 같은 몫에 수렴합니다. 슬라이스도 고정값이 아니라 <b>목표 지연 ÷ 주자 수</b>로 그때그때 나눕니다(상단 표시)."}],
+ [ /* ② nice = 시계 속도 */
+  {fn:()=>schedule(),cap:"B는 nice −5 — B가 뛸 때 vr이 얼마나 늘어나는지 지켜보세요",
+   vd:"<b>무게의 정체.</b> nice −5인 B는 시계가 <b>절반 속도(×0.5)</b>로 갑니다 — 같은 10 tick을 받아도 vr은 +5만 증가. 우선순위를 배열 칸이나 보너스로 다루지 않고 <b>시계 속도에 녹인 것</b>이 CFS의 우아함입니다."},
+  {fn:()=>schedule(),cap:"계속 돌립니다 — B가 최솟값에 더 오래 머무는 것을 보세요",
+   vd:"B의 vr이 천천히 자라니 <b>맨 왼쪽에 더 자주 돌아옵니다</b> — 규칙을 하나도 안 바꿨는데 우선순위가 작동합니다."},
+  {fn:async()=>{await schedule();await sleep(WAIT*.4);await schedule();},
+   cap:"두 바퀴 더 — 트랙의 「받은 실시간」 숫자를 비교하세요",
+   vd:"<span class='good'>② 완료.</span> vr은 나란해도(공평의 장부) <b>실시간은 B가 두 배</b> — 막대 속 「받은 실시간」이 증거입니다. 같은 vr에 도달하는 데 nice −5는 실제 시간을 2배 쓸 수 있다: <b>가중된 공평.</b> 시작 질문의 답 — 시계가 느린 자가 더 받는다."}],
+ [ /* ③ 잠꾸러기 보정 */
+  {fn:async()=>{const c=tasks.find(t=>t.id==="C");c.state="S";
+    log("<span class='z'>C — 키 입력 대기, 잠듦(S)</span> · vr 0에서 <b>시계 정지</b> (트리에서 제외)");render();},
+   cap:"C(대화형)가 vr 0인 채 잠들었습니다 — A·B는 계속 달립니다",
+   vd:"잠든 task는 트리에 없고 시계도 멈춥니다 — 여기까지는 O(n)의 counter 보존과 비슷해 보입니다. 차이는 깨어날 때."},
+  {fn:async()=>{await schedule();await sleep(WAIT*.3);await schedule();await sleep(WAIT*.3);await schedule();await sleep(WAIT*.3);await schedule();},
+   cap:"A·B가 네 슬라이스를 나눠 갖는 동안 — C의 vr은 0에 얼어 있습니다",
+   vd:"이제 A·B의 vr은 60 안팎, C는 0 — 이대로 C가 깨어나면 <b>최솟값을 60만큼 독차지</b>하며 한참을 혼자 뛰게 됩니다. 공평의 시계가 역으로 독점을 낳는 순간 — CFS의 처방을 예측하세요."},
+  {fn:async()=>{const c=tasks.find(t=>t.id==="C");wake(c);render();},
+   cap:"키 입력 도착 — 로그의 보정 계산을 보세요: min − 6",
+   vd:"<b>보정 한 줄.</b> 깨어난 vr을 <b>min_vruntime − 약간</b>으로 끌어올립니다 — 맨 왼쪽엔 서게 하되(즉시 반응), 빚 60을 다 몰아 받지는 못하게. O(1)이 sleep_avg·보너스·재삽입 규칙 뭉치로 하던 일을 <b>시계 보정 하나</b>로 끝냅니다."},
+  {fn:()=>schedule(),cap:"다음 선택 — 방금 깨어난 C가 맨 왼쪽에서 뽑힙니다",
+   vd:"<span class='good'>③ 완성 — 그리고 3부작의 끝.</span> 대화형은 즉시 응답하고, 독점은 없습니다. 정리 — <b>O(n)</b>: 전수 스캔 + 전원 재충전. <b>O(1)</b>: 배열·비트맵 + 휴리스틱 보너스. <b>CFS</b>: vruntime 시계 하나 + 트리 하나 — 2007년부터 리눅스의 기본이며, 최근에는 같은 정신을 다듬은 <b>EEVDF</b>로 개량되고 있습니다. 자유 모드로 nice를 섞어 실험해 보세요."}]];
+
+function seed(list){tasks=list;runningId=null;}
+function loadSc(i){
+ if(busy)return;
+ freeMode=false;sc=i;nextCh=68;
+ if(i===0)seed([mk("A",0),mk("B",0),mk("C",0)]);
+ else if(i===1)seed([mk("A",0),mk("B",-5,"중요 작업"),mk("C",0)]);
+ else seed([mk("A",0),mk("B",0),mk("C",0,"대화형")]);
+ $("#now").textContent="idle";$("#sliceInfo").textContent="목표 지연 ÷ 주자 수";
+ $("#log").innerHTML="";
+ log("<span class='p'>── 시나리오 "+(i+1)+" ──</span>");
+ queue=[...SC[i]];
+ lamp(i===0?"k1":i===1?"k3":"k4");if(i===0)lamp("k2");
+ render();
+ cap("시나리오 준비 완료 — 「다음 단계 ▶」 ("+queue.length+"단계, 단계마다 자동 재생)");
+ verdict(["예측 — vr 0·0·0 동률로 시작합니다. 세 슬라이스가 지나면 트랙은 어떤 모양일까요?",
+  "예측 — nice −5(시계 ×0.5)인 B는 같은 vr에 도달할 때 실제 시간을 얼마나 받게 될까요?",
+  "예측 — vr 0에서 얼어 있던 C가 깨어나면, 그대로 두면 무슨 일이 벌어질까요?"][i]);}
+async function step(){
+ if(busy)return;
+ if(!queue.length){
+  if(sc===null){loadSc(0);return;}
+  freeMode=true;render();
+  cap("시나리오 종료 — 자유 모드: task 추가 · 이름 클릭(재우기/깨우기) · schedule() 실행");
+  return;}
+ const st=queue.shift();cap(st.cap);verdict(st.vd);
+ await st.fn();
+ if(!queue.length){freeMode=true;render();
+  cap($("#cap").textContent+"  — 시나리오 끝: 자유 모드 사용 가능");}}
+$("#btnStep").addEventListener("click",step);
+$("#btnReset").addEventListener("click",()=>{if(busy)return;
+ seed([mk("A",0),mk("B",0),mk("C",0)]);
+ queue=[];sc=null;freeMode=true;nextCh=68;
+ $("#now").textContent="idle";$("#sliceInfo").textContent="목표 지연 ÷ 주자 수";
+ ["k1","k2","k3","k4"].forEach(id=>$("#"+id).classList.remove("set"));
+ $("#log").innerHTML="대기 중 — vruntime의 흐름이 여기에 기록됩니다";
+ cap("초기화 완료 — 시나리오를 고르거나 자유 모드로 실험하세요");
+ verdict("예측 질문 — 시계(vruntime)가 <b>가장 느리게 가는</b> task는 결국 CPU를 더 받을까요, 덜 받을까요?");
+ render();});
+document.querySelectorAll("[data-sc]").forEach(c=>c.addEventListener("click",()=>loadSc(+c.dataset.sc)));
+document.querySelectorAll("[data-n]").forEach(c=>c.addEventListener("click",()=>{
+ if(busy)return;freeMode=true;
+ if(nextCh>90){log("<span class='err'>task가 너무 많습니다</span>");return;}
+ const t=mk(String.fromCharCode(nextCh++),+c.dataset.n);
+ t.vr=minVr(); // 새 task는 min에서 출발 (공평)
+ tasks.push(t);
+ log(`<span class='warn'>+ ${t.id} 추가 (nice ${t.nice>0?"+":""}${t.nice})</span> — vr은 min(${t.vr})에서 출발 (새치기도 빚도 없이)`);
+ render();}));
+$("#fmSched").addEventListener("click",async()=>{if(busy)return;freeMode=true;
+ await schedule();
+ cap("schedule() 완료 — 트리 맨 왼쪽이 어떻게 바뀌었는지 확인하세요");});
+// 초기 화면
+seed([mk("A",0),mk("B",0),mk("C",0)]);
+freeMode=true;render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buddy 시스템 운용 — 할당 과정과 해지 과정</title>
+<style>
+:root{
+  --bg:#0f141d;--panel:#161d2a;--panel2:#1b2434;--line:#26314a;
+  --ink:#dce6f5;--dim:#7d8ba3;--amber:#ffd166;--warnc:#ff9f43;
+  --hot:#ff5d73;--accent:#4cc9f0;--good:#7ee787;--purple:#c3a6ff;--teal:#5eead4;--rose:#f9a8d4;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);min-height:100vh;padding:24px 16px 60px;
+ font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+.wrap{max-width:1000px;margin:0 auto}
+header{margin-bottom:18px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+h1{font-size:clamp(20px,4vw,28px);font-weight:800;margin-top:6px}
+h1 b{font-family:var(--mono);color:var(--amber)}
+.sub{color:var(--dim);font-size:14px;margin-top:6px;line-height:1.6}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.run{padding:11px 22px;border:none;border-radius:8px;background:var(--amber);color:#2a2005;
+ font-weight:800;font-size:15px;cursor:pointer;font-family:inherit}
+.run:disabled{opacity:.4;cursor:default}
+.run.sec{background:var(--panel2);color:var(--ink);border:1px solid var(--line);font-size:13.5px}
+.run:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.presets{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px}
+.presets .cap{width:100%;font-size:11px;color:var(--dim);letter-spacing:.06em}
+.chip{font-family:var(--mono);font-size:13px;padding:7px 12px;border-radius:999px;
+ background:var(--panel2);color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.chip:hover:not(:disabled){border-color:var(--accent)}
+.chip:disabled{opacity:.4;cursor:default}
+.chip b{color:var(--amber);font-weight:700}
+/* 메모리 막대 */
+.board{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+ padding:16px;margin-bottom:14px}
+.board .t{font-size:11px;color:var(--dim);letter-spacing:.06em;margin-bottom:8px}
+.membar{display:flex;height:82px;border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+.seg{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
+ border-right:1px solid var(--bg);transition:all .3s;overflow:hidden}
+.seg:last-child{border-right:0}
+.seg .sz{font-family:var(--mono);font-size:12px;font-weight:800}
+.seg .who{font-size:11px;margin-top:2px}
+.seg.free{background:var(--panel2);color:var(--dim)}
+.seg.alloc{cursor:pointer}
+.seg.alloc:hover{filter:brightness(1.25)}
+.seg.oA{background:#3a3208;color:var(--amber)}
+.seg.oB{background:#0e3542;color:var(--accent)}
+.seg.oC{background:#2a2340;color:var(--purple)}
+.seg.oD{background:#0f3730;color:var(--teal)}
+.seg.oE{background:#3a1b2c;color:var(--rose)}
+.seg.hot{box-shadow:inset 0 0 0 2.5px var(--good)}
+.seg.buddyhl{box-shadow:inset 0 0 0 2.5px var(--warnc)}
+.seg .waste{position:absolute;top:0;right:0;bottom:0;background:repeating-linear-gradient(
+ -45deg,rgba(255,93,115,.28) 0 6px,transparent 6px 12px);display:flex;align-items:flex-end;justify-content:center;
+ font-size:10px;color:var(--hot);padding-bottom:4px;font-family:var(--mono)}
+.seg.split-l{animation:sl .4s ease}
+.seg.split-r{animation:sr .4s ease}
+.seg.merged{animation:mg .5s ease}
+@keyframes sl{from{transform:translateX(24%);opacity:.3}}
+@keyframes sr{from{transform:translateX(-24%);opacity:.3}}
+@keyframes mg{0%{box-shadow:inset 0 0 0 3px var(--good)}100%{box-shadow:inset 0 0 0 0 transparent}}
+.ruler{display:flex;font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-top:4px}
+.ruler span{flex:1;text-align:left}
+.ruler span:last-child{flex:0}
+/* free list + 로그 */
+.grid2{display:grid;grid-template-columns:1.05fr 1fr;gap:14px;margin-bottom:14px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}}
+.fl{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12.5px}
+.fl th{color:var(--dim);font-weight:700;text-align:left;padding:4px 8px;border-bottom:1px solid var(--line);font-size:11px}
+.fl td{padding:5px 8px;border-bottom:1px solid var(--line)}
+.fl td.hl{color:var(--good);font-weight:800}
+.term{background:#0a0f18;border:1px solid var(--line);border-radius:10px;padding:12px 14px;
+ font-family:var(--mono);font-size:12.5px;line-height:1.75;height:206px;overflow-y:auto}
+.term .p{color:var(--good)}.term .sys{color:var(--accent)}.term .warn{color:var(--warnc)}.term .err{color:var(--hot)}
+.verdict{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+ padding:13px 15px;font-size:13.5px;line-height:1.7;margin-bottom:14px}
+.verdict b{color:var(--amber)}
+.good{color:var(--good);font-weight:800}.bad{color:var(--hot);font-weight:800}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--dim);margin-top:8px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<div class="eyebrow">OS · Memory 관리 · 심화</div>
+<h1>Buddy 시스템 운용 — <b>할당 과정과 해지 과정</b></h1>
+<p class="sub">여러 프로세스가 Memory를 빌리고 돌려주는 실제 운용 장면입니다.
+할당은 <b>올림 → 장부 확인 → 부족하면 분할</b>, 해지는 <b>반납 → buddy 확인(주소⊕크기) → 비어 있으면 병합 연쇄</b>.
+시나리오로 전 과정을 본 뒤, <b>자유 모드에서 직접 할당하고 블록을 클릭해 해제</b>해 보세요.</p>
+</header>
+
+<section class="panel">
+<div class="row">
+<button class="run" id="btnStep">다음 단계 ▶</button>
+<button class="run sec" id="btnReset">전체 초기화</button>
+<span class="sub" style="margin:0" id="cap">시나리오 ①부터 — 각 단계에서 무슨 일이 벌어질지 먼저 예측!</span>
+</div>
+<div class="presets"><span class="cap">시나리오 — 예상 결과가 함께 표시됩니다</span>
+<button class="chip" data-sc="0">① 할당 과정 → <b>A·C·B가 차례로 빌린다</b></button>
+<button class="chip" data-sc="1">② 해지 과정 → <b>돌려주는 순서가 병합을 연다</b></button>
+</div>
+<div class="presets"><span class="cap">자유 모드 — 직접 운용 (색 블록을 클릭하면 해제)</span>
+<button class="chip fm" data-req="8">+ 8K 할당</button>
+<button class="chip fm" data-req="16">+ 16K 할당</button>
+<button class="chip fm" data-req="20">+ 20K 할당 → <b>32K</b></button>
+<button class="chip fm" data-req="64">+ 64K 할당</button>
+</div>
+</section>
+
+<section class="board" aria-label="메모리 막대">
+<div class="t">물리 Memory 128KB — 초록 테두리 = 이번 단계의 주인공 · 주황 테두리 = 그 buddy · 빗금 = 내부 단편화(낭비)</div>
+<div class="membar" id="bar"></div>
+<div class="ruler"><span>0</span><span>32</span><span>64</span><span>96</span><span>128KB</span></div>
+<div class="legend">
+<span><i style="background:#3a3208"></i>A</span><span><i style="background:#0e3542"></i>B</span>
+<span><i style="background:#2a2340"></i>C</span><span><i style="background:#0f3730"></i>D</span>
+<span><i style="background:#3a1b2c"></i>E</span><span><i style="background:var(--panel2)"></i>free</span>
+<span style="margin-left:auto">자유 모드에서는 색 블록 클릭 = free()</span>
+</div>
+</section>
+
+<div class="grid2">
+<section class="panel" style="margin:0">
+<div class="board t" style="margin-bottom:6px;padding:0;border:0;background:none">free list — 크기별 빈 블록 장부</div>
+<table class="fl" id="flt"></table>
+</section>
+<section class="panel" style="margin:0">
+<div class="board t" style="margin-bottom:6px;padding:0;border:0;background:none">동작 로그 — 분할·buddy 계산·병합</div>
+<div class="term" id="log" aria-live="polite">대기 중 — 할당과 해지가 여기에 기록됩니다</div>
+</section>
+</div>
+
+<div class="verdict" id="v">예측 질문 — 할당을 여러 번 한 뒤 <b>아무 순서로나 해제해도</b> Memory는 다시 통짜 128K로 돌아올까요? 답을 정하고 시나리오 ①부터.</div>
+</div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const WAIT=reduced?0:560;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const TOTAL=128,SIZES=[128,64,32,16,8];
+let blocks=[{a:0,s:128,o:"free"}];
+let queue=[],busy=false,freeMode=false,nextName=0;
+const NAMES=["A","B","C","D","E"];
+let hot=null,bud=null,fx=null;
+
+function find(a){return blocks.find(b=>b.a===a);}
+function log(h){const o=$("#log");
+ if(o.textContent.startsWith("대기 중"))o.innerHTML="";
+ o.innerHTML+=h+"<br>";o.scrollTop=o.scrollHeight;}
+function cap(t){$("#cap").textContent=t;}
+function verdict(h){$("#v").innerHTML=h;}
+function render(){
+ const bar=$("#bar");bar.innerHTML="";
+ blocks.forEach(b=>{
+  const d=document.createElement("div");
+  d.className="seg "+(b.o==="free"?"free":"o"+b.o+" alloc");
+  d.style.width=(b.s/TOTAL*100)+"%";
+  if(b.a===hot)d.classList.add("hot");
+  if(b.a===bud)d.classList.add("buddyhl");
+  if(fx&&!reduced){if(b.a===fx.l)d.classList.add("split-l");
+   if(b.a===fx.r)d.classList.add("split-r");
+   if(b.a===fx.m)d.classList.add("merged");}
+  d.innerHTML=`<span class="sz">${b.s}K</span><span class="who">${b.o==="free"?"free":b.o}</span>`;
+  if(b.use&&b.use<b.s){const w=document.createElement("div");w.className="waste";
+   w.style.width=((b.s-b.use)/b.s*100)+"%";w.textContent="낭비 "+(b.s-b.use)+"K";d.appendChild(w);}
+  if(b.o!=="free")d.addEventListener("click",()=>{if(freeMode&&!busy)opFree(b.a,true);});
+  bar.appendChild(d);});
+ fx=null;
+ const t=$("#flt");
+ t.innerHTML="<tr><th>크기</th><th>빈 블록의 시작 주소</th></tr>";
+ SIZES.forEach(s=>{
+  const fr=blocks.filter(b=>b.o==="free"&&b.s===s).map(b=>b.a+"K");
+  t.insertAdjacentHTML("beforeend",
+   `<tr><td>${s}K</td><td class="${fr.length?"hl":""}">${fr.length?fr.join(" · "):"—"}</td></tr>`);});}
+
+/* ── 할당 과정 ── */
+async function opAlloc(name,req){
+ busy=true;lock(true);
+ log(`<span class='p'>프로세스 ${name}</span> — malloc(${req}K) 요청`);
+ let need=8;while(need<req)need*=2;
+ if(need!==req)log(`<span class='sys'>올림</span> ${req}K → 2의 거듭제곱 최소 상한 = <b>${need}K</b>`);
+ else log(`${req}K는 그대로 2의 거듭제곱 — 올림 불필요`);
+ hot=null;bud=null;render();await sleep(WAIT*.7);
+ // 가장 작은 free 블록 ≥ need
+ const cands=blocks.filter(b=>b.o==="free"&&b.s>=need).sort((x,y)=>x.s-y.s||x.a-y.a);
+ if(!cands.length){log("<span class='err'>할당 실패 — 충분히 큰 빈 블록이 없습니다</span>");
+  cap(name+"의 요청 실패 — 해제(반납)로 자리를 만들어야 합니다");busy=false;lock(false);return;}
+ let blk=cands[0];
+ if(blk.s===need)log(`free list ${need}K 칸에 재고 있음 → <b>분할 없이 즉시 지급</b>`);
+ else log(`free list ${need}K 칸 비어 있음 → 가장 작은 상위 블록 ${blk.s}K@${blk.a} 를 분할`);
+ while(blk.s>need){
+  const h=blk.s/2,i=blocks.indexOf(blk);
+  blocks.splice(i,1,{a:blk.a,s:h,o:"free"},{a:blk.a+h,s:h,o:"free"});
+  log(`<span class='sys'>split</span> ${h*2}K@${blk.a} → ${h}K@${blk.a} + ${h}K@${blk.a+h} <span class='warn'>(서로 buddy)</span>`);
+  hot=blk.a;bud=blk.a+h;fx={l:blk.a,r:blk.a+h};render();
+  await sleep(WAIT);
+  blk=find(blk.a);}
+ blk.o=name;if(req<need)blk.use=req;
+ hot=blk.a;bud=null;render();
+ log(`<span class='p'>할당 완료</span> ${need}K@${blk.a} → ${name}${req<need?` (실사용 ${req}K, <span class='err'>낭비 ${need-req}K</span>)`:""}`);
+ busy=false;lock(false);}
+
+/* ── 해지 과정 ── */
+async function opFree(addr,manual){
+ busy=true;lock(true);
+ let b=find(addr);const name=b.o;
+ log(`<span class='p'>free(${name})</span> — ${b.s}K@${b.a} 반납`);
+ b.o="free";delete b.use;
+ hot=b.a;bud=null;render();await sleep(WAIT*.8);
+ // 병합 연쇄
+ while(true){
+  const budA=b.a^b.s;
+  log(`<span class='sys'>buddy 계산</span> ${b.a} ⊕ ${b.s} = <b>${budA}</b>`);
+  const c=blocks.find(x=>x.a===budA&&x.s===b.s);
+  hot=b.a;bud=budA;render();await sleep(WAIT*.8);
+  if(!c||c.o!=="free"){
+   log(`→ ${b.s}K@${budA} ${!c?"는 지금 더 잘게 쪼개져 있음":"은 <span class='err'>"+c.o+" 사용 중</span>"} — <span class='warn'>병합 불가, 여기서 대기</span>`);
+   break;}
+  log(`→ ${b.s}K@${budA} <span class='p'>free!</span> — <span class='sys'>merge</span> → ${b.s*2}K@${Math.min(b.a,budA)}`);
+  const lo=Math.min(b.a,c.a);
+  blocks=blocks.filter(x=>x!==b&&x!==c);
+  blocks.push({a:lo,s:b.s*2,o:"free"});blocks.sort((x,y)=>x.a-y.a);
+  b=find(lo);hot=lo;bud=null;fx={m:lo};render();
+  await sleep(WAIT);}
+ hot=null;bud=null;render();
+ if(blocks.length===1)log("<span class='p'><b>통짜 128K 복구 — 외부 단편화 0</b></span>");
+ if(manual)cap("해제 완료 — 계속 할당/해제하며 병합 조건을 실험해 보세요");
+ busy=false;lock(false);}
+
+function lock(on){
+ $("#btnStep").disabled=on;
+ document.querySelectorAll(".chip").forEach(c=>c.disabled=on);}
+
+/* ── 시나리오 ── */
+const SC1=[ // 할당 과정
+ {fn:()=>opAlloc("A",16),cap:"A가 16K 요청 — 장부가 비어 128부터 쪼갭니다",
+  vd:"<b>할당 ①.</b> 분할이 연쇄로 재생됩니다 — 매 split마다 오른쪽 반쪽이 free list에 등록되는 것을 장부에서 확인하세요."},
+ {fn:()=>opAlloc("C",8),cap:"C가 8K 요청 — 이번엔 A가 남긴 조각을 씁니다",
+  vd:"<b>할당 ②.</b> 128을 다시 쪼개지 않습니다 — A가 남긴 <b>16K@16 한 조각만</b> 반으로 갈라 8K를 지급. 남긴 조각이 다음 손님의 재료가 되는 구조."},
+ {fn:()=>opAlloc("B",20),cap:"B가 20K 요청 — 올림과 즉시 지급",
+  vd:"<b>할당 ③.</b> 20K→32K 올림 후, 장부의 32K 칸에 재고(32K@32)가 있어 <b>분할 없이 즉시 지급</b> — 빗금 12K가 내부 단편화입니다. 이제 A·C·B가 세 들어 사는 상태 — ②에서 해지를 시작합니다."}];
+const SC2=[ // 해지 과정 (①의 결과에서)
+ {fn:async()=>{await opFree(32);},cap:"B부터 반납 — buddy 자리(0K)는 지금 어떤 상태죠?",
+  vd:"<b>해지 ①.</b> 32K@32의 buddy는 32⊕32=<b>0</b> — 그런데 그 자리는 통짜 32K가 아니라 A·C가 사는 잘게 쪼개진 동네입니다. 같은 크기의 free 블록이 아니면 <b>병합 불가</b> — 32K는 장부에서 대기."},
+ {fn:async()=>{await opFree(16);},cap:"C 반납 — 첫 병합이 일어나고, 연쇄는 A 앞에서 멈춥니다",
+  vd:"<b>해지 ②.</b> 8+8→16K@16까지 병합 — 그러나 다음 buddy(16⊕16=0)는 <b>A가 사용 중</b>이라 연쇄가 멈춥니다. 병합의 사다리는 <b>짝이 빈 층까지만</b> 올라갑니다."},
+ {fn:async()=>{await opFree(0);},cap:"마지막으로 A 반납 — 병합 사다리가 끝까지 올라갑니다",
+  vd:"<span class='good'>해지 ③ — 완성.</span> A가 비워지자 16+16→32, 32+32→64, 64+64→<b>128 통짜 복구</b>. 아침의 예측 질문의 답 — <b>순서와 무관하게</b>, 전부 반납되기만 하면 buddy 규칙이 결국 통짜로 되돌립니다. 다만 <b>일부만 반납된 동안은</b> 해제 순서에 따라 병합이 열리기도, 막히기도 합니다(①·②에서 본 것). 이제 자유 모드로 직접 실험하세요."}];
+let sc=null;
+function loadSc(i){
+ if(busy)return;
+ freeMode=false;queue=[];sc=i;
+ if(i===0){blocks=[{a:0,s:128,o:"free"}];hot=null;bud=null;
+  $("#log").innerHTML="";log("<span class='p'>── 시나리오 ① · 할당 과정 ──</span>");
+  queue=[...SC1];}
+ else{ // ①의 결과 상태를 전제로 구성
+  blocks=[{a:0,s:16,o:"A"},{a:16,s:8,o:"C"},{a:24,s:8,o:"free"},{a:32,s:32,o:"B",use:20},{a:64,s:64,o:"free"}];
+  hot=null;bud=null;
+  $("#log").innerHTML="";log("<span class='p'>── 시나리오 ② · 해지 과정 (①의 결과에서) ──</span>");
+  queue=[...SC2];}
+ render();
+ cap("시나리오 준비 완료 — 「다음 단계 ▶」 ("+queue.length+"단계, 단계마다 자동 재생)");
+ verdict(i===0?"각 할당 전에 예측하세요 — <b>몇 번의 split이 필요할까?</b> 장부(free list)를 보면 답이 보입니다."
+  :"각 해제 전에 예측하세요 — <b>병합이 몇 층까지 올라갈까?</b> buddy 자리의 상태(free/사용 중/쪼개짐)가 답입니다.");}
+async function step(){
+ if(busy)return;
+ if(!queue.length){
+  if(sc===null){loadSc(0);return;}
+  freeMode=true;
+  cap("시나리오 종료 — 자유 모드가 열렸습니다: 할당 칩 + 색 블록 클릭(해제)");
+  return;}
+ const st=queue.shift();
+ cap(st.cap);verdict(st.vd);
+ await st.fn();
+ if(!queue.length){freeMode=true;
+  cap($("#cap").textContent+"  — 시나리오 끝: 자유 모드 사용 가능");}}
+$("#btnStep").addEventListener("click",step);
+$("#btnReset").addEventListener("click",()=>{if(busy)return;
+ blocks=[{a:0,s:128,o:"free"}];queue=[];sc=null;freeMode=true;nextName=0;hot=null;bud=null;
+ $("#log").innerHTML="대기 중 — 할당과 해지가 여기에 기록됩니다";
+ cap("초기화 완료 — 시나리오를 고르거나 자유 모드로 바로 할당해 보세요");
+ verdict("예측 질문 — 할당을 여러 번 한 뒤 <b>아무 순서로나 해제해도</b> Memory는 다시 통짜 128K로 돌아올까요?");
+ render();});
+document.querySelectorAll("[data-sc]").forEach(c=>c.addEventListener("click",()=>loadSc(+c.dataset.sc)));
+document.querySelectorAll(".fm").forEach(c=>c.addEventListener("click",async()=>{
+ if(busy)return;freeMode=true;sc=sc===null?-1:sc;
+ const used=new Set(blocks.filter(b=>b.o!=="free").map(b=>b.o));
+ let nm=NAMES.find(n=>!used.has(n));
+ if(!nm){log("<span class='err'>프로세스는 최대 5개(A~E) — 블록을 클릭해 먼저 해제하세요</span>");return;}
+ await opAlloc(nm,+c.dataset.req);
+ cap("할당 완료 — 색 블록을 클릭하면 해제(병합 확인)가 재생됩니다");}));
+render();
+})();
+</script>
+</body>
+</html>

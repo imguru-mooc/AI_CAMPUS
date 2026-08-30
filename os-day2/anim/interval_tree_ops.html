@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interval Tree 해부 — 삽입·삭제·검색, 그리고 천장(maxHi)</title>
+<style>
+:root{
+  --bg:#0f141d;--panel:#161d2a;--panel2:#1b2434;--line:#26314a;
+  --ink:#dce6f5;--dim:#7d8ba3;--amber:#ffd166;--warnc:#ff9f43;
+  --hot:#ff5d73;--accent:#4cc9f0;--good:#7ee787;--purple:#c3a6ff;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);min-height:100vh;padding:24px 16px 60px;
+ font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+.wrap{max-width:1040px;margin:0 auto}
+header{margin-bottom:18px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+h1{font-size:clamp(20px,4vw,27px);font-weight:800;margin-top:6px}
+h1 b{font-family:var(--mono);color:var(--amber)}
+.sub{color:var(--dim);font-size:14px;margin-top:6px;line-height:1.6}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.run{padding:11px 22px;border:none;border-radius:8px;background:var(--amber);color:#2a2005;
+ font-weight:800;font-size:15px;cursor:pointer;font-family:inherit}
+.run:disabled{opacity:.4;cursor:default}
+.run.sec{background:var(--panel2);color:var(--ink);border:1px solid var(--line);font-size:13.5px}
+.run:focus-visible,.chip:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.presets{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.presets .cap{width:100%;font-size:11px;color:var(--dim);letter-spacing:.06em}
+.chip{font-family:var(--mono);font-size:12.5px;padding:7px 12px;border-radius:999px;
+ background:var(--panel2);color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.chip:hover:not(:disabled){border-color:var(--accent)}
+.chip:disabled{opacity:.4;cursor:default}
+.chip b{color:var(--amber);font-weight:700}
+input[type=number]{width:70px;padding:8px 10px;font-family:var(--mono);font-size:14px;
+ background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px}
+.caption{background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+ padding:10px 14px;font-size:13.5px;line-height:1.6;margin-top:12px;min-height:44px}
+.caption b{color:var(--amber)}
+/* 구간 자 */
+.iline{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.iline .t{font-size:11px;color:var(--dim);letter-spacing:.06em;margin-bottom:8px}
+.ibar{position:relative;height:20px}
+.ibar .iv{position:absolute;top:3px;height:14px;border-radius:5px;border:1px solid;
+ font-family:var(--mono);font-size:9px;display:flex;align-items:center;justify-content:center;transition:all .3s}
+.ibar .iv.qv{top:0;height:20px;background:rgba(126,231,135,.15);border-color:var(--good);color:var(--good);z-index:1}
+.ruler{display:flex;font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:4px}
+.ruler span{flex:1}.ruler span:last-child{flex:0}
+/* 트리 */
+.treeP{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px;overflow-x:auto}
+.treeP .t{font-size:11px;color:var(--dim);letter-spacing:.06em;margin-bottom:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.treeP .t b{color:var(--ink)}
+.rulecheck{font-family:var(--mono);font-size:11px}
+.rulecheck .ok{color:var(--good)}.rulecheck .no{color:var(--warnc);font-weight:800}
+.treewrap{display:flex;justify-content:center;min-height:110px}
+.nchip{font-family:var(--mono);font-weight:800;width:84px;border-radius:10px;padding:5px 0;
+ display:flex;flex-direction:column;align-items:center;gap:1px;transition:all .3s;position:absolute;z-index:1}
+.nchip .iv{font-size:12px}
+.nchip .mx{font-size:9.5px;color:var(--amber);font-weight:700}
+.nchip.redN{background:#4a1420;border:2px solid #ff5d73;color:#ffd7de}
+.nchip.blackN{background:#131a28;border:2px solid #5a6788;color:var(--ink)}
+.nchip.hlCur{box-shadow:0 0 0 3px var(--good),0 0 14px rgba(126,231,135,.5)}
+.nchip.hlHit{box-shadow:0 0 0 3px var(--good),0 0 18px rgba(126,231,135,.85)}
+.nchip.hlUnc{box-shadow:0 0 0 3px var(--warnc)}
+.nchip.dimmed{opacity:.16;filter:grayscale(1)}
+.nchip.hlRec{animation:rec .6s ease}
+.nchip.hlNew{animation:pop .45s ease}
+@keyframes rec{30%{box-shadow:0 0 0 4px var(--purple)}70%{box-shadow:0 0 0 2px var(--purple)}}
+@keyframes pop{from{transform:scale(.3);opacity:0}}
+/* 로그·카드·판정 */
+.term{background:#0a0f18;border:1px solid var(--line);border-radius:10px;padding:12px 14px;
+ font-family:var(--mono);font-size:12.5px;line-height:1.75;height:168px;overflow-y:auto;margin-bottom:14px}
+.term .p{color:var(--good)}.term .sys{color:var(--accent)}.term .warn{color:var(--warnc)}
+.term .err{color:var(--hot)}.term .z{color:var(--purple)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.card .top{display:flex;justify-content:space-between;align-items:center}
+.card .name{font-family:var(--mono);font-weight:800;font-size:12.5px}
+.card .lamp{width:11px;height:11px;border-radius:50%;background:#2a3550}
+.card.set{border-color:var(--accent)}.card.set .lamp{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+.card .why{font-size:12px;line-height:1.5;color:var(--ink);margin-top:6px;min-height:48px}
+.verdict{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+ padding:13px 15px;font-size:13.5px;line-height:1.7}
+.verdict b{color:var(--amber)}
+.good{color:var(--good);font-weight:800}.bad{color:var(--hot);font-weight:800}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<div class="eyebrow">OS · 자료구조 · Augmented RB Tree · Interval Tree</div>
+<h1>Interval Tree 해부 — <b>삽입·삭제·검색, 그리고 천장(maxHi)</b></h1>
+<p class="sub">보통의 BST는 「같은 값」을 찾지만, 구간의 <b>겹침</b>은 왼쪽·오른쪽 어디에나 있을 수 있어 그대로는 못 찾습니다.
+해법은 증강 — RB 트리(정렬 key = <b>구간의 시작</b>)의 각 노드에 <b>maxHi(내 서브트리에서 가장 멀리 뻗은 끝)</b> 하나를 더 얹는 것.
+삽입·삭제 때 이 「천장」이 어떻게 유지되고, 검색 때 어떻게 <b>서브트리를 통째로 버리게</b> 해 주는지 봅니다.</p>
+</header>
+
+<section class="panel">
+<div class="row">
+<button class="run" id="btnStep">다음 단계 ▶</button>
+<button class="run sec" id="btnReset">전체 초기화</button>
+<span class="sub" style="margin:0" id="prog"></span>
+</div>
+<div class="presets"><span class="cap">시나리오 — 예상 결과가 함께 표시됩니다</span>
+<button class="chip" data-sc="0">① 삽입 → <b>정렬은 시작으로, 천장은 끝으로</b></button>
+<button class="chip" data-sc="1">② 검색 → <b>천장 비교 한 번 = 서브트리 하나</b></button>
+<button class="chip" data-sc="2">③ 삭제 → <b>천장이 내려앉으면 답이 바뀐다</b></button>
+</div>
+<div class="presets"><span class="cap">자유 모드 — 직접 (0~99, 과정 자동 재생)</span>
+<span class="sub" style="margin:0">구간 [</span>
+<input type="number" id="ilo" min="0" max="98" value="50" aria-label="시작">
+<span class="sub" style="margin:0">,</span>
+<input type="number" id="ihi" min="1" max="99" value="60" aria-label="끝">
+<span class="sub" style="margin:0">)</span>
+<button class="chip fm" id="fmIns">삽입</button>
+<button class="chip fm" id="fmDel">삭제(시작값 기준)</button>
+<button class="chip fm" id="fmQ">겹침 검색</button>
+</div>
+<div class="caption" id="cap">시나리오 ①부터 — 각 단계에서 다음에 벌어질 일을 먼저 예측하세요!</div>
+</section>
+
+<section class="iline">
+<div class="t">구간 자(0~60+) — 트리의 노드들을 수직선 위에 펼친 모습 · 초록 배경 = 질의 구간</div>
+<div class="ibar" id="ibar"></div>
+<div class="ruler"><span>0</span><span>15</span><span>30</span><span>45</span><span>60</span></div>
+</section>
+
+<section class="treeP">
+<div class="t"><span><b>Interval Tree</b> — 노드 = [시작,끝) + <span style="color:var(--amber)">≤maxHi(천장)</span> · <span style="color:var(--good)">초록 = 방문/발견</span> · <span style="color:var(--purple)">보라 번쩍 = maxHi 갱신</span> · 흐림 = <b>가지치기</b></span>
+<span class="rulecheck" id="rc"></span></div>
+<div class="treewrap" id="tree"></div>
+</section>
+
+<div class="term" id="log" aria-live="polite">대기 중 — 삽입·삭제·검색이 여기에 기록됩니다</div>
+
+<div class="cards">
+<div class="card" id="k1"><div class="top"><span class="name">key = 시작</span><span class="lamp"></span></div>
+<div class="why">정렬은 구간의 시작만 본다 — 삽입·삭제는 그냥 RB 트리 그대로.</div></div>
+<div class="card" id="k2"><div class="top"><span class="name">증강 = maxHi</span><span class="lamp"></span></div>
+<div class="why">각 노드가 「내 서브트리의 최대 끝」을 기억 — 값 하나가 겹침 검색을 가능케 한다.</div></div>
+<div class="card" id="k3"><div class="top"><span class="name">유지 비용 = 경로만</span><span class="lamp"></span></div>
+<div class="why">삽입·삭제·회전 때 바뀌는 maxHi는 지나간 경로의 O(log n)개뿐.</div></div>
+<div class="card" id="k4"><div class="top"><span class="name">검색 = 가지치기</span><span class="lamp"></span></div>
+<div class="why">왼쪽 천장 ≤ 질의 시작 → 왼쪽 전체에 겹칠 구간이 없다 — 통째로 건너뛴다.</div></div>
+</div>
+
+<div class="verdict" id="v">예측 질문 — 겹침은 왼쪽·오른쪽 어느 자식에나 있을 수 있는데, <b>무엇을 알고 있으면</b> 한쪽을 통째로 버릴 수 있을까요?</div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const WAIT=reduced?0:950;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ══ 검증 완료된 이벤트판 Interval Tree 엔진 ══ */
+function makeIVT(){
+ const NIL={red:false,lo:null,hi:-Infinity,maxHi:-Infinity};NIL.l=NIL;NIL.r=NIL;NIL.p=NIL;
+ let root=NIL, ev=[], fixNotes=[];
+ const snap=(msg,hl)=>ev.push({msg,hl:hl||{},tree:ser(root)});
+ function upd(n){if(n!==NIL)n.maxHi=Math.max(n.hi,n.l.maxHi,n.r.maxHi);}
+ function updAll(n){if(n===NIL)return;updAll(n.l);updAll(n.r);upd(n);}
+ function mhMap(){const m={};(function w(n){if(n===NIL)return;m[n.lo]=n.maxHi;w(n.l);w(n.r);})(root);return m;}
+ function rotL(x){fixNotes.push("좌회전@"+x.lo);const y=x.r;x.r=y.l;if(y.l!==NIL)y.l.p=x;
+  y.p=x.p;if(x.p===NIL)root=y;else if(x===x.p.l)x.p.l=y;else x.p.r=y;
+  y.l=x;x.p=y;upd(x);upd(y);}
+ function rotR(x){fixNotes.push("우회전@"+x.lo);const y=x.l;x.l=y.r;if(y.r!==NIL)y.r.p=x;
+  y.p=x.p;if(x.p===NIL)root=y;else if(x===x.p.r)x.p.r=y;else x.p.l=y;
+  y.r=x;x.p=y;upd(x);upd(y);}
+ function insert(lo,hi,name){
+  ev=[];fixNotes=[];
+  if(findKey(lo)!==NIL){snap(`시작이 ${lo}인 구간이 이미 있습니다`,{});return ev;}
+  const before=mhMap();
+  let y=NIL,x=root;
+  while(x!==NIL){y=x;
+   snap(`[${lo},${hi}) 자리 찾기 — key(시작) ${lo} vs ${x.lo} → ${lo<x.lo?"왼쪽":"오른쪽"}으로`,{cur:x.lo});
+   x=lo<x.lo?x.l:x.r;}
+  const z={lo,hi,name,red:true,l:NIL,r:NIL,p:y,maxHi:hi};
+  if(y===NIL)root=z;else if(lo<y.lo)y.l=z;else y.r=z;
+  snap(`삽입 — [${lo},${hi}) <b>빨강</b>으로. 정렬은 <b>시작만</b> 보고, 끝은 증강값으로만 쓰인다 (자기 maxHi=${hi})`,{newN:lo,cur:lo});
+  insFix(z);root.red=false;updAll(root);
+  if(fixNotes.length)
+   snap(`RB 수선: ${fixNotes.join(" · ")} — 앞 편의 규칙 그대로. <b>회전한 노드는 maxHi도 그 자리에서 재계산</b>`,{rec:[lo]});
+  const after=mhMap(), ch=[];
+  for(const k in after)if(before[k]!==undefined&&before[k]!==after[k])ch.push({lo:+k,o:before[k],n:after[k]});
+  if(ch.length)
+   snap(`<b>maxHi 전파</b> — ${ch.map(c=>`[${c.lo},…) ${c.o}→<b>${c.n}</b>`).join(" · ")} : 새 구간의 끝이 조상들의 「천장」을 밀어올림`,{rec:ch.map(c=>c.lo),cur:lo});
+  else snap(`maxHi 전파 없음 — 새 끝(${hi})이 기존 천장을 넘지 못함`,{cur:lo});
+  snap(`완료 — 규칙(RB 3가지 + maxHi 정확) 전부 유지`,{done:1});
+  return ev;}
+ function insFix(z){
+  while(z.p.red){
+   const g=z.p.p, left=(z.p===g.l), u=left?g.r:g.l;
+   if(u.red){fixNotes.push("색 바꾸기@"+g.lo);z.p.red=false;u.red=false;g.red=true;z=g;}
+   else{
+    if(left&&z===z.p.r){z=z.p;rotL(z);}
+    else if(!left&&z===z.p.l){z=z.p;rotR(z);}
+    z.p.red=false;g.red=true;left?rotR(g):rotL(g);}}}
+ function mini(n){while(n.l!==NIL)n=n.l;return n;}
+ function transplant(u,w){if(u.p===NIL)root=w;else if(u===u.p.l)u.p.l=w;else u.p.r=w;w.p=u.p;}
+ function findKey(lo){let x=root;while(x!==NIL&&x.lo!==lo)x=lo<x.lo?x.l:x.r;return x;}
+ function del(lo){
+  ev=[];fixNotes=[];
+  const z=findKey(lo);
+  if(z===NIL){snap(`시작이 ${lo}인 구간 없음`,{});return ev;}
+  const before=mhMap();const zhi=z.hi;
+  snap(`삭제 대상 [${z.lo},${z.hi}) 찾음 (${z.red?"빨강":"검정"})`,{cur:lo});
+  let y=z,yRed=y.red,x;
+  if(z.l===NIL){x=z.r;transplant(z,z.r);snap(`자식 하나 이하 — 바로 떼어냄`,{});}
+  else if(z.r===NIL){x=z.l;transplant(z,z.l);snap(`자식 하나 이하 — 바로 떼어냄`,{});}
+  else{y=mini(z.r);yRed=y.red;x=y.r;
+   snap(`자식 둘 — 후계자 [${y.lo},${y.hi})가 자리를 이어받음 (색 승계)`,{cur:lo,unc:y.lo});
+   if(y.p===z){x.p=y;}
+   else{transplant(y,y.r);y.r=z.r;y.r.p=y;}
+   transplant(z,y);y.l=z.l;y.l.p=y;y.red=z.red;}
+  if(!yRed){snap(`검정이 빠짐 — 이중 흑 수선 (앞 편의 규칙 그대로)`,{});delFix(x);}
+  root.red=false;updAll(root);
+  if(fixNotes.length)snap(`수선 중 회전: ${fixNotes.join(" · ")} — 회전마다 maxHi 재계산`,{});
+  const after=mhMap(), ch=[];
+  for(const k in after)if(before[k]!==undefined&&before[k]!==after[k])ch.push({lo:+k,o:before[k],n:after[k]});
+  if(ch.length)
+   snap(`<b>maxHi 재계산</b> — ${ch.map(c=>`[${c.lo},…) ${c.o}→<b>${c.n}</b>`).join(" · ")} : 끝 ${zhi}가 사라지자 <b>천장이 내려앉음</b>`,{rec:ch.map(c=>c.lo)});
+  else snap(`남은 노드들의 maxHi 변화 없음 — 끝 ${zhi}의 천장은 그 노드가 직접 들고 있다가 함께 사라짐`,{});
+  snap(`완료 — 규칙 전부 유지`,{done:1});
+  return ev;}
+ function delFix(x){
+  while(x!==root&&!x.red){
+   const left=(x===x.p.l);
+   let w=left?x.p.r:x.p.l;
+   if(w.red){w.red=false;x.p.red=true;left?rotL(x.p):rotR(x.p);w=left?x.p.r:x.p.l;}
+   const near=left?w.l:w.r, far=left?w.r:w.l;
+   if(!near.red&&!far.red){w.red=true;x=x.p;}
+   else{
+    if(!far.red){near.red=false;w.red=true;left?rotR(w):rotL(w);w=left?x.p.r:x.p.l;}
+    w.red=x.p.red;x.p.red=false;(left?w.r:w.l).red=false;left?rotL(x.p):rotR(x.p);x=root;}}
+  x.red=false;}
+ function overlap(lo,hi){
+  ev=[];let x=root, visits=0;
+  snap(`검색 — [${lo},${hi})와 <b>겹치는</b> 구간이 있는가? (겹침: 시작<${hi} 그리고 ${lo}<끝)`,{resetDim:1,q:[lo,hi]});
+  while(x!==NIL){
+   visits++;
+   if(x.lo<hi&&lo<x.hi){
+    snap(`[${x.lo},${x.hi}) 방문 — ${x.lo}<${hi} ✓ 그리고 ${lo}<${x.hi} ✓ → <b>겹침 발견!</b> (방문 ${visits}개 / 전체 ${count()}개)`,{hit:x.lo,q:[lo,hi]});
+    return {found:{lo:x.lo,hi:x.hi},steps:ev,visits};}
+   snap(`[${x.lo},${x.hi}) 방문 — 겹침 아님. 왼쪽으로? 오른쪽으로?`,{cur:x.lo,q:[lo,hi]});
+   if(x.l!==NIL&&x.l.maxHi>lo){
+    snap(`왼쪽 천장 maxHi=${x.l.maxHi} > ${lo} → 왼쪽 어딘가가 ${lo}를 넘어 뻗어 있다 — <b>가능성 있음, 왼쪽으로</b>`,{cur:x.lo,q:[lo,hi]});
+    x=x.l;}
+   else{
+    snap(x.l===NIL?`왼쪽 자식 없음 — 오른쪽으로`
+     :`왼쪽 천장 maxHi=${x.l.maxHi} ≤ ${lo} → 왼쪽의 <b>어떤 끝도</b> ${lo}에 못 닿는다 — <b>서브트리 통째 가지치기</b>`,{cur:x.lo,pruneL:x.lo,q:[lo,hi]});
+    x=x.r;}}
+  snap(`NIL 도달 — <b>겹치는 구간 없음</b> (방문 ${visits}개 / 전체 ${count()}개)`,{miss:1,q:[lo,hi]});
+  return {found:null,steps:ev,visits};}
+ function count(){let c=0;(function w(n){if(n===NIL)return;c++;w(n.l);w(n.r);})(root);return c;}
+ function list(){const out=[];(function w(n){if(n===NIL)return;w(n.l);out.push({lo:n.lo,hi:n.hi});w(n.r);})(root);return out;}
+ function ser(n){return n===NIL?null:{lo:n.lo,hi:n.hi,red:n.red,maxHi:n.maxHi,l:ser(n.l),r:ser(n.r)};}
+ return {insert,del,overlap,list,get snap(){return ser(root)}};
+}
+
+/* ══ UI ══ */
+let T=makeIVT();
+let queue=[],busy=false,sc=null,dimSet=new Set();
+
+function log(h){const o=$("#log");
+ if(o.textContent.startsWith("대기 중"))o.innerHTML="";
+ o.innerHTML+=h+"<br>";o.scrollTop=o.scrollHeight;}
+function cap(h){$("#cap").innerHTML=h;}
+function verdict(h){$("#v").innerHTML=h;}
+function lamp(id){$("#"+id).classList.add("set");}
+function prog(t){$("#prog").textContent=t;}
+
+function checkSnap(t){
+ let redred=false,bhOk=true,mhOk=true;
+ function mh(n){return n?Math.max(n.hi,mh2(n.l),mh2(n.r)):-Infinity;}
+ function mh2(n){return n?n.maxHi:-Infinity;}
+ function bh(n){if(!n)return 1;
+  if(n.red&&((n.l&&n.l.red)||(n.r&&n.r.red)))redred=true;
+  if(n.maxHi!==mh(n))mhOk=false;
+  const a=bh(n.l),b=bh(n.r);if(a!==b)bhOk=false;return a+(n.red?0:1);}
+ bh(t);
+ return {rootOk:!t||!t.red,redOk:!redred,bhOk,mhOk};}
+
+const SCALE=62; // 구간 자 스케일 상한
+function renderLine(q){
+ const bar=$("#ibar");bar.innerHTML="";
+ if(q){const d=document.createElement("div");d.className="iv qv";
+  d.style.left=(q[0]/SCALE*100)+"%";d.style.width=((q[1]-q[0])/SCALE*100)+"%";
+  d.textContent="";bar.appendChild(d);}
+ T.list().forEach(v=>{const d=document.createElement("div");d.className="iv";
+  d.style.left=(v.lo/SCALE*100)+"%";d.style.width=(Math.max(v.hi-v.lo,1.4)/SCALE*100)+"%";
+  d.style.background="#0e3542";d.style.borderColor="var(--accent)";d.style.color="var(--accent)";
+  d.textContent=`${v.lo}–${v.hi}`;bar.appendChild(d);});}
+
+function subKeysL(snapTree,lo){
+ const out=new Set();
+ (function find(n){if(!n)return null;
+  if(n.lo===lo){(function g(m){if(!m)return;out.add(m.lo);g(m.l);g(m.r);})(n.l);return n;}
+  return find(n.l)||find(n.r);})(snapTree);
+ return out;}
+
+function renderTree(snapTree,hl){
+ hl=hl||{};
+ const rc=checkSnap(snapTree);
+ $("#rc").innerHTML=
+  `루트 검정 <span class="${rc.rootOk?"ok":"no"}">${rc.rootOk?"✓":"…"}</span> · `+
+  `빨강-빨강 <span class="${rc.redOk?"ok":"no"}">${rc.redOk?"✓":"수선 중"}</span> · `+
+  `검정 수 <span class="${rc.bhOk?"ok":"no"}">${rc.bhOk?"✓":"수선 중"}</span> · `+
+  `maxHi 정확 <span class="${rc.mhOk?"ok":"no"}">${rc.mhOk?"✓":"갱신 중"}</span>`;
+ const w=$("#tree");w.innerHTML="";
+ if(!snapTree){w.innerHTML="<span style='font-family:var(--mono);font-size:12px;color:#3a445e'>(빈 트리)</span>";return;}
+ const NW=84,XG=94,YG=74,PAD=10,NH=48;
+ let ix=0,maxD=0;const nodes=[];
+ (function walk(n,d,par){if(!n)return;
+  walk(n.l,d+1,n);
+  n._x=ix++;n._d=d;if(d>maxD)maxD=d;nodes.push({n,par});
+  walk(n.r,d+1,n);})(snapTree,0,null);
+ const W=ix*XG+PAD*2,H=maxD*YG+NH+PAD;
+ const box=document.createElement("div");
+ box.style.cssText=`position:relative;width:${W}px;height:${H}px`;
+ const cx=n=>PAD+n._x*XG+NW/2, cy=n=>n._d*YG+NH/2;
+ const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+ svg.setAttribute("width",W);svg.setAttribute("height",H);
+ svg.style.cssText="position:absolute;inset:0;z-index:0";
+ nodes.forEach(({n,par})=>{if(!par)return;
+  const ln=document.createElementNS(svg.namespaceURI,"line");
+  ln.setAttribute("x1",cx(par));ln.setAttribute("y1",cy(par));
+  ln.setAttribute("x2",cx(n));ln.setAttribute("y2",cy(n));
+  ln.setAttribute("stroke",dimSet.has(n.lo)?"#232b40":"#3a4a6e");
+  ln.setAttribute("stroke-width","1.6");
+  svg.appendChild(ln);});
+ box.appendChild(svg);
+ nodes.forEach(({n})=>{
+  const c=document.createElement("span");
+  c.className="nchip "+(n.red?"redN":"blackN");
+  if(dimSet.has(n.lo))c.classList.add("dimmed");
+  if(hl.cur===n.lo)c.classList.add("hlCur");
+  if(hl.hit===n.lo)c.classList.add("hlHit");
+  if(hl.unc===n.lo)c.classList.add("hlUnc");
+  if(!reduced){
+   if(hl.rec&&hl.rec.includes(n.lo))c.classList.add("hlRec");
+   if(hl.newN===n.lo)c.classList.add("hlNew");}
+  c.style.left=(PAD+n._x*XG)+"px";c.style.top=(n._d*YG)+"px";
+  c.innerHTML=`<span class="iv">[${n.lo},${n.hi})</span><span class="mx">천장 ≤${n.maxHi}</span>`;
+  box.appendChild(c);});
+ w.appendChild(box);}
+
+function playEvent(e){
+ if(e.hl.resetDim)dimSet=new Set();
+ if(e.hl.pruneL!==undefined)subKeysL(e.tree,e.hl.pruneL).forEach(k=>dimSet.add(k));
+ if(e.hl.done)dimSet=new Set();
+ cap(e.msg);log("&nbsp;&nbsp;"+e.msg);
+ renderTree(e.tree,e.hl);
+ renderLine(e.hl.q);}
+
+/* ── 시나리오 (전 수순 엔진 실행으로 사전 검증됨) ── */
+let ops=[];
+function pushOp(kind,args,intro,vd){ops.push({kind,args,intro,vd});}
+function flatten(){
+ queue=[];
+ ops.forEach(op=>{
+  queue.push({type:"intro",op});
+  const ev=op.kind==="ins"?T.insert(...op.args):op.kind==="del"?T.del(...op.args):T.overlap(...op.args).steps;
+  ev.forEach(e=>queue.push({type:"ev",e}));});
+ ops=[];}
+function loadSc(i){
+ if(busy)return;
+ sc=i;dimSet=new Set();ops=[];queue=[];
+ T=makeIVT();
+ $("#log").innerHTML="";
+ log("<span class='p'>── 시나리오 "+(i+1)+" ──</span>");
+ if(i===0){
+  pushOp("ins",[20,30,"a"],"[20,30) 삽입 — 첫 노드. key와 maxHi가 무엇으로 정해지는지 보세요",
+   "<b>이중 신분.</b> 정렬(key)은 시작 20, 증강(천장)은 끝 30 — 하나의 구간이 두 값으로 트리에 살게 됩니다.");
+  pushOp("ins",[10,40,"b"],"[10,40) 삽입 — 시작은 작은데(왼쪽행) 끝은 큽니다. 루트의 천장에 무슨 일이?",
+   "<b>천장 전파의 순간.</b> 왼쪽 「아래」에 들어갔는데 끝 40이 루트의 천장(30→40)을 뚫습니다 — <b>정렬 위치와 천장은 별개</b>라는 것, 이것이 interval tree의 전부입니다.");
+  pushOp("ins",[35,45,"c"],"[35,45) 삽입 — 오른쪽. 천장이 또 올라갑니다",
+   "루트 천장 40→45 — 조상들이 「내 밑에 어디까지 뻗은 게 있다」를 항상 알고 있게 유지하는 중.");
+  pushOp("ins",[5,8,"d"],"[5,8) 삽입 — RB 수선(색 바꾸기)이 재등장합니다",
+   "<b>RB는 그대로.</b> 앞 편의 색 바꾸기가 그대로 돌고 — 달라진 건 하나: <b>회전·수선 때 maxHi도 함께 재계산</b>된다는 것(비용은 여전히 경로 O(log n)).");
+  pushOp("ins",[15,18,"e"],"[15,18) 삽입 — 조용한 삽입으로 5노드 완성",
+   "<span class='good'>① 완료.</span> 트리를 읽어 보세요 — [10,40)의 천장 40, 루트의 천장 45. 이 숫자들이 ②의 검색에서 <b>나침반</b>이 됩니다.");}
+ else{
+  [[20,30],[10,40],[35,45],[5,8],[15,18]].forEach(([a,b])=>T.insert(a,b,"x"));
+  log("전제 — ①의 트리(5개 구간)에서 시작");
+  if(i===1){
+   pushOp("q",[12,14],"질의 [12,14) — 루트 [20,30)과는 안 겹칩니다. 왼쪽? 오른쪽? 천장을 보세요",
+    "<b>나침반 작동.</b> 루트는 빗나갔지만 <b>왼쪽 천장 40 > 12</b> — 왼쪽 어딘가가 12를 넘어 뻗어 있다는 보증입니다. 내려가 보니 [10,40) 명중 — 방문 2개.");
+   pushOp("q",[46,50],"질의 [46,50) — 이번엔 왼쪽 천장이 못 미칩니다. 몇 개나 방문할까요?",
+    "<span class='good'>② 완료 — 가지치기의 위력.</span> 루트에서 <b>왼쪽 천장 40 ≤ 46</b> 비교 한 번으로 왼쪽 4개 노드가 통째로 흐려졌습니다(안 봄). 전체 5개 중 <b>방문 2개</b> — n이 1,000이어도 이 원리로 O(log n)입니다.");}
+  else{
+   pushOp("del",[10],"[10,40) 삭제 — 후계자 승계와 이중 흑 수선, 그리고 천장의 운명",
+    "<b>천장이 내려앉다.</b> 왼쪽 서브트리의 천장이었던 40이 노드와 함께 사라졌습니다 — 이제 왼쪽에서 가장 멀리 뻗은 끝은 18. 이 하강이 다음 검색의 답을 바꿉니다.");
+   pushOp("q",[12,14],"아까 명중했던 같은 질의 [12,14) — 이번엔?",
+    "<span class='bad'>같은 질문, 다른 답.</span> [15,…)의 왼쪽 천장 8 ≤ 12 → 가지치기 → <b>미발견.</b> maxHi가 삭제 후에도 정직하게 유지되었기에 검색이 정확합니다 — 증강값 관리가 곧 검색의 정확성.");
+   pushOp("ins",[11,13,"f"],"[11,13) 삽입 — 꺾임 두 번 회전까지 재등장합니다",
+    "회전 두 방(좌@5·우@15)과 함께 착지 — 회전 속에서도 maxHi는 그 자리에서 재계산됩니다.");
+   pushOp("q",[12,14],"세 번째 [12,14) — 답이 되살아날까요?",
+    "<span class='good'>③ 완성.</span> <b>미발견 → 삽입 → 명중</b>: 삽입·삭제가 천장을 정직하게 유지하는 한, 검색은 언제나 현재를 정확히 답합니다. 이 자료구조가 VMA 에뮬레이터에서 「이 주소는 누구 땅인가」를 O(log n)에 답하던 바로 그 장치입니다.");}}
+ flatten();
+ renderTree(T.snap,{});renderLine(null);
+ lamp(i===0?"k2":i===1?"k4":"k3");if(i===0)lamp("k1");
+ cap("시나리오 준비 완료 — 「다음 단계 ▶」로 한 걸음씩 (단계마다 예측 먼저!)");
+ prog("남은 단계 "+queue.length);
+ verdict(["예측 — [10,40)은 시작이 작아 왼쪽으로 갑니다. 그럼 끝 40은 트리 어디에 흔적을 남길까요?",
+  "예측 — 질의 [46,50)에 대해, 5개 노드 중 몇 개를 실제로 방문하게 될까요?",
+  "예측 — 천장 40을 들고 있던 [10,40)을 지우면, 아까 명중했던 질의 [12,14)의 답은 어떻게 될까요?"][i]);}
+function step(){
+ if(busy)return;
+ if(!queue.length){
+  if(sc===null){loadSc(0);return;}
+  prog("시나리오 종료 — 자유 모드로 아무 구간이나 실험하세요 (자동 재생)");
+  return;}
+ const st=queue.shift();
+ if(st.type==="intro"){
+  log(`<span class='p'>── ${st.op.kind==="ins"?"insert":st.op.kind==="del"?"delete":"search"}(${st.op.args.filter(a=>typeof a==="number").join(", ")}) ──</span>`);
+  cap(st.op.intro);verdict(st.op.vd);}
+ else playEvent(st.e);
+ prog(queue.length?("남은 단계 "+queue.length):"이 시나리오의 마지막 단계입니다");}
+
+/* ── 자유 모드 ── */
+async function playOp(kind,args){
+ busy=true;lock(true);
+ if(kind==="ins"&&T.list().length>=12){log("<span class='err'>구간이 너무 많습니다(12개 제한)</span>");busy=false;lock(false);return;}
+ const ev=kind==="ins"?T.insert(...args):kind==="del"?T.del(...args):T.overlap(...args).steps;
+ log(`<span class='p'>── ${kind==="ins"?"insert":kind==="del"?"delete":"search"}(${args.filter(a=>typeof a==="number").join(", ")}) · 자동 재생 ──</span>`);
+ for(const e of ev){playEvent(e);await sleep(WAIT);}
+ busy=false;lock(false);}
+function lock(on){$("#btnStep").disabled=on;
+ document.querySelectorAll(".chip").forEach(c=>c.disabled=on);}
+
+$("#btnStep").addEventListener("click",step);
+$("#btnReset").addEventListener("click",()=>{if(busy)return;
+ T=makeIVT();queue=[];ops=[];sc=null;dimSet=new Set();
+ ["k1","k2","k3","k4"].forEach(id=>$("#"+id).classList.remove("set"));
+ $("#log").innerHTML="대기 중 — 삽입·삭제·검색이 여기에 기록됩니다";
+ cap("초기화 완료 — 빈 트리에서 직접 시작하거나 시나리오를 고르세요");prog("");
+ verdict("예측 질문 — 겹침은 왼쪽·오른쪽 어느 자식에나 있을 수 있는데, <b>무엇을 알고 있으면</b> 한쪽을 통째로 버릴 수 있을까요?");
+ renderTree(null,{});renderLine(null);});
+document.querySelectorAll("[data-sc]").forEach(c=>c.addEventListener("click",()=>loadSc(+c.dataset.sc)));
+$("#fmIns").addEventListener("click",()=>{
+ if(busy)return;
+ const lo=+$("#ilo").value,hi=+$("#ihi").value;
+ if(hi<=lo){log("<span class='err'>끝은 시작보다 커야 합니다</span>");return;}
+ playOp("ins",[lo,hi,"u"]);});
+$("#fmDel").addEventListener("click",()=>{
+ if(busy)return;playOp("del",[+$("#ilo").value]);});
+$("#fmQ").addEventListener("click",async()=>{
+ if(busy)return;
+ const lo=+$("#ilo").value,hi=+$("#ihi").value;
+ if(hi<=lo){log("<span class='err'>끝은 시작보다 커야 합니다</span>");return;}
+ await playOp("q",[lo,hi]);});
+renderTree(null,{});renderLine(null);
+})();
+</script>
+</body>
+</html>

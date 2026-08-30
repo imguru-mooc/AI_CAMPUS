@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>fork() 해부 — CPU와 Memory에서 벌어지는 일</title>
+<style>
+:root{
+  --bg:#0f141d;--panel:#161d2a;--panel2:#1b2434;--line:#26314a;
+  --ink:#dce6f5;--dim:#7d8ba3;--amber:#ffd166;--warnc:#ff9f43;
+  --hot:#ff5d73;--accent:#4cc9f0;--good:#7ee787;--purple:#c3a6ff;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);min-height:100vh;padding:24px 16px 60px;
+ font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+.wrap{max-width:960px;margin:0 auto}
+header{margin-bottom:18px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+h1{font-size:clamp(20px,4vw,28px);font-weight:800;margin-top:6px}
+h1 b{font-family:var(--mono);color:var(--amber)}
+.sub{color:var(--dim);font-size:14px;margin-top:6px;line-height:1.6}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.run{padding:11px 22px;border:none;border-radius:8px;background:var(--amber);color:#2a2005;
+ font-weight:800;font-size:15px;cursor:pointer;font-family:inherit}
+.run:disabled{opacity:.4;cursor:default}
+.run.sec{background:var(--panel2);color:var(--ink);border:1px solid var(--line);font-size:13.5px}
+.run:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.presets{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px}
+.presets .cap{width:100%;font-size:11px;color:var(--dim);letter-spacing:.06em}
+.chip{font-family:var(--mono);font-size:13px;padding:7px 12px;border-radius:999px;
+ background:var(--panel2);color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+.chip b{color:var(--amber);font-weight:700}
+/* 코드 리스트 */
+.code{background:#0a0f18;border:1px solid var(--line);border-radius:10px;
+ font-family:var(--mono);font-size:13.5px;line-height:1.9;padding:10px 0;margin-bottom:14px}
+.code .ln{display:flex;padding:0 14px}
+.code .no{width:26px;color:var(--dim);flex:0 0 auto}
+.code .tx{flex:1;white-space:pre}
+.code .cm{color:var(--dim)}
+.code .kw{color:var(--accent)}
+.code .fn{color:var(--amber)}
+.code .ln .mk{width:60px;flex:0 0 auto;text-align:right;font-size:11px}
+.code .mk .p{color:var(--good);font-weight:800}
+.code .mk .c{color:var(--purple);font-weight:800}
+.code .ln.hlP{background:rgba(126,231,135,.08)}
+.code .ln.hlC{background:rgba(195,166,255,.10)}
+.code .ln.hlP.hlC{background:rgba(76,201,240,.12)}
+/* 프로세스 패널 */
+.procs{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+@media(max-width:760px){.procs{grid-template-columns:1fr}}
+.proc{background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:14px;transition:opacity .4s,border-color .3s}
+.proc.ghost{opacity:.18;pointer-events:none}
+.proc.on{border-color:var(--accent)}
+.proc h2{font-size:15px;display:flex;justify-content:space-between;align-items:baseline}
+.proc h2 .pid{font-family:var(--mono);font-size:12px;color:var(--amber)}
+.pbody{display:grid;grid-template-columns:1fr 1.15fr;gap:10px;margin-top:10px}
+/* CPU 박스 */
+.cpu{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px}
+.cpu .t{font-size:11px;color:var(--dim);letter-spacing:.06em;margin-bottom:6px}
+.reg{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12.5px;
+ padding:5px 8px;border:1px solid var(--line);border-radius:7px;margin-bottom:6px;transition:border-color .3s,background .3s}
+.reg .k{color:var(--dim)}.reg .v{font-weight:800}
+.reg.hl{border-color:var(--amber);background:#221c08}
+.reg.diff{border-color:var(--hot);background:#2a141a}
+/* Memory 블록 */
+.mem .t{font-size:11px;color:var(--dim);letter-spacing:.06em;margin-bottom:6px}
+.blk{border:1px solid var(--line);border-radius:8px;padding:7px 10px;margin-bottom:6px;
+ font-family:var(--mono);font-size:12px;position:relative;transition:border-color .3s,background .3s,opacity .3s}
+.blk .bt{color:var(--dim);font-size:10.5px}
+.blk .bv{font-weight:800;margin-top:1px}
+.blk.copy{animation:cp .55s ease}
+@keyframes cp{0%{transform:translateX(-46px);opacity:0}100%{transform:none;opacity:1}}
+.blk.write{border-color:var(--hot);background:#2a141a}
+.blk.shared{border-style:dashed;border-color:var(--purple)}
+.blk.shared::after{content:"공유 · 읽기전용";position:absolute;right:8px;top:7px;font-size:9.5px;color:var(--purple)}
+.blk.owned::after{content:"내 것 · 복사됨";position:absolute;right:8px;top:7px;font-size:9.5px;color:var(--good)}
+/* 카드/로그/판정 */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.card .top{display:flex;justify-content:space-between;align-items:center}
+.card .name{font-family:var(--mono);font-weight:800;font-size:13.5px}
+.card .lamp{width:11px;height:11px;border-radius:50%;background:#2a3550}
+.card.set{border-color:var(--accent)}.card.set .lamp{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+.card .why{font-size:12px;line-height:1.5;color:var(--ink);margin-top:6px;min-height:48px}
+.term{background:#0a0f18;border:1px solid var(--line);border-radius:10px;padding:12px 14px;
+ font-family:var(--mono);font-size:12.5px;line-height:1.75;height:120px;overflow-y:auto;margin-bottom:14px}
+.term .p{color:var(--good)}.term .sys{color:var(--accent)}.term .warn{color:var(--warnc)}
+.verdict{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+ padding:13px 15px;font-size:13.5px;line-height:1.7}
+.verdict b{color:var(--amber)}
+.good{color:var(--good);font-weight:800}.bad{color:var(--hot);font-weight:800}
+.pulse{animation:pl .5s ease}
+@keyframes pl{0%{transform:scale(.97)}60%{transform:scale(1.015)}100%{transform:scale(1)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<div class="eyebrow">OS · Linux Process · 심화</div>
+<h1>fork() 해부 — <b>CPU와 Memory에서 벌어지는 일</b></h1>
+<p class="sub">fork()는 「프로세스 복사기」입니다. Memory의 주소 공간과 CPU의 레지스터가 통째로 복제되고,
+<b>단 하나 — fork()의 반환값만 다릅니다.</b> 그 한 칸의 차이로 부모와 자식의 길이 갈라지는 과정을 단계별로 봅니다.</p>
+</header>
+
+<section class="panel">
+<div class="row">
+<button class="run" id="btnStep">다음 단계 ▶</button>
+<button class="run sec" id="btnReset">처음부터</button>
+<span class="sub" style="margin:0" id="cap">「다음 단계」로 기본 시나리오를 시작하세요 — 각 단계에서 다음에 벌어질 일을 먼저 예측!</span>
+</div>
+<div class="presets"><span class="cap">시나리오 — 예상 결과가 함께 표시됩니다</span>
+<button class="chip" data-sc="0">① fork() 기본 → <b>복제 후 반환값만 다름</b></button>
+<button class="chip" data-sc="1">② 독립 메모리 증명 → <b>자식 x=99, 부모 x=10</b></button>
+<button class="chip" data-sc="2">③ 심화 Copy-on-Write → <b>쓰는 순간에만 복사</b></button>
+</div>
+</section>
+
+<!-- 공유 코드 리스트 -->
+<div class="code" id="codeBox">
+<div class="ln" data-l="1"><span class="no">1</span><span class="tx"><span class="kw">int</span> x = 10;</span><span class="mk"></span></div>
+<div class="ln" data-l="2"><span class="no">2</span><span class="tx">pid = <span class="fn">fork</span>();   <span class="cm">// 여기서 둘이 된다</span></span><span class="mk"></span></div>
+<div class="ln" data-l="3"><span class="no">3</span><span class="tx"><span class="kw">if</span> (pid == 0)</span><span class="mk"></span></div>
+<div class="ln" data-l="4"><span class="no">4</span><span class="tx">    x = 99;      <span class="cm">// 자식의 길</span></span><span class="mk"></span></div>
+<div class="ln" data-l="5"><span class="no">5</span><span class="tx"><span class="kw">else</span></span><span class="mk"></span></div>
+<div class="ln" data-l="6"><span class="no">6</span><span class="tx">    print(x);    <span class="cm">// 부모의 길</span></span><span class="mk"></span></div>
+</div>
+
+<!-- 부모/자식 패널 -->
+<div class="procs">
+<section class="proc on" id="pP">
+<h2>부모 프로세스 <span class="pid">PID 1000</span></h2>
+<div class="pbody">
+<div class="cpu"><div class="t">CPU (레지스터)</div>
+<div class="reg" id="pPC"><span class="k">PC</span><span class="v" id="pPCv">1행</span></div>
+<div class="reg" id="pPid"><span class="k">pid (반환값)</span><span class="v" id="pPidv">—</span></div>
+</div>
+<div class="mem"><div class="t">Memory (주소 공간)</div>
+<div class="blk" id="pCode"><div class="bt">Code</div><div class="bv">프로그램 명령들</div></div>
+<div class="blk" id="pData"><div class="bt">Data</div><div class="bv" id="pXv">x = —</div></div>
+<div class="blk" id="pStk"><div class="bt">Stack</div><div class="bv">호출 기록</div></div>
+</div></div>
+</section>
+<section class="proc ghost" id="pC">
+<h2>자식 프로세스 <span class="pid" id="cPidLabel">—</span></h2>
+<div class="pbody">
+<div class="cpu"><div class="t">CPU (레지스터)</div>
+<div class="reg" id="cPC"><span class="k">PC</span><span class="v" id="cPCv">—</span></div>
+<div class="reg" id="cPid"><span class="k">pid (반환값)</span><span class="v" id="cPidv">—</span></div>
+</div>
+<div class="mem"><div class="t">Memory (주소 공간)</div>
+<div class="blk" id="cCode"><div class="bt">Code</div><div class="bv">프로그램 명령들</div></div>
+<div class="blk" id="cData"><div class="bt">Data</div><div class="bv" id="cXv">x = —</div></div>
+<div class="blk" id="cStk"><div class="bt">Stack</div><div class="bv">호출 기록</div></div>
+</div></div>
+</section>
+</div>
+
+<div class="term" id="log" aria-live="polite">대기 중 — fork()의 안쪽이 여기에 기록됩니다</div>
+
+<div class="cards">
+<div class="card" id="k1"><div class="top"><span class="name">Memory 복제</span><span class="lamp"></span></div>
+<div class="why">Code·Data·Stack — 주소 공간 전체가 자식에게 복사됩니다. 내용은 같고, 공간은 별개.</div></div>
+<div class="card" id="k2"><div class="top"><span class="name">CPU 복제</span><span class="lamp"></span></div>
+<div class="why">PC를 포함한 레지스터도 복사 — 그래서 둘 다 fork() 「직후」 같은 지점에서 깨어납니다.</div></div>
+<div class="card" id="k3"><div class="top"><span class="name">반환값만 다름</span><span class="lamp"></span></div>
+<div class="why">부모의 pid = 자식의 PID, 자식의 pid = 0 — 완전한 쌍둥이를 구별하는 유일한 한 칸.</div></div>
+<div class="card" id="k4"><div class="top"><span class="name">독립성</span><span class="lamp"></span></div>
+<div class="why">복사본이므로 이후는 남남 — 자식이 x를 바꿔도 부모의 x는 그대로.</div></div>
+</div>
+
+<div class="verdict" id="v">예측 질문 — fork() 한 번을 호출하면, <b>return은 몇 번</b> 일어날까요? 답을 정한 뒤 시작하세요.</div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+let queue=[],cow=false;
+
+function log(h){const o=$("#log");
+ if(o.textContent.startsWith("대기 중"))o.innerHTML="";
+ o.innerHTML+=h+"<br>";o.scrollTop=o.scrollHeight;}
+function cap(t){$("#cap").textContent=t;}
+function verdict(h){$("#v").innerHTML=h;}
+function lamp(id,on){$("#"+id).classList.toggle("set",on);}
+function mark(l,who){ // 코드 라인 마커: who='P'|'C'|null
+ document.querySelectorAll(".code .ln").forEach(ln=>{
+  const mk=ln.querySelector(".mk");
+  if(who===null){ln.classList.remove("hlP","hlC");mk.innerHTML="";return;}
+  const on=+ln.dataset.l===l;
+  if(who==="P"){ln.classList.toggle("hlP",on);
+   mk.innerHTML=(on?'<span class="p">◀ 부모</span> ':'')+(ln.classList.contains("hlC")?'<span class="c">◀ 자식</span>':'');}
+  else{ln.classList.toggle("hlC",on);
+   mk.innerHTML=(ln.classList.contains("hlP")?'<span class="p">◀ 부모</span> ':'')+(on?'<span class="c">◀ 자식</span>':'');}});}
+function pulse(id){if(reduced)return;const e=$("#"+id);
+ e.classList.remove("pulse");void e.offsetWidth;e.classList.add("pulse");}
+function hl(id,cls,on){$("#"+id).classList.toggle(cls,on===undefined?true:on);}
+
+/* ── 단계 정의 ── */
+const T={
+ run1(){ // 부모가 1행 실행
+  mark(null,null);mark(1,"P");
+  $("#pPCv").textContent="1행";hl("pPC","hl");setTimeout(()=>hl("pPC","hl",false),700);
+  $("#pXv").textContent="x = 10";hl("pData","write");setTimeout(()=>hl("pData","write",false),700);
+  log("<span class='p'>부모(1000)</span> 1행 실행 — Data에 x=10 기록");
+  cap("부모 혼자 실행 중 — Memory의 Data 영역에 x=10. 다음: 2행 fork() 진입");
+  verdict("지금은 프로세스 <b>하나</b> — CPU의 PC가 1행을 가리키고, Memory 세 구역(Code·Data·Stack)이 이 프로세스의 전 재산입니다.");},
+ trap(){ // fork 진입
+  mark(2,"P");$("#pPCv").textContent="2행";
+  log("<span class='sys'>fork()</span> 호출 — CPU가 OS로 진입 (system call)");
+  cap("fork() 진입 — 지금부터 OS가 복사기를 돌립니다. 다음: Memory 복제");
+  verdict("fork()는 일반 함수가 아니라 <b>OS를 부르는 요청(system call)</b> — 프로세스를 만드는 권한은 OS에게만 있습니다.");},
+ copyMem(){ // 메모리 복제
+  $("#pC").classList.remove("ghost");$("#pC").classList.add("on");
+  $("#cPidLabel").textContent="PID 1234 (새로 부여)";
+  if(cow){ // COW: 공유 표시
+   ["cCode","cData","cStk"].forEach(id=>{hl(id,"shared");hl(id,"copy");});
+   $("#cXv").textContent="x = 10";
+   log("<span class='sys'>OS</span> Copy-on-Write — 페이지를 <b>복사하지 않고 공유(읽기전용)</b>로 연결");
+   cap("심화 — 아직 아무것도 복사되지 않았습니다! 다음: CPU 레지스터 복제");
+   verdict("<b>Copy-on-Write.</b> 실제 Linux는 fork() 순간 Memory를 통째로 복사하지 않습니다 — 일단 부모의 페이지를 <b>읽기전용으로 공유</b>하고, 「누군가 쓰는 순간」에만 그 페이지를 복사합니다. fork()가 빠른 이유.");}
+  else{
+   ["cCode","cData","cStk"].forEach((id,i)=>setTimeout(()=>hl(id,"copy"),reduced?0:i*180));
+   $("#cXv").textContent="x = 10";
+   log("<span class='sys'>OS</span> 주소 공간 복제 — Code·Data·Stack을 자식에게 복사 (x=10 포함)");
+   lamp("k1",true);
+   cap("Memory 복제 — 내용은 같고 공간은 별개. 다음: CPU 레지스터 복제");
+   verdict("<b>Memory 관점.</b> 자식은 부모 주소 공간의 <b>복사본</b>을 받습니다 — x=10까지 그대로. 같은 내용, 그러나 물리적으로 다른 자리. 이 '별개'가 잠시 뒤 독립성의 근거가 됩니다.");}},
+ copyCpu(){ // 레지스터 복제
+  $("#cPCv").textContent="2행 직후";$("#pPCv").textContent="2행 직후";
+  hl("cPC","hl");hl("pPC","hl");
+  mark(2,"P");mark(2,"C");
+  log("<span class='sys'>OS</span> CPU 레지스터 복제 — PC 포함. 둘 다 fork() <b>직후</b>에서 깨어남");
+  lamp("k2",true);
+  cap("CPU 복제 — PC까지 같으므로 두 프로세스 모두 '2행 직후'에서 시작합니다. 다음: 반환값");
+  verdict("<b>CPU 관점.</b> 레지스터(특히 PC)가 복사되었기에 자식은 프로그램을 처음부터 돌리지 않습니다 — <b>fork()가 끝난 바로 그 지점</b>에서, 부모와 나란히 깨어납니다. 그래서 fork()는 「한 번 부르고, 두 번 return하는」 함수입니다.");},
+ retval(){ // 반환값 분기
+  hl("pPC","hl",false);hl("cPC","hl",false);
+  $("#pPidv").textContent="1234";$("#cPidv").textContent="0";
+  hl("pPid","diff");hl("cPid","diff");pulse("pPid");pulse("cPid");
+  log("return — <span class='p'>부모: pid=1234(자식 PID)</span> · <span style='color:var(--purple)'>자식: pid=0</span>");
+  lamp("k3",true);
+  cap("반환값 — 완전한 쌍둥이의 유일한 차이. 다음: if(pid==0) 분기");
+  verdict("<b>유일한 차이.</b> Memory도 CPU도 똑같이 복사됐지만 <b>pid 레지스터 한 칸</b>만 다릅니다 — 부모는 자식의 PID(1234), 자식은 0. 프로그램은 이 한 칸을 보고 「내가 부모인가 자식인가」를 알게 됩니다.");},
+ branch(){ // 각자의 길
+  hl("pPid","diff",false);hl("cPid","diff",false);
+  mark(6,"P");mark(4,"C");
+  $("#pPCv").textContent="6행";$("#cPCv").textContent="4행";
+  log("if(pid==0) — 자식은 4행으로, 부모는 6행으로 <b>갈라짐</b>");
+  cap("같은 코드, 다른 길 — pid 한 칸이 갈림길을 만들었습니다. 다음: 자식이 x를 바꾼다");
+  verdict("<b>분기.</b> 두 프로세스는 <b>같은 Code</b>를 실행하지만, pid 값이 달라 if의 다른 가지를 탑니다 — 한 벌의 코드로 두 역할을 나누는 fork()의 대표 사용법.");},
+ write(){ // 자식이 x=99
+  if(cow){
+   hl("cData","shared",false);hl("cData","owned");hl("cData","copy");
+   log("<span class='warn'>자식이 x에 쓰기 시도</span> → 읽기전용 위반 → OS가 <b>Data 페이지만</b> 복사 → x=99");
+   $("#cXv").textContent="x = 99";hl("cData","write");
+   lamp("k1",true);lamp("k4",true);
+   cap("쓰는 순간 복사 — Data만 실체화, Code·Stack은 여전히 공유. 다음: 부모 확인");
+   verdict("<b>쓰는 순간에만 복사.</b> 자식이 x를 고치려는 순간 OS가 <b>그 페이지 하나만</b> 복사해 자식 소유로 만듭니다 — Code·Stack은 계속 공유(점선). 결과는 기본 시나리오와 같지만, 비용은 훨씬 쌉니다.");}
+  else{
+   $("#cXv").textContent="x = 99";hl("cData","write");pulse("cData");
+   log("<span style='color:var(--purple)'>자식(1234)</span> 4행 실행 — <b>자식의 Data</b>에만 x=99 기록");
+   cap("자식이 x=99 — 부모의 x는? 예측한 뒤 다음 단계");
+   verdict("자식이 자기 Data의 x를 99로 바꿨습니다. 질문 — <b>부모의 x는 지금 몇일까요?</b>");}},
+ prove(){ // 부모 x=10 확인
+  hl("pData","write");pulse("pData");setTimeout(()=>hl("pData","write",false),900);
+  log("<span class='p'>부모(1000)</span> 6행 실행 — print(x) → <b>10</b> 출력");
+  lamp("k4",true);
+  cap("증명 완료 — 부모의 x는 여전히 10. 「처음부터」 또는 다른 시나리오로");
+  verdict("<span class='good'>독립성 증명.</span> 부모의 출력은 <b>10</b> — 자식의 99는 자식 공간에만 있습니다. 복사본은 복사되는 순간부터 남남. 그래서 fork() 이후 두 프로세스가 서로를 망가뜨리지 않고, S2에서 본 「Memory 구획 분리」가 여기서도 지켜집니다.");}
+};
+
+/* ── 시나리오 ── */
+const SC=[
+ ["fork() 기본",["run1","trap","copyMem","copyCpu","retval"],false],
+ ["독립 메모리 증명",["run1","trap","copyMem","copyCpu","retval","branch","write","prove"],false],
+ ["심화 Copy-on-Write",["run1","trap","copyMem","copyCpu","retval","branch","write","prove"],true]];
+function loadSc(i){reset(false);cow=SC[i][2];queue=[...SC[i][1]];
+ log("<span class='p'>── 시나리오 "+(i+1)+" · "+SC[i][0]+" ──</span>");
+ cap("시나리오 「"+SC[i][0]+"」 — 「다음 단계 ▶」로 진행 ("+queue.length+"단계)");}
+function step(){
+ if(!queue.length){
+  if($("#pXv").textContent==="x = —"){loadSc(1);return;}
+  cap("시나리오가 끝났습니다 — 다른 시나리오 또는 「처음부터」");return;}
+ T[queue.shift()]();}
+function reset(clearLog){
+ queue=[];cow=false;
+ mark(null,null);
+ $("#pC").classList.add("ghost");$("#pC").classList.remove("on");
+ $("#cPidLabel").textContent="—";
+ $("#pPCv").textContent="1행";$("#cPCv").textContent="—";
+ $("#pPidv").textContent="—";$("#cPidv").textContent="—";
+ $("#pXv").textContent="x = —";$("#cXv").textContent="x = —";
+ ["pPC","pPid","cPC","cPid"].forEach(id=>{hl(id,"hl",false);hl(id,"diff",false);});
+ ["pData","cData"].forEach(id=>hl(id,"write",false));
+ ["cCode","cData","cStk"].forEach(id=>{hl(id,"shared",false);hl(id,"owned",false);hl(id,"copy",false);});
+ ["k1","k2","k3","k4"].forEach(id=>lamp(id,false));
+ if(clearLog!==false)$("#log").innerHTML="대기 중 — fork()의 안쪽이 여기에 기록됩니다";
+ cap("「다음 단계」로 기본 시나리오를 시작하세요 — 각 단계에서 다음에 벌어질 일을 먼저 예측!");
+ verdict("예측 질문 — fork() 한 번을 호출하면, <b>return은 몇 번</b> 일어날까요? 답을 정한 뒤 시작하세요.");}
+$("#btnStep").addEventListener("click",step);
+$("#btnReset").addEventListener("click",()=>reset(true));
+document.querySelectorAll("[data-sc]").forEach(c=>c.addEventListener("click",()=>loadSc(+c.dataset.sc)));
+reset(true);
+})();
+</script>
+</body>
+</html>

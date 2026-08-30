@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux O(1) 스케줄러 해부 — 훑지 않고, 비트 하나로 찾는다</title>
+<style>
+:root{
+  --bg:#0f141d;--panel:#161d2a;--panel2:#1b2434;--line:#26314a;
+  --ink:#dce6f5;--dim:#7d8ba3;--amber:#ffd166;--warnc:#ff9f43;
+  --hot:#ff5d73;--accent:#4cc9f0;--good:#7ee787;--purple:#c3a6ff;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);min-height:100vh;padding:24px 16px 60px;
+ font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+.wrap{max-width:1030px;margin:0 auto}
+header{margin-bottom:18px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+h1{font-size:clamp(20px,4vw,27px);font-weight:800;margin-top:6px}
+h1 b{font-family:var(--mono);color:var(--amber)}
+.sub{color:var(--dim);font-size:14px;margin-top:6px;line-height:1.6}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.run{padding:11px 22px;border:none;border-radius:8px;background:var(--amber);color:#2a2005;
+ font-weight:800;font-size:15px;cursor:pointer;font-family:inherit}
+.run:disabled{opacity:.4;cursor:default}
+.run.sec{background:var(--panel2);color:var(--ink);border:1px solid var(--line);font-size:13.5px}
+.run:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.presets{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px}
+.presets .cap{width:100%;font-size:11px;color:var(--dim);letter-spacing:.06em}
+.chip{font-family:var(--mono);font-size:12.5px;padding:7px 12px;border-radius:999px;
+ background:var(--panel2);color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.chip:hover:not(:disabled){border-color:var(--accent)}
+.chip:disabled{opacity:.4;cursor:default}
+.chip b{color:var(--amber);font-weight:700}
+/* CPU */
+.cpu{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px;
+ display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.cpu .t{font-size:11px;color:var(--dim);letter-spacing:.06em}
+.cpu .now{font-family:var(--mono);font-size:16px;font-weight:800;min-width:130px}
+.ticks{display:flex;gap:4px}
+.tick{width:16px;height:22px;border-radius:4px;border:1px solid var(--line);background:var(--panel2);transition:all .2s}
+.tick.onT{background:#3a3208;border-color:#5c4d10}
+.tick.burn{background:transparent;border-style:dashed;opacity:.4}
+.cmp{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--dim);text-align:right;line-height:1.7}
+.cmp b{color:var(--good);font-size:16px}
+.cmp .vs{color:var(--hot);font-weight:800}
+/* 두 배열 */
+.arrs{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+@media(max-width:820px){.arrs{grid-template-columns:1fr}}
+.arr{background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:12px;transition:border-color .4s}
+.arr.actv{border-color:var(--good)}
+.arr.expd{border-color:#3a445e}
+.arr h3{font-family:var(--mono);font-size:13px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.arr.actv h3 .role{color:var(--good)}
+.arr.expd h3 .role{color:var(--dim)}
+.arr h3 .role{font-weight:800;transition:color .4s}
+.arr h3 .cnt{font-size:11px;color:var(--dim)}
+.bmrow{display:flex;gap:4px;margin-bottom:10px;align-items:center}
+.bmrow .lb{font-size:10px;color:var(--dim);font-family:var(--mono);width:44px}
+.bit{flex:1;height:24px;border:1px solid var(--line);border-radius:5px;background:var(--panel2);
+ display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;
+ color:var(--dim);transition:all .25s}
+.bit.on1{background:#3a3208;border-color:#5c4d10;color:var(--amber);font-weight:800}
+.bit.found{background:#123524;border-color:var(--good);color:var(--good);box-shadow:0 0 10px rgba(126,231,135,.5)}
+.bit.flash{animation:bf .5s ease}
+@keyframes bf{30%{box-shadow:0 0 0 2px var(--accent)}}
+.plist{display:flex;align-items:center;gap:6px;border-top:1px solid var(--line);padding:4px 0;min-height:32px}
+.plist .pl{width:44px;font-family:var(--mono);font-size:10.5px;color:var(--dim)}
+.plist.onP .pl{color:var(--good);font-weight:800}
+.tchip{font-family:var(--mono);font-size:11.5px;font-weight:800;padding:3px 8px;border-radius:7px;
+ border:1px solid var(--line);background:var(--panel2);transition:all .25s}
+.tchip.head{border-color:var(--good)}
+.tchip.pick{background:#123524;border-color:var(--good);color:var(--good);box-shadow:0 0 10px rgba(126,231,135,.45)}
+.tchip.moved{animation:mv .5s ease}
+@keyframes mv{from{transform:translateY(-8px);opacity:.2}}
+.tchip.inter{border-color:var(--purple);color:var(--purple)}
+.arr.swapping{animation:sw .6s ease}
+@keyframes sw{30%{transform:translateY(6px)}60%{transform:translateY(-4px)}}
+/* 로그·카드·판정 */
+.term{background:#0a0f18;border:1px solid var(--line);border-radius:10px;padding:12px 14px;
+ font-family:var(--mono);font-size:12.5px;line-height:1.75;height:168px;overflow-y:auto;margin-bottom:14px}
+.term .p{color:var(--good)}.term .sys{color:var(--accent)}.term .warn{color:var(--warnc)}
+.term .err{color:var(--hot)}.term .z{color:var(--purple)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.card .top{display:flex;justify-content:space-between;align-items:center}
+.card .name{font-family:var(--mono);font-weight:800;font-size:12.5px}
+.card .lamp{width:11px;height:11px;border-radius:50%;background:#2a3550}
+.card.set{border-color:var(--accent)}.card.set .lamp{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+.card .why{font-size:12px;line-height:1.5;color:var(--ink);margin-top:6px;min-height:48px}
+.verdict{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+ padding:13px 15px;font-size:13.5px;line-height:1.7}
+.verdict b{color:var(--amber)}
+.good{color:var(--good);font-weight:800}.bad{color:var(--hot);font-weight:800}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<div class="eyebrow">OS · CPU 스케줄링 · 심화 · Linux 2.6 O(1)</div>
+<h1>O(1) 스케줄러 해부 — <b>훑지 않고, 비트 하나로 찾는다</b></h1>
+<p class="sub">O(n)의 두 가지 비용 — 선택마다 전수 스캔, epoch마다 전원 재충전 — 을 2.6 커널은 자료구조로 없앴습니다.
+<b>우선순위별 줄(FIFO) + 비트맵</b>으로 최고 우선순위를 <b>find-first-bit 한 번</b>에 찾고,
+다 쓴 task는 <b>expired 배열</b>로 보내다가, active가 비면 <b>두 배열의 포인터만 맞바꿉니다.</b> task가 몇 개든 — 항상 같은 시간.</p>
+</header>
+
+<section class="panel">
+<div class="row">
+<button class="run" id="btnStep">다음 단계 ▶</button>
+<button class="run sec" id="btnReset">전체 초기화</button>
+<span class="sub" style="margin:0" id="cap">시나리오 ①부터 — 각 단계에서 다음에 벌어질 일을 먼저 예측!</span>
+</div>
+<div class="presets"><span class="cap">시나리오 — 예상 결과가 함께 표시됩니다</span>
+<button class="chip" data-sc="0">① 선택의 비밀 → <b>비트맵 1회 + 줄 맨 앞</b></button>
+<button class="chip" data-sc="1">② active가 비면 → <b>포인터 교체 한 방</b></button>
+<button class="chip" data-sc="2">③ task 폭증 실험 → <b>그래도 연산 2회</b></button>
+</div>
+<div class="presets"><span class="cap">자유 모드 — 직접 운용</span>
+<button class="chip fm" data-p="1">+ 높은 우선순위(P1) task</button>
+<button class="chip fm" data-p="4">+ 중간(P4) task</button>
+<button class="chip fm" data-p="6">+ 낮은(P6) task</button>
+<button class="chip fm" id="fmSched">schedule() 한 번 실행</button>
+</div>
+</section>
+
+<section class="cpu">
+<div><div class="t">CPU — 실행 중</div><div class="now" id="now">idle</div></div>
+<div><div class="t">남은 timeslice</div><div class="ticks" id="ticks"></div></div>
+<div class="cmp">이번 결정 연산 <b id="nOp">0</b>회 (비트맵 1 + head 1)<br>
+<span class="vs">O(n)이었다면 <span id="nWould">0</span>회 비교</span></div>
+</section>
+
+<div class="arrs">
+<section class="arr" id="arr0">
+<h3><span class="role" id="role0">—</span><span class="cnt" id="cnt0">0 task</span></h3>
+<div class="bmrow"><span class="lb">bitmap</span><div style="display:flex;gap:4px;flex:1" id="bm0"></div></div>
+<div id="lists0"></div>
+</section>
+<section class="arr" id="arr1">
+<h3><span class="role" id="role1">—</span><span class="cnt" id="cnt1">0 task</span></h3>
+<div class="bmrow"><span class="lb">bitmap</span><div style="display:flex;gap:4px;flex:1" id="bm1"></div></div>
+<div id="lists1"></div>
+</section>
+</div>
+
+<div class="term" id="log" aria-live="polite">대기 중 — 비트맵 조회와 배열 교체가 여기에 기록됩니다</div>
+
+<div class="cards">
+<div class="card" id="k1"><div class="top"><span class="name">우선순위 배열</span><span class="lamp"></span></div>
+<div class="why">P0(높음)~P7(낮음) 줄마다 FIFO — 같은 줄 안에서는 앞사람부터 공평하게.</div></div>
+<div class="card" id="k2"><div class="top"><span class="name">find-first-bit</span><span class="lamp"></span></div>
+<div class="why">줄이 비었는지를 비트 1개로 요약 — 최고 우선순위 찾기가 CPU 명령 한 번.</div></div>
+<div class="card" id="k3"><div class="top"><span class="name">만료 → expired</span><span class="lamp"></span></div>
+<div class="why">slice를 다 쓴 task만 그 자리에서 새 slice를 계산해 expired로 — 전원 재충전 루프가 없다.</div></div>
+<div class="card" id="k4"><div class="top"><span class="name">배열 교체</span><span class="lamp"></span></div>
+<div class="why">active가 비면 두 배열의 포인터를 맞바꾼다 — epoch 전환이 O(1).</div></div>
+</div>
+
+<div class="verdict" id="v">예측 질문 — task가 <b>1,000개</b>일 때, O(1) 스케줄러가 다음 주인공을 고르는 연산은 몇 회일까요? (O(n)의 답은 1,000회였습니다)</div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const WAIT=reduced?0:480;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const NP=8; // P0(높음)~P7
+let A={lists:Array.from({length:NP},()=>[])}, B={lists:Array.from({length:NP},()=>[])};
+let act=A, exp=B;
+let queue=[],busy=false,freeMode=false,sc=null,nextCh=68; // D부터 추가
+let fx={found:null,pick:null,movedTo:null,flash:false,swap:false};
+
+function slice(p){return p<=2?4:(p<=5?3:2);} // 높은 우선순위 → 더 긴 slice
+function mk(id,p,kind){return{id,p,kind:kind||"CPU형"};}
+function count(arr){return arr.lists.reduce((a,l)=>a+l.length,0);}
+function log(h){const o=$("#log");
+ if(o.textContent.startsWith("대기 중"))o.innerHTML="";
+ o.innerHTML+=h+"<br>";o.scrollTop=o.scrollHeight;}
+function cap(t){$("#cap").textContent=t;}
+function verdict(h){$("#v").innerHTML=h;}
+function lamp(id){$("#"+id).classList.add("set");}
+function ticks(n,total){const b=$("#ticks");b.innerHTML="";
+ for(let i=0;i<total;i++){const d=document.createElement("div");
+  d.className="tick "+(i<n?"onT":"burn");b.appendChild(d);}}
+
+function render(){
+ [[A,"arr0","bm0","lists0","role0","cnt0"],[B,"arr1","bm1","lists1","role1","cnt1"]].forEach(([arr,pid,bid,lid,rid,cid])=>{
+  const isAct=arr===act;
+  const p=$("#"+pid);
+  p.classList.toggle("actv",isAct);p.classList.toggle("expd",!isAct);
+  if(fx.swap&&!reduced){p.classList.remove("swapping");void p.offsetWidth;p.classList.add("swapping");}
+  $("#"+rid).textContent=isAct?"active → (여기서 뽑는다)":"expired (다 쓴 task 대기)";
+  $("#"+cid).textContent=count(arr)+" task";
+  const bm=$("#"+bid);bm.innerHTML="";
+  arr.lists.forEach((l,i)=>{
+   const d=document.createElement("div");
+   d.className="bit "+(l.length?"on1":"")+((isAct&&fx.found===i)?" found":"")+((isAct&&fx.flash)?" flash":"");
+   d.textContent=l.length?1:0;bm.appendChild(d);});
+  const ls=$("#"+lid);ls.innerHTML="";
+  arr.lists.forEach((l,i)=>{
+   const row=document.createElement("div");
+   row.className="plist"+((isAct&&fx.found===i)?" onP":"");
+   row.innerHTML=`<span class="pl">P${i}${i===0?"·높음":i===NP-1?"·낮음":""}</span>`;
+   l.forEach((t,j)=>{
+    const c=document.createElement("span");
+    c.className="tchip"+(t.kind==="대화형"?" inter":"")
+     +((isAct&&fx.found===i&&j===0)?" head":"")
+     +((fx.pick===t.id)?" pick":"")
+     +((fx.movedTo===t.id)?" moved":"");
+    c.textContent=t.id+"·s"+t.s;
+    row.appendChild(c);});
+   ls.appendChild(row);});});
+ fx={found:fx.found,pick:null,movedTo:null,flash:false,swap:false};}
+
+/* ── schedule(): find-first-bit → head → slice 소진 → expired ── */
+async function schedule(){
+ busy=true;lock(true);
+ const n=count(act)+count(exp);
+ fx.flash=true;render();
+ log(`<span class='sys'>schedule()</span> — active 비트맵에 <b>find-first-bit</b> (연산 1회)`);
+ $("#nOp").textContent="1";$("#nWould").textContent=n;
+ await sleep(WAIT);
+ let lv=act.lists.findIndex(l=>l.length);
+ if(lv<0){log("<span class='warn'>active가 비어 있음 — 배열 교체가 필요합니다</span>");
+  busy=false;lock(false);render();return false;}
+ fx.found=lv;render();
+ log(`→ 첫 1비트 = <b>P${lv}</b> · 그 줄의 <b>맨 앞</b>을 꺼냄 (연산 1회, 합계 2회)`);
+ $("#nOp").textContent="2";
+ await sleep(WAIT);
+ const t=act.lists[lv][0];
+ fx.found=lv;fx.pick=t.id;render();
+ log(`<span class='p'>선택 → ${t.id}</span> — task가 ${n}개여도 훑지 않았습니다`);
+ $("#now").textContent=t.id+" 실행";
+ const total=t.s;
+ for(let i=t.s;i>0;i--){ticks(i,total);await sleep(WAIT*.45);t.s--;fx.found=lv;fx.pick=t.id;render();$("#now").textContent=t.id+" 실행";}
+ ticks(0,total);
+ // 만료: 그 task만 재계산 → expired
+ act.lists[lv].shift();
+ t.s=slice(t.p);
+ exp.lists[t.p].push(t);
+ fx.found=null;fx.movedTo=t.id;render();
+ log(`${t.id} slice 소진 → <span class='warn'>그 자리에서 새 slice ${t.s} 계산</span> → <b>expired P${t.p} 꼬리</b>로`);
+ $("#now").textContent="idle";
+ busy=false;lock(false);return true;}
+
+/* ── 배열 교체 ── */
+async function swapArrays(){
+ busy=true;lock(true);
+ log("<span class='warn'>active 배열이 완전히 비었습니다</span>");
+ await sleep(WAIT*.6);
+ const tmp=act;act=exp;exp=tmp;
+ fx.swap=true;fx.found=null;render();
+ log("<span class='sys'>배열 교체</span> — active ↔ expired <b>포인터만 맞바꿈 (연산 1회)</b>");
+ log("<span class='p'>새 epoch 시작 — 재충전 루프 없음: 각자 이사 올 때 이미 새 slice를 들고 왔다</span>");
+ busy=false;lock(false);}
+
+function lock(on){$("#btnStep").disabled=on;
+ document.querySelectorAll(".chip").forEach(c=>c.disabled=on);}
+
+function seed(list){A={lists:Array.from({length:NP},()=>[])};B={lists:Array.from({length:NP},()=>[])};
+ act=A;exp=B;
+ list.forEach(t=>{t.s=slice(t.p);act.lists[t.p].push(t);});}
+
+/* ── 시나리오 ── */
+const SC=[
+ [ /* ① 선택의 비밀 */
+  {fn:schedule,cap:"schedule() — 비트맵을 보세요: 훑는 대신 첫 1비트로 점프합니다",
+   vd:"<b>연산 2회.</b> ① 비트맵에서 첫 1비트(P1) — CPU 명령 하나 ② 그 줄의 맨 앞 — 포인터 하나. O(n)에서 3회였던 비교가, 여기선 task 수와 <b>무관하게 항상 2회</b>입니다."},
+  {fn:schedule,cap:"같은 P1에 둘이 있었죠 — 이번엔 누구일까요?",
+   vd:"<b>같은 줄 = FIFO.</b> A가 expired로 떠났으니 P1의 맨 앞은 B — 같은 우선순위끼리는 <b>줄 선 순서</b>로 공평하게 돌아갑니다(라운드로빈)."},
+  {fn:schedule,cap:"P1이 비었습니다 — 비트맵이 어떻게 안내하는지 보세요",
+   vd:"<span class='good'>① 완료.</span> P1 비트가 0으로 꺼지자 find-first-bit가 곧장 <b>P4의 C</b>를 가리킵니다 — 빈 줄을 건너뛰는 데도 비용이 들지 않습니다. 그리고 로그를 보세요: 만료된 task는 <b>이사 가는 그 순간 혼자서만</b> 새 slice를 계산했습니다 — O(n)의 전원 재충전 루프가 여기서 사라진 것."}],
+ [ /* ② 배열 교체 */
+  {fn:schedule,cap:"active에 마지막 남은 C를 소진시킵니다",
+   vd:"C까지 expired로 떠나면 active는 완전히 빕니다 — O(n)이라면 지금 <b>전원 순회 재충전</b>이 돌 차례였습니다. O(1)의 답을 예측하세요."},
+  {fn:swapArrays,cap:"포인터 교체 — 두 패널의 테두리 색이 서로 바뀌는 순간",
+   vd:"<b>epoch 전환이 O(1).</b> 배열 내용은 1바이트도 옮기지 않았습니다 — <b>active/expired 라벨(포인터)만</b> 맞바꿨습니다. task가 3개든 3만 개든 이 비용은 같습니다."},
+  {fn:schedule,cap:"새 epoch의 첫 선택 — 모두 새 slice를 이미 들고 있습니다",
+   vd:"<span class='good'>② 완료.</span> 교체 직후 곧바로 정상 선택 — 각 task가 expired로 이사할 때 <b>자기 slice를 미리 채워 왔기 때문</b>입니다. 재충전을 「한 번에 전원」에서 「만료 시 각자」로 쪼갠 것 — 총량은 같지만 한꺼번에 멈추는 일이 없습니다."}],
+ [ /* ③ task 폭증 */
+  {fn:schedule,cap:"기준점 — task 3개, 연산 2회 (O(n)이라면 3회)",
+   vd:"기준을 잡습니다 — 상단 카운터의 두 줄을 계속 비교하세요."},
+  {fn:async()=>{const add=[["D",1],["E",1],["F",4],["G",4],["H",4],["I",6],["J",6]];
+    add.forEach(([n,p])=>{const t=mk(n,p);t.s=slice(p);act.lists[p].push(t);});
+    log("<span class='warn'>task 7개 추가 — 총 "+ (count(act)+count(exp)) +"개 (P1·P4·P6에 분산)</span>");
+    render();},
+   cap:"task가 10개로 늘었습니다 — 다음 선택의 연산 수를 예측하세요",
+   vd:"O(n) 애니메이션에서는 이 순간 비교가 8회로 뛰었습니다 — 여기서는?"},
+  {fn:schedule,cap:"여전히 연산 2회 — 빨간 줄(O(n)이라면)만 커졌습니다",
+   vd:"<span class='good'>③ 완성 — 이름의 의미.</span> n이 3→10이 되어도 연산은 <b>그대로 2회</b>, 'O(n)이라면' 카운터만 10으로 뛰었습니다. 시작 질문의 답 — <b>1,000개여도 2회.</b> 실제 커널은 우선순위 140칸 + CPU마다 runqueue 분리 + 대화형 보너스(잠을 많이 잔 task는 우선순위를 올려 active에 재삽입, 보라색 칩)까지 얹었습니다. 다만 그 보너스 휴리스틱이 점점 복잡해져 — 2007년, 더 단순한 원리의 <b>CFS</b>에게 자리를 넘깁니다. 자유 모드로 직접 실험해 보세요."}]];
+
+function loadSc(i){
+ if(busy)return;
+ freeMode=false;sc=i;nextCh=68;
+ if(i===0)seed([mk("A",1),mk("B",1),mk("C",4)]);
+ else if(i===1){ // ①의 끝 상태: A,B expired / C active
+  seed([mk("C",4)]);
+  [mk("A",1),mk("B",1)].forEach(t=>{t.s=slice(t.p);exp.lists[t.p].push(t);});}
+ else seed([mk("A",1),mk("B",4),mk("C",6)]);
+ $("#nOp").textContent="0";$("#nWould").textContent=count(act)+count(exp);
+ $("#now").textContent="idle";ticks(0,0);
+ $("#log").innerHTML="";
+ log("<span class='p'>── 시나리오 "+(i+1)+" ──</span>");
+ queue=[...SC[i]];
+ lamp(i===0?"k1":i===1?"k4":"k2");if(i===0)lamp("k2");if(i===1)lamp("k3");
+ fx.found=null;render();
+ cap("시나리오 준비 완료 — 「다음 단계 ▶」 ("+queue.length+"단계, 단계마다 자동 재생)");
+ verdict(["예측 — P1에 두 명이 서 있습니다. 선택에 필요한 연산은 몇 회일까요?",
+  "예측 — active가 완전히 비면, O(1)은 무엇을 「한 번」 하고 끝낼까요?",
+  "예측 — task를 3개에서 10개로 늘리면 연산 수는 어떻게 될까요?"][i]);}
+async function step(){
+ if(busy)return;
+ if(!queue.length){
+  if(sc===null){loadSc(0);return;}
+  freeMode=true;render();
+  cap("시나리오 종료 — 자유 모드: task 추가 · schedule() 실행 (active가 비면 자동 교체)");
+  return;}
+ const st=queue.shift();cap(st.cap);verdict(st.vd);
+ await st.fn();
+ if(!queue.length){freeMode=true;render();
+  cap($("#cap").textContent+"  — 시나리오 끝: 자유 모드 사용 가능");}}
+$("#btnStep").addEventListener("click",step);
+$("#btnReset").addEventListener("click",()=>{if(busy)return;
+ seed([mk("A",1),mk("B",1),mk("C",4)]);
+ queue=[];sc=null;freeMode=true;nextCh=68;
+ $("#nOp").textContent="0";$("#nWould").textContent=count(act)+count(exp);
+ $("#now").textContent="idle";ticks(0,0);
+ ["k1","k2","k3","k4"].forEach(id=>$("#"+id).classList.remove("set"));
+ $("#log").innerHTML="대기 중 — 비트맵 조회와 배열 교체가 여기에 기록됩니다";
+ cap("초기화 완료 — 시나리오를 고르거나 자유 모드로 실험하세요");
+ verdict("예측 질문 — task가 <b>1,000개</b>일 때, O(1) 스케줄러가 다음 주인공을 고르는 연산은 몇 회일까요?");
+ fx.found=null;render();});
+document.querySelectorAll("[data-sc]").forEach(c=>c.addEventListener("click",()=>loadSc(+c.dataset.sc)));
+document.querySelectorAll("[data-p]").forEach(c=>c.addEventListener("click",()=>{
+ if(busy)return;freeMode=true;
+ if(nextCh>90){log("<span class='err'>task가 너무 많습니다</span>");return;}
+ const t=mk(String.fromCharCode(nextCh++),+c.dataset.p);t.s=slice(t.p);
+ act.lists[t.p].push(t);
+ log(`<span class='warn'>+ ${t.id} 추가 (P${t.p})</span> — active에 입장, 비트 P${t.p}=1`);
+ $("#nWould").textContent=count(act)+count(exp);
+ render();}));
+$("#fmSched").addEventListener("click",async()=>{
+ if(busy)return;freeMode=true;
+ const ok=await schedule();
+ if(ok===false){
+  if(count(exp))await swapArrays();
+  else log("<span class='err'>실행할 task가 없습니다 — 추가하세요</span>");}
+ cap("schedule() 완료 — active가 비면 자동으로 배열 교체가 재생됩니다");});
+// 초기 화면
+seed([mk("A",1),mk("B",1),mk("C",4)]);
+freeMode=true;render();ticks(0,0);
+})();
+</script>
+</body>
+</html>

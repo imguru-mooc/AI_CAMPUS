@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>wait() 해부 — 잠들고, 깨어나고, 거두는 일</title>
+<style>
+:root{
+  --bg:#0f141d;--panel:#161d2a;--panel2:#1b2434;--line:#26314a;
+  --ink:#dce6f5;--dim:#7d8ba3;--amber:#ffd166;--warnc:#ff9f43;
+  --hot:#ff5d73;--accent:#4cc9f0;--good:#7ee787;--purple:#c3a6ff;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);min-height:100vh;padding:24px 16px 60px;
+ font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+.wrap{max-width:1000px;margin:0 auto}
+header{margin-bottom:18px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+h1{font-size:clamp(20px,4vw,28px);font-weight:800;margin-top:6px}
+h1 b{font-family:var(--mono);color:var(--amber)}
+.sub{color:var(--dim);font-size:14px;margin-top:6px;line-height:1.6}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.run{padding:11px 22px;border:none;border-radius:8px;background:var(--amber);color:#2a2005;
+ font-weight:800;font-size:15px;cursor:pointer;font-family:inherit}
+.run:disabled{opacity:.4;cursor:default}
+.run.sec{background:var(--panel2);color:var(--ink);border:1px solid var(--line);font-size:13.5px}
+.run:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.presets{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px}
+.presets .cap{width:100%;font-size:11px;color:var(--dim);letter-spacing:.06em}
+.chip{font-family:var(--mono);font-size:13px;padding:7px 12px;border-radius:999px;
+ background:var(--panel2);color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+.chip b{color:var(--amber);font-weight:700}
+/* 코드 */
+.code{background:#0a0f18;border:1px solid var(--line);border-radius:10px;
+ font-family:var(--mono);font-size:13.5px;line-height:1.9;padding:10px 0;margin-bottom:14px}
+.code .ln{display:flex;padding:0 14px}
+.code .no{width:26px;color:var(--dim);flex:0 0 auto}
+.code .tx{flex:1;white-space:pre}
+.code .cm{color:var(--dim)}.code .fn{color:var(--amber)}
+.code .ln .mk{width:78px;flex:0 0 auto;text-align:right;font-size:11px;color:var(--good);font-weight:800}
+.code .ln.hl{background:rgba(126,231,135,.08)}
+/* 3열 보드: 부모 | OS | 자식 */
+.board{display:grid;grid-template-columns:1fr 1.1fr 1fr;gap:14px;margin-bottom:14px}
+@media(max-width:860px){.board{grid-template-columns:1fr}}
+.proc{background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:14px;transition:opacity .4s,border-color .3s}
+.proc.on{border-color:var(--accent)}
+.proc.asleep{border-color:var(--purple)}
+.proc h2{font-size:14.5px;display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.proc h2 .pid{font-family:var(--mono);font-size:12px;color:var(--amber)}
+.sec-t{font-size:11px;color:var(--dim);letter-spacing:.06em;margin:10px 0 6px}
+.reg{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12.5px;
+ padding:5px 8px;border:1px solid var(--line);border-radius:7px;margin-bottom:6px;transition:all .3s}
+.reg .k{color:var(--dim)}.reg .v{font-weight:800}
+.reg.hl{border-color:var(--amber);background:#221c08}
+.reg.got{border-color:var(--good);background:#0f2417}
+.blk{border:1px solid var(--line);border-radius:8px;padding:7px 10px;margin-bottom:6px;
+ font-family:var(--mono);font-size:12px;position:relative;transition:all .35s}
+.blk .bt{color:var(--dim);font-size:10.5px}
+.blk .bv{font-weight:800;margin-top:1px}
+.blk.demol{border-style:dashed;border-color:#3a445e;background:transparent}
+.blk.demol .bv{color:#4a5674;text-decoration:line-through}
+.blk.demol::after{content:"반납됨";position:absolute;right:8px;top:7px;font-size:9.5px;color:var(--hot)}
+/* OS 패널: 프로세스 표 + 대기 큐 */
+.pt{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12.5px}
+.pt th{color:var(--dim);font-weight:700;text-align:left;padding:4px 6px;border-bottom:1px solid var(--line);font-size:11px}
+.pt td{padding:5px 6px;border-bottom:1px solid var(--line);transition:background .3s}
+.pt tr.zrow td{background:#2a141a}
+.pt tr.gone td{opacity:.25;text-decoration:line-through}
+.stat{display:inline-block;min-width:24px;text-align:center;border-radius:6px;padding:1px 5px;font-weight:800;font-size:11.5px}
+.stR{background:#123524;color:var(--good)}
+.stS{background:#2a2340;color:var(--purple)}
+.stZ{background:#3a1b22;color:var(--hot)}
+.wq{border:1px dashed var(--purple);border-radius:8px;padding:8px 10px;min-height:40px;
+ font-family:var(--mono);font-size:12px;color:var(--purple)}
+.wq .who{display:inline-block;background:#2a2340;border-radius:6px;padding:3px 8px;font-weight:800}
+/* 카드/로그/판정 */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.card .top{display:flex;justify-content:space-between;align-items:center}
+.card .name{font-family:var(--mono);font-weight:800;font-size:13.5px}
+.card .lamp{width:11px;height:11px;border-radius:50%;background:#2a3550}
+.card.set{border-color:var(--accent)}.card.set .lamp{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+.card .why{font-size:12px;line-height:1.5;color:var(--ink);margin-top:6px;min-height:48px}
+.term{background:#0a0f18;border:1px solid var(--line);border-radius:10px;padding:12px 14px;
+ font-family:var(--mono);font-size:12.5px;line-height:1.75;height:118px;overflow-y:auto;margin-bottom:14px}
+.term .p{color:var(--good)}.term .sys{color:var(--accent)}.term .warn{color:var(--warnc)}
+.term .err{color:var(--hot)}.term .z{color:var(--purple)}
+.verdict{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+ padding:13px 15px;font-size:13.5px;line-height:1.7}
+.verdict b{color:var(--amber)}
+.good{color:var(--good);font-weight:800}.bad{color:var(--hot);font-weight:800}
+.pulse{animation:pl .5s ease}
+@keyframes pl{0%{transform:scale(.97)}60%{transform:scale(1.015)}100%{transform:scale(1)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<div class="eyebrow">OS · Linux Process · 심화</div>
+<h1>wait() 해부 — <b>잠들고, 깨어나고, 거두는 일</b></h1>
+<p class="sub">wait()는 「기다림」이 아니라 세 가지 일의 묶음입니다 — 끝난 자식이 없으면 <b>대기 큐에서 잠들고(S)</b>,
+자식의 exit() 이벤트에 <b>OS가 깨워 주고</b>, 좀비(표의 한 줄)에 남은 <b>종료값을 회수해 자리를 비웁니다.</b>
+그 안쪽을 OS의 프로세스 표와 대기 큐로 직접 봅니다.</p>
+</header>
+
+<section class="panel">
+<div class="row">
+<button class="run" id="btnStep">다음 단계 ▶</button>
+<button class="run sec" id="btnReset">처음부터</button>
+<span class="sub" style="margin:0" id="cap">「다음 단계」로 기본 시나리오를 시작하세요 — 다음에 벌어질 일을 먼저 예측!</span>
+</div>
+<div class="presets"><span class="cap">시나리오 — 예상 결과가 함께 표시됩니다</span>
+<button class="chip" data-sc="0">① 자식이 아직 일하는 중 → <b>부모 잠듦(S) 후 회수</b></button>
+<button class="chip" data-sc="1">② 자식이 이미 좀비 → <b>잠들지 않고 즉시 return</b></button>
+<button class="chip" data-sc="2">③ 심화 · 부모가 먼저 죽으면 → <b>systemd(1)가 입양·대리 회수</b></button>
+</div>
+</section>
+
+<div class="code" id="codeBox"></div>
+
+<div class="board">
+<!-- 부모 -->
+<section class="proc on" id="pP">
+<h2>부모 프로세스 <span class="pid">PID 1000</span></h2>
+<div class="sec-t">CPU (레지스터)</div>
+<div class="reg" id="pPC"><span class="k">PC</span><span class="v" id="pPCv">1행</span></div>
+<div class="reg" id="pSt"><span class="k">상태</span><span class="v" id="pStv">실행 중</span></div>
+<div class="sec-t">Memory (Data)</div>
+<div class="blk" id="pVar"><div class="bt">변수</div><div class="bv" id="pVarv">status = —</div></div>
+</section>
+<!-- OS -->
+<section class="proc" id="pO" style="border-color:var(--line)">
+<h2>OS (커널) <span class="pid">프로세스 표 · 대기 큐</span></h2>
+<div class="sec-t">프로세스 표 — 좀비는 여기 「한 줄」로 남는다</div>
+<table class="pt">
+<tr><th>PID</th><th>PPID</th><th>STAT</th><th>종료값</th></tr>
+<tr id="rowP"><td>1000</td><td id="pppid">1</td><td id="tpS"><span class="stat stR">R</span></td><td>—</td></tr>
+<tr id="rowC"><td>1234</td><td id="cppid">1000</td><td id="tcS"><span class="stat stR">R</span></td><td id="tcE">—</td></tr>
+</table>
+<div class="sec-t">대기 큐 — 「자식 종료」 이벤트를 기다리는 방</div>
+<div class="wq" id="wq">(비어 있음)</div>
+</section>
+<!-- 자식 -->
+<section class="proc" id="pC">
+<h2>자식 프로세스 <span class="pid">PID 1234</span></h2>
+<div class="sec-t">CPU</div>
+<div class="reg" id="cSt"><span class="k">상태</span><span class="v" id="cStv">실행 중 (일하는 중)</span></div>
+<div class="sec-t">Memory (주소 공간)</div>
+<div class="blk" id="cMem"><div class="bt">Code · Data · Stack</div><div class="bv" id="cMemv">자식의 작업 공간</div></div>
+</section>
+</div>
+
+<div class="term" id="log" aria-live="polite">대기 중 — wait()의 안쪽이 여기에 기록됩니다</div>
+
+<div class="cards">
+<div class="card" id="k1"><div class="top"><span class="name">잠듦 (S)</span><span class="lamp"></span></div>
+<div class="why">끝난 자식이 없으면 부모는 CPU를 반납하고 대기 큐로 — 바쁘게 확인하는 게 아니라 잠들어 기다립니다.</div></div>
+<div class="card" id="k2"><div class="top"><span class="name">좀비 = 표 한 줄</span><span class="lamp"></span></div>
+<div class="why">자식이 exit()하면 Memory는 반납되고, 표의 한 줄에 종료값만 남습니다 — 그것이 Z.</div></div>
+<div class="card" id="k3"><div class="top"><span class="name">OS가 깨움</span><span class="lamp"></span></div>
+<div class="why">자식의 exit()가 이벤트 — OS가 대기 큐에서 부모를 찾아 준비(R)로 되돌립니다.</div></div>
+<div class="card" id="k4"><div class="top"><span class="name">회수 (reap)</span><span class="lamp"></span></div>
+<div class="why">종료값을 부모의 변수로 전달하고, 좀비의 표 한 줄을 삭제 — 그제야 완전한 소멸.</div></div>
+</div>
+
+<div class="verdict" id="v">예측 질문 — 자식이 아직 일하는 중일 때 wait()를 부르면, 부모는 <b>바쁘게 확인을 반복</b>할까요, <b>잠들</b>까요? 답을 정한 뒤 시작하세요.</div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+let queue=[];
+
+const CODES=[
+ [["1",'pid = <span class="fn">fork</span>();          <span class="cm">// 자식(1234) 생성됨</span>'],
+  ["2",'<span class="fn">wait</span>(&status);       <span class="cm">// 여기서 무슨 일이?</span>'],
+  ["3",'print(status);       <span class="cm">// 자식의 성적표</span>']],
+ [["1",'pid = <span class="fn">fork</span>();          <span class="cm">// 자식은 이미 exit(0) 완료</span>'],
+  ["2",'<span class="fn">wait</span>(&status);       <span class="cm">// 잠들까, 바로 돌아올까?</span>'],
+  ["3",'print(status);']],
+ [["1",'pid = <span class="fn">fork</span>();'],
+  ["2",'<span class="fn">exit</span>(0);             <span class="cm">// 부모가 wait 없이 먼저 퇴장!</span>'],
+  ["3",'<span class="cm">// 남겨진 자식(1234)은 누가 거두나?</span>']]];
+function renderCode(i){$("#codeBox").innerHTML=CODES[i].map(l=>
+ `<div class="ln" data-l="${l[0]}"><span class="no">${l[0]}</span><span class="tx">${l[1]}</span><span class="mk"></span></div>`).join("");}
+function mark(l,label){document.querySelectorAll(".code .ln").forEach(ln=>{
+ const on=ln.dataset.l===String(l);
+ ln.classList.toggle("hl",on);
+ ln.querySelector(".mk").textContent=on?("◀ "+(label||"부모 PC")):"";});}
+
+function log(h){const o=$("#log");
+ if(o.textContent.startsWith("대기 중"))o.innerHTML="";
+ o.innerHTML+=h+"<br>";o.scrollTop=o.scrollHeight;}
+function cap(t){$("#cap").textContent=t;}
+function verdict(h){$("#v").innerHTML=h;}
+function lamp(id,on){$("#"+id).classList.toggle("set",on);}
+function pulse(id){if(reduced)return;const e=$("#"+id);
+ e.classList.remove("pulse");void e.offsetWidth;e.classList.add("pulse");}
+function tstat(id,cls,ch){$("#"+id).innerHTML='<span class="stat '+cls+'">'+ch+'</span>';}
+
+/* ── 공통 전이 ── */
+const T={
+ /* 시나리오 ① */
+ enter(){mark(2);$("#pPCv").textContent="2행";
+  log("<span class='sys'>wait(&status)</span> — OS 진입, 자식 목록 확인");
+  cap("wait 진입 — OS가 먼저 묻습니다: 끝난 자식이 있는가? 다음 단계");
+  verdict("wait()의 첫 동작은 기다림이 아니라 <b>확인</b> — 이미 좀비가 된 자식이 있으면 잠들 필요가 없습니다(시나리오 ②). 지금은 자식이 한창 일하는 중.");},
+ sleep(){$("#pStv").textContent="잠듦 (S)";$("#pSt").classList.add("hl");
+  $("#pP").classList.remove("on");$("#pP").classList.add("asleep");
+  tstat("tpS","stS","S");
+  $("#wq").innerHTML='<span class="who">부모 1000 — 「자식 종료」 대기</span>';pulse("wq");
+  log("끝난 자식 없음 → 부모를 <b>대기 큐</b>에 등록, CPU 반납 → STAT <span class='z'>S</span>");
+  lamp("k1",true);
+  cap("부모 잠듦 — CPU를 전혀 쓰지 않습니다. 다음: 자식의 exit");
+  verdict("<b>CPU 관점.</b> 부모는 「끝났나? 끝났나?」 바쁘게 확인하지 않습니다 — 그러면 CPU 낭비. 대기 큐에 이름을 올리고 <b>잠듭니다(S).</b> 생명주기에서 본 '대부분의 프로세스가 S인 이유'가 바로 이런 기다림들.");},
+ cexit(){mark(2,"부모 S");
+  $("#cStv").textContent="exit(7) 실행";
+  log("<span class='p'>자식(1234)</span> 일 완료 → <span class='sys'>exit(7)</span>");
+  cap("자식이 종료값 7과 함께 퇴장합니다. Memory는 어떻게 될까요? 다음 단계");
+  verdict("자식이 성적표(종료값 7)를 들고 퇴장하려 합니다 — 이 숫자를 <b>어디에 보관해야</b> 부모가 나중에 받을 수 있을까요?");},
+ zombie(){$("#cMem").classList.add("demol");$("#cMemv").textContent="자식의 작업 공간";
+  $("#cStv").textContent="좀비 (Z)";
+  tstat("tcS","stZ","Z");$("#tcE").textContent="7";
+  $("#rowC").classList.add("zrow");pulse("rowC");
+  log("Memory 반납 → 프로세스 표의 한 줄에 <span class='z'>Z + 종료값 7</span>만 남음");
+  lamp("k2",true);
+  cap("좀비 탄생 — Memory는 사라지고 표의 한 줄만 남았습니다. 다음: OS가 부모를 깨움");
+  verdict("<b>Memory 관점.</b> 좀비의 실체가 이것입니다 — Code·Data·Stack은 즉시 반납되고, <b>프로세스 표의 한 줄(PID·종료값)</b>만 남습니다. 이 한 줄이 부모에게 전할 성적표 보관함.");},
+ wake(){$("#wq").innerHTML="(비어 있음)";
+  $("#pStv").textContent="준비 (R)";$("#pSt").classList.remove("hl");
+  $("#pP").classList.remove("asleep");
+  tstat("tpS","stR","R");
+  log("<span class='sys'>OS</span> — 「자식 종료」 이벤트 발생 → 대기 큐에서 부모 발견 → <b>깨움</b> (S→R)");
+  lamp("k3",true);
+  cap("깨움 — 부모가 준비 줄(R)로 돌아왔습니다. 다음: wait의 return과 회수");
+  verdict("<b>깨우는 것은 OS.</b> 자식의 exit()가 이벤트가 되어, OS가 대기 큐를 뒤져 이 이벤트를 기다리던 부모를 찾아 깨웁니다 — 잠든 자는 스스로 못 일어나고, 반드시 이벤트가 깨웁니다.");},
+ reap(){$("#pStv").textContent="실행 중";$("#pP").classList.add("on");
+  $("#pVarv").textContent="status = 7";$("#pVar").classList.add ? null:null;
+  $("#pVar").style.borderColor="var(--good)";pulse("pVar");
+  $("#rowC").classList.remove("zrow");$("#rowC").classList.add("gone");
+  tstat("tcS","stZ","—");
+  log("wait return — 종료값 7을 <b>부모의 status 변수</b>에 기록");
+  log("<span class='p'>회수(reap)</span> — 좀비의 표 한 줄 삭제 → PID 1234 완전 소멸");
+  lamp("k4",true);
+  cap("회수 완료 — 성적표는 부모의 Memory로, 표의 자리는 반납. 다음: 3행");
+  verdict("<b>회수(reap).</b> wait()의 마지막 일 두 가지 — ① 표에 보관된 종료값을 <b>부모의 Memory(status 변수)</b>로 옮기고, ② 좀비의 표 한 줄을 삭제해 PID 자리를 되돌려 줍니다. 이제야 완전한 소멸.");},
+ done(){mark(3);$("#pPCv").textContent="3행";
+  log("<span class='p'>부모(1000)</span> 3행 — print(status) → <b>7</b> 출력");
+  cap("한 사이클 완성 — 잠듦 → 깨움 → 회수. 다른 시나리오로 대조해 보세요");
+  verdict("<span class='good'>완성.</span> wait() = <b>확인 → (없으면) 잠듦 → 이벤트로 깨어남 → 성적표 회수 + 자리 반납.</b> 생명주기 애니메이션의 Z가 사라지던 순간, execve 시나리오 ②의 wait() 한 줄의 안쪽이 바로 이것이었습니다.");},
+ /* 시나리오 ② */
+ preZ(){mark(1);
+  $("#cStv").textContent="좀비 (Z)";$("#cMem").classList.add("demol");
+  tstat("tcS","stZ","Z");$("#tcE").textContent="0";$("#rowC").classList.add("zrow");
+  log("<span class='p'>자식(1234)</span>는 부모보다 먼저 <span class='sys'>exit(0)</span> — 이미 좀비");
+  cap("전제 — 자식이 이미 좀비 상태입니다. wait()를 부르면? 예측 후 다음 단계");
+  verdict("이번엔 순서가 반대 — 자식이 먼저 끝나 <b>성적표가 이미 표에 보관</b>되어 있습니다. 그럼 wait()는 잠들까요?");},
+ enter2(){mark(2);$("#pPCv").textContent="2행";
+  log("<span class='sys'>wait(&status)</span> — 자식 목록 확인 → <b>좀비 발견!</b>");
+  cap("확인 단계에서 좀비를 찾았습니다 — 잠들 이유가 없습니다. 다음: 즉시 회수");
+  verdict("확인 결과 좀비가 있음 — <b>대기 큐를 거치지 않고</b> 곧장 회수로 갑니다. 부모의 STAT은 S를 찍지 않습니다.");},
+ reap2(){$("#pVarv").textContent="status = 0";$("#pVar").style.borderColor="var(--good)";pulse("pVar");
+  $("#rowC").classList.remove("zrow");$("#rowC").classList.add("gone");tstat("tcS","stZ","—");
+  $("#wq").innerHTML="(비어 있음 — 이번엔 쓰이지 않았다)";
+  log("즉시 return — 종료값 0 전달, 표 한 줄 삭제 <span class='p'>(잠듦 없음)</span>");
+  lamp("k2",true);lamp("k4",true);
+  cap("즉시 반환 — ①과의 차이는 「잠듦 단계의 유무」뿐. 다음: 3행");
+  verdict("<span class='good'>대조 완성.</span> wait()가 잠드는 것은 <b>기다릴 것이 있을 때뿐</b> — 성적표가 이미 있으면 받고 바로 돌아옵니다. ①과 ②의 차이는 대기 큐를 거쳤는가 하나.");},
+ done2(){mark(3);$("#pPCv").textContent="3행";
+  log("<span class='p'>부모(1000)</span> print(status) → 0");
+  cap("시나리오 ② 완료 — ③에서는 부모가 먼저 죽습니다");
+  verdict("정리 — wait()는 「무조건 잠드는 함수」가 아니라 <b>「성적표를 받을 때까지만 잠드는 함수」</b>입니다.");},
+ /* 시나리오 ③ */
+ pexit(){mark(2);$("#pPCv").textContent="2행";
+  $("#pStv").textContent="종료됨";$("#pP").style.opacity=".3";
+  tstat("tpS","stZ","—");document.querySelector("#rowP").classList.add("gone");
+  log("<span class='warn'>부모(1000)가 wait 없이 exit(0)</span> — 자식(1234)은 아직 실행 중");
+  cap("부모가 먼저 퇴장 — 자식은 고아가 됐습니다. 누가 거두죠? 다음 단계");
+  verdict("<span class='bad'>고아 발생.</span> 자식이 나중에 exit()하면 성적표를 받을 부모가 없습니다 — 좀비가 영원히 남을 위기. OS의 해법은?");},
+ adopt(){$("#cppid").textContent="1";pulse("rowC");
+  log("<span class='sys'>OS</span> — 고아 입양: 자식의 PPID를 1000 → <b>1 (systemd)</b>로 변경");
+  cap("입양 — 자식의 부모 칸(PPID)이 systemd(1)로 바뀌었습니다. 다음: 자식 종료");
+  verdict("<b>입양.</b> Linux는 부모 잃은 프로세스를 <b>PID 1(systemd)</b>이 거두게 합니다 — 프로세스 표의 PPID 칸이 실제로 1로 바뀝니다. 생명주기 표 맨 윗줄의 systemd가 바로 이 최후의 보호자.");},
+ cexit3(){$("#cStv").textContent="좀비 (Z)";$("#cMem").classList.add("demol");
+  tstat("tcS","stZ","Z");$("#tcE").textContent="0";$("#rowC").classList.add("zrow");
+  log("<span class='p'>자식(1234)</span> exit(0) → Z — 이제 새 부모가 거둘 차례");
+  lamp("k2",true);
+  cap("자식이 좀비가 됐지만 — 이번엔 거둘 부모가 있습니다. 다음: 대리 회수");
+  verdict("자식은 평소처럼 좀비가 됩니다 — 다른 점은 단 하나, 성적표를 받을 사람이 <b>systemd</b>라는 것.");},
+ reap3(){$("#rowC").classList.remove("zrow");$("#rowC").classList.add("gone");tstat("tcS","stZ","—");
+  log("<span class='sys'>systemd(1): wait()</span> — 대리 회수 → 표 정리 완료");
+  lamp("k3",true);lamp("k4",true);
+  cap("systemd가 대신 wait() — 표가 깨끗해졌습니다");
+  verdict("<span class='good'>안전망 완성.</span> systemd는 입양한 자식들을 위해 <b>계속 wait()를 돌리는 프로세스</b>이기도 합니다 — 그래서 부모가 실수해도 시스템에 좀비가 영원히 쌓이지는 않습니다. 단, 부모가 <b>살아 있으면서</b> wait를 안 하는 좀비(생명주기 시나리오 ③)는 예외 — 그건 부모의 책임.");}
+};
+
+/* ── 시나리오 ── */
+const SC=[
+ ["자식이 아직 일하는 중",["enter","sleep","cexit","zombie","wake","reap","done"],0],
+ ["자식이 이미 좀비",["preZ","enter2","reap2","done2"],1],
+ ["부모가 먼저 죽으면 (고아)",["pexit","adopt","cexit3","reap3"],2]];
+function loadSc(i){reset(false);renderCode(SC[i][2]);
+ queue=[...SC[i][1]];
+ log("<span class='p'>── 시나리오 "+(i+1)+" · "+SC[i][0]+" ──</span>");
+ cap("시나리오 「"+SC[i][0]+"」 — 「다음 단계 ▶」로 진행 ("+queue.length+"단계)");
+ if(i===0)mark(1);}
+function step(){
+ if(!queue.length){
+  if(!document.querySelector(".code .ln")){loadSc(0);return;}
+  cap("시나리오가 끝났습니다 — 다른 시나리오 또는 「처음부터」");return;}
+ T[queue.shift()]();}
+function reset(clearLog){
+ queue=[];renderCode(0);mark(1);
+ $("#pP").classList.add("on");$("#pP").classList.remove("asleep");$("#pP").style.opacity="";
+ $("#pPCv").textContent="1행";$("#pStv").textContent="실행 중";
+ $("#pSt").classList.remove("hl");
+ $("#pVarv").textContent="status = —";$("#pVar").style.borderColor="";
+ $("#cStv").textContent="실행 중 (일하는 중)";
+ $("#cMem").classList.remove("demol");$("#cMemv").textContent="자식의 작업 공간";
+ tstat("tpS","stR","R");tstat("tcS","stR","R");
+ $("#tcE").textContent="—";$("#cppid").textContent="1000";
+ $("#rowC").classList.remove("zrow","gone");$("#rowP").classList.remove("gone");
+ $("#wq").innerHTML="(비어 있음)";
+ ["k1","k2","k3","k4"].forEach(id=>lamp(id,false));
+ if(clearLog!==false)$("#log").innerHTML="대기 중 — wait()의 안쪽이 여기에 기록됩니다";
+ cap("「다음 단계」로 기본 시나리오를 시작하세요 — 다음에 벌어질 일을 먼저 예측!");
+ verdict("예측 질문 — 자식이 아직 일하는 중일 때 wait()를 부르면, 부모는 <b>바쁘게 확인을 반복</b>할까요, <b>잠들</b>까요? 답을 정한 뒤 시작하세요.");}
+$("#btnStep").addEventListener("click",step);
+$("#btnReset").addEventListener("click",()=>reset(true));
+document.querySelectorAll("[data-sc]").forEach(c=>c.addEventListener("click",()=>loadSc(+c.dataset.sc)));
+reset(true);
+})();
+</script>
+</body>
+</html>

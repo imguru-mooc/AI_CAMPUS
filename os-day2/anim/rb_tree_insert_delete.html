@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>레드블랙 트리 해부 — 삽입과 삭제, 회전과 색의 규칙</title>
+<style>
+:root{
+  --bg:#0f141d;--panel:#161d2a;--panel2:#1b2434;--line:#26314a;
+  --ink:#dce6f5;--dim:#7d8ba3;--amber:#ffd166;--warnc:#ff9f43;
+  --hot:#ff5d73;--accent:#4cc9f0;--good:#7ee787;--purple:#c3a6ff;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);min-height:100vh;padding:24px 16px 60px;
+ font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+.wrap{max-width:1030px;margin:0 auto}
+header{margin-bottom:18px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+h1{font-size:clamp(20px,4vw,27px);font-weight:800;margin-top:6px}
+h1 b{font-family:var(--mono);color:var(--amber)}
+.sub{color:var(--dim);font-size:14px;margin-top:6px;line-height:1.6}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.run{padding:11px 22px;border:none;border-radius:8px;background:var(--amber);color:#2a2005;
+ font-weight:800;font-size:15px;cursor:pointer;font-family:inherit}
+.run:disabled{opacity:.4;cursor:default}
+.run.sec{background:var(--panel2);color:var(--ink);border:1px solid var(--line);font-size:13.5px}
+.run:focus-visible,.chip:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.presets{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.presets .cap{width:100%;font-size:11px;color:var(--dim);letter-spacing:.06em}
+.chip{font-family:var(--mono);font-size:12.5px;padding:7px 12px;border-radius:999px;
+ background:var(--panel2);color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.chip:hover:not(:disabled){border-color:var(--accent)}
+.chip:disabled{opacity:.4;cursor:default}
+.chip b{color:var(--amber);font-weight:700}
+input[type=number]{width:84px;padding:8px 10px;font-family:var(--mono);font-size:14px;
+ background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px}
+.caption{background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+ padding:10px 14px;font-size:13.5px;line-height:1.6;margin-top:12px;min-height:44px}
+.caption b{color:var(--amber)}
+/* 트리 */
+.treeP{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px;overflow-x:auto}
+.treeP .t{font-size:11px;color:var(--dim);letter-spacing:.06em;margin-bottom:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.treeP .t b{color:var(--ink)}
+.rulecheck{font-family:var(--mono);font-size:11px}
+.rulecheck .ok{color:var(--good)}.rulecheck .no{color:var(--hot);font-weight:800}
+.treewrap{display:flex;justify-content:center;min-height:120px}
+.nchip{font-family:var(--mono);font-size:13px;font-weight:800;width:44px;height:44px;border-radius:50%;
+ display:flex;align-items:center;justify-content:center;transition:all .3s;position:absolute;z-index:1}
+.nchip.redN{background:#4a1420;border:2px solid #ff5d73;color:#ffb3c0}
+.nchip.blackN{background:#131a28;border:2px solid #5a6788;color:var(--ink)}
+.nchip.hlCur{box-shadow:0 0 0 3px var(--good),0 0 16px rgba(126,231,135,.5)}
+.nchip.hlUnc{box-shadow:0 0 0 3px var(--warnc),0 0 14px rgba(255,159,67,.5)}
+.nchip.hlRot{animation:rot .6s ease}
+.nchip.hlRec{animation:rec .6s ease}
+.nchip.hlNew{animation:pop .45s ease}
+@keyframes rot{30%{transform:rotate(-12deg) scale(1.12)}60%{transform:rotate(8deg)}}
+@keyframes rec{30%{box-shadow:0 0 0 4px var(--purple)}70%{box-shadow:0 0 0 2px var(--purple)}}
+@keyframes pop{from{transform:scale(.3);opacity:0}}
+/* 로그·카드·판정 */
+.term{background:#0a0f18;border:1px solid var(--line);border-radius:10px;padding:12px 14px;
+ font-family:var(--mono);font-size:12.5px;line-height:1.75;height:168px;overflow-y:auto;margin-bottom:14px}
+.term .p{color:var(--good)}.term .sys{color:var(--accent)}.term .warn{color:var(--warnc)}
+.term .err{color:var(--hot)}.term .z{color:var(--purple)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.card .top{display:flex;justify-content:space-between;align-items:center}
+.card .name{font-family:var(--mono);font-weight:800;font-size:12.5px}
+.card .lamp{width:11px;height:11px;border-radius:50%;background:#2a3550}
+.card.set{border-color:var(--accent)}.card.set .lamp{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+.card .why{font-size:12px;line-height:1.5;color:var(--ink);margin-top:6px;min-height:48px}
+.verdict{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+ padding:13px 15px;font-size:13.5px;line-height:1.7}
+.verdict b{color:var(--amber)}
+.good{color:var(--good);font-weight:800}.bad{color:var(--hot);font-weight:800}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<div class="eyebrow">OS · 자료구조 · CFS의 심장 · Red-Black Tree</div>
+<h1>레드블랙 트리 해부 — <b>삽입과 삭제, 회전과 색의 규칙</b></h1>
+<p class="sub">CFS에서 「맨 왼쪽이 다음 주자」였던 그 나무입니다. 아무렇게나 꽂아도 한쪽으로 기울지 않는 비밀 —
+노드마다 <b>빨강/검정</b> 색을 달고, 규칙이 깨질 때마다 <b>색 바꾸기</b>와 <b>회전</b>으로 균형을 되찾습니다.
+삽입은 「빨강-빨강 충돌」을, 삭제는 「검정 부족(이중 흑)」을 수선하는 이야기입니다.</p>
+</header>
+
+<section class="panel">
+<div class="row">
+<button class="run" id="btnStep">다음 단계 ▶</button>
+<button class="run sec" id="btnReset">전체 초기화</button>
+<span class="sub" style="margin:0" id="prog"></span>
+</div>
+<div class="presets"><span class="cap">시나리오 — 예상 결과가 함께 표시됩니다</span>
+<button class="chip" data-sc="0">① 삽입의 4가지 사건 → <b>충돌은 색 아니면 회전으로</b></button>
+<button class="chip" data-sc="1">② 삭제 — 빨강은 공짜 → <b>검정이 빠지면 이중 흑</b></button>
+<button class="chip" data-sc="2">③ 삭제 심화 → <b>형제 빨강 · 위로 전달</b></button>
+</div>
+<div class="presets"><span class="cap">자유 모드 — 아무 값이나 (1~99), 과정이 자동 재생됩니다</span>
+<input type="number" id="fv" min="1" max="99" value="42" aria-label="값">
+<button class="chip fm" id="fmIns">삽입</button>
+<button class="chip fm" id="fmDel">삭제</button>
+<button class="chip fm" id="fmRand">무작위 5개 삽입</button>
+</div>
+<div class="caption" id="cap">시나리오 ①부터 — 각 단계에서 다음에 벌어질 일을 먼저 예측하세요!</div>
+</section>
+
+<section class="treeP">
+<div class="t"><span><b>트리</b> — ● 빨강 / ● 검정 · <span style="color:var(--good)">초록 링 = 현재</span> · <span style="color:var(--warnc)">주황 링 = 삼촌/형제</span> · 흔들림 = 회전 · 보라 번쩍 = 색 바꾸기</span>
+<span class="rulecheck" id="rc"></span></div>
+<div class="treewrap" id="tree"></div>
+</section>
+
+<div class="term" id="log" aria-live="polite">대기 중 — 비교·회전·색 바꾸기가 여기에 기록됩니다</div>
+
+<div class="cards">
+<div class="card" id="k1"><div class="top"><span class="name">규칙① 색과 루트</span><span class="lamp"></span></div>
+<div class="why">모든 노드는 빨강 아니면 검정 — 그리고 루트는 항상 검정.</div></div>
+<div class="card" id="k2"><div class="top"><span class="name">규칙② 빨강-빨강 금지</span><span class="lamp"></span></div>
+<div class="why">빨간 노드의 자식은 빨강일 수 없다 — 삽입 수선은 전부 이 위반을 고치는 일.</div></div>
+<div class="card" id="k3"><div class="top"><span class="name">규칙③ 검정 수 동일</span><span class="lamp"></span></div>
+<div class="why">루트에서 모든 잎까지, 지나는 검정 수가 같다 — 삭제 수선은 전부 이 부족을 메우는 일.</div></div>
+<div class="card" id="k4"><div class="top"><span class="name">도구: 색 vs 회전</span><span class="lamp"></span></div>
+<div class="why">색만 바꾸면 싸지만 문제를 위로 미루고, 회전은 그 자리에서 끝낸다 — 둘의 조합이 O(log n) 균형.</div></div>
+</div>
+
+<div class="verdict" id="v">예측 질문 — 정렬된 값을 <b>순서대로</b>(10, 20, 30, …) 꽂으면 보통의 이진 탐색 트리는 한 줄로 기울어 리스트가 됩니다. RB 트리는 <b>무엇을 감시해서</b> 이를 막을까요?</div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const WAIT=reduced?0:900;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ══ 검증 완료된 RB 엔진 (CLRS · 스냅샷 기록) ══ */
+function makeTree(){
+ const NIL={red:false,v:null};NIL.l=NIL;NIL.r=NIL;NIL.p=NIL;
+ let root=NIL, ev=[];
+ const snap=(msg,hl)=>{ev.push({msg,hl:hl||{},tree:ser(root)})};
+ function ser(n){return n===NIL?null:{v:n.v,red:n.red,l:ser(n.l),r:ser(n.r)};}
+ function rotL(x){const y=x.r;x.r=y.l;if(y.l!==NIL)y.l.p=x;
+  y.p=x.p;if(x.p===NIL)root=y;else if(x===x.p.l)x.p.l=y;else x.p.r=y;
+  y.l=x;x.p=y;}
+ function rotR(x){const y=x.l;x.l=y.r;if(y.r!==NIL)y.r.p=x;
+  y.p=x.p;if(x.p===NIL)root=y;else if(x===x.p.r)x.p.r=y;else x.p.l=y;
+  y.r=x;x.p=y;}
+ function insert(v){
+  ev=[];
+  if(find(v)!==NIL){snap(`${v}는 이미 있습니다`,{});return ev;}
+  let y=NIL,x=root;
+  while(x!==NIL){y=x;snap(`${v}의 자리 찾기 — ${x.v}와 비교 → ${v<x.v?"왼쪽":"오른쪽"}으로`,{cur:x.v});x=v<x.v?x.l:x.r;}
+  const z={v,red:true,l:NIL,r:NIL,p:y};
+  if(y===NIL)root=z;else if(v<y.v)y.l=z;else y.r=z;
+  snap(`삽입 — 새 노드 ${v}는 <b>빨강</b>으로 (검정으로 넣으면 규칙③ 검정 수가 곧장 깨지므로)`,{cur:v,newN:v});
+  insFix(z);
+  root.red=false;
+  snap(`완료 — 루트는 항상 검정 (규칙①)`,{done:1});
+  return ev;}
+ function insFix(z){
+  while(z.p.red){
+   const g=z.p.p, left=(z.p===g.l), u=left?g.r:g.l;
+   if(u.red){
+    snap(`<b>빨강-빨강 충돌!</b> (${z.v}·${z.p.v}) — 삼촌 ${u.v}도 빨강 → <b>Case: 색 바꾸기</b>`,{cur:z.v,unc:u.v});
+    z.p.red=false;u.red=false;g.red=true;
+    snap(`부모·삼촌 → 검정, 조부모 ${g.v} → 빨강 — 이 삼각형의 검정 수는 그대로. 충돌 검사는 조부모로 <b>위로</b>`,{cur:g.v,rec:[z.p.v,u.v,g.v]});
+    z=g;}
+   else{
+    if(left&&z===z.p.r){snap(`빨강-빨강 충돌 — 삼촌 검정 · <b>꺾인 모양</b> → 먼저 부모 ${z.p.v}를 좌회전해 일자로`,{cur:z.v,rot:[z.p.v]});
+     z=z.p;rotL(z);snap(`일자가 됨 — 이제 마무리 회전`,{cur:z.v});}
+    else if(!left&&z===z.p.l){snap(`빨강-빨강 충돌 — 삼촌 검정 · <b>꺾인 모양</b> → 먼저 부모 ${z.p.v}를 우회전해 일자로`,{cur:z.v,rot:[z.p.v]});
+     z=z.p;rotR(z);snap(`일자가 됨 — 이제 마무리 회전`,{cur:z.v});}
+    snap(`삼촌 검정 · <b>일자 모양</b> → 조부모 ${g.v}를 ${left?"우":"좌"}회전 + 부모↔조부모 색 교환 — <b>Case: 회전</b>`,{rot:[g.v,z.p.v]});
+    z.p.red=false;g.red=true;left?rotR(g):rotL(g);
+    snap(`회전 완료 — 어느 경로의 검정 수도 변하지 않았고(규칙③ 유지), 충돌은 <b>그 자리에서 해소</b>`,{done:1});}}}
+ function mini(n){while(n.l!==NIL)n=n.l;return n;}
+ function transplant(u,w){if(u.p===NIL)root=w;else if(u===u.p.l)u.p.l=w;else u.p.r=w;w.p=u.p;}
+ function find(v){let x=root;while(x!==NIL&&x.v!==v)x=v<x.v?x.l:x.r;return x;}
+ function del(v){
+  ev=[];
+  const z=find(v);
+  if(z===NIL){snap(`${v} 없음 — 먼저 삽입하세요`,{});return ev;}
+  snap(`삭제 대상 ${v} 찾음 — 색은 <b>${z.red?"빨강":"검정"}</b>`,{cur:v});
+  let y=z,yRed=y.red,x;
+  if(z.l===NIL){x=z.r;
+   snap(z.red?`${v}는 <b>빨강</b> — 빨강은 검정 수(규칙③)에 안 세므로 <b>빼도 공짜.</b> 그냥 제거`
+    :`${v}는 <b>검정</b> — 빼면 이 경로만 검정이 1 부족 → 메운 자리가 <b>이중 흑(⬛⬛)</b>을 짊어짐`,{cur:v});
+   transplant(z,z.r);}
+  else if(z.r===NIL){x=z.l;
+   snap(`${v}는 자식 하나 — 자식 ${z.l.v}가 자리를 이어받음`,{cur:v});
+   transplant(z,z.l);}
+  else{y=mini(z.r);yRed=y.red;x=y.r;
+   snap(`${v}는 자식 둘 — 오른쪽 부분의 최솟값(후계자) <b>${y.v}</b>가 자리를 이어받음`,{cur:v,unc:y.v});
+   if(y.p===z){x.p=y;}
+   else{transplant(y,y.r);y.r=z.r;y.r.p=y;}
+   transplant(z,y);y.l=z.l;y.l.p=y;y.red=z.red;
+   snap(`${y.v}가 ${v}의 자리에 (색은 그 자리 것을 승계) — 문제는 <b>${y.v}가 떠난 자리</b>`,{cur:y.v});}
+  if(!yRed){snap(`떠난/지운 것이 <b>검정</b> — 그 경로 검정 1 부족: <b>이중 흑 수선 시작</b> (규칙③ 위반)`,{});delFix(x);}
+  else snap(`빨강이 빠졌으므로 수선 불필요 — 규칙 전부 무사`,{done:1});
+  root.red=false;
+  snap(`완료 — 루트 검정 확인`,{done:1});
+  return ev;}
+ function delFix(x){
+  while(x!==root&&!x.red){
+   const left=(x===x.p.l);
+   let w=left?x.p.r:x.p.l;
+   if(w.red){
+    snap(`형제 ${w.v}가 <b>빨강</b> → 부모를 ${left?"좌":"우"}회전해 <b>검정 형제</b>를 데려옴 — <b>Case: 형제 빨강</b>`,{sib:w.v,rot:[x.p.v]});
+    w.red=false;x.p.red=true;left?rotL(x.p):rotR(x.p);w=left?x.p.r:x.p.l;
+    snap(`이제 형제는 검정 ${w.v} — 다음 Case로 이어집니다`,{sib:w.v});}
+   const near=left?w.l:w.r, far=left?w.r:w.l;
+   if(!near.red&&!far.red){
+    snap(`형제 ${w.v} 검정 + 자식 둘 다 검정 → <b>형제를 빨강으로</b> 바꿔 부족분을 부모에게 올림 — <b>Case: 위로 전달</b>`,{sib:w.v,rec:[w.v]});
+    w.red=true;x=x.p;
+    snap(x.red?`부모 ${x.v}가 빨강 — 검정으로 바꾸며 부족분 <b>흡수, 수선 끝</b>`:`부모 ${x.v}도 검정 — 이중 흑이 한 층 위로 전파`,{cur:x.v});}
+   else{
+    if(!far.red){
+     snap(`형제의 <b>가까운 자식만 빨강</b> → 형제 ${w.v}를 ${left?"우":"좌"}회전해 먼 쪽을 빨강으로 — <b>Case: 방향 맞추기</b>`,{sib:w.v,rot:[w.v]});
+     near.red=false;w.red=true;left?rotR(w):rotL(w);w=left?x.p.r:x.p.l;
+     snap(`먼 자식이 빨강이 됨 — 마무리 Case로`,{sib:w.v});}
+    snap(`형제 검정 + <b>먼 자식 빨강</b> → 부모 ${left?"좌":"우"}회전 + 색 정리 = 부족분 <b>그 자리에서 완전 해결</b> — <b>Case: 회전 해결</b>`,{sib:w.v,rot:[x.p.v]});
+    w.red=x.p.red;x.p.red=false;(left?w.r:w.l).red=false;left?rotL(x.p):rotR(x.p);x=root;}}
+  if(x.red&&x!==root)snap(`빨간 노드 ${x.v}가 부족분을 흡수 — 검정으로`,{cur:x.v});
+  x.red=false;}
+ function values(){const out=[];(function w(n){if(n===NIL)return;w(n.l);out.push(n.v);w(n.r);})(root);return out;}
+ return {insert,del,values,get snapRoot(){return ser(root)}};
+}
+
+/* ══ UI ══ */
+const T=makeTree();
+let queue=[],busy=false,sc=null,opIdx=0,ops=[];
+
+function log(h){const o=$("#log");
+ if(o.textContent.startsWith("대기 중"))o.innerHTML="";
+ o.innerHTML+=h+"<br>";o.scrollTop=o.scrollHeight;}
+function cap(h){$("#cap").innerHTML=h;}
+function verdict(h){$("#v").innerHTML=h;}
+function lamp(id){$("#"+id).classList.add("set");}
+function prog(t){$("#prog").textContent=t;}
+
+function checkSnap(t){ // 스냅샷 규칙 검사
+ let redred=false, bhOk=true;
+ function bh(n){if(!n)return 1;
+  if(n.red&&((n.l&&n.l.red)||(n.r&&n.r.red)))redred=true;
+  const a=bh(n.l),b=bh(n.r);
+  if(a!==b)bhOk=false;
+  return a+(n.red?0:1);}
+ bh(t);
+ const rootOk=!t||!t.red;
+ return {rootOk,redOk:!redred,bhOk};}
+
+function render(snapTree,hl){
+ hl=hl||{};
+ const rc=checkSnap(snapTree);
+ $("#rc").innerHTML=
+  `루트 검정 <span class="${rc.rootOk?"ok":"no"}">${rc.rootOk?"✓":"✗"}</span> · `+
+  `빨강-빨강 없음 <span class="${rc.redOk?"ok":"no"}">${rc.redOk?"✓ (수선 중이면 ✗)":"✗ 수선 중"}</span> · `+
+  `검정 수 동일 <span class="${rc.bhOk?"ok":"no"}">${rc.bhOk?"✓":"✗ 수선 중"}</span>`;
+ const w=$("#tree");w.innerHTML="";
+ if(!snapTree){w.innerHTML="<span style='font-family:var(--mono);font-size:12px;color:#3a445e'>(빈 트리)</span>";return;}
+ // 중위 순회로 x, 깊이로 y — 자리표(고스트) 없이 좌/우가 구분됨
+ const NW=44,XG=56,YG=66,PAD=10;
+ let ix=0,maxD=0;const nodes=[];
+ (function walk(n,d,par){if(!n)return;
+  walk(n.l,d+1,n);
+  n._x=ix++;n._d=d;if(d>maxD)maxD=d;nodes.push({n,par});
+  walk(n.r,d+1,n);})(snapTree,0,null);
+ const W=ix*XG+PAD*2, H=(maxD+1)*YG-YG+NW+PAD;
+ const box=document.createElement("div");
+ box.style.cssText=`position:relative;width:${W}px;height:${H}px`;
+ const cx=n=>PAD+n._x*XG+NW/2, cy=n=>n._d*YG+NW/2;
+ const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+ svg.setAttribute("width",W);svg.setAttribute("height",H);
+ svg.style.cssText="position:absolute;inset:0;z-index:0";
+ nodes.forEach(({n,par})=>{if(!par)return;
+  const ln=document.createElementNS(svg.namespaceURI,"line");
+  ln.setAttribute("x1",cx(par));ln.setAttribute("y1",cy(par));
+  ln.setAttribute("x2",cx(n));ln.setAttribute("y2",cy(n));
+  ln.setAttribute("stroke","#3a4a6e");ln.setAttribute("stroke-width","1.6");
+  svg.appendChild(ln);});
+ box.appendChild(svg);
+ nodes.forEach(({n})=>{
+  const c=document.createElement("span");
+  c.className="nchip "+(n.red?"redN":"blackN");
+  if(hl.cur===n.v)c.classList.add("hlCur");
+  if(hl.unc===n.v||hl.sib===n.v)c.classList.add("hlUnc");
+  if(!reduced){
+   if(hl.rot&&hl.rot.includes(n.v))c.classList.add("hlRot");
+   if(hl.rec&&hl.rec.includes(n.v))c.classList.add("hlRec");
+   if(hl.newN===n.v)c.classList.add("hlNew");}
+  c.style.left=(PAD+n._x*XG)+"px";
+  c.style.top=(n._d*YG)+"px";
+  c.textContent=n.v;
+  box.appendChild(c);});
+ w.appendChild(box);}
+
+function pushOp(kind,v,intro,vd){ops.push({kind,v,intro,vd});}
+function flatten(){ // ops → queue of steps
+ queue=[];
+ ops.forEach(op=>{
+  queue.push({type:"intro",op});
+  const ev=op.kind==="ins"?T.insert(op.v):T.del(op.v);
+  ev.forEach(e=>queue.push({type:"ev",e}));});
+ ops=[];}
+
+async function step(){
+ if(busy)return;
+ if(!queue.length){
+  if(sc===null){loadSc(0);return;}
+  prog("시나리오 종료 — 자유 모드로 아무 값이나 실험하세요 (자동 재생)");
+  return;}
+ const st=queue.shift();
+ if(st.type==="intro"){
+  log(`<span class='p'>── ${st.op.kind==="ins"?"insert":"delete"}(${st.op.v}) ──</span>`);
+  cap(st.op.intro);
+  if(st.op.vd)verdict(st.op.vd);}
+ else{
+  cap(st.e.msg);
+  log("&nbsp;&nbsp;"+st.e.msg);
+  render(st.e.tree,st.e.hl);}
+ prog(queue.length?("남은 단계 "+queue.length):"이 시나리오의 마지막 단계입니다");}
+
+/* ── 시나리오 ── */
+function fresh(){ // 트리 비우기: 새 엔진으로 교체
+ const nt=makeTree();
+ Object.assign(T,{insert:nt.insert,del:nt.del,values:nt.values});
+ Object.defineProperty(T,"snapRoot",{get(){return nt.snapRoot},configurable:true});}
+function loadSc(i){
+ if(busy)return;
+ sc=i;fresh();ops=[];queue=[];
+ $("#log").innerHTML="";
+ log("<span class='p'>── 시나리오 "+(i+1)+" ──</span>");
+ if(i===0){
+  pushOp("ins",10,"10 삽입 — 빈 트리의 첫 노드입니다. 무슨 색으로 들어가 어떻게 끝날까요?",
+   "<b>사건 0 — 뿌리.</b> 새 노드는 항상 <b>빨강</b>으로 태어납니다(규칙③을 안 건드리려고). 루트가 되는 순간만 검정으로 눌러 줍니다(규칙①).");
+  pushOp("ins",20,"20 삽입 — 부모(10)는 검정입니다. 수선이 필요할까요?",
+   "<b>사건 1 — 무사 통과.</b> 부모가 검정이면 빨강 자식은 아무 규칙도 안 깨뜨립니다 — 삽입의 절반 이상은 이렇게 공짜로 끝납니다.");
+  pushOp("ins",30,"30 삽입 — 20(빨강) 밑으로 들어갑니다. 빨강-빨강! 삼촌 자리를 보세요",
+   "<b>사건 2 — 일자 회전.</b> 10-20-30이 한 줄로 기우는 바로 그 순간 — 삼촌이 검정(없음)이고 일자 모양이면 <b>조부모를 회전</b>해 가운데(20)를 위로 올립니다. 정렬 순서 삽입에도 리스트가 안 되는 이유가 이 한 수입니다.");
+  pushOp("ins",15,"15 삽입 — 10(빨강) 밑입니다. 이번엔 삼촌(30)의 색을 먼저 확인하세요",
+   "<b>사건 3 — 색 바꾸기.</b> 삼촌까지 빨강이면 회전이 필요 없습니다 — 부모·삼촌을 검정, 조부모를 빨강으로 <b>색만 뒤집고</b>, 문제를 조부모로 올려 다시 검사합니다. 싸지만 위로 미루는 해법.");
+  pushOp("ins",13,"13 삽입 — 15(빨강) 밑, 그런데 모양이 꺾여 있습니다",
+   "<b>사건 4 — 두 번 회전.</b> 꺾인 모양(지그재그)은 한 번의 회전으로 못 폅니다 — 먼저 부모를 돌려 <b>일자로 만든 뒤</b> 조부모를 돌립니다. 이로써 삽입의 모든 경우를 다 봤습니다: <b>무사 / 색 바꾸기 / 회전 / 회전×2.</b>");}
+ else if(i===1){
+  [10,20,30,15,13].forEach(v=>T.insert(v));
+  log("전제 — ①의 결과 트리에서 시작: 20⚫ 아래 13⚫(10🔴·15🔴)와 30⚫");
+  pushOp("del",15,"15(빨간 잎)를 삭제합니다 — 규칙③(검정 수)에 영향이 있을까요?",
+   "<b>빨강은 공짜.</b> 빨강은 검정 수에 세지 않으므로 빼도 규칙③이 무사합니다 — 수선 없이 끝. 삭제가 무서워지는 건 <b>검정</b>이 빠질 때부터입니다.");
+  pushOp("del",30,"30(검정)을 삭제합니다 — 그 경로의 검정이 하나 모자라게 됩니다",
+   "<b>이중 흑의 탄생과 해결.</b> 검정이 빠진 자리는 「검정 1 부족」 딱지(⬛⬛)를 답니다. 형제의 <b>먼 자식이 빨강</b>이면 — 부모를 회전하고 그 빨강을 검정으로 바꿔 부족분을 <b>그 자리에서</b> 메웁니다. 회전 한 번의 완전 해결.");}
+ else{
+  [10,5,20,15,30,25,35].forEach(v=>T.insert(v));
+  log("전제 — 트리(5·10·15·20·25·30·35) 구성 완료: 20이 빨강, 5는 검정 잎");
+  pushOp("del",5,"5(검정 잎)를 삭제합니다 — 그런데 형제 쪽(20)이 빨강입니다. 두 단계 수선을 예측하세요",
+   "<b>연쇄 수선.</b> ① <b>형제가 빨강</b>이면 비교할 수 없으니, 부모를 회전해 <b>검정 형제를 데려옵니다</b>(문제를 바꿔치기). ② 새 형제의 자식이 둘 다 검정이면 — 형제를 빨강으로 바꿔 부족분을 <b>부모에게 올리고</b>, 부모가 빨강이라 그 자리에서 <b>흡수</b>. 회전 1 + 색 바꾸기로 끝났습니다.");}
+ flatten();
+ render(T.snapRoot,{});
+ lamp(i===0?"k2":"k3");if(i===0)lamp("k1");lamp("k4");
+ cap("시나리오 준비 완료 — 「다음 단계 ▶」로 한 걸음씩 (단계마다 예측 먼저!)");
+ prog("남은 단계 "+queue.length);
+ verdict(["예측 — 10, 20, 30을 순서대로 꽂으면 한 줄로 기울 텐데, 트리는 언제 무엇을 할까요?",
+  "예측 — 빨간 노드를 지울 때와 검정 노드를 지울 때, 어느 쪽이 문제가 될까요? 왜?",
+  "예측 — 지우려는 검정 잎의 형제가 빨강입니다. 빨강 형제와는 왜 바로 담판을 못 지을까요?"][i]);}
+
+/* ── 자유 모드 (자동 재생) ── */
+async function playOp(kind,v){
+ busy=true;lock(true);
+ if(kind==="ins"&&T.values().length>=15){log("<span class='err'>노드가 너무 많습니다(15개 제한) — 삭제 후 시도</span>");busy=false;lock(false);return;}
+ const ev=kind==="ins"?T.insert(v):T.del(v);
+ log(`<span class='p'>── ${kind==="ins"?"insert":"delete"}(${v}) · 자동 재생 ──</span>`);
+ for(const e of ev){cap(e.msg);log("&nbsp;&nbsp;"+e.msg);render(e.tree,e.hl);await sleep(WAIT);}
+ busy=false;lock(false);}
+function lock(on){$("#btnStep").disabled=on;
+ document.querySelectorAll(".chip").forEach(c=>c.disabled=on);}
+
+$("#btnStep").addEventListener("click",step);
+$("#btnReset").addEventListener("click",()=>{if(busy)return;
+ fresh();queue=[];ops=[];sc=null;
+ ["k1","k2","k3","k4"].forEach(id=>$("#"+id).classList.remove("set"));
+ $("#log").innerHTML="대기 중 — 비교·회전·색 바꾸기가 여기에 기록됩니다";
+ cap("초기화 완료 — 시나리오를 고르거나 자유 모드로 실험하세요");prog("");
+ verdict("예측 질문 — 정렬된 값을 <b>순서대로</b> 꽂으면 보통의 BST는 리스트가 됩니다. RB 트리는 <b>무엇을 감시해서</b> 이를 막을까요?");
+ render(null,{});});
+document.querySelectorAll("[data-sc]").forEach(c=>c.addEventListener("click",()=>loadSc(+c.dataset.sc)));
+$("#fmIns").addEventListener("click",()=>{if(busy)return;
+ const v=+$("#fv").value;if(v>=1&&v<=99)playOp("ins",v);});
+$("#fmDel").addEventListener("click",()=>{if(busy)return;
+ const v=+$("#fv").value;if(v>=1&&v<=99)playOp("del",v);});
+$("#fmRand").addEventListener("click",async()=>{if(busy)return;
+ for(let i=0;i<5;i++){const v=1+Math.floor(Math.random()*99);
+  if(T.values().includes(v)||T.values().length>=15)continue;
+  await playOp("ins",v);}
+ cap("무작위 삽입 완료 — 규칙 검사(트리 우측 상단)가 항상 ✓로 끝나는 것을 확인하세요. 마지막 verdict: 이 나무가 CFS에서 「맨 왼쪽 = 다음 주자」를 O(log n)으로 지탱합니다.");});
+render(null,{});
+})();
+</script>
+</body>
+</html>

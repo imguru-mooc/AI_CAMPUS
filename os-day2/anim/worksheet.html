@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>운영체제 활용 Day 2 워크시트 — 프로세스와 자원의 하루</title>
+<style>
+:root{
+  --bg:#0f141d;--panel:#161d2a;--panel2:#1b2434;--line:#26314a;
+  --ink:#dce6f5;--dim:#7d8ba3;--amber:#ffd166;--warnc:#ff9f43;
+  --hot:#ff5d73;--accent:#4cc9f0;--good:#7ee787;--purple:#c3a6ff;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);min-height:100vh;padding:22px 14px 70px;
+ font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+.wrap{max-width:900px;margin:0 auto}
+header{margin-bottom:14px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+h1{font-size:clamp(19px,4vw,26px);font-weight:800;margin-top:6px}
+h1 b{color:var(--amber)}
+.sub{color:var(--dim);font-size:13.5px;margin-top:6px;line-height:1.6}
+.notice{background:var(--panel2);border:1px dashed var(--line);border-radius:10px;
+ padding:9px 12px;font-size:12px;color:var(--dim);margin-top:10px;line-height:1.6}
+.notice b{color:var(--warnc)}
+/* 탭 */
+nav{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0}
+.tab{font-family:var(--mono);font-size:12.5px;padding:8px 13px;border-radius:9px;
+ background:var(--panel2);color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.tab:hover{border-color:var(--accent)}
+.tab.on{background:var(--amber);color:#2a2005;font-weight:800;border-color:var(--amber)}
+.tab .done{color:var(--good)}
+.tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* 세션 */
+section.sess{display:none}
+section.sess.on{display:block}
+.shead{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px 16px;margin-bottom:12px}
+.shead h2{font-size:17px}
+.shead h2 span{font-family:var(--mono);color:var(--accent);font-size:13px;margin-right:8px}
+.shead .goal{margin-top:7px;font-size:13.5px;line-height:1.6}
+.shead .goal b{color:var(--amber)}
+.tools{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.tools .cap{width:100%;font-size:11px;color:var(--dim);letter-spacing:.06em}
+.tool{font-family:var(--mono);font-size:12px;padding:7px 11px;border-radius:999px;
+ background:var(--panel2);color:var(--ink);border:1px solid var(--line);text-decoration:none;display:inline-block}
+.tool:hover{border-color:var(--good);color:var(--good)}
+.tool.opt{border-style:dashed;color:var(--dim)}
+.tool.opt:hover{color:var(--purple);border-color:var(--purple)}
+/* 문항 */
+.q{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:10px}
+.q .qt{font-size:13.5px;line-height:1.6;margin-bottom:9px}
+.q .qt .no{font-family:var(--mono);color:var(--accent);font-weight:800;margin-right:6px}
+.q .qt b{color:var(--amber)}
+.cols{display:grid;grid-template-columns:1fr;gap:9px}
+@media(max-width:640px){.cols{grid-template-columns:1fr}}
+.field label{display:block;font-size:10.5px;letter-spacing:.05em;margin-bottom:4px;font-family:var(--mono)}
+.field.pcol label{color:var(--purple)}
+.field.acol label{color:var(--good)}
+input[type=text],textarea{width:100%;padding:9px 11px;font-size:13.5px;
+ background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;font-family:inherit}
+input[type=text]:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+input.pred:disabled{opacity:.55;border-style:dashed}
+input.ok{border-color:var(--good);background:#0f2417}
+input.no{border-color:var(--hot);background:#2a141a}
+.mark{font-family:var(--mono);font-size:11px;margin-top:4px;min-height:14px}
+.mark.ok{color:var(--good)}.mark.no{color:var(--hot)}
+/* 확인 문구 */
+.checkpt{background:#141c30;border-left:3px solid var(--accent);border-radius:0 10px 10px 0;
+ padding:11px 14px;font-size:13px;line-height:1.6;margin:14px 0 6px;color:var(--ink)}
+.checkpt .lb{font-family:var(--mono);font-size:10.5px;color:var(--accent);display:block;margin-bottom:3px;letter-spacing:.06em}
+/* 하단 바 */
+.bar{position:fixed;left:0;right:0;bottom:0;background:rgba(15,20,29,.96);border-top:1px solid var(--line);
+ padding:10px 14px;display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;z-index:5}
+.bar .save{font-family:var(--mono);font-size:11px;color:var(--dim)}
+.btn{padding:10px 20px;border:none;border-radius:8px;background:var(--amber);color:#2a2005;
+ font-weight:800;font-size:14px;cursor:pointer;font-family:inherit}
+.btn.sec{background:var(--panel2);color:var(--ink);border:1px solid var(--line);font-size:13px}
+.btn:disabled{opacity:.4;cursor:default}
+/* 완료 화면 */
+.scorebox{background:var(--panel);border:2px solid var(--good);border-radius:16px;padding:20px;text-align:center;margin-bottom:14px}
+.scorebox .big{font-family:var(--mono);font-size:38px;font-weight:800;color:var(--good)}
+.scorebox .per{font-size:13px;color:var(--dim);margin-top:4px}
+.bysess{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:14px}
+.bysess .b{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px;
+ font-family:var(--mono);font-size:12px;text-align:center}
+.bysess .b b{color:var(--amber)}
+.transcript{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+.transcript h3{font-size:14px;margin:10px 0 6px;color:var(--accent)}
+.transcript .row{font-size:12.5px;line-height:1.65;padding:6px 0;border-bottom:1px solid var(--line)}
+.transcript .row .qq{color:var(--dim)}
+.transcript .row .pp{color:var(--purple)}
+.transcript .row .aa{color:var(--good)}
+.transcript .row .aa.wrong{color:var(--hot)}
+@media print{
+ body{background:#fff;color:#000;padding:8px}
+ nav,.bar,.tools,.notice{display:none}
+ section.sess{display:block!important;page-break-inside:avoid}
+ .q,.shead,.checkpt,.transcript,.scorebox{border-color:#999;background:#fff;color:#000}
+ input[type=text],textarea{border:1px solid #999;background:#fff;color:#000}
+ .scorebox .big{color:#000}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<div class="eyebrow">운영체제 활용 · Day 2 · 난이도 상향판</div>
+<h1>Day 2 워크시트 — <b>프로세스와 자원의 하루</b></h1>
+<p class="sub"><b style="color:var(--ink)">오늘의 도착점:</b> Terminal에 명령 한 줄(<span style="font-family:var(--mono)">ls ⏎</span>)을 치는 순간
+OS 안에서 벌어지는 전 과정 — <b style="color:var(--amber)">fork → execve → 스케줄러 → 주소 변환 → wait</b> — 를
+빈칸 없이 이어 말할 수 있다. 각 세션의 도구(애니메이션)를 열어 확인하며 <b style="color:var(--good)">답</b>을 적습니다.</p>
+<div style="margin-top:10px;display:flex;align-items:center;gap:8px">
+<label for="userName" style="font-family:var(--mono);font-size:12.5px;color:var(--accent);font-weight:800">이름</label>
+<input type="text" id="userName" placeholder="이름을 적어 주세요" style="max-width:220px;padding:9px 11px;font-size:13.5px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;font-family:inherit">
+</div>
+<div class="notice"><b>[안내]</b> 이 워크시트와 도구 HTML 파일들은 <b>같은 폴더</b>에 두세요 (도구 ▶ 버튼이 상대 경로로 열립니다).
+답은 자동 저장됩니다(이 브라우저 안에서만). <b>[강사 확정]</b> 세션 구성은 도구 기반 제안이며, Day 2 시간별 섹션 확정 시 조정될 수 있습니다.</div>
+</header>
+
+<nav id="nav"></nav>
+
+<!-- ══════════ S1 ══════════ -->
+<section class="sess" data-s="1">
+<div class="shead">
+<h2><span>S1</span>프로세스의 일생 — 태어나고, 잠들고, 사라지기까지</h2>
+<div class="goal">도착점: ps 화면의 상태 글자(R·S·Z)를 읽고, <b>좀비가 왜 「표의 한 줄」인지</b> 설명한다.</div>
+<div class="tools"><span class="cap">도구</span>
+<a class="tool" href="linux_process_lifecycle.html" target="_blank">▶ 프로세스 생명주기</a>
+</div>
+</div>
+<div class="q"><div class="qt"><span class="no">1-1</span>지금 이 컴퓨터에서 도는 수백 개의 프로세스 — <b>대부분은 어떤 상태</b>일까? (상태 글자 하나)</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s1q1a" data-re="(^s$|잠|sleep)" data-i="1"><div class="mark" id="s1q1a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">1-2</span>자식이 exit()했는데 부모가 wait()를 안 부르면, 자식은 <b>어떤 상태로 남는가?</b></div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s1q2a" data-re="(z|좀비|zombie)" data-i="1"><div class="mark" id="s1q2a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">1-3</span>프로세스 표의 맨 윗줄, <b>모든 프로세스의 시조(PID 1)</b>의 이름은?</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s1q3a" data-re="(systemd|init)" data-i="1"><div class="mark" id="s1q3a_m"></div></div>
+</div></div>
+<div class="checkpt"><span class="lb">확인 문구 — 강사가 이렇게 말하면 진행합니다</span>
+「S1 확인 — 좀비가 왜 Memory가 아니라 <b>표의 한 줄</b>로만 남는지, 옆 사람에게 30초로 설명을 마친 조는 손 들어 주세요.」</div>
+</section>
+
+<!-- ══════════ S2 ══════════ -->
+<section class="sess" data-s="2">
+<div class="shead">
+<h2><span>S2</span>fork() — 프로세스 복사기</h2>
+<div class="goal">도착점: fork()가 CPU(레지스터)와 Memory(주소 공간)를 어떻게 복제하고, <b>반환값 한 칸</b>이 어떻게 길을 가르는지 설명한다.</div>
+<div class="tools"><span class="cap">도구</span>
+<a class="tool" href="fork_cpu_memory.html" target="_blank">▶ fork() 해부 (CPU·Memory)</a>
+</div>
+</div>
+<div class="q"><div class="qt"><span class="no">2-1</span>fork()를 <b>한 번</b> 호출하면 return은 <b>몇 번</b> 일어나는가? (숫자)</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s2q1a" data-re="(2|두)" data-i="1"><div class="mark" id="s2q1a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">2-2</span><b>자식 프로세스</b>에서 fork()의 반환값은? (숫자)</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s2q2a" data-re="^0$" data-i="1"><div class="mark" id="s2q2a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">2-3</span>fork 후 자식이 <span style="font-family:var(--mono)">x=99</span>로 바꿨다. x=10이었던 <b>부모의 x</b>는 지금 몇인가?</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s2q3a" data-re="10" data-i="1"><div class="mark" id="s2q3a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">2-4</span>[심화] 실제 Linux가 fork 순간 Memory를 통째로 복사하지 않고 <b>쓰는 순간에만</b> 복사하는 기법의 이름은?</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s2q4a" data-re="(cow|copy.?on.?write|카피\s*온\s*라이트)" data-i="1"><div class="mark" id="s2q4a_m"></div></div>
+</div></div>
+<div class="checkpt"><span class="lb">확인 문구</span>
+「S2 확인 — 화면의 부모·자식 패널에서 <b>단 하나 다른 레지스터</b>가 무엇이었는지, 조별로 한 단어로 외쳐 주세요.」</div>
+</section>
+
+<!-- ══════════ S3 ══════════ -->
+<section class="sess" data-s="3">
+<div class="shead">
+<h2><span>S3</span>execve()와 wait() — 변신, 그리고 회수</h2>
+<div class="goal">도착점: Shell의 3박자 <b>fork → execve → wait</b>를 완성하고, 「성공한 execve는 돌아오지 않는다」를 이유와 함께 말한다.</div>
+<div class="tools"><span class="cap">도구</span>
+<a class="tool" href="execve_cpu_memory.html" target="_blank">▶ execve() 해부</a>
+<a class="tool" href="wait_internals.html" target="_blank">▶ wait() 해부</a>
+</div>
+</div>
+<div class="q"><div class="qt"><span class="no">3-1</span>성공한 execve() <b>다음 줄</b>의 print는 실행될까? (된다/안 된다 + 이유 한 조각)</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s3q1a" data-re="(안|않|못|never|미실행)" data-i="1"><div class="mark" id="s3q1a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">3-2</span>execve로 Memory가 통째로 교체되어도 <b>바뀌지 않고 유지되는 번호</b>는?</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s3q2a" data-re="pid" data-i="1"><div class="mark" id="s3q2a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">3-3</span>Terminal에 <span style="font-family:var(--mono)">ls ⏎</span> — bash가 명령을 처리하는 <b>3박자를 순서대로</b> 쓰시오.</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s3q3a" data-re="fork[\s\S]*exec[\s\S]*wait" data-i="1"><div class="mark" id="s3q3a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">3-4</span>wait()가 좀비의 「표 한 줄」에서 회수해 부모의 변수로 옮기는 것은? (자식이 남긴 숫자의 이름)</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s3q4a" data-re="(종료|status|exit|성적)" data-i="1"><div class="mark" id="s3q4a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">3-5</span>부모가 wait 없이 먼저 죽으면, 남은 자식을 <b>입양해 대신 거두는</b> 프로세스는?</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s3q5a" data-re="(systemd|init|pid\s*1|1번)" data-i="1"><div class="mark" id="s3q5a_m"></div></div>
+</div></div>
+<div class="checkpt"><span class="lb">확인 문구</span>
+「S3 확인 — 방금 쓴 3박자를 손가락 세 개로 꼽으며 <b>10초 안에</b> 말해 보세요. 셋 다 나온 조는 손!」</div>
+</section>
+
+<!-- ══════════ S4 ══════════ -->
+<section class="sess" data-s="4">
+<div class="shead">
+<h2><span>S4</span>CPU 나누기 ① — O(n)에서 O(1)로</h2>
+<div class="goal">도착점: 「전부 훑기」의 비용을 숫자로 말하고, 비트맵과 배열 교체가 그 비용을 <b>상수</b>로 만든 원리를 설명한다.</div>
+<div class="tools"><span class="cap">도구</span>
+<a class="tool" href="linux_on_scheduler.html" target="_blank">▶ O(n) 스케줄러</a>
+<a class="tool" href="linux_o1_scheduler.html" target="_blank">▶ O(1) 스케줄러</a>
+</div>
+</div>
+<div class="q"><div class="qt"><span class="no">4-1</span>task가 <b>1,000개</b>일 때, O(n) 스케줄러가 다음 주인공을 한 번 고르는 데 필요한 비교는 몇 회?</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s4q1a" data-re="(1[,.]?000|천)" data-i="1"><div class="mark" id="s4q1a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">4-2</span>O(n)의 점수 공식 goodness는 <b>무엇 + 무엇</b>인가?</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s4q2a" data-re="(counter|카운터)[\s\S]*(priority|우선)" data-i="1"><div class="mark" id="s4q2a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">4-3</span>O(1)이 최고 우선순위 줄을 <b>훑지 않고</b> 찾을 때 쓰는 자료구조/연산은?</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s4q3a" data-re="(비트|bit)" data-i="1"><div class="mark" id="s4q3a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">4-4</span>active 배열이 완전히 비면 O(1)은 무엇을 <b>「한 번」</b> 하고 새 epoch을 시작하는가?</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s4q4a" data-re="(교체|교환|swap|맞바꾸|바꾸)" data-i="1"><div class="mark" id="s4q4a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">4-5</span>task가 1,000개여도 O(1)의 <b>선택 연산 수</b>는? (숫자)</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s4q5a" data-re="(^2|두)" data-i="1"><div class="mark" id="s4q5a_m"></div></div>
+</div></div>
+<div class="checkpt"><span class="lb">확인 문구</span>
+「S4 확인 — 자유 모드에서 task를 <b>8개 이상</b> 추가한 뒤, 두 도구의 비교/연산 카운터 차이를 캡처해 두세요. S8에서 씁니다.」</div>
+</section>
+
+<!-- ══════════ S5 ══════════ -->
+<section class="sess" data-s="5">
+<div class="shead">
+<h2><span>S5</span>CPU 나누기 ② — CFS, 공평의 시계</h2>
+<div class="goal">도착점: 「가장 적게 받은 사람이 다음 주자」 규칙 하나로 차례·우선순위·반응성이 <b>전부 따라 나오는</b> 구조를 설명한다.</div>
+<div class="tools"><span class="cap">도구 (RB 트리는 심화·선택)</span>
+<a class="tool" href="linux_cfs_scheduler.html" target="_blank">▶ CFS 스케줄러</a>
+<a class="tool opt" href="rb_tree_insert_delete.html" target="_blank">▷ 심화: 레드블랙 트리</a>
+</div>
+</div>
+<div class="q"><div class="qt"><span class="no">5-1</span>CFS에서 다음에 CPU를 받는 task는 vruntime이 <b>어떤</b> task인가?</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s5q1a" data-re="(작|최소|왼쪽|min|적)" data-i="1"><div class="mark" id="s5q1a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">5-2</span>nice −5(높은 우선순위)의 vruntime 시계는 어떻게 가는가?</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s5q2a" data-re="(느리|절반|0\.5|천천)" data-i="1"><div class="mark" id="s5q2a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">5-3</span>오래 잠들었다 깨어난 task의 vruntime을 CFS는 <b>어느 값 근처로</b> 보정하는가?</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s5q3a" data-re="(min|최소|맨\s*왼쪽)" data-i="1"><div class="mark" id="s5q3a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">5-4</span>[심화] RB 트리 규칙 — <b>빨간 노드의 자식</b>이 될 수 없는 색은?</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s5q4a" data-re="(빨|red)" data-i="1"><div class="mark" id="s5q4a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">5-5</span>[심화] 정렬된 값을 순서대로 꽂아도 트리가 안 기울게 하는 <b>두 가지 도구</b>는? (둘 다)</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s5q5a" data-re="(회전[\s\S]*(색|recolor))|((색|recolor)[\s\S]*회전)" data-i="1"><div class="mark" id="s5q5a_m"></div></div>
+</div></div>
+<div class="checkpt"><span class="lb">확인 문구</span>
+「S5 확인 — 자유 모드에서 nice −5 task를 넣고 <b>「받은 실시간」이 2배</b>가 되는 화면을 만든 조는 손 들어 주세요.」</div>
+</section>
+
+<!-- ══════════ S6 ══════════ -->
+<section class="sess" data-s="6">
+<div class="shead">
+<h2><span>S6</span>Memory 나누기 — buddy 도매상과 slab 소매점</h2>
+<div class="goal">도착점: 쪼개서 주고(split) 짝 맞춰 합치는(merge) buddy와, 페이지를 재단해 파는 slab의 <b>2층 협업</b>을 설명한다.</div>
+<div class="tools"><span class="cap">도구</span>
+<a class="tool" href="buddy_system.html" target="_blank">▶ buddy 해부</a>
+<a class="tool" href="buddy_alloc_free.html" target="_blank">▶ buddy 운용 (할당·해지)</a>
+<a class="tool" href="slab_allocator.html" target="_blank">▶ slab allocator</a>
+</div>
+</div>
+<div class="q"><div class="qt"><span class="no">6-1</span>프로그램이 <b>20K</b>를 요청하면 buddy는 몇 K를 내어주는가?</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s6q1a" data-re="32" data-i="1"><div class="mark" id="s6q1a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">6-2</span>buddy(쌍둥이)의 주소를 계산 한 번으로 찾는 공식은? <b>내 주소 ( ? ) 내 크기</b> — 괄호의 연산은?</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s6q2a" data-re="(xor|⊕|배타)" data-i="1"><div class="mark" id="s6q2a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">6-3</span>해제된 블록이 buddy와 <b>병합되기 위한 조건</b>은? (buddy가 어떤 상태여야 하나)</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s6q3a" data-re="(free|비어|빈|반납)" data-i="1"><div class="mark" id="s6q3a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">6-4</span>slab이 buddy에게 임대해 오는 <b>단위</b>는?</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s6q4a" data-re="(페이지|page|4\s*k)" data-i="1"><div class="mark" id="s6q4a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">6-5</span>slab의 새 할당이 <b>가장 먼저</b> 찾아가는 진열대의 이름은? (partial / full / empty 중)</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s6q5a" data-re="partial" data-i="1"><div class="mark" id="s6q5a_m"></div></div>
+</div></div>
+<div class="checkpt"><span class="lb">확인 문구</span>
+「S6 확인 — buddy 운용 자유 모드에서 <b>128K 통짜 복구(병합 3연쇄)</b>를 만든 조는 화면을 들어 보여 주세요.」</div>
+</section>
+
+<!-- ══════════ S7 ══════════ -->
+<section class="sess" data-s="7">
+<div class="shead">
+<h2><span>S7</span>가상 메모리 — 지도, 문지기, 그리고 내쫓기</h2>
+<div class="goal">도착점: 주소가 <b>값이 아니라 경로</b>임을 분해식으로 보이고, 유효하지 않은 주소·모자란 RAM에 OS가 각각 어떻게 답하는지 말한다.</div>
+<div class="tools"><span class="cap">도구 (4단·interval tree는 심화·선택)</span>
+<a class="tool" href="x86_2level_pgd_pte.html" target="_blank">▶ x86 2단 (PGD·PTE)</a>
+<a class="tool" href="x86_paging_map.html" target="_blank">▶ 주소 변환 · TLB · #PF</a>
+<a class="tool" href="vma_interval_tree.html" target="_blank">▶ VMA 에뮬레이터</a>
+<a class="tool" href="linux_lru.html" target="_blank">▶ LRU 페이지 회수</a>
+<a class="tool opt" href="interval_tree_ops.html" target="_blank">▷ 심화: interval tree 연산</a>
+</div>
+</div>
+<div class="q"><div class="qt"><span class="no">7-1</span>32비트 x86 2단에서 가상 주소는 <b>몇+몇+몇 비트</b>로 쪼개지는가?</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s7q1a" data-re="10[\s\S]*10[\s\S]*12" data-i="1"><div class="mark" id="s7q1a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">7-2</span>PGD 표 한 장은 <b>몇 칸</b>인가? (힌트: 4KB ÷ 4B)</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s7q2a" data-re="1[,.]?024" data-i="1"><div class="mark" id="s7q2a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">7-3</span>프로세스 A와 B가 <b>똑같은 가상 주소</b>를 읽으면 물리 칸은? (같다/다르다 + 무엇이 달라서인지)</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s7q3a" data-re="(다르|다른|별개)" data-i="1"><div class="mark" id="s7q3a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">7-4</span>find_vma가 트리를 끝까지 내려가도 <b>겹치는 VMA가 없을 때</b> 프로세스가 받는 신호는?</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s7q4a" data-re="(sigsegv|세그|segmentation)" data-i="1"><div class="mark" id="s7q4a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">7-5</span>메모리 압박 때 inactive <b>꼬리의 R=1</b> 페이지는 어떻게 되는가? (축출된다/살아남는다 + 처리)</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s7q5a" data-re="(기회|살|second|머리)" data-i="1"><div class="mark" id="s7q5a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">7-6</span>[심화] 주소 공간에 표를 <b>겹겹이(다단)</b> 쌓는 이유를 한 단어로 — 주소 공간의 어떤 성질 때문인가?</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s7q6a" data-re="(희소|비어|빈|sparse|절약)" data-i="1"><div class="mark" id="s7q6a_m"></div></div>
+</div></div>
+<div class="checkpt"><span class="lb">확인 문구</span>
+「S7 확인 — VMA 에뮬레이터에서 find_vma <b>미발견 → SIGSEGV</b> 화면을 만든 조는 손! 그 주소가 왜 '남의 땅도 아닌 빈 땅'인지 한 문장으로.」</div>
+</section>
+
+<!-- ══════════ S8 ══════════ -->
+<section class="sess" data-s="8">
+<div class="shead">
+<h2><span>S8</span>종합 — 명령 한 줄의 여행 <span style="font-size:12px;color:var(--dim)">(오늘의 도착점)</span></h2>
+<div class="goal">Terminal에 <b style="font-family:var(--mono)">ls ⏎</b> — 그 순간부터 Prompt가 돌아오기까지, 오늘 배운 전부가 한 번씩 등장합니다. <b>여섯 빈칸을 채우고, 짝에게 1분 설명</b>으로 마무리합니다.</div>
+</div>
+<div class="q"><div class="qt"><span class="no">8-1</span>① bash가 자신을 복제한다 — 이 system call은?</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s8q1a" data-re="fork" data-i="1"><div class="mark" id="s8q1a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">8-2</span>② 자식이 ls 프로그램으로 <b>변신</b>한다 — 이 system call은?</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s8q2a" data-re="exec" data-i="1"><div class="mark" id="s8q2a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">8-3</span>③ 준비된 자식에게 CPU 차례를 주는 OS의 장치는? (현재 리눅스 기본 이름이면 더 좋음)</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s8q3a" data-re="(스케줄|cfs|sched)" data-i="1"><div class="mark" id="s8q3a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">8-4</span>④ ls가 읽는 가상 주소를 표를 걸어 물리 주소로 바꾸는 <b>하드웨어</b>는?</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s8q4a" data-re="mmu" data-i="1"><div class="mark" id="s8q4a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">8-5</span>⑤ 아직 안 올라온 페이지에 처음 접근하는 순간 발생하는 사건은? — 그리고 이때 frame을 내어주는 할당기는?</div>
+<div class="cols">
+<div class="field acol"><label>답 (사건 + 할당기, 둘 다)</label><input type="text" class="ans" id="s8q5a" data-re="(fault|폴트|#pf)[\s\S]*(buddy|버디)|(buddy|버디)[\s\S]*(fault|폴트|#pf)" data-i="1"><div class="mark" id="s8q5a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">8-6</span>⑥ ls가 exit(0)한 뒤, bash가 좀비를 거두고 Prompt로 돌아오게 하는 호출은?</div>
+<div class="cols">
+<div class="field acol"><label>답</label><input type="text" class="ans" id="s8q6a" data-re="wait" data-i="1"><div class="mark" id="s8q6a_m"></div></div>
+</div></div>
+<div class="q"><div class="qt"><span class="no">짝 설명</span>여섯 칸을 이어 <b>1분 동안 짝에게 설명</b>했으면 체크하세요. <label style="display:inline-flex;align-items:center;gap:6px;margin-left:8px;font-size:13px"><input type="checkbox" id="pairDone" style="width:16px;height:16px"> 설명 완료</label></div>
+<div class="qt" style="margin-top:8px"><span class="no">하루 요약</span>오늘 가장 선명해진 그림 <b>하나</b>를 두세 문장으로. (채점하지 않습니다 — 완료 화면 전문에 실립니다)</div>
+<textarea id="daySummary" rows="4" placeholder="예: 좀비가 무섭지 않아졌다. 그건 시체가 아니라 부모가 아직 안 찾아간 성적표 한 줄이었다…"></textarea>
+</div>
+<div class="checkpt"><span class="lb">확인 문구 — 오늘의 마무리</span>
+「S8 확인 — 하단의 <b>채점하기</b>를 누르면 완료 화면이 열립니다. 점수 화면을 캡처해 <b>[강사 확정: 제출 채널]</b>로 보내 주세요.」</div>
+</section>
+
+<!-- ══════════ 완료 ══════════ -->
+<section class="sess" data-s="9">
+<div id="doneBox">
+<div class="shead"><h2><span>완료</span>채점 결과와 작성 전문</h2>
+<div class="goal">아직 채점 전입니다 — 하단의 <b>채점하기</b>를 누르세요.</div></div>
+</div>
+</section>
+
+</div>
+
+<div class="bar">
+<span class="save" id="saveMsg">자동 저장 켜짐</span>
+<button class="btn sec" id="btnPrev">◀ 이전</button>
+<button class="btn sec" id="btnNext">다음 ▶</button>
+<button class="btn" id="btnGrade">채점하기</button>
+<button class="btn sec" id="btnPrint">인쇄 / PDF</button>
+</div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const KEY="osd2_ws_";
+const SESSNAMES={1:"S1 일생",2:"S2 fork",3:"S3 execve·wait",4:"S4 O(n)→O(1)",5:"S5 CFS",6:"S6 buddy·slab",7:"S7 가상메모리",8:"S8 종합",9:"완료"};
+let cur=1, graded=localStorage.getItem(KEY+"graded")==="1";
+
+/* 탭 */
+function buildNav(){
+ const nav=$("#nav");nav.innerHTML="";
+ for(let i=1;i<=9;i++){
+  const b=document.createElement("button");
+  b.className="tab"+(i===cur?" on":"");
+  b.innerHTML=SESSNAMES[i]+(i<=8?` <span class="done" id="navd${i}"></span>`:"");
+  b.addEventListener("click",()=>go(i));
+  nav.appendChild(b);}}
+function go(i){cur=i;
+ $$("section.sess").forEach(s=>s.classList.toggle("on",+s.dataset.s===i));
+ buildNav();updateNavDots();window.scrollTo({top:0});}
+function sessOf(el){return +el.closest("section.sess").dataset.s;}
+function updateNavDots(){
+ for(let i=1;i<=8;i++){
+  const as=$$(`section[data-s="${i}"] input.ans`);
+  const filled=as.filter(a=>a.value.trim()).length;
+  const d=$("#navd"+i);
+  if(d)d.textContent=filled&&filled===as.length?"●":(filled?"◐":"");}}
+
+/* 자동 저장 */
+function saveField(el){
+ localStorage.setItem(KEY+el.id,el.type==="checkbox"?(el.checked?"1":""):el.value);
+ $("#saveMsg").textContent="저장됨 "+new Date().toLocaleTimeString();
+ updateNavDots();}
+function restore(){
+ $$("input[type=text],textarea").forEach(el=>{
+  const v=localStorage.getItem(KEY+el.id);
+  if(v!==null)el.value=v;});
+ const pd=localStorage.getItem(KEY+"pairDone");
+ if(pd)$("#pairDone").checked=pd==="1";}
+$$("input[type=text],textarea,#pairDone").forEach(el=>{
+ el.addEventListener("input",()=>saveField(el));
+ el.addEventListener("change",()=>saveField(el));});
+
+/* 채점 */
+function gradeAll(silent){
+ let total=0,correct=0;const per={};
+ $$("input.ans").forEach(a=>{
+  const s=sessOf(a);per[s]=per[s]||[0,0];
+  const re=new RegExp(a.dataset.re,"i");
+  const ok=a.value.trim()!==""&&re.test(a.value.trim());
+  total++;per[s][1]++;
+  if(ok){correct++;per[s][0]++;}
+  a.classList.toggle("ok",ok);a.classList.toggle("no",!ok);
+  const m=$("#"+a.id+"_m");
+  if(m){m.textContent=ok?"✓ 정답":"✗ 다시 — 도구의 해당 시나리오를 한 번 더";
+   m.className="mark "+(ok?"ok":"no");}});
+ if(!silent){
+  graded=true;localStorage.setItem(KEY+"graded","1");
+  renderDone(correct,total,per);go(9);}
+ return {correct,total,per};}
+function lockIfGraded(){}
+
+/* 완료 화면 */
+function qText(a){ // 문항 텍스트 추출
+ const q=a.closest(".q");return q?q.querySelector(".qt").textContent.trim().replace(/\s+/g," "):"";}
+function renderDone(correct,total,per){
+ const box=$("#doneBox");
+ const uname=($("#userName").value||"").trim();
+ let h=`<div class="scorebox"><div class="big">${correct} / ${total}</div>
+  <div class="per" style="font-size:15px;color:var(--ink);font-weight:800">${uname?uname.replace(/</g,"&lt;")+" 님":"(이름 미기입)"}</div>
+  <div class="per" id="doneName"></div></div>
+  <div class="bysess">`;
+ for(let i=1;i<=8;i++){const p=per[i]||[0,0];
+  h+=`<div class="b">${SESSNAMES[i]}<br><b>${p[0]} / ${p[1]}</b></div>`;}
+ h+=`</div><div class="transcript"><h3 style="margin-top:0">작성 전문</h3>`;
+ for(let i=1;i<=8;i++){
+  h+=`<h3>${SESSNAMES[i]}</h3>`;
+  $$(`section[data-s="${i}"] input.ans`).forEach(a=>{
+   const ok=a.classList.contains("ok");
+   h+=`<div class="row"><span class="qq">${qText(a)}</span><br>
+    <span class="aa ${ok?"":"wrong"}">답: ${a.value.trim()||"(비움)"} ${ok?"✓":"✗"}</span></div>`;});}
+ const ds=$("#daySummary").value.trim();
+ const pd=$("#pairDone").checked;
+ h+=`<h3>S8 마무리</h3>
+  <div class="row">짝 1분 설명: <span class="${pd?"aa":"pp"}">${pd?"완료 ✓":"미완료"}</span></div>
+  <div class="row">하루 요약: <span class="aa" style="color:var(--ink)">${ds?ds.replace(/</g,"&lt;"):"(비움)"}</span></div>
+  </div>`;
+ box.innerHTML=h;}
+
+/* 하단 바 */
+$("#btnPrev").addEventListener("click",()=>go(Math.max(1,cur-1)));
+$("#btnNext").addEventListener("click",()=>go(Math.min(9,cur+1)));
+$("#btnGrade").addEventListener("click",()=>{
+ if(graded){const r=gradeAll(true);renderDone(r.correct,r.total,r.per);go(9);return;}
+ if(!confirm("답을 다 채웠나요? 채점을 시작합니다."))return;
+ gradeAll(false);});
+$("#btnPrint").addEventListener("click",()=>{
+ if(graded){const r=gradeAll(true);renderDone(r.correct,r.total,r.per);}
+ window.print();});
+
+restore();lockIfGraded();
+if(graded){const r=gradeAll(true);renderDone(r.correct,r.total,r.per);}
+buildNav();go(1);
+})();
+</script>
+</body>
+</html>
