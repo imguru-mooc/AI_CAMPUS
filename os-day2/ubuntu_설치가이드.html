@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ubuntu 22.04 Server + VirtualBox 설치 따라하기</title>
+<style>
+:root{--bg:#f6f4f0;--paper:#fff;--ink:#1f1d1a;--ink2:#4a463f;--dim:#8a8479;--line:#e6e1d8;
+ --orange:#e95420;--orange2:#c7421a;--orangebg:#fdece5;--aub:#772953;--aubbg:#f5e9f0;
+ --code:#1c1a24;--codeink:#e9e6f0;--codeb:#2b2838;--good:#2e7d32;--goodbg:#e8f5e9;--warnbg:#fff4e0;--warnb:#f0a53a;
+ --mono:"JetBrains Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,"D2Coding",monospace;
+ --sans:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,-apple-system,"Segoe UI",sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:70px}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.7;font-size:15.5px}
+#prog{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--orange),var(--aub));width:0;z-index:50;transition:width .15s}
+.top{position:sticky;top:0;z-index:40;background:rgba(246,244,240,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top .in{max-width:1280px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:14px}
+.top .logo{width:30px;height:30px;border-radius:50%;background:var(--orange);display:grid;place-items:center;color:#fff;font-weight:800;font-family:var(--mono);font-size:13px}
+.top .t{font-weight:800;font-size:14.5px}
+.top .t small{color:var(--dim);font-weight:500;margin-left:8px;font-size:12px}
+.top button.menu{display:none;margin-left:auto;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-family:inherit;cursor:pointer}
+.layout{max-width:1280px;margin:0 auto;display:grid;grid-template-columns:290px 1fr;gap:28px;padding:0 20px}
+aside{position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto;padding:18px 6px 40px 0;border-right:1px solid var(--line);font-size:13px}
+aside .search{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-family:inherit;font-size:13px;margin-bottom:10px;background:var(--paper)}
+aside .part{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--dim);margin:14px 0 4px;padding-left:8px;text-transform:uppercase}
+aside .part span{display:inline-block;min-width:18px;color:var(--orange);font-weight:800;margin-right:6px}
+aside a{display:block;color:var(--ink2);text-decoration:none;padding:5px 8px;border-radius:7px;line-height:1.35}
+aside a.item b{font-family:var(--mono);color:var(--dim);font-weight:600;margin-right:8px;font-size:11.5px}
+aside a:hover{background:var(--paper)}
+aside a.item.on{background:var(--orangebg);color:var(--orange2);font-weight:700}
+aside a.item.on b{color:var(--orange2)}
+aside .subs{display:none;margin:0 0 4px 22px;border-left:2px solid var(--line)}
+aside .subs.open{display:block}
+aside a.sub{font-size:12px;padding:3px 8px;color:var(--dim)}
+aside a.sub.on{color:var(--orange2);font-weight:700}
+aside .hide{display:none}
+main{padding:24px 0 80px;min-width:0}
+.hero{background:linear-gradient(135deg,#2c1b26 0%,#5a2340 55%,#e95420 140%);color:#fff;border-radius:18px;padding:34px 36px;margin-bottom:22px;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-60px;top:-60px;width:260px;height:260px;border-radius:50%;border:38px solid rgba(255,255,255,.07)}
+.hero .kick{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;opacity:.85}
+.hero h1{font-size:clamp(22px,3.2vw,32px);font-weight:800;line-height:1.3;margin:8px 0 12px}
+.hero .sub{opacity:.92;font-size:14.5px;max-width:760px}
+.hero .sub br{display:none}
+.hero .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.hero .chips span{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:5px 12px;font-family:var(--mono);font-size:12px}
+.sec{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:26px 30px;margin-bottom:18px}
+.sec-title{display:flex;align-items:center;gap:12px;font-size:21px;font-weight:800;margin-bottom:14px;letter-spacing:-.01em}
+.sec-title .num{font-family:var(--mono);font-size:13px;font-weight:800;color:#fff;background:var(--orange);border-radius:9px;padding:4px 9px;flex-shrink:0}
+.sub-title{display:flex;align-items:center;gap:10px;font-size:16.5px;font-weight:800;margin:22px 0 10px;color:var(--aub)}
+.sub-num{font-family:var(--mono);font-size:12px;background:var(--aubbg);color:var(--aub);border-radius:6px;padding:2px 7px}
+h4.field{font-size:13.5px;font-weight:800;color:var(--ink2);margin:14px 0 4px;font-family:var(--mono)}
+h4.field::before{content:"▸ ";color:var(--orange)}
+.sec p{margin:8px 0;color:var(--ink2)}
+.sec p strong,.sec li strong{color:var(--ink)}
+.sec ul,.sec ol{margin:8px 0 8px 22px;color:var(--ink2)}
+.sec li{margin:3px 0}
+code{font-family:var(--mono);font-size:.9em;background:#f0ede6;border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:#7a2d13}
+pre.code{position:relative;background:var(--code);color:var(--codeink);border-radius:12px;padding:38px 18px 16px;margin:12px 0;overflow-x:auto;border:1px solid var(--codeb)}
+pre.code code{background:none;border:none;padding:0;color:inherit;font-size:13.2px;line-height:1.65;white-space:pre}
+pre.code .lang{position:absolute;left:14px;top:10px;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:#9a95ad}
+pre.code.bash .lang{color:#ffb38a}
+pre.code.bash{border-left:3px solid var(--orange)}
+pre.code .copy{position:absolute;right:10px;top:7px;background:#3a3650;color:#e9e6f0;border:1px solid #4d4866;border-radius:7px;padding:3px 10px;font-size:11.5px;cursor:pointer;font-family:inherit}
+pre.code .copy:hover{background:#4d4866}
+pre.code .copy.ok{background:var(--good);border-color:var(--good)}
+.callout{position:relative;border-radius:12px;padding:14px 16px 14px 46px;margin:14px 0;font-size:14.5px}
+.callout.info{background:var(--aubbg);border:1px solid #e3cbd8}
+.callout.warn{background:var(--warnbg);border:1px solid #f5d9a6}
+.callout .ic{position:absolute;left:14px;top:12px;font-size:18px;font-weight:800}
+.callout.info .ic{color:var(--aub)}.callout.warn .ic{color:#c47a00}
+.callout p{margin:4px 0;color:var(--ink2)}
+.callout ul{margin:6px 0 0 18px}
+.tw{overflow-x:auto;margin:12px 0}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{background:#f2efe8;text-align:left;padding:9px 12px;border-bottom:2px solid var(--line);font-weight:800}
+td{padding:9px 12px;border-bottom:1px solid var(--line);color:var(--ink2)}
+tr:last-child td{border-bottom:none}
+ul.checklist{list-style:none;margin-left:0}
+ul.checklist li{margin:0}
+ul.checklist label{display:flex;gap:12px;align-items:flex-start;padding:8px 10px;border-radius:9px;cursor:pointer}
+ul.checklist label:hover{background:#faf8f3}
+ul.checklist input{width:18px;height:18px;margin-top:4px;accent-color:var(--orange);flex-shrink:0}
+ul.checklist input:checked + span{color:var(--dim);text-decoration:line-through}
+.ckbar{display:flex;align-items:center;gap:12px;margin:8px 0 14px;font-size:13px;color:var(--dim)}
+.ckbar .bar{flex:1;height:8px;background:#eee9df;border-radius:99px;overflow:hidden}
+.ckbar .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--orange),var(--aub));transition:width .3s}
+.ckbar b{color:var(--orange2);font-family:var(--mono)}
+.ckbar button{margin-left:auto;font-size:12px;background:none;border:1px solid var(--line);border-radius:7px;padding:3px 9px;cursor:pointer;font-family:inherit;color:var(--dim)}
+a{color:var(--orange2)}
+.sec a{word-break:break-all}
+#totop{position:fixed;right:22px;bottom:22px;width:42px;height:42px;border-radius:50%;background:var(--orange);color:#fff;border:none;font-size:18px;cursor:pointer;box-shadow:0 6px 18px rgba(233,84,32,.35);opacity:0;pointer-events:none;transition:opacity .2s;z-index:45}
+#totop.show{opacity:1;pointer-events:auto}
+footer{color:var(--dim);font-size:12.5px;text-align:center;padding:20px 0 40px}
+@media(max-width:960px){
+ .layout{grid-template-columns:1fr}
+ aside{position:fixed;left:0;top:0;bottom:0;width:300px;background:var(--bg);z-index:60;padding:70px 14px 30px;transform:translateX(-105%);transition:transform .2s;border-right:1px solid var(--line);height:100vh}
+ aside.open{transform:none}
+ .top button.menu{display:block}
+ .sec{padding:20px 18px}.hero{padding:26px 22px}
+}
+@media print{
+ .top,aside,#totop,#prog,pre.code .copy,.ckbar button{display:none!important}
+ body{background:#fff;font-size:12px}
+ .layout{display:block;padding:0}
+ .sec{break-inside:avoid;border:1px solid #ccc;box-shadow:none;page-break-inside:avoid}
+ .hero{background:#333!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ pre.code{background:#f3f2f6!important;color:#111!important;border:1px solid #ccc;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ pre.code code{color:#111!important}
+ pre.code .lang{color:#666!important}
+}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<div class="top"><div class="in">
+ <div class="logo">U</div>
+ <div class="t">Ubuntu 22.04 Server + VirtualBox 설치 따라하기<small>68개 섹션 · 따라하기 가이드</small></div>
+ <button class="menu" id="menu" type="button">☰ 목차</button>
+</div></div>
+<div class="layout">
+<aside>
+ <input class="search" id="tocq" type="search" placeholder="목차 검색 (예: PuTTY, 포트, 스냅샷)">
+ <div class="part"><span>준비</span>이번 실습 환경</div>
+<a class="item" href="#s0" data-sec="s0"><b>00</b>이번 실습에서 만들 환경</a>
+<div class="part"><span>A</span>ISO · VirtualBox 준비</div>
+<a class="item" href="#s1" data-sec="s1"><b>01</b>Ubuntu 22.04 Server ISO 다운로드</a><div class="subs"><a class="sub" href="#s1-1_1">1-1 KAIST Ubuntu 미러 접속</a><a class="sub" href="#s1-1_2">1-2 다운로드할 파일 찾기</a><a class="sub" href="#s1-1_3">1-3 다운로드 확인</a></div>
+<a class="item" href="#s2" data-sec="s2"><b>02</b>VirtualBox 다운로드</a><div class="subs"><a class="sub" href="#s2-2_1">2-1 공식 다운로드 사이트 접속</a></div>
+<a class="item" href="#s3" data-sec="s3"><b>03</b>VirtualBox 설치</a><div class="subs"><a class="sub" href="#s3-3_1">3-1 설치 시작</a><a class="sub" href="#s3-3_2">3-2 네트워크 관련 경고</a><a class="sub" href="#s3-3_3">3-3 설치 진행</a></div>
+<a class="item" href="#s4" data-sec="s4"><b>04</b>VirtualBox 실행</a>
+<div class="part"><span>B</span>가상 머신 만들기</div>
+<a class="item" href="#s5" data-sec="s5"><b>05</b>Ubuntu Server 가상 머신 만들기</a><div class="subs"><a class="sub" href="#s5-5_1">5-1 새 가상 머신 생성</a><a class="sub" href="#s5-5_2">5-2 가상 머신 이름 입력</a><a class="sub" href="#s5-5_3">5-3 자동 설치 기능 끄기</a></div>
+<a class="item" href="#s6" data-sec="s6"><b>06</b>CPU와 메모리 설정</a><div class="subs"><a class="sub" href="#s6-6_1">6-1 메모리</a><a class="sub" href="#s6-6_2">6-2 CPU</a></div>
+<a class="item" href="#s7" data-sec="s7"><b>07</b>가상 하드디스크 만들기</a><div class="subs"><a class="sub" href="#s7-7_1">7-1 디스크 크기</a><a class="sub" href="#s7-7_2">7-2 디스크 생성</a></div>
+<a class="item" href="#s8" data-sec="s8"><b>08</b>생성 결과 확인</a>
+<a class="item" href="#s9" data-sec="s9"><b>09</b>네트워크 설정 확인</a>
+<div class="part"><span>C</span>Ubuntu Server 설치</div>
+<a class="item" href="#s10" data-sec="s10"><b>10</b>Ubuntu Server 설치 시작</a>
+<a class="item" href="#s11" data-sec="s11"><b>11</b>Ubuntu Server 부팅 메뉴</a>
+<a class="item" href="#s12" data-sec="s12"><b>12</b>설치 언어 선택</a>
+<a class="item" href="#s13" data-sec="s13"><b>13</b>Installer Update 화면</a>
+<a class="item" href="#s14" data-sec="s14"><b>14</b>Keyboard configuration</a>
+<a class="item" href="#s15" data-sec="s15"><b>15</b>Ubuntu 설치 유형</a>
+<a class="item" href="#s16" data-sec="s16"><b>16</b>네트워크 설정</a>
+<a class="item" href="#s17" data-sec="s17"><b>17</b>Proxy 설정</a>
+<a class="item" href="#s18" data-sec="s18"><b>18</b>Ubuntu Archive Mirror 설정</a>
+<a class="item" href="#s19" data-sec="s19"><b>19</b>디스크 파티션 설정</a>
+<a class="item" href="#s20" data-sec="s20"><b>20</b>디스크 초기화 확인</a>
+<a class="item" href="#s21" data-sec="s21"><b>21</b>사용자 계정 만들기</a>
+<a class="item" href="#s22" data-sec="s22"><b>22</b>Ubuntu Pro 설정</a>
+<a class="item" href="#s23" data-sec="s23"><b>23</b>SSH 서버 설치</a>
+<a class="item" href="#s24" data-sec="s24"><b>24</b>서버용 추가 패키지 선택</a>
+<a class="item" href="#s25" data-sec="s25"><b>25</b>Ubuntu 설치 진행</a>
+<a class="item" href="#s26" data-sec="s26"><b>26</b>설치 완료 후 재부팅</a>
+<a class="item" href="#s27" data-sec="s27"><b>27</b>ISO 제거 메시지가 나오는 경우</a>
+<div class="part"><span>D</span>첫 로그인 · SSH 준비</div>
+<a class="item" href="#s28" data-sec="s28"><b>28</b>Ubuntu 로그인</a>
+<a class="item" href="#s29" data-sec="s29"><b>29</b>설치 확인</a>
+<a class="item" href="#s30" data-sec="s30"><b>30</b>인터넷 연결 확인</a>
+<a class="item" href="#s31" data-sec="s31"><b>31</b>IP 주소 확인</a>
+<a class="item" href="#s32" data-sec="s32"><b>32</b>패키지 업데이트</a>
+<a class="item" href="#s33" data-sec="s33"><b>33</b>SSH 서버 동작 확인</a>
+<a class="item" href="#s34" data-sec="s34"><b>34</b>SSH가 설치되지 않은 경우</a>
+<a class="item" href="#s35" data-sec="s35"><b>35</b>VirtualBox NAT에서 Windows SSH 접속하기</a><div class="subs"><a class="sub" href="#s35-35_1">35-1 Ubuntu VM 종료</a><a class="sub" href="#s35-35_2">35-2 포트 포워딩 설정</a></div>
+<div class="part"><span>E</span>PuTTY 공개키 인증</div>
+<a class="item" href="#s36" data-sec="s36"><b>36</b>Windows에 PuTTY 설치</a>
+<a class="item" href="#s37" data-sec="s37"><b>37</b>PuTTY로 최초 SSH 접속</a><div class="subs"><a class="sub" href="#s37-37_1">37-1 Session 설정</a><a class="sub" href="#s37-37_2">37-2 최초 접속</a></div>
+<a class="item" href="#s38" data-sec="s38"><b>38</b>PuTTYgen으로 공개키와 비밀키 만들기</a><div class="subs"><a class="sub" href="#s38-38_1">38-1 키 종류 선택</a><a class="sub" href="#s38-38_2">38-2 Generate 클릭</a><a class="sub" href="#s38-38_3">38-3 Key comment 설정</a><a class="sub" href="#s38-38_4">38-4 Key passphrase 설정</a></div>
+<a class="item" href="#s39" data-sec="s39"><b>39</b>비밀키(.ppk) 저장</a>
+<a class="item" href="#s40" data-sec="s40"><b>40</b>공개키 복사</a>
+<a class="item" href="#s41" data-sec="s41"><b>41</b>Ubuntu Server에 공개키 등록</a><div class="subs"><a class="sub" href="#s41-41_1">41-1 공개키 붙여넣기</a><a class="sub" href="#s41-41_2">41-2 nano 저장</a><a class="sub" href="#s41-41_3">41-3 authorized_keys 권한 설정</a></div>
+<a class="item" href="#s42" data-sec="s42"><b>42</b>PuTTY에 비밀키(.ppk) 등록</a>
+<a class="item" href="#s43" data-sec="s43"><b>43</b>PuTTY에 사용자 이름 저장</a>
+<a class="item" href="#s44" data-sec="s44"><b>44</b>PuTTY Session 저장</a>
+<a class="item" href="#s45" data-sec="s45"><b>45</b>ID / Password 입력 없이 SSH 접속 테스트</a>
+<a class="item" href="#s46" data-sec="s46"><b>46</b>공개키 인증 구조 이해하기</a>
+<a class="item" href="#s47" data-sec="s47"><b>47</b>비밀번호 SSH 로그인을 완전히 막기 — 선택 사항</a><div class="subs"><a class="sub" href="#s47-47_1">47-1 다시 접속 테스트</a></div>
+<div class="part"><span>F</span>스냅샷 · 점검 · 구성도</div>
+<a class="item" href="#s48" data-sec="s48"><b>48</b>VM 정상 종료 방법</a>
+<a class="item" href="#s49" data-sec="s49"><b>49</b>VirtualBox 스냅샷 만들기</a>
+<a class="item" href="#s50" data-sec="s50"><b>50</b>설치 완료 체크리스트</a>
+<a class="item" href="#s51" data-sec="s51"><b>51</b>자주 발생하는 문제</a><div class="subs"><a class="sub" href="#s51-1">문제 1. PuTTY에서 Connection refused가 나온다</a><a class="sub" href="#s51-2">문제 2. PuTTY에서 Server refused our key가 나온다</a><a class="sub" href="#s51-3">문제 3. 계속 비밀번호를 묻는다</a><a class="sub" href="#s51-4">문제 4. 매번 login as: 를 묻는다</a><a class="sub" href="#s51-5">문제 5. 키 passphrase를 묻는다</a><a class="sub" href="#s51-6">문제 6. PasswordAuthentication no 설정 후 접속할 수 없다</a><a class="sub" href="#s51-7">문제 7. Ubuntu (64-bit)가 보이지 않는다</a><a class="sub" href="#s51-8">문제 8. 인터넷이 연결되지 않는다</a><a class="sub" href="#s51-9">문제 9. 설치 후 다시 설치 화면이 나온다</a></div>
+<a class="item" href="#s52" data-sec="s52"><b>52</b>최종 구성</a>
+<div class="part"><span>G</span>FileZilla SFTP</div>
+<a class="item" href="#s53" data-sec="s53"><b>53</b>FileZilla Client 다운로드</a><div class="subs"><a class="sub" href="#s53-53_1">53-1 FileZilla 공식 사이트 접속</a><a class="sub" href="#s53-53_2">53-2 설치 파일 실행</a></div>
+<a class="item" href="#s54" data-sec="s54"><b>54</b>FileZilla로 접속하기 전에 확인할 것</a>
+<a class="item" href="#s55" data-sec="s55"><b>55</b>FileZilla Site Manager 열기</a>
+<a class="item" href="#s56" data-sec="s56"><b>56</b>FileZilla SFTP 접속 정보 입력</a><div class="subs"><a class="sub" href="#s56-56_1">56-1 Protocol</a><a class="sub" href="#s56-56_2">56-2 Host</a><a class="sub" href="#s56-56_3">56-3 Port</a><a class="sub" href="#s56-56_4">56-4 Logon Type</a><a class="sub" href="#s56-56_5">56-5 User</a><a class="sub" href="#s56-56_6">56-6 Key file</a></div>
+<a class="item" href="#s57" data-sec="s57"><b>57</b>FileZilla 최초 접속</a>
+<a class="item" href="#s58" data-sec="s58"><b>58</b>FileZilla 화면 이해하기</a>
+<a class="item" href="#s59" data-sec="s59"><b>59</b>Windows 파일을 Ubuntu로 업로드</a><div class="subs"><a class="sub" href="#s59-59_1">59-1 폴더 전체 업로드</a></div>
+<a class="item" href="#s60" data-sec="s60"><b>60</b>Ubuntu 파일을 Windows로 다운로드</a>
+<a class="item" href="#s61" data-sec="s61"><b>61</b>FileZilla 접속 정보를 저장해서 재사용</a>
+<a class="item" href="#s62" data-sec="s62"><b>62</b>FileZilla와 PuTTY를 함께 사용하는 방법</a>
+<a class="item" href="#s63" data-sec="s63"><b>63</b>FileZilla 자주 발생하는 오류</a><div class="subs"><a class="sub" href="#s63-1">문제 1. Connection refused</a><a class="sub" href="#s63-2">문제 2. Connection timed out</a><a class="sub" href="#s63-3">문제 3. Authentication failed</a><a class="sub" href="#s63-4">문제 4. 일반 FTP로 접속해서 실패한다</a><a class="sub" href="#s63-5">문제 5. Permission denied로 업로드가 안 된다</a><a class="sub" href="#s63-6">문제 6. 비밀키 파일이 선택되지 않는다</a><a class="sub" href="#s63-7">문제 7. 비밀키 passphrase를 계속 묻는다</a></div>
+<a class="item" href="#s64" data-sec="s64"><b>64</b>PuTTY + FileZilla 최종 구성</a>
+<div class="part"><span>H</span>명령어 · 링크 · 다음 단계</div>
+<a class="item" href="#s65" data-sec="s65"><b>65</b>자주 사용하는 Ubuntu 명령어</a>
+<a class="item" href="#s66" data-sec="s66"><b>66</b>참고 링크</a>
+<a class="item" href="#s67" data-sec="s67"><b>67</b>실습 완료 후 다음 단계 추천</a><div class="subs"><a class="sub" href="#s67-1">완료</a></div>
+</aside>
+<main>
+ <div class="hero">
+  <div class="kick">UBUNTU 22.04 SERVER · VIRTUALBOX · PUTTY · FILEZILLA</div>
+  <h1>Ubuntu 22.04 Server + VirtualBox 설치 따라하기</h1>
+  <div class="sub">
+<p>Windows 11 PC에서 KAIST Ubuntu 미러를 이용하여 <strong>Ubuntu 22.04.5 Server</strong> ISO를 다운로드하고,<br/>
+<strong>Oracle VirtualBox</strong>에 가상 머신을 만든 뒤 Ubuntu Server를 설치하는 전체 과정입니다.</p>
+</div>
+  <div class="chips"><span>Windows 11 호스트</span><span>VirtualBox 7.2.x</span><span>Ubuntu Server 22.04.5 LTS</span><span>PuTTY + PuTTYgen</span><span>FileZilla SFTP</span><span>NAT 2222 → 22</span></div>
+ </div>
+ <section class="sec" data-num="0" id="s0"><h2 class="sec-title"><span class="num">00</span><span>이번 실습에서 만들 환경</span></h2><div class="tw"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th>설정</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>호스트 PC</td>
+<td>Windows 11 64비트</td>
+</tr>
+<tr>
+<td>가상화 프로그램</td>
+<td>Oracle VirtualBox 7.2.x</td>
+</tr>
+<tr>
+<td>SSH 클라이언트</td>
+<td>PuTTY + PuTTYgen</td>
+</tr>
+<tr>
+<td>게스트 OS</td>
+<td>Ubuntu Server 22.04.5 LTS 64비트</td>
+</tr>
+<tr>
+<td>CPU</td>
+<td>2개 권장</td>
+</tr>
+<tr>
+<td>메모리</td>
+<td>4GB 권장</td>
+</tr>
+<tr>
+<td>가상 디스크</td>
+<td>30GB 권장</td>
+</tr>
+<tr>
+<td>네트워크</td>
+<td>NAT</td>
+</tr>
+<tr>
+<td>Ubuntu ISO</td>
+<td><code>ubuntu-22.04.5-live-server-amd64.iso</code></td>
+</tr>
+</tbody>
+</table></div><blockquote class="callout info"><span class="ic">ⓘ</span>
+<p><strong>최소 권장 사항</strong></p>
+<ul>
+<li>PC 메모리: 8GB 이상</li>
+<li>여유 디스크: 40GB 이상</li>
+<li>BIOS/UEFI에서 Intel VT-x 또는 AMD-V 가상화 기능 활성화</li>
+<li>인터넷 연결</li>
+<li>PuTTY / PuTTYgen (Windows에서 SSH 접속 및 키 생성)</li>
+</ul>
+</blockquote></section><section class="sec" data-num="1" id="s1"><h2 class="sec-title"><span class="num">01</span><span>Ubuntu 22.04 Server ISO 다운로드</span></h2><h3 class="sub-title" id="s1-1_1"><span class="sub-num">1-1</span><span>KAIST Ubuntu 미러 접속</span></h3><p>웹 브라우저에서 아래 주소로 접속합니다.</p><p><a href="https://ftp.kaist.ac.kr/ubuntu-cd/22.04/" rel="noopener" target="_blank">https://ftp.kaist.ac.kr/ubuntu-cd/22.04/</a></p><p>접속하면 여러 파일이 보입니다.</p><p>그중 <strong>Server 버전</strong>은 다음 파일입니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">ubuntu-22.04.5-live-server-amd64.iso
+</code></pre><blockquote class="callout warn"><span class="ic">⚠</span>
+<p><code>desktop</code>이 들어간 파일이 아니라 반드시<br/>
+<strong><code>live-server-amd64.iso</code></strong> 파일을 선택합니다.</p>
+</blockquote><h3 class="sub-title" id="s1-1_2"><span class="sub-num">1-2</span><span>다운로드할 파일 찾기</span></h3><p>목록에서 다음 파일을 찾습니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">ubuntu-22.04.5-live-server-amd64.iso
+</code></pre><p>파일 크기는 약 <strong>2GB</strong>입니다.</p><p>직접 다운로드 주소:</p><p><a href="https://ftp.kaist.ac.kr/ubuntu-cd/22.04/ubuntu-22.04.5-live-server-amd64.iso" rel="noopener" target="_blank">https://ftp.kaist.ac.kr/ubuntu-cd/22.04/ubuntu-22.04.5-live-server-amd64.iso</a></p><p>파일 이름을 클릭하여 다운로드합니다.</p><p>예를 들어 Windows의 다운로드 폴더에 저장했다면:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">C:\Users\사용자이름\Downloads\ubuntu-22.04.5-live-server-amd64.iso
+</code></pre><h3 class="sub-title" id="s1-1_3"><span class="sub-num">1-3</span><span>다운로드 확인</span></h3><p>파일 탐색기를 열고 다음을 확인합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">다운로드
+ └─ ubuntu-22.04.5-live-server-amd64.iso
+</code></pre><p>확장자가 반드시 다음과 같아야 합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">.iso
+</code></pre><blockquote class="callout info"><span class="ic">ⓘ</span>
+<p>Windows가 확장자를 숨기고 있다면<br/>
+<strong>파일 탐색기 → 보기 → 표시 → 파일 확장명</strong>을 체크하면 확인하기 쉽습니다.</p>
+</blockquote></section><section class="sec" data-num="2" id="s2"><h2 class="sec-title"><span class="num">02</span><span>VirtualBox 다운로드</span></h2><h3 class="sub-title" id="s2-2_1"><span class="sub-num">2-1</span><span>공식 다운로드 사이트 접속</span></h3><p>VirtualBox 공식 다운로드 페이지:</p><p><a href="https://www.virtualbox.org/wiki/Downloads" rel="noopener" target="_blank">https://www.virtualbox.org/wiki/Downloads</a></p><p>Oracle 공식 파일 저장소:</p><p><a href="https://download.virtualbox.org/virtualbox/" rel="noopener" target="_blank">https://download.virtualbox.org/virtualbox/</a></p><p>이 문서를 작성한 시점의 안정 버전은 <strong>VirtualBox 7.2.16</strong>입니다.</p><p>Windows 11 PC에서는 다음 종류의 설치 파일을 사용합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">VirtualBox-7.2.16-174877-Win.exe
+</code></pre><p>직접 다운로드:</p><p><a href="https://download.virtualbox.org/virtualbox/7.2.16/VirtualBox-7.2.16-174877-Win.exe" rel="noopener" target="_blank">https://download.virtualbox.org/virtualbox/7.2.16/VirtualBox-7.2.16-174877-Win.exe</a></p><blockquote class="callout info"><span class="ic">ⓘ</span>
+<p>버전은 이후 업데이트될 수 있습니다.<br/>
+공식 Downloads 페이지에 더 최신 안정 버전이 있다면 그 버전을 사용해도 됩니다.</p>
+</blockquote></section><section class="sec" data-num="3" id="s3"><h2 class="sec-title"><span class="num">03</span><span>VirtualBox 설치</span></h2><p>다운로드한 파일을 실행합니다.</p><p>예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">VirtualBox-7.2.16-174877-Win.exe
+</code></pre><h3 class="sub-title" id="s3-3_1"><span class="sub-num">3-1</span><span>설치 시작</span></h3><p>설치 프로그램이 실행되면 다음 순서로 진행합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Welcome
+   ↓
+Next
+   ↓
+설치 구성 확인
+   ↓
+Next
+</code></pre><p>기본 설정을 그대로 사용해도 됩니다.</p><h3 class="sub-title" id="s3-3_2"><span class="sub-num">3-2</span><span>네트워크 관련 경고</span></h3><p>설치 중 다음과 비슷한 안내가 나타날 수 있습니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Network Interfaces
+</code></pre><p>VirtualBox의 가상 네트워크 드라이버를 설치하면서<br/>
+Windows 네트워크가 잠깐 끊길 수 있다는 의미입니다.</p><p><strong>Yes</strong> 또는 <strong>계속</strong>을 선택합니다.</p><h3 class="sub-title" id="s3-3_3"><span class="sub-num">3-3</span><span>설치 진행</span></h3><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Install
+</code></pre><p>버튼을 클릭합니다.</p><p>Windows에서 다음 메시지가 나오면:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">이 앱이 디바이스를 변경하도록 허용하시겠습니까?
+</code></pre><p><strong>예</strong>를 선택합니다.</p><p>설치가 완료되면:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Finish
+</code></pre><p>를 클릭합니다.</p></section><section class="sec" data-num="4" id="s4"><h2 class="sec-title"><span class="num">04</span><span>VirtualBox 실행</span></h2><p>Windows 시작 메뉴에서 다음을 검색합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">VirtualBox
+</code></pre><p>실행하면 <strong>VirtualBox Manager</strong>가 나타납니다.</p></section><section class="sec" data-num="5" id="s5"><h2 class="sec-title"><span class="num">05</span><span>Ubuntu Server 가상 머신 만들기</span></h2><h3 class="sub-title" id="s5-5_1"><span class="sub-num">5-1</span><span>새 가상 머신 생성</span></h3><p>VirtualBox 상단의 다음 버튼을 클릭합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">New
+</code></pre><p>또는</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Machine → New
+</code></pre><h3 class="sub-title" id="s5-5_2"><span class="sub-num">5-2</span><span>가상 머신 이름 입력</span></h3><p>다음과 같이 설정합니다.</p><h4 class="field">Name</h4><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Ubuntu-22.04-Server
+</code></pre><h4 class="field">Folder</h4><p>기본값을 사용해도 됩니다.</p><p>예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">C:\Users\사용자이름\VirtualBox VMs
+</code></pre><h4 class="field">ISO Image</h4><p>다운받은 Ubuntu Server ISO를 선택합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">ubuntu-22.04.5-live-server-amd64.iso
+</code></pre><h3 class="sub-title" id="s5-5_3"><span class="sub-num">5-3</span><span>자동 설치 기능 끄기</span></h3><p>VirtualBox 버전에 따라 다음 항목이 보일 수 있습니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Skip Unattended Installation
+</code></pre><p>이 문서에서는 Ubuntu 설치 화면을 직접 따라갈 것이므로<br/>
+<strong>Skip Unattended Installation을 체크</strong>하는 것을 권장합니다.</p><p>즉:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">☑ Skip Unattended Installation
+</code></pre><p>그다음 <strong>Next</strong>를 클릭합니다.</p><blockquote class="callout info"><span class="ic">ⓘ</span>
+<p>자동 설치 기능을 사용해도 되지만, 교육이나 실습에서는<br/>
+설치 과정을 직접 보는 편이 이해하기 쉽습니다.</p>
+</blockquote></section><section class="sec" data-num="6" id="s6"><h2 class="sec-title"><span class="num">06</span><span>CPU와 메모리 설정</span></h2><h3 class="sub-title" id="s6-6_1"><span class="sub-num">6-1</span><span>메모리</span></h3><p>권장:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">4096 MB
+</code></pre><p>즉 약 <strong>4GB</strong>입니다.</p><p>PC 메모리가 부족하면:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">2048 MB
+</code></pre><p>로 설정해도 Ubuntu Server 기본 실습은 가능합니다.</p><h3 class="sub-title" id="s6-6_2"><span class="sub-num">6-2</span><span>CPU</span></h3><p>권장:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">2 CPUs
+</code></pre><p>PC 사양이 충분하다면 4개를 할당해도 됩니다.</p><h4 class="field">일반적인 권장 설정</h4><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Memory : 4096 MB
+CPU    : 2
+</code></pre><blockquote class="callout info"><span class="ic">ⓘ</span>
+<p>호스트 PC의 CPU와 메모리를 너무 많이 가상 머신에 할당하면<br/>
+Windows가 느려질 수 있습니다.</p>
+</blockquote><p><strong>Next</strong>를 클릭합니다.</p></section><section class="sec" data-num="7" id="s7"><h2 class="sec-title"><span class="num">07</span><span>가상 하드디스크 만들기</span></h2><h3 class="sub-title" id="s7-7_1"><span class="sub-num">7-1</span><span>디스크 크기</span></h3><p>다음과 같이 설정합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">30 GB
+</code></pre><p>Ubuntu Server 기본 실습에는 충분합니다.</p><p>개발 도구를 많이 설치할 계획이라면:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">50 ~ 100 GB
+</code></pre><p>를 사용할 수 있습니다.</p><h3 class="sub-title" id="s7-7_2"><span class="sub-num">7-2</span><span>디스크 생성</span></h3><p>VirtualBox 버전에 따라 새 가상 디스크 생성 옵션이 표시됩니다.</p><p>기본값을 사용합니다.</p><p>권장 구성:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">VDI
+Dynamically allocated
+30 GB
+</code></pre><p>동적 할당 방식은 실제로 사용한 만큼만 Windows 디스크 공간을 차지합니다.</p></section><section class="sec" data-num="8" id="s8"><h2 class="sec-title"><span class="num">08</span><span>생성 결과 확인</span></h2><p>대략 다음과 같이 되어 있으면 됩니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Name       : Ubuntu-22.04-Server
+Type       : Linux
+Version    : Ubuntu (64-bit)
+Memory     : 4096 MB
+Processors : 2
+Disk       : 30 GB
+ISO        : ubuntu-22.04.5-live-server-amd64.iso
+</code></pre><p><strong>Finish</strong>를 클릭합니다.</p></section><section class="sec" data-num="9" id="s9"><h2 class="sec-title"><span class="num">09</span><span>네트워크 설정 확인</span></h2><p>VirtualBox 왼쪽에서 다음 VM을 선택합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Ubuntu-22.04-Server
+</code></pre><p>그리고:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Settings
+   ↓
+Network
+</code></pre><p>로 이동합니다.</p><p>Adapter 1을 다음처럼 설정합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Enable Network Adapter : 체크
+Attached to            : NAT
+</code></pre><p>초보 실습에서는 <strong>NAT</strong>가 가장 간단합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Windows PC
+    │
+    ├── 인터넷
+    │
+VirtualBox NAT
+    │
+Ubuntu Server
+</code></pre><p><strong>OK</strong>를 클릭합니다.</p></section><section class="sec" data-num="10" id="s10"><h2 class="sec-title"><span class="num">10</span><span>Ubuntu Server 설치 시작</span></h2><p>생성한 가상 머신을 선택하고:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Start
+</code></pre><p>를 클릭합니다.</p><p>잠시 기다리면 Ubuntu Server 설치 화면이 나타납니다.</p></section><section class="sec" data-num="11" id="s11"><h2 class="sec-title"><span class="num">11</span><span>Ubuntu Server 부팅 메뉴</span></h2><p>처음 화면에 다음과 비슷한 메뉴가 나타납니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Try or Install Ubuntu Server
+</code></pre><p>해당 항목을 선택하고 <strong>Enter</strong>를 누릅니다.</p></section><section class="sec" data-num="12" id="s12"><h2 class="sec-title"><span class="num">12</span><span>설치 언어 선택</span></h2><p>설치 언어 선택 화면입니다.</p><p>보통 서버 실습에서는 다음을 권장합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">English
+</code></pre><p>방향키로 선택하고 <strong>Enter</strong>를 누릅니다.</p><blockquote class="callout info"><span class="ic">ⓘ</span>
+<p>Ubuntu Server 설치 화면은 영어로 진행해도<br/>
+설치 후 한글 사용이나 한글 입력에는 문제가 없습니다.</p>
+</blockquote></section><section class="sec" data-num="13" id="s13"><h2 class="sec-title"><span class="num">13</span><span>Installer Update 화면</span></h2><p>설치 프로그램 업데이트가 존재하면 다음과 비슷한 항목이 나올 수 있습니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Update to the new installer
+Continue without updating
+</code></pre><p>교육 실습에서는 빠르게 진행하려면:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Continue without updating
+</code></pre><p>을 선택해도 됩니다.</p></section><section class="sec" data-num="14" id="s14"><h2 class="sec-title"><span class="num">14</span><span>Keyboard configuration</span></h2><p>키보드 설정은 일반적으로 다음을 사용합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Layout  : English (US)
+Variant : English (US)
+</code></pre><p>또는 자동 인식된 기본값을 사용합니다.</p><p>선택 후:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Done
+</code></pre></section><section class="sec" data-num="15" id="s15"><h2 class="sec-title"><span class="num">15</span><span>Ubuntu 설치 유형</span></h2><p>Ubuntu Server 설치 유형을 선택합니다.</p><p>일반적으로 다음을 사용합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Ubuntu Server
+</code></pre><p>선택 후:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Done
+</code></pre></section><section class="sec" data-num="16" id="s16"><h2 class="sec-title"><span class="num">16</span><span>네트워크 설정</span></h2><p>VirtualBox가 NAT로 설정되어 있다면 대부분 자동으로 IP 주소가 설정됩니다.</p><p>예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">enp0s3
+DHCPv4
+10.0.2.15/24
+</code></pre><p>IP가 표시되어 있다면 정상입니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Done
+</code></pre><p>을 선택합니다.</p><blockquote class="callout info"><span class="ic">ⓘ</span>
+<p>VirtualBox NAT의 Ubuntu 주소가 <code>10.0.2.15</code>로 잡히는 경우가 흔합니다.</p>
+</blockquote></section><section class="sec" data-num="17" id="s17"><h2 class="sec-title"><span class="num">17</span><span>Proxy 설정</span></h2><p>Proxy를 별도로 사용하는 회사/기관이 아니라면 아무것도 입력하지 않습니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Proxy address:
+</code></pre><p>빈 상태에서:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Done
+</code></pre></section><section class="sec" data-num="18" id="s18"><h2 class="sec-title"><span class="num">18</span><span>Ubuntu Archive Mirror 설정</span></h2><p>미러 서버 설정 화면입니다.</p><p>기본값으로 인터넷 연결 테스트가 성공하면 그대로 사용합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Done
+</code></pre><blockquote class="callout info"><span class="ic">ⓘ</span>
+<p>학교나 기관 내부 네트워크 환경에 따라 미러 접속 시간이 조금 걸릴 수 있습니다.</p>
+</blockquote></section><section class="sec" data-num="19" id="s19"><h2 class="sec-title"><span class="num">19</span><span>디스크 파티션 설정</span></h2><p>초보자는 자동 파티션을 권장합니다.</p><p>다음과 비슷한 옵션을 선택합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Use an entire disk
+</code></pre><p>가상 디스크가 표시되면 해당 디스크를 선택합니다.</p><p>예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">VBOX HARDDISK 30.000G
+</code></pre><p>LVM 사용 옵션은 기본값 그대로 사용해도 됩니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Set up this disk as an LVM group
+</code></pre><p>선택 후:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Done
+</code></pre></section><section class="sec" data-num="20" id="s20"><h2 class="sec-title"><span class="num">20</span><span>디스크 초기화 확인</span></h2><p>파티션 요약 화면이 나타납니다.</p><p>가상 머신의 가상 디스크이므로 내용이 문제가 없다면:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Done
+</code></pre><p>을 선택합니다.</p><p>다음 경고가 나오면:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Confirm destructive action
+</code></pre><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Continue
+</code></pre><p>를 선택합니다.</p><blockquote class="callout info"><span class="ic">ⓘ</span>
+<p>이 작업은 <strong>VirtualBox 안의 가상 디스크</strong>를 초기화합니다.<br/>
+Windows의 C: 드라이브를 지우는 작업이 아닙니다.</p>
+</blockquote></section><section class="sec" data-num="21" id="s21"><h2 class="sec-title"><span class="num">21</span><span>사용자 계정 만들기</span></h2><p>Profile setup 화면에서 사용자 정보를 입력합니다.</p><p>예:</p><h4 class="field">Your name</h4><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">ubuntu
+</code></pre><h4 class="field">Your server's name</h4><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">ubuntu-server
+</code></pre><h4 class="field">Pick a username</h4><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">ubuntu
+</code></pre><h4 class="field">Choose a password</h4><p>실습용 암호를 입력합니다.</p><p>예를 들면:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">ubuntu1234
+</code></pre><blockquote class="callout warn"><span class="ic">⚠</span>
+<p>실제 서비스 서버에서는 위와 같은 단순한 비밀번호를 사용하지 마세요.</p>
+</blockquote><p>확인 후:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Done
+</code></pre></section><section class="sec" data-num="22" id="s22"><h2 class="sec-title"><span class="num">22</span><span>Ubuntu Pro 설정</span></h2><p>Ubuntu Pro 안내가 나오면 일반 실습에서는 가입하지 않아도 됩니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Skip for now
+</code></pre><p>또는 비슷한 항목을 선택합니다.</p></section><section class="sec" data-num="23" id="s23"><h2 class="sec-title"><span class="num">23</span><span>SSH 서버 설치</span></h2><p>다음 화면이 중요합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">SSH Setup
+</code></pre><p>다음 항목을 체크하는 것을 권장합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">☑ Install OpenSSH server
+</code></pre><p>SSH 서버를 설치하면 나중에 Windows에서 Ubuntu Server로 원격 접속할 수 있습니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Done
+</code></pre><p>을 선택합니다.</p></section><section class="sec" data-num="24" id="s24"><h2 class="sec-title"><span class="num">24</span><span>서버용 추가 패키지 선택</span></h2><p>Featured Server Snaps 화면이 나타날 수 있습니다.</p><p>Docker, Nextcloud 등의 패키지가 보이지만<br/>
+지금은 아무것도 선택하지 않아도 됩니다.</p><p>그대로:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Done
+</code></pre></section><section class="sec" data-num="25" id="s25"><h2 class="sec-title"><span class="num">25</span><span>Ubuntu 설치 진행</span></h2><p>Ubuntu 설치가 시작됩니다.</p><p>화면에 다음과 비슷하게 표시됩니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Installing system
+</code></pre><p>설치가 완료될 때까지 진행 상황을 확인합니다.</p></section><section class="sec" data-num="26" id="s26"><h2 class="sec-title"><span class="num">26</span><span>설치 완료 후 재부팅</span></h2><p>설치가 끝나면 다음 버튼이 나타납니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Reboot Now
+</code></pre><p>선택합니다.</p></section><section class="sec" data-num="27" id="s27"><h2 class="sec-title"><span class="num">27</span><span>ISO 제거 메시지가 나오는 경우</span></h2><p>재부팅 도중 다음과 비슷한 메시지가 나올 수 있습니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Please remove the installation medium, then press ENTER
+</code></pre><p>VirtualBox에서는 대부분 ISO가 자동으로 분리되거나<br/>
+설치 미디어를 다시 부팅하지 않도록 처리됩니다.</p><p>그대로 <strong>Enter</strong>를 먼저 눌러 봅니다.</p><p>만약 다시 Ubuntu 설치 화면으로 돌아간다면 아래 방법으로 ISO를 제거합니다.</p><h4 class="field">VirtualBox 실행 중 메뉴</h4><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Devices
+  → Optical Drives
+  → Remove disk from virtual drive
+</code></pre><p>그다음 VM을 재부팅합니다.</p></section><section class="sec" data-num="28" id="s28"><h2 class="sec-title"><span class="num">28</span><span>Ubuntu 로그인</span></h2><p>부팅이 완료되면 다음과 같은 화면이 나타납니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">ubuntu-server login:
+</code></pre><p>설치할 때 만든 사용자 이름을 입력합니다.</p><p>예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">ubuntu
+</code></pre><p>비밀번호를 입력합니다.</p><blockquote class="callout warn"><span class="ic">⚠</span>
+<p>Linux 터미널에서는 비밀번호를 입력해도 화면에 <code>****</code>가 표시되지 않습니다.<br/>
+아무것도 보이지 않는 것이 정상입니다.</p>
+</blockquote><p>로그인에 성공하면 다음과 비슷한 프롬프트가 나타납니다.</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">ubuntu@ubuntu-server:~$
+</code></pre></section><section class="sec" data-num="29" id="s29"><h2 class="sec-title"><span class="num">29</span><span>설치 확인</span></h2><p>Ubuntu 버전을 확인합니다.</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">lsb_release -a
+</code></pre><p>또는:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">cat /etc/os-release
+</code></pre><p>정상적인 경우 다음 정보가 포함됩니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Ubuntu 22.04
+Jammy Jellyfish
+</code></pre></section><section class="sec" data-num="30" id="s30"><h2 class="sec-title"><span class="num">30</span><span>인터넷 연결 확인</span></h2><p>다음 명령을 입력합니다.</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">ping -c 4 google.com
+</code></pre><p>정상이라면 응답이 표시됩니다.</p><p>예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">64 bytes from ...
+64 bytes from ...
+</code></pre></section><section class="sec" data-num="31" id="s31"><h2 class="sec-title"><span class="num">31</span><span>IP 주소 확인</span></h2><p>다음 명령을 사용합니다.</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">ip addr
+</code></pre><p>간단하게 보려면:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">hostname -I
+</code></pre><p>NAT 환경에서는 예를 들어 다음처럼 나타날 수 있습니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">10.0.2.15
+</code></pre></section><section class="sec" data-num="32" id="s32"><h2 class="sec-title"><span class="num">32</span><span>패키지 업데이트</span></h2><p>설치 후 가장 먼저 패키지를 업데이트합니다.</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo apt update
+</code></pre><p>그리고:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo apt upgrade -y
+</code></pre><p>비밀번호를 묻는 경우 Ubuntu 사용자 비밀번호를 입력합니다.</p></section><section class="sec" data-num="33" id="s33"><h2 class="sec-title"><span class="num">33</span><span>SSH 서버 동작 확인</span></h2><p>설치 중 OpenSSH Server를 선택했다면 다음 명령을 실행합니다.</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo systemctl status ssh
+</code></pre><p>다음과 같이 나오면 정상입니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">active (running)
+</code></pre><p>화면에서 빠져나오려면:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">q
+</code></pre><p>를 누릅니다.</p></section><section class="sec" data-num="34" id="s34"><h2 class="sec-title"><span class="num">34</span><span>SSH가 설치되지 않은 경우</span></h2><p>다음 명령으로 설치할 수 있습니다.</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo apt update
+sudo apt install openssh-server -y
+</code></pre><p>서비스를 시작합니다.</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo systemctl enable --now ssh
+</code></pre><p>확인:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo systemctl status ssh
+</code></pre></section><section class="sec" data-num="35" id="s35"><h2 class="sec-title"><span class="num">35</span><span>VirtualBox NAT에서 Windows SSH 접속하기</span></h2><p>기본 NAT 설정에서는 Ubuntu VM의 <code>10.0.2.15</code> 주소로<br/>
+Windows에서 직접 SSH 접속이 되지 않는 경우가 있습니다.</p><p>이때 <strong>포트 포워딩</strong>을 설정하면 편리합니다.</p><h3 class="sub-title" id="s35-35_1"><span class="sub-num">35-1</span><span>Ubuntu VM 종료</span></h3><p>먼저 Ubuntu에서:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo poweroff
+</code></pre><p>VM이 완전히 종료될 때까지 확인합니다.</p><h3 class="sub-title" id="s35-35_2"><span class="sub-num">35-2</span><span>포트 포워딩 설정</span></h3><p>VirtualBox에서 VM을 선택하고:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Settings
+  → Network
+  → Adapter 1
+  → Advanced
+  → Port Forwarding
+</code></pre><p>새 규칙을 추가합니다.</p><div class="tw"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th>값</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Name</td>
+<td>SSH</td>
+</tr>
+<tr>
+<td>Protocol</td>
+<td>TCP</td>
+</tr>
+<tr>
+<td>Host IP</td>
+<td>127.0.0.1</td>
+</tr>
+<tr>
+<td>Host Port</td>
+<td>2222</td>
+</tr>
+<tr>
+<td>Guest IP</td>
+<td>비워둠</td>
+</tr>
+<tr>
+<td>Guest Port</td>
+<td>22</td>
+</tr>
+</tbody>
+</table></div><p>즉:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Windows 127.0.0.1:2222
+          ↓
+VirtualBox NAT
+          ↓
+Ubuntu Server:22
+</code></pre><p><strong>OK</strong>를 눌러 저장합니다.</p></section><section class="sec" data-num="36" id="s36"><h2 class="sec-title"><span class="num">36</span><span>Windows에 PuTTY 설치</span></h2><p>Ubuntu Server에 Windows에서 SSH로 접속하기 위해 <strong>PuTTY</strong>를 사용합니다.</p><p>PuTTY 공식 사이트:</p><p><a href="https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html" rel="noopener" target="_blank">https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html</a></p><p>Windows용 설치 파일을 내려받아 설치합니다.</p><p>일반적으로 64비트 Windows 11에서는 다음 형태의 MSI 설치 프로그램을 사용하면 됩니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">64-bit x86
+putty-64bit-....-installer.msi
+</code></pre><p>PuTTY를 설치하면 일반적으로 다음 프로그램이 함께 설치됩니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">PuTTY     : SSH 접속 프로그램
+PuTTYgen  : 공개키 / 비밀키 생성 프로그램
+Pageant   : SSH 키를 메모리에 보관하는 프로그램
+</code></pre><p>이번 실습에서는 <strong>PuTTY + PuTTYgen</strong>을 사용합니다.</p></section><section class="sec" data-num="37" id="s37"><h2 class="sec-title"><span class="num">37</span><span>PuTTY로 최초 SSH 접속</span></h2><p>공개키를 서버에 등록하기 전에는 최초 1회 사용자 이름과 비밀번호로 접속합니다.</p><p>Ubuntu VM을 먼저 실행합니다.</p><p>Windows 시작 메뉴에서:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">PuTTY
+</code></pre><p>를 실행합니다.</p><h3 class="sub-title" id="s37-37_1"><span class="sub-num">37-1</span><span>Session 설정</span></h3><p>PuTTY의 <strong>Session</strong> 화면에서 다음과 같이 입력합니다.</p><h4 class="field">Host Name</h4><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">127.0.0.1
+</code></pre><h4 class="field">Port</h4><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">2222
+</code></pre><h4 class="field">Connection type</h4><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">SSH
+</code></pre><p>즉:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Host Name : 127.0.0.1
+Port      : 2222
+Type      : SSH
+</code></pre><h3 class="sub-title" id="s37-37_2"><span class="sub-num">37-2</span><span>최초 접속</span></h3><p>아래쪽의:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Open
+</code></pre><p>을 클릭합니다.</p><p>최초 접속 시 서버의 Host Key를 신뢰할 것인지 묻는 창이 나타날 수 있습니다.</p><p>내용을 확인한 뒤:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Accept
+</code></pre><p>를 선택합니다.</p><p>터미널에 다음과 같이 표시됩니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">login as:
+</code></pre><p>설치할 때 만든 사용자 이름을 입력합니다.</p><p>예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">ubuntu
+</code></pre><p>비밀번호를 입력합니다.</p><p>접속에 성공하면:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">ubuntu@ubuntu-server:~$
+</code></pre><p>와 비슷하게 나타납니다.</p><blockquote class="callout info"><span class="ic">ⓘ</span>
+<p>이 비밀번호 접속은 공개키를 등록하기 위한 <strong>최초 설정용</strong>입니다.<br/>
+다음 단계부터 공개키/비밀키 방식으로 변경합니다.</p>
+</blockquote></section><section class="sec" data-num="38" id="s38"><h2 class="sec-title"><span class="num">38</span><span>PuTTYgen으로 공개키와 비밀키 만들기</span></h2><p>Windows 시작 메뉴에서 다음을 실행합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">PuTTYgen
+</code></pre><p>PuTTYgen은 SSH 인증에 사용할 키 쌍을 만듭니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">공개키(Public Key)
+        ↓
+Ubuntu Server의 ~/.ssh/authorized_keys 에 등록
+
+비밀키(Private Key)
+        ↓
+Windows PC에 .ppk 파일로 보관
+        ↓
+PuTTY가 접속할 때 사용
+</code></pre><blockquote class="callout warn"><span class="ic">⚠</span>
+<p><strong>비밀키는 다른 사람에게 전달하면 안 됩니다.</strong></p>
+</blockquote><h3 class="sub-title" id="s38-38_1"><span class="sub-num">38-1</span><span>키 종류 선택</span></h3><p>PuTTYgen에서 키 종류를 선택할 수 있다면 <strong>Ed25519</strong>를 권장합니다.</p><p>버전에 따라 다음과 비슷하게 표시됩니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">EdDSA
+Ed25519
+</code></pre><p>RSA를 사용하는 교육 환경이라면 RSA 3072비트 이상을 사용해도 됩니다.</p><h3 class="sub-title" id="s38-38_2"><span class="sub-num">38-2</span><span>Generate 클릭</span></h3><p>다음을 클릭합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Generate
+</code></pre><p>키 생성 중 마우스를 빈 공간에서 움직이라는 안내가 나오면<br/>
+PuTTYgen 창 안에서 마우스를 움직입니다.</p><p>잠시 후 키가 생성됩니다.</p><h3 class="sub-title" id="s38-38_3"><span class="sub-num">38-3</span><span>Key comment 설정</span></h3><p>구분하기 쉬운 이름을 입력합니다.</p><p>예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">ubuntu-virtualbox-key
+</code></pre><h3 class="sub-title" id="s38-38_4"><span class="sub-num">38-4</span><span>Key passphrase 설정</span></h3><p>PuTTYgen에는 다음 항목이 있습니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Key passphrase
+Confirm passphrase
+</code></pre><h4 class="field">실습용 VirtualBox에서 완전 자동 접속이 목적이라면</h4><p>두 항목을 <strong>빈칸</strong>으로 둡니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Key passphrase     :
+Confirm passphrase :
+</code></pre><p>이렇게 하면 PuTTY 실행 시 <strong>키 암호도 묻지 않습니다.</strong></p><blockquote class="callout warn"><span class="ic">⚠</span>
+<p>이 방식은 개인 PC의 로컬 VirtualBox 실습 환경에서는 편리하지만<br/>
+실제 운영 서버에서는 권장하지 않습니다.</p>
+<p>실제 서버에서는 비밀키에 passphrase를 설정하고<br/>
+<strong>Pageant</strong> 같은 SSH Agent를 사용하는 것이 더 안전합니다.</p>
+</blockquote></section><section class="sec" data-num="39" id="s39"><h2 class="sec-title"><span class="num">39</span><span>비밀키(.ppk) 저장</span></h2><p>PuTTYgen에서:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Save private key
+</code></pre><p>를 클릭합니다.</p><p>예를 들어 다음 위치에 저장합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">C:\Users\사용자이름\.ssh\ubuntu-virtualbox.ppk
+</code></pre><p><code>.ssh</code> 폴더가 없다면 새로 만들어도 됩니다.</p><p>예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">C:\Users\사용자이름\.ssh\
+</code></pre><p>비밀키 파일:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">ubuntu-virtualbox.ppk
+</code></pre><blockquote class="callout warn"><span class="ic">⚠</span>
+<p><code>.ppk</code> 파일은 <strong>비밀키</strong>입니다.<br/>
+이메일, 메신저, GitHub 등에 올리지 마세요.</p>
+</blockquote></section><section class="sec" data-num="40" id="s40"><h2 class="sec-title"><span class="num">40</span><span>공개키 복사</span></h2><p>PuTTYgen 상단에 다음과 같은 영역이 있습니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Public key for pasting into OpenSSH authorized_keys file
+</code></pre><p>그 안의 긴 문자열 전체를 선택하여 복사합니다.</p><p>Ed25519 키라면 대략 다음 형태입니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI........ ubuntu-virtualbox-key
+</code></pre><blockquote class="callout warn"><span class="ic">⚠</span>
+<p>공개키는 반드시 <strong>한 줄 전체</strong>를 복사합니다.</p>
+</blockquote><p>다음과 같이 중간에서 줄을 임의로 나누면 안 됩니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">ssh-ed25519 AAAA....
+</code></pre></section><section class="sec" data-num="41" id="s41"><h2 class="sec-title"><span class="num">41</span><span>Ubuntu Server에 공개키 등록</span></h2><p>앞에서 비밀번호로 접속해 둔 PuTTY 창에서 실행합니다.</p><p>먼저 <code>.ssh</code> 디렉터리를 만듭니다.</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">mkdir -p ~/.ssh
+</code></pre><p>권한을 설정합니다.</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">chmod 700 ~/.ssh
+</code></pre><p><code>authorized_keys</code> 파일을 엽니다.</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">nano ~/.ssh/authorized_keys
+</code></pre><h3 class="sub-title" id="s41-41_1"><span class="sub-num">41-1</span><span>공개키 붙여넣기</span></h3><p>PuTTYgen에서 복사한 공개키를 <code>nano</code>에 붙여넣습니다.</p><p>PuTTY 터미널에서는 일반적으로 <strong>마우스 오른쪽 버튼 클릭</strong>으로 붙여넣을 수 있습니다.</p><p>예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI........ ubuntu-virtualbox-key
+</code></pre><p>공개키가 한 줄로 들어갔는지 확인합니다.</p><h3 class="sub-title" id="s41-41_2"><span class="sub-num">41-2</span><span>nano 저장</span></h3><p>다음을 누릅니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Ctrl + O
+</code></pre><p>파일 이름 확인 후:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Enter
+</code></pre><p>종료:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Ctrl + X
+</code></pre><h3 class="sub-title" id="s41-41_3"><span class="sub-num">41-3</span><span>authorized_keys 권한 설정</span></h3><p>다음 명령을 실행합니다.</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">chmod 600 ~/.ssh/authorized_keys
+</code></pre><p>소유권도 현재 사용자로 맞춥니다.</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">chown -R $USER:$USER ~/.ssh
+</code></pre><p>확인:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">ls -al ~/.ssh
+</code></pre><p>대략 다음과 같이 보이면 됩니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">drwx------  .ssh
+-rw-------  authorized_keys
+</code></pre><p>공개키가 정상 등록되었는지 확인:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">cat ~/.ssh/authorized_keys
+</code></pre></section><section class="sec" data-num="42" id="s42"><h2 class="sec-title"><span class="num">42</span><span>PuTTY에 비밀키(.ppk) 등록</span></h2><p>이제 새 PuTTY 창을 실행합니다.</p><p>왼쪽 메뉴에서 다음 경로로 이동합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Connection
+  → SSH
+    → Auth
+      → Credentials
+</code></pre><p>버전에 따라 메뉴가 조금 다를 수 있습니다.</p><p>다음 항목을 찾습니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Private key file for authentication
+</code></pre><p><strong>Browse</strong>를 클릭하고 앞에서 저장한 파일을 선택합니다.</p><p>예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">C:\Users\사용자이름\.ssh\ubuntu-virtualbox.ppk
+</code></pre></section><section class="sec" data-num="43" id="s43"><h2 class="sec-title"><span class="num">43</span><span>PuTTY에 사용자 이름 저장</span></h2><p>매번 <code>ubuntu</code>라는 로그인 ID를 입력하지 않도록 사용자 이름도 저장합니다.</p><p>왼쪽 메뉴에서:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Connection
+  → Data
+</code></pre><p>로 이동합니다.</p><p>다음 항목을 찾습니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Auto-login username
+</code></pre><p>설치 시 만든 Ubuntu 사용자 이름을 입력합니다.</p><p>예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">ubuntu
+</code></pre><p>이렇게 하면 접속할 때:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">login as:
+</code></pre><p>를 묻지 않고 PuTTY가 자동으로 <code>ubuntu</code> 사용자를 사용합니다.</p></section><section class="sec" data-num="44" id="s44"><h2 class="sec-title"><span class="num">44</span><span>PuTTY Session 저장</span></h2><p>왼쪽 메뉴 맨 위의:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Session
+</code></pre><p>으로 돌아갑니다.</p><p>다시 확인합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Host Name : 127.0.0.1
+Port      : 2222
+Type      : SSH
+</code></pre><h4 class="field">Saved Sessions</h4><p>다음과 같이 이름을 입력합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Ubuntu-22.04-Server
+</code></pre><p>그리고:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Save
+</code></pre><p>를 클릭합니다.</p><p>이제 다음 설정이 한 번에 저장됩니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">서버 주소       : 127.0.0.1
+SSH 포트        : 2222
+사용자 이름     : ubuntu
+비밀키          : ubuntu-virtualbox.ppk
+</code></pre></section><section class="sec" data-num="45" id="s45"><h2 class="sec-title"><span class="num">45</span><span>ID / Password 입력 없이 SSH 접속 테스트</span></h2><p>기존 PuTTY 창은 아직 닫지 않는 것을 권장합니다.</p><p>새 PuTTY를 실행합니다.</p><p><strong>Saved Sessions</strong> 목록에서:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Ubuntu-22.04-Server
+</code></pre><p>를 선택합니다.</p><p>다음 중 하나를 실행합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Load → Open
+</code></pre><p>또는 저장된 세션 이름을 더블클릭합니다.</p><p>정상이라면 로그인 ID와 비밀번호를 입력하지 않고 바로:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">ubuntu@ubuntu-server:~$
+</code></pre><p>프롬프트가 나타납니다.</p><p>즉 이후 접속 과정은 다음과 같습니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">PuTTY 실행
+    ↓
+Ubuntu-22.04-Server 더블클릭
+    ↓
+공개키/비밀키 인증
+    ↓
+Ubuntu 자동 로그인
+</code></pre><h4 class="field">정상 접속 예</h4><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Using username "ubuntu".
+Authenticating with public key "ubuntu-virtualbox-key"
+</code></pre><p>이후:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">ubuntu@ubuntu-server:~$
+</code></pre><p>가 나타납니다.</p></section><section class="sec" data-num="46" id="s46"><h2 class="sec-title"><span class="num">46</span><span>공개키 인증 구조 이해하기</span></h2><p>전체 인증 구조는 다음과 같습니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Windows 11
+│
+│  PuTTY
+│    │
+│    ├─ Username : ubuntu
+│    │
+│    └─ Private Key
+│         ubuntu-virtualbox.ppk
+│
+│          SSH : 127.0.0.1:2222
+│                    │
+│                    ▼
+│           VirtualBox NAT
+│             2222 → 22
+│                    │
+│                    ▼
+│          Ubuntu Server
+│                    │
+│                    └─ ~/.ssh/authorized_keys
+│                         Public Key
+│
+└──── 공개키와 비밀키가 일치하면 접속 허용
+</code></pre><p>중요한 점:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Windows PC : 비밀키 보관
+Ubuntu     : 공개키 보관
+</code></pre><p>비밀번호 자체가 네트워크를 통해 인증에 사용되지 않습니다.</p></section><section class="sec" data-num="47" id="s47"><h2 class="sec-title"><span class="num">47</span><span>비밀번호 SSH 로그인을 완전히 막기 — 선택 사항</span></h2><p>공개키 인증이 정상적으로 동작하는 것을 <strong>먼저 확인한 후</strong> 진행합니다.</p><blockquote class="callout warn"><span class="ic">⚠</span>
+<p>이 단계 전에 반드시 새 PuTTY 창을 열어<br/>
+공개키 방식으로 실제 접속에 성공했는지 확인하세요.</p>
+<p>설정이 잘못되면 SSH로 로그인하지 못할 수 있으므로<br/>
+작업 중인 기존 SSH 창은 테스트가 끝날 때까지 닫지 않는 것을 권장합니다.</p>
+</blockquote><p>SSH 설정 파일을 엽니다.</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo nano /etc/ssh/sshd_config
+</code></pre><p>다음 설정을 찾아 수정하거나 파일 마지막에 추가합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">PubkeyAuthentication yes
+PasswordAuthentication no
+</code></pre><p>설정을 저장합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Ctrl + O
+Enter
+Ctrl + X
+</code></pre><p>설정 문법을 검사합니다.</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo sshd -t
+</code></pre><p>아무 메시지도 나오지 않으면 일반적으로 문법상 문제가 없는 것입니다.</p><p>SSH 서비스를 다시 읽습니다.</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo systemctl reload ssh
+</code></pre><h3 class="sub-title" id="s47-47_1"><span class="sub-num">47-1</span><span>다시 접속 테스트</span></h3><p>새 PuTTY 창을 실행하고 저장한:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Ubuntu-22.04-Server
+</code></pre><p>세션으로 접속합니다.</p><p>정상 접속되면 이제 서버는 SSH 비밀번호 로그인을 허용하지 않고<br/>
+등록된 공개키를 가진 클라이언트만 로그인할 수 있습니다.</p></section><section class="sec" data-num="48" id="s48"><h2 class="sec-title"><span class="num">48</span><span>VM 정상 종료 방법</span></h2><p>가상 머신을 강제로 끄는 것보다 Ubuntu 안에서 종료하는 것이 좋습니다.</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo poweroff
+</code></pre><p>재부팅:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo reboot
+</code></pre></section><section class="sec" data-num="49" id="s49"><h2 class="sec-title"><span class="num">49</span><span>VirtualBox 스냅샷 만들기</span></h2><p>Ubuntu 설치와 공개키 SSH 설정이 끝났다면 스냅샷을 만드는 것을 권장합니다.</p><p>VirtualBox에서 VM 선택 후:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Snapshots
+  → Take
+</code></pre><p>이름 예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">02-SSH-Key-Configured
+</code></pre><p>설명 예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Ubuntu Server 22.04 설치 완료
+PuTTY 공개키 인증 설정 완료
+</code></pre><p>이후 실습 중 시스템에 문제가 생기면<br/>
+이 상태로 빠르게 복구할 수 있습니다.</p></section><section class="sec" data-num="50" id="s50"><h2 class="sec-title"><span class="num">50</span><span>설치 완료 체크리스트</span></h2><p>아래 항목을 하나씩 확인합니다.</p><div class="ckbar" id="ckbar"><span>완료</span><b>0 / 0</b><div class="bar"><i></i></div><button id="ckreset" type="button">초기화</button></div><ul class="checklist">
+<li class="check"><label><input data-ck="1" type="checkbox"/><span>KAIST 미러에서 <code>ubuntu-22.04.5-live-server-amd64.iso</code> 다운로드</span></label></li>
+<li class="check"><label><input data-ck="2" type="checkbox"/><span>VirtualBox 설치</span></label></li>
+<li class="check"><label><input data-ck="3" type="checkbox"/><span><code>Ubuntu-22.04-Server</code> VM 생성</span></label></li>
+<li class="check"><label><input data-ck="4" type="checkbox"/><span>RAM 4GB 설정</span></label></li>
+<li class="check"><label><input data-ck="5" type="checkbox"/><span>CPU 2개 설정</span></label></li>
+<li class="check"><label><input data-ck="6" type="checkbox"/><span>가상 디스크 30GB 설정</span></label></li>
+<li class="check"><label><input data-ck="7" type="checkbox"/><span>네트워크 NAT 설정</span></label></li>
+<li class="check"><label><input data-ck="8" type="checkbox"/><span>Ubuntu Server 설치 완료</span></label></li>
+<li class="check"><label><input data-ck="9" type="checkbox"/><span>OpenSSH Server 설치</span></label></li>
+<li class="check"><label><input data-ck="10" type="checkbox"/><span><code>sudo apt update</code> 성공</span></label></li>
+<li class="check"><label><input data-ck="11" type="checkbox"/><span>인터넷 연결 확인</span></label></li>
+<li class="check"><label><input data-ck="12" type="checkbox"/><span>SSH 서비스 확인</span></label></li>
+<li class="check"><label><input data-ck="13" type="checkbox"/><span>VirtualBox NAT 포트 포워딩 <code>2222 → 22</code> 설정</span></label></li>
+<li class="check"><label><input data-ck="14" type="checkbox"/><span>PuTTY 설치</span></label></li>
+<li class="check"><label><input data-ck="15" type="checkbox"/><span>PuTTY에서 최초 비밀번호 SSH 접속 성공</span></label></li>
+<li class="check"><label><input data-ck="16" type="checkbox"/><span>PuTTYgen에서 Ed25519 공개키/비밀키 생성</span></label></li>
+<li class="check"><label><input data-ck="17" type="checkbox"/><span>Windows에 <code>.ppk</code> 비밀키 저장</span></label></li>
+<li class="check"><label><input data-ck="18" type="checkbox"/><span>Ubuntu <code>~/.ssh/authorized_keys</code>에 공개키 등록</span></label></li>
+<li class="check"><label><input data-ck="19" type="checkbox"/><span><code>.ssh</code> 권한 <code>700</code> 설정</span></label></li>
+<li class="check"><label><input data-ck="20" type="checkbox"/><span><code>authorized_keys</code> 권한 <code>600</code> 설정</span></label></li>
+<li class="check"><label><input data-ck="21" type="checkbox"/><span>PuTTY에 Auto-login username 저장</span></label></li>
+<li class="check"><label><input data-ck="22" type="checkbox"/><span>PuTTY에 <code>.ppk</code> 비밀키 등록</span></label></li>
+<li class="check"><label><input data-ck="23" type="checkbox"/><span><code>Ubuntu-22.04-Server</code> Session 저장</span></label></li>
+<li class="check"><label><input data-ck="24" type="checkbox"/><span>ID/Password 입력 없이 PuTTY 접속 성공</span></label></li>
+<li class="check"><label><input data-ck="25" type="checkbox"/><span>필요하면 <code>PasswordAuthentication no</code> 적용</span></label></li>
+<li class="check"><label><input data-ck="26" type="checkbox"/><span>SSH 키 설정 완료 후 VirtualBox 스냅샷 생성</span></label></li>
+<li class="check"><label><input data-ck="27" type="checkbox"/><span>FileZilla Client 설치</span></label></li>
+<li class="check"><label><input data-ck="28" type="checkbox"/><span>Site Manager에서 SFTP 선택</span></label></li>
+<li class="check"><label><input data-ck="29" type="checkbox"/><span>Host <code>127.0.0.1</code>, Port <code>2222</code> 설정</span></label></li>
+<li class="check"><label><input data-ck="30" type="checkbox"/><span>Logon Type <code>Key file</code> 설정</span></label></li>
+<li class="check"><label><input data-ck="31" type="checkbox"/><span>PuTTYgen의 <code>ubuntu-virtualbox.ppk</code> 비밀키 지정</span></label></li>
+<li class="check"><label><input data-ck="32" type="checkbox"/><span>FileZilla 공개키 인증 접속 성공</span></label></li>
+<li class="check"><label><input data-ck="33" type="checkbox"/><span>Windows → Ubuntu 파일 업로드 확인</span></label></li>
+<li class="check"><label><input data-ck="34" type="checkbox"/><span>Ubuntu → Windows 파일 다운로드 확인</span></label></li>
+</ul></section><section class="sec" data-num="51" id="s51"><h2 class="sec-title"><span class="num">51</span><span>자주 발생하는 문제</span></h2><h3 class="sub-title" id="s51-1"><span>문제 1. PuTTY에서 Connection refused가 나온다</span></h3><p>Ubuntu의 SSH 서비스 상태를 확인합니다.</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo systemctl status ssh
+</code></pre><p>실행되지 않았다면:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo systemctl enable --now ssh
+</code></pre><p>VirtualBox 포트 포워딩도 확인합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Host IP    : 127.0.0.1
+Host Port  : 2222
+Guest Port : 22
+</code></pre><h3 class="sub-title" id="s51-2"><span>문제 2. PuTTY에서 Server refused our key가 나온다</span></h3><p>Ubuntu의 권한을 확인합니다.</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">chmod 700 ~/.ssh
+chmod 600 ~/.ssh/authorized_keys
+chown -R $USER:$USER ~/.ssh
+</code></pre><p>공개키가 한 줄로 정확히 들어갔는지 확인합니다.</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">cat ~/.ssh/authorized_keys
+</code></pre><p>PuTTY에 지정한 <code>.ppk</code> 파일이<br/>
+해당 공개키와 짝을 이루는 비밀키인지도 확인합니다.</p><h3 class="sub-title" id="s51-3"><span>문제 3. 계속 비밀번호를 묻는다</span></h3><p>PuTTY에서 다음 설정을 확인합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Connection
+  → SSH
+    → Auth
+      → Credentials
+</code></pre><p><code>Private key file for authentication</code>에 올바른 <code>.ppk</code>가 등록되어 있어야 합니다.</p><p>또한 Ubuntu에서:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">cat ~/.ssh/authorized_keys
+</code></pre><p>를 실행해 공개키가 정확히 등록되어 있는지 확인합니다.</p><h3 class="sub-title" id="s51-4"><span>문제 4. 매번 login as: 를 묻는다</span></h3><p>PuTTY에서:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Connection
+  → Data
+  → Auto-login username
+</code></pre><p>에 다음과 같이 사용자 이름을 저장합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">ubuntu
+</code></pre><p>그 후 반드시:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Session
+  → Save
+</code></pre><p>로 세션을 다시 저장합니다.</p><h3 class="sub-title" id="s51-5"><span>문제 5. 키 passphrase를 묻는다</span></h3><p>비밀키 생성 시 passphrase를 설정했기 때문입니다.</p><p>보안상 정상적인 동작입니다.</p><p>매번 입력하지 않으려면 다음 두 방법이 있습니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">방법 1 : PuTTYgen에서 passphrase 없는 실습용 키 생성
+방법 2 : Pageant에 passphrase가 있는 키를 등록
+</code></pre><p>실제 운영 서버에서는 <strong>방법 2</strong>가 더 안전합니다.</p><h3 class="sub-title" id="s51-6"><span>문제 6. PasswordAuthentication no 설정 후 접속할 수 없다</span></h3><p>VirtualBox VM 화면에서 직접 Ubuntu 콘솔로 로그인합니다.</p><p>설정 파일을 다시 엽니다.</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo nano /etc/ssh/sshd_config
+</code></pre><p>임시로 다음과 같이 되돌립니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">PasswordAuthentication yes
+</code></pre><p>확인:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo sshd -t
+</code></pre><p>적용:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo systemctl reload ssh
+</code></pre><p>그다음 공개키 등록 상태를 다시 점검합니다.</p><h3 class="sub-title" id="s51-7"><span>문제 7. Ubuntu (64-bit)가 보이지 않는다</span></h3><p>Windows 작업 관리자에서:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Ctrl + Shift + Esc
+  → 성능
+  → CPU
+</code></pre><p>다음을 확인합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">가상화: 사용
+</code></pre><p>비활성 상태라면 BIOS/UEFI에서 다음 기능을 활성화합니다.</p><p>Intel:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Intel Virtualization Technology
+VT-x
+</code></pre><p>AMD:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">SVM Mode
+AMD-V
+</code></pre><h3 class="sub-title" id="s51-8"><span>문제 8. 인터넷이 연결되지 않는다</span></h3><p>VirtualBox:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Settings
+  → Network
+  → Adapter 1
+</code></pre><p>다음 상태인지 확인합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Enable Network Adapter : ON
+Attached to            : NAT
+</code></pre><p>Ubuntu:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">ip addr
+ping -c 4 8.8.8.8
+ping -c 4 google.com
+</code></pre><h3 class="sub-title" id="s51-9"><span>문제 9. 설치 후 다시 설치 화면이 나온다</span></h3><p>ISO가 계속 연결되어 있을 수 있습니다.</p><p>VM 종료 후:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Settings
+  → Storage
+  → Optical Drive
+</code></pre><p>에서 ISO를 제거합니다.</p></section><section class="sec" data-num="52" id="s52"><h2 class="sec-title"><span class="num">52</span><span>최종 구성</span></h2><p>설치와 공개키 설정이 끝나면 다음과 같은 구조가 됩니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">┌────────────────────────────────────────────────┐
+│                 Windows 11 PC                  │
+│                                                │
+│  PuTTY                                         │
+│   ├─ Saved Session : Ubuntu-22.04-Server       │
+│   ├─ Username      : ubuntu                    │
+│   └─ Private Key   : ubuntu-virtualbox.ppk     │
+│             │                                  │
+│             │ 127.0.0.1:2222                   │
+│             ▼                                  │
+│  ┌──────────────────────────────────────────┐  │
+│  │             Oracle VirtualBox            │  │
+│  │                                          │  │
+│  │       NAT Port Forward 2222 → 22         │  │
+│  │                    │                     │  │
+│  │                    ▼                     │  │
+│  │  ┌────────────────────────────────────┐  │  │
+│  │  │ Ubuntu Server 22.04.5 LTS          │  │  │
+│  │  │                                    │  │  │
+│  │  │ SSH Port : 22                      │  │  │
+│  │  │ User     : ubuntu                  │  │  │
+│  │  │                                    │  │  │
+│  │  │ ~/.ssh/authorized_keys             │  │  │
+│  │  │        └─ Public Key               │  │  │
+│  │  └────────────────────────────────────┘  │  │
+│  └──────────────────────────────────────────┘  │
+│                                                │
+│  이후 접속:                                    │
+│  PuTTY → Ubuntu-22.04-Server 더블클릭          │
+│  → ID/Password 입력 없이 SSH 접속              │
+└────────────────────────────────────────────────┘
+</code></pre></section><section class="sec" data-num="53" id="s53"><h2 class="sec-title"><span class="num">53</span><span>FileZilla Client 다운로드</span></h2><p>PuTTY로 SSH 접속이 정상적으로 된다면 같은 SSH 서버를 이용하여<br/>
+<strong>FileZilla Client</strong>로 Windows와 Ubuntu Server 사이에 파일을 주고받을 수 있습니다.</p><p>이번 실습에서는 일반 FTP가 아니라 <strong>SFTP(SSH File Transfer Protocol)</strong>를 사용합니다.</p><p>즉 기존 SSH 포트:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Ubuntu SSH Port : 22
+</code></pre><p>와 VirtualBox NAT 포트포워딩:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Windows 127.0.0.1:2222
+        ↓
+Ubuntu Server:22
+</code></pre><p>를 그대로 사용합니다.</p><h3 class="sub-title" id="s53-53_1"><span class="sub-num">53-1</span><span>FileZilla 공식 사이트 접속</span></h3><p>웹 브라우저에서 FileZilla 공식 다운로드 페이지에 접속합니다.</p><p><a href="https://filezilla-project.org/download.php?type=client" rel="noopener" target="_blank">https://filezilla-project.org/download.php?type=client</a></p><p>Windows 11에서는 <strong>FileZilla Client</strong>를 다운로드합니다.</p><blockquote class="callout warn"><span class="ic">⚠</span>
+<p><code>FileZilla Server</code>가 아니라 반드시 <strong>FileZilla Client</strong>를 설치합니다.</p>
+</blockquote><p>화면에 다음과 같이 표시될 수 있습니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Download FileZilla Client for Windows
+</code></pre><p>다운로드 버튼을 클릭합니다.</p><h3 class="sub-title" id="s53-53_2"><span class="sub-num">53-2</span><span>설치 파일 실행</span></h3><p>다운로드한 FileZilla 설치 파일을 실행합니다.</p><p>설치 프로그램이 시작되면 안내에 따라 진행합니다.</p><p>일반적으로 다음 순서로 진행하면 됩니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">설치 파일 실행
+    ↓
+라이선스 확인
+    ↓
+설치 옵션 확인
+    ↓
+설치 위치 확인
+    ↓
+Install
+    ↓
+Finish
+</code></pre><p>설치가 완료되면 Windows 시작 메뉴에서:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">FileZilla
+</code></pre><p>를 검색하여 실행합니다.</p></section><section class="sec" data-num="54" id="s54"><h2 class="sec-title"><span class="num">54</span><span>FileZilla로 접속하기 전에 확인할 것</span></h2><p>FileZilla는 앞에서 구축한 SSH 환경을 그대로 사용합니다.</p><p>다음 항목이 모두 준비되어 있어야 합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Ubuntu VM 실행
+OpenSSH Server 실행
+VirtualBox NAT 포트포워딩 2222 → 22 설정
+Ubuntu 사용자 이름 확인
+PuTTYgen으로 만든 .ppk 비밀키 준비
+Ubuntu authorized_keys에 공개키 등록 완료
+</code></pre><p>예를 들어 이 문서의 설정값은 다음과 같습니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Host        : 127.0.0.1
+Port        : 2222
+Protocol    : SFTP
+Username    : ubuntu
+Private Key : C:\Users\사용자이름\.ssh\ubuntu-virtualbox.ppk
+</code></pre><p>Ubuntu에서 SSH 서버가 실행 중인지 확인하려면:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo systemctl status ssh
+</code></pre><p>정상 상태:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">active (running)
+</code></pre></section><section class="sec" data-num="55" id="s55"><h2 class="sec-title"><span class="num">55</span><span>FileZilla Site Manager 열기</span></h2><p>FileZilla를 실행합니다.</p><p>상단 메뉴에서:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">File
+  → Site Manager
+</code></pre><p>를 선택합니다.</p><p>단축키가 제공되는 버전에서는 Site Manager 아이콘을 클릭해도 됩니다.</p><p>왼쪽 아래의:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">New site
+</code></pre><p>를 클릭합니다.</p><p>사이트 이름을 다음처럼 지정합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Ubuntu-22.04-Server
+</code></pre></section><section class="sec" data-num="56" id="s56"><h2 class="sec-title"><span class="num">56</span><span>FileZilla SFTP 접속 정보 입력</span></h2><p>오른쪽 <strong>General</strong> 탭에서 다음과 같이 입력합니다.</p><h3 class="sub-title" id="s56-56_1"><span class="sub-num">56-1</span><span>Protocol</span></h3><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">SFTP - SSH File Transfer Protocol
+</code></pre><p>을 선택합니다.</p><blockquote class="callout warn"><span class="ic">⚠</span>
+<p>일반 <code>FTP</code> 또는 <code>FTP over TLS</code>를 선택하지 않습니다.</p>
+</blockquote><h3 class="sub-title" id="s56-56_2"><span class="sub-num">56-2</span><span>Host</span></h3><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">127.0.0.1
+</code></pre><p>을 입력합니다.</p><h3 class="sub-title" id="s56-56_3"><span class="sub-num">56-3</span><span>Port</span></h3><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">2222
+</code></pre><p>를 입력합니다.</p><p>이 포트는 앞에서 VirtualBox에 설정한:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Host Port 2222
+     ↓
+Guest Port 22
+</code></pre><p>포트포워딩 설정을 사용하는 것입니다.</p><h3 class="sub-title" id="s56-56_4"><span class="sub-num">56-4</span><span>Logon Type</span></h3><p>다음 항목을 선택합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Key file
+</code></pre><p>FileZilla는 SFTP 사이트 설정에서 <code>.ppk</code> 형식의 PuTTY 비밀키를 사용할 수 있습니다.</p><h3 class="sub-title" id="s56-56_5"><span class="sub-num">56-5</span><span>User</span></h3><p>Ubuntu 설치 시 만든 사용자 이름을 입력합니다.</p><p>예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">ubuntu
+</code></pre><h3 class="sub-title" id="s56-56_6"><span class="sub-num">56-6</span><span>Key file</span></h3><p>다음 항목에서:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Browse
+</code></pre><p>또는 키 파일 선택 버튼을 클릭합니다.</p><p>앞에서 PuTTYgen으로 만든 비밀키를 선택합니다.</p><p>예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">C:\Users\사용자이름\.ssh\ubuntu-virtualbox.ppk
+</code></pre><p>최종 설정 예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Protocol   : SFTP - SSH File Transfer Protocol
+Host       : 127.0.0.1
+Port       : 2222
+Logon Type : Key file
+User       : ubuntu
+Key file   : C:\Users\사용자이름\.ssh\ubuntu-virtualbox.ppk
+</code></pre></section><section class="sec" data-num="57" id="s57"><h2 class="sec-title"><span class="num">57</span><span>FileZilla 최초 접속</span></h2><p>설정을 모두 입력한 뒤:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Connect
+</code></pre><p>를 클릭합니다.</p><p>처음 접속하는 서버라면 SSH Host Key 확인 창이 나타날 수 있습니다.</p><p>예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Unknown host key
+</code></pre><p>PuTTY에서 접속했던 서버와 동일한 서버인지 확인한 뒤<br/>
+문제가 없다면 신뢰하도록 선택합니다.</p><p>예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Always trust this host, add this key to the cache
+</code></pre><p>또는 비슷한 옵션을 체크한 뒤:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">OK
+</code></pre><p>를 클릭합니다.</p><p>정상 접속되면 FileZilla 상단 로그에 다음과 비슷한 메시지가 나타납니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Status: Connecting to 127.0.0.1:2222...
+Status: Connected to 127.0.0.1
+Status: Retrieving directory listing...
+Status: Directory listing successful
+</code></pre></section><section class="sec" data-num="58" id="s58"><h2 class="sec-title"><span class="num">58</span><span>FileZilla 화면 이해하기</span></h2><p>FileZilla 화면은 크게 왼쪽과 오른쪽으로 나뉩니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">┌──────────────────────┬──────────────────────┐
+│      Windows PC      │    Ubuntu Server     │
+│                      │                      │
+│      Local site      │     Remote site      │
+│                      │                      │
+│  C:\Users\...        │  /home/ubuntu        │
+│                      │                      │
+│  내 PC 파일          │  서버 파일           │
+└──────────────────────┴──────────────────────┘
+</code></pre><h4 class="field">왼쪽</h4><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Local site
+</code></pre><p>Windows PC의 파일과 폴더입니다.</p><p>예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">C:\Users\사용자이름\Downloads
+</code></pre><h4 class="field">오른쪽</h4><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Remote site
+</code></pre><p>Ubuntu Server의 파일과 폴더입니다.</p><p>예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">/home/ubuntu
+</code></pre></section><section class="sec" data-num="59" id="s59"><h2 class="sec-title"><span class="num">59</span><span>Windows 파일을 Ubuntu로 업로드</span></h2><p>예를 들어 Windows의 다운로드 폴더에 다음 파일이 있다고 가정합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">C:\Users\사용자이름\Downloads\test.txt
+</code></pre><p>Ubuntu의 다음 위치로 복사하고 싶습니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">/home/ubuntu
+</code></pre><p>FileZilla에서:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">왼쪽 : test.txt 선택
+오른쪽 : /home/ubuntu 이동
+</code></pre><p>그다음 <code>test.txt</code>를 오른쪽 영역으로 드래그합니다.</p><p>또는 파일을 마우스 오른쪽 버튼으로 클릭하고:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Upload
+</code></pre><p>을 선택합니다.</p><p>전송이 성공하면 Ubuntu 쪽에 다음 파일이 생깁니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">/home/ubuntu/test.txt
+</code></pre><p>PuTTY에서 확인할 수 있습니다.</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">ls -al
+</code></pre><p>또는:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">ls -al ~/test.txt
+</code></pre><p>파일 내용 확인:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">cat ~/test.txt
+</code></pre><h3 class="sub-title" id="s59-59_1"><span class="sub-num">59-1</span><span>폴더 전체 업로드</span></h3><p>Windows 폴더도 같은 방법으로 서버에 복사할 수 있습니다.</p><p>예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Windows
+C:\work\myproject
+</code></pre><p>를:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Ubuntu
+/home/ubuntu/myproject
+</code></pre><p>로 전송할 수 있습니다.</p><p>왼쪽에서 폴더를 선택한 뒤 오른쪽으로 드래그하면 됩니다.</p></section><section class="sec" data-num="60" id="s60"><h2 class="sec-title"><span class="num">60</span><span>Ubuntu 파일을 Windows로 다운로드</span></h2><p>이번에는 Ubuntu에 있는 파일을 Windows로 가져옵니다.</p><p>예를 들어 Ubuntu에 다음 파일이 있다고 가정합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">/home/ubuntu/result.txt
+</code></pre><p>FileZilla 오른쪽에서:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">result.txt
+</code></pre><p>를 선택하고 왼쪽 Windows 폴더로 드래그합니다.</p><p>또는 마우스 오른쪽 버튼을 클릭하고:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Download
+</code></pre><p>를 선택합니다.</p><p>예를 들어 Windows 다운로드 폴더로 받으면:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">C:\Users\사용자이름\Downloads\result.txt
+</code></pre><p>가 생성됩니다.</p><p>FileZilla 공식 사용법에서도 파일 또는 폴더를 더블클릭하거나<br/>
+마우스 오른쪽 버튼의 Upload/Download, 또는 드래그 앤 드롭으로 전송할 수 있습니다.</p></section><section class="sec" data-num="61" id="s61"><h2 class="sec-title"><span class="num">61</span><span>FileZilla 접속 정보를 저장해서 재사용</span></h2><p>Site Manager에 저장한 경우 다음부터는 모든 항목을 다시 입력할 필요가 없습니다.</p><p>FileZilla 실행 후:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">File
+  → Site Manager
+</code></pre><p>에서:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Ubuntu-22.04-Server
+</code></pre><p>를 선택합니다.</p><p>그다음:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Connect
+</code></pre><p>를 클릭합니다.</p><p>저장된 설정:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Host        : 127.0.0.1
+Port        : 2222
+Protocol    : SFTP
+User        : ubuntu
+Private Key : ubuntu-virtualbox.ppk
+</code></pre><p>를 사용하여 접속합니다.</p><p>비밀키에 passphrase를 설정하지 않았다면<br/>
+Ubuntu 계정 비밀번호를 입력하지 않고 접속할 수 있습니다.</p></section><section class="sec" data-num="62" id="s62"><h2 class="sec-title"><span class="num">62</span><span>FileZilla와 PuTTY를 함께 사용하는 방법</span></h2><p>두 프로그램은 역할이 다릅니다.</p><h4 class="field">PuTTY</h4><p>Ubuntu 명령어를 실행할 때 사용합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">PuTTY
+  ↓
+터미널 명령 실행
+  ↓
+sudo apt update
+cd
+ls
+python3
+docker
+</code></pre><h4 class="field">FileZilla</h4><p>파일을 Windows ↔ Ubuntu 간에 전송할 때 사용합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">FileZilla
+  ↓
+SFTP
+  ↓
+파일 업로드 / 다운로드
+</code></pre><p>실습에서는 보통 다음처럼 함께 사용합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Windows PC
+   │
+   ├── PuTTY
+   │     └── Ubuntu 터미널 접속
+   │
+   └── FileZilla
+         └── Ubuntu 파일 전송
+
+          ↓
+
+VirtualBox NAT
+127.0.0.1:2222
+          ↓
+Ubuntu Server SSH:22
+</code></pre></section><section class="sec" data-num="63" id="s63"><h2 class="sec-title"><span class="num">63</span><span>FileZilla 자주 발생하는 오류</span></h2><h3 class="sub-title" id="s63-1"><span>문제 1. Connection refused</span></h3><p>예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">ECONNREFUSED
+Connection refused
+</code></pre><p>먼저 Ubuntu VM이 실행 중인지 확인합니다.</p><p>Ubuntu에서:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo systemctl status ssh
+</code></pre><p>SSH 서비스가 실행되지 않았다면:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo systemctl enable --now ssh
+</code></pre><p>VirtualBox 포트포워딩도 확인합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Host IP    : 127.0.0.1
+Host Port  : 2222
+Guest Port : 22
+</code></pre><h3 class="sub-title" id="s63-2"><span>문제 2. Connection timed out</span></h3><p>VirtualBox VM이 실행 중인지 확인합니다.</p><p>그리고 FileZilla 설정이 다음과 같은지 확인합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Host : 127.0.0.1
+Port : 2222
+</code></pre><p>이 실습에서는 Ubuntu VM의:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">10.0.2.15
+</code></pre><p>주소를 FileZilla Host에 직접 넣는 방식이 아니라<br/>
+VirtualBox NAT 포트포워딩을 사용합니다.</p><h3 class="sub-title" id="s63-3"><span>문제 3. Authentication failed</span></h3><p>예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Authentication failed
+</code></pre><p>다음을 확인합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Protocol   : SFTP
+Logon Type : Key file
+User       : ubuntu
+</code></pre><p>그리고 Key file이 PuTTY에서 사용한 것과 같은 파일인지 확인합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">ubuntu-virtualbox.ppk
+</code></pre><p>Ubuntu에 공개키가 등록되어 있는지도 확인합니다.</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">cat ~/.ssh/authorized_keys
+</code></pre><p>권한 확인:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">chmod 700 ~/.ssh
+chmod 600 ~/.ssh/authorized_keys
+</code></pre><h3 class="sub-title" id="s63-4"><span>문제 4. 일반 FTP로 접속해서 실패한다</span></h3><p>FileZilla에서 프로토콜을 반드시 다음과 같이 선택해야 합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">SFTP - SSH File Transfer Protocol
+</code></pre><p>일반 FTP의 기본 포트는 21번이지만<br/>
+이번 실습에서는 FTP 서버를 설치한 것이 아닙니다.</p><p>사용하는 것은 SSH 기반 SFTP입니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">FileZilla
+    ↓
+SFTP
+    ↓
+Windows 2222
+    ↓
+VirtualBox NAT
+    ↓
+Ubuntu SSH 22
+</code></pre><h3 class="sub-title" id="s63-5"><span>문제 5. Permission denied로 업로드가 안 된다</span></h3><p>일반 사용자는 시스템 디렉터리에 바로 파일을 올리지 못할 수 있습니다.</p><p>예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">/etc
+/usr
+/var
+</code></pre><p>초보 실습에서는 자신의 홈 디렉터리를 사용합니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">/home/ubuntu
+</code></pre><p>또는:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">~
+</code></pre><p>예:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">/home/ubuntu/upload
+</code></pre><p>필요하면 PuTTY에서 업로드용 폴더를 만듭니다.</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">mkdir -p ~/upload
+</code></pre><p>FileZilla에서:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">/home/ubuntu/upload
+</code></pre><p>로 파일을 전송합니다.</p><p>시스템 디렉터리로 옮겨야 한다면 업로드 후 PuTTY에서 <code>sudo</code>를 사용합니다.</p><p>예:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo mv ~/upload/test.conf /etc/example/
+</code></pre><h3 class="sub-title" id="s63-6"><span>문제 6. 비밀키 파일이 선택되지 않는다</span></h3><p>FileZilla Site Manager에서:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">Protocol   : SFTP
+Logon Type : Key file
+</code></pre><p>을 먼저 선택한 뒤 비밀키를 지정합니다.</p><p>앞 단계에서 PuTTYgen으로 만든:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">ubuntu-virtualbox.ppk
+</code></pre><p>파일을 사용합니다.</p><h3 class="sub-title" id="s63-7"><span>문제 7. 비밀키 passphrase를 계속 묻는다</span></h3><p>PuTTYgen에서 키를 생성할 때 passphrase를 설정했다면<br/>
+FileZilla가 키를 사용할 때 passphrase를 물을 수 있습니다.</p><p>이것은 정상적인 보안 동작입니다.</p><p>개인 PC의 교육용 VirtualBox에서 입력 없는 접속이 목적이라면<br/>
+passphrase 없는 실습 전용 키를 사용할 수 있습니다.</p><p>실제 외부 서버에서는 passphrase가 있는 키를 사용하는 것을 권장합니다.</p></section><section class="sec" data-num="64" id="s64"><h2 class="sec-title"><span class="num">64</span><span>PuTTY + FileZilla 최종 구성</span></h2><p>전체 구성은 다음과 같습니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">┌───────────────────────────────────────────────────┐
+│                  Windows 11 PC                    │
+│                                                   │
+│  ┌─────────────────┐      ┌────────────────────┐  │
+│  │     PuTTY       │      │     FileZilla      │  │
+│  │                 │      │                    │  │
+│  │ 터미널 접속     │      │ 파일 전송          │  │
+│  │ SSH             │      │ SFTP               │  │
+│  │ .ppk 비밀키     │      │ .ppk 비밀키        │  │
+│  └────────┬────────┘      └──────────┬─────────┘  │
+│           │                          │            │
+│           └────────────┬─────────────┘            │
+│                        │                          │
+│                  127.0.0.1:2222                   │
+│                        │                          │
+│                        ▼                          │
+│  ┌─────────────────────────────────────────────┐  │
+│  │              Oracle VirtualBox              │  │
+│  │                                             │  │
+│  │       NAT Port Forward 2222 → 22            │  │
+│  │                        │                    │  │
+│  │                        ▼                    │  │
+│  │           Ubuntu Server 22.04.5             │  │
+│  │                                             │  │
+│  │           OpenSSH Server : Port 22          │  │
+│  │           User : ubuntu                     │  │
+│  │           ~/.ssh/authorized_keys            │  │
+│  └─────────────────────────────────────────────┘  │
+└───────────────────────────────────────────────────┘
+</code></pre><p>이제:</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">PuTTY     → 명령어 실행
+FileZilla → 파일 업로드/다운로드
+</code></pre><p>방식으로 Ubuntu Server를 편리하게 관리할 수 있습니다.</p></section><section class="sec" data-num="65" id="s65"><h2 class="sec-title"><span class="num">65</span><span>자주 사용하는 Ubuntu 명령어</span></h2><p>현재 디렉터리:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">pwd
+</code></pre><p>파일 목록:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">ls
+</code></pre><p>자세히 보기:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">ls -al
+</code></pre><p>디렉터리 이동:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">cd 디렉터리명
+</code></pre><p>홈으로 이동:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">cd ~
+</code></pre><p>디렉터리 생성:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">mkdir test
+</code></pre><p>Ubuntu 버전:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">lsb_release -a
+</code></pre><p>IP 확인:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">hostname -I
+</code></pre><p>디스크 확인:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">df -h
+</code></pre><p>메모리 확인:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">free -h
+</code></pre><p>CPU 확인:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">lscpu
+</code></pre><p>종료:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo poweroff
+</code></pre><p>재부팅:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo reboot
+</code></pre></section><section class="sec" data-num="66" id="s66"><h2 class="sec-title"><span class="num">66</span><span>참고 링크</span></h2><h4 class="field">KAIST Ubuntu 22.04 미러</h4><p><a href="https://ftp.kaist.ac.kr/ubuntu-cd/22.04/" rel="noopener" target="_blank">https://ftp.kaist.ac.kr/ubuntu-cd/22.04/</a></p><h4 class="field">Ubuntu 22.04.5 Server ISO</h4><p><a href="https://ftp.kaist.ac.kr/ubuntu-cd/22.04/ubuntu-22.04.5-live-server-amd64.iso" rel="noopener" target="_blank">https://ftp.kaist.ac.kr/ubuntu-cd/22.04/ubuntu-22.04.5-live-server-amd64.iso</a></p><h4 class="field">VirtualBox 공식 사이트</h4><p><a href="https://www.virtualbox.org/" rel="noopener" target="_blank">https://www.virtualbox.org/</a></p><h4 class="field">VirtualBox 다운로드</h4><p><a href="https://www.virtualbox.org/wiki/Downloads" rel="noopener" target="_blank">https://www.virtualbox.org/wiki/Downloads</a></p><h4 class="field">VirtualBox 공식 다운로드 저장소</h4><p><a href="https://download.virtualbox.org/virtualbox/" rel="noopener" target="_blank">https://download.virtualbox.org/virtualbox/</a></p><h4 class="field">PuTTY 공식 다운로드</h4><p><a href="https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html" rel="noopener" target="_blank">https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html</a></p><h4 class="field">FileZilla Client 공식 다운로드</h4><p><a href="https://filezilla-project.org/download.php?type=client" rel="noopener" target="_blank">https://filezilla-project.org/download.php?type=client</a></p><h4 class="field">FileZilla 공식 사용 가이드</h4><p><a href="https://wiki.filezilla-project.org/Using" rel="noopener" target="_blank">https://wiki.filezilla-project.org/Using</a></p></section><section class="sec" data-num="67" id="s67"><h2 class="sec-title"><span class="num">67</span><span>실습 완료 후 다음 단계 추천</span></h2><p>Ubuntu Server와 VirtualBox 설치가 완료되었다면 다음 순서로 실습하면 좋습니다.</p><pre class="code screen"><span class="lang">화면 · 입력값</span><button class="copy" type="button">복사</button><code class="language-text">1. Linux 기본 명령어
+        ↓
+2. apt 패키지 관리
+        ↓
+3. SSH 원격 접속
+        ↓
+4. Git 설치
+        ↓
+5. Python 개발 환경
+        ↓
+6. Docker 설치
+        ↓
+7. 웹 서버(Nginx) 설치
+        ↓
+8. 개발 서버 구축
+</code></pre><p>Git 설치:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo apt update
+sudo apt install git -y
+git --version
+</code></pre><p>Python 확인:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">python3 --version
+</code></pre><p>pip 설치:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo apt install python3-pip -y
+</code></pre><p>Nginx 설치 예:</p><pre class="code bash"><span class="lang">$ 명령</span><button class="copy" type="button">복사</button><code class="language-bash">sudo apt install nginx -y
+sudo systemctl status nginx
+</code></pre><h3 class="sub-title" id="s67-1"><span>완료</span></h3><p>이제 Windows 11 안의 VirtualBox에서 <strong>Ubuntu Server 22.04.5 LTS</strong>를 실행할 수 있으며,<br/>
+PuTTY에서는 <strong>공개키/비밀키 인증으로 사용자명과 비밀번호를 매번 입력하지 않고 SSH 접속</strong>할 수 있고,<br/>
+FileZilla에서는 동일한 <code>.ppk</code> 비밀키와 SFTP를 사용하여 <strong>Windows ↔ Ubuntu Server 간 파일을 손쉽게 업로드/다운로드</strong>할 수 있습니다.</p></section>
+ <footer>목차 검색 · 코드 복사 · 체크리스트 자동 저장(이 브라우저) · 인쇄 시 사이드바 제외</footer>
+</main>
+</div>
+<button id="totop" type="button" aria-label="맨 위로">↑</button>
+<script>
+(function(){
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+// 진행 바 · 맨 위로
+const prog=$('#prog'), totop=$('#totop');
+addEventListener('scroll',()=>{const h=document.documentElement;const p=h.scrollTop/(h.scrollHeight-h.clientHeight);
+ prog.style.width=(p*100)+'%';totop.classList.toggle('show',h.scrollTop>600);},{passive:true});
+totop.addEventListener('click',()=>scrollTo({top:0,behavior:'smooth'}));
+// 복사 버튼
+$$('pre.code .copy').forEach(b=>b.addEventListener('click',async()=>{
+ const t=b.parentElement.querySelector('code').innerText;
+ try{await navigator.clipboard.writeText(t);}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}
+ b.textContent='복사됨 ✓';b.classList.add('ok');setTimeout(()=>{b.textContent='복사';b.classList.remove('ok');},1400);}));
+// 목차 현재 위치
+const items=$$('aside a.item'); const map={};items.forEach(a=>map[a.dataset.sec]=a);
+const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){items.forEach(a=>a.classList.remove('on'));
+ const a=map[e.target.id]; if(a){a.classList.add('on');$$('aside .subs').forEach(s=>s.classList.remove('open'));
+  const subs=a.nextElementSibling; if(subs&&subs.classList.contains('subs'))subs.classList.add('open');
+  a.scrollIntoView({block:'nearest'});}}});},{rootMargin:'-60px 0px -75% 0px'});
+$$('main section.sec').forEach(s=>io.observe(s));
+// 목차 검색
+$('#tocq').addEventListener('input',e=>{const q=e.target.value.trim().toLowerCase();
+ $$('aside a.item').forEach(a=>{const hit=!q||a.textContent.toLowerCase().includes(q);a.classList.toggle('hide',!hit);
+  const subs=a.nextElementSibling;if(subs&&subs.classList.contains('subs')){subs.classList.toggle('hide',!hit);if(q&&hit)subs.classList.add('open');}});
+ $$('aside .part').forEach(p=>p.classList.toggle('hide',!!q));});
+// 모바일 메뉴
+$('#menu').addEventListener('click',()=>$('aside').classList.toggle('open'));
+$$('aside a').forEach(a=>a.addEventListener('click',()=>$('aside').classList.remove('open')));
+// 체크리스트 저장
+const KEY='ubuntu_guide_ck_';
+const cks=$$('ul.checklist input');
+function refresh(){const d=cks.filter(c=>c.checked).length;const bar=$('#ckbar');if(!bar)return;
+ bar.querySelector('b').textContent=d+' / '+cks.length;bar.querySelector('i').style.width=(cks.length?d/cks.length*100:0)+'%';}
+cks.forEach(c=>{c.checked=localStorage.getItem(KEY+c.dataset.ck)==='1';
+ c.addEventListener('change',()=>{localStorage.setItem(KEY+c.dataset.ck,c.checked?'1':'');refresh();});});
+const rst=$('#ckreset');if(rst)rst.addEventListener('click',()=>{if(!confirm('체크리스트를 초기화할까요?'))return;cks.forEach(c=>{c.checked=false;localStorage.removeItem(KEY+c.dataset.ck);});refresh();});
+refresh();
+})();
+</script>
+</body>
+</html>
