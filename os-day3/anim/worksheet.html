@@ -71,6 +71,35 @@ input:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible{
 .tr .row .a{font-family:var(--mono);color:var(--ink)}
 .tr .row .ok{color:var(--good)}.tr .row .ng{color:var(--hot)}
 .tr .row.free .a{color:var(--purple)}
+.submit{margin:6px 0 30px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.submit .cap{font-family:var(--mono);font-size:11.5px;color:var(--dim)}
+.card{margin:14px 0 30px;background:var(--panel2);border:2px solid var(--good);border-radius:16px;padding:18px 20px}
+.card .top{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.card .chk{font-size:44px;color:var(--good);font-weight:800;line-height:1}
+.card .meta{line-height:1.5}
+.card .meta b{color:var(--accent);font-size:17px}
+.card .meta .who{font-size:15px}.card .meta .who span{color:var(--amber);font-weight:800}
+.card .meta .ts{font-family:var(--mono);font-size:12px;color:var(--dim)}
+.card .sc{margin-left:auto;font-family:var(--mono);font-size:26px;font-weight:800;color:var(--amber)}
+.card .row{font-size:13px;line-height:1.6;padding:5px 0;border-top:1px dashed var(--line)}
+.card .row .a{font-family:var(--mono);color:var(--ink)}
+.card .row .ok{color:var(--good)}.card .row .ng{color:var(--hot)}
+.card .row.free .a{color:var(--purple)}
+.card .cap{margin-top:12px;padding:9px 12px;background:var(--bg);border-radius:9px;font-size:13px;line-height:1.6}
+.card .cap b{color:var(--warnc)}
+.locked input[type=text],.locked textarea{opacity:.6}
+@media print{.card{border-color:#333;background:#fff}.submit{display:none}}
+.tab.sub::after{content:" ✓";color:var(--good)}
+.overlay{position:fixed;inset:0;background:rgba(5,8,14,.82);display:none;align-items:flex-start;justify-content:center;padding:24px 12px;overflow:auto;z-index:50;backdrop-filter:blur(4px)}
+.overlay.on{display:flex}
+.dialog{width:min(760px,100%);background:var(--bg);border:1px solid var(--line);border-radius:18px;padding:16px 18px 18px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.dialog .bar2{display:flex;gap:8px;justify-content:flex-end;margin-bottom:8px}
+.dialog .card{margin:0}
+.dialog .hint{font-family:var(--mono);font-size:11.5px;color:var(--dim);margin-bottom:8px}
+.reopen{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.reopen .cap{font-family:var(--mono);font-size:11.5px;color:var(--good)}
+@media print{.overlay.on{position:static;background:#fff;padding:0;display:block}.overlay.on ~ *{display:none}.dialog{box-shadow:none;border:none;width:100%}.dialog .bar2,.dialog .hint,#dMsg{display:none!important}body.printing .wrap,body.printing .bar{display:none}}
+.tab.on.sub::after{color:#0a5c2e}
 @media (max-width:600px){.per{grid-template-columns:repeat(2,1fr)}}
 @media print{
  body{background:#fff;color:#000;padding:0}
@@ -91,15 +120,22 @@ input:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible{
  <div class="sub">각 세션의 <b>도구 ▶</b>(애니메이션)를 열어 시나리오를 끝까지 넘겨 본 뒤 답을 적습니다. 답은 입력하는 즉시 이 브라우저에 자동 저장됩니다.
  오늘의 도착점: <b>Jetson을 켜기만 하면 로그 수집 스크립트가 자동으로 뜨고, SSH를 끊어도 죽지 않으며, 죽으면 스스로 다시 뜬다</b> — 그리고 그 한 줄 한 줄이 커널 안의 어떤 구조를 움직이는지 설명할 수 있다.</div>
  <div class="namerow"><label for="userName">이름</label><input type="text" id="userName" placeholder="이름을 적어 주세요"></div>
- <div class="notice">도구 ▶ 버튼은 <b>같은 폴더</b>의 애니메이션 파일을 엽니다(상대 링크). 세션 구성은 Day 3 커리큘럼 문서의 S1~S8과 같습니다. 채점 후 완료 화면의 <b>제출 방식</b>은 <b>[강사 확정]</b> 항목입니다.</div>
+ <div class="notice">도구 ▶ 버튼은 <b>같은 폴더</b>의 애니메이션 파일을 엽니다(상대 링크). 세션 구성은 Day 3 커리큘럼 문서의 S1~S8과 같습니다. 제출은 <b>세션마다</b> "제출 화면 만들기"로 카드를 만들어 캡처합니다. 제출 채널은 <b>[강사 확정]</b> 항목입니다.</div>
 </header>
 <nav id="nav"></nav>
 <main id="main"></main>
 </div>
+<div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-label="세션 제출 카드">
+ <div class="dialog">
+  <div class="bar2"><button class="btn primary" id="dCapture">📋 클립보드에 캡처</button><button class="btn" id="dPrint">인쇄 / PDF</button><button class="btn" id="dClose">닫기 ✕</button></div><div class="hint" id="dMsg" style="display:none"></div>
+  <div class="hint">📋 클립보드에 캡처를 누른 뒤 제출 채널에 붙여넣기(Ctrl+V)하세요. 안 되면 화면 캡처 도구를 쓰세요 (Esc 또는 닫기로 돌아갑니다)</div>
+  <div id="dBody"></div>
+ </div>
+</div>
 <div class="bar">
  <button class="btn" id="bPrev">◀ 이전 세션</button>
  <button class="btn" id="bNext">다음 세션 ▶</button>
- <button class="btn primary" id="bGrade">채점하기</button>
+ <button class="btn" id="bGrade">전체 결과 보기</button>
  <button class="btn" id="bPrint">인쇄 / PDF</button>
  <button class="btn" id="bReset">답 지우기</button>
 </div>
@@ -125,13 +161,16 @@ function build(){
   });
   h+=`<div class="obs"><div class="cap">실습 기록 (채점 없음)</div><textarea class="free" id="${s.id}obs" placeholder="${s.obs}"></textarea></div>`;
   h+=`<div class="confirm"><span class="cap">확인 문구</span>${s.confirm}</div>`;
+  h+=`<div class="submit"><button class="btn primary" data-sub="${si}">${s.id} 제출 화면 만들기</button><button class="btn" data-edit="${si}" style="display:none">수정하기</button><span class="cap">이 세션 문항만 채점해 캡처용 대화 상자를 띄웁니다. 띄운 뒤 답 칸은 잠깁니다.</span></div><div id="card${si}"></div>`;
   sec.innerHTML=h;main.appendChild(sec);
+  sec.querySelector(`[data-sub="${si}"]`).onclick=()=>submitSession(si,false);
+  sec.querySelector(`[data-edit="${si}"]`).onclick=()=>{if(!confirm(s.id+" 제출 카드를 지우고 답을 다시 엽니다. 계속할까요?"))return;delete store["__sub_"+s.id];save();renderSession(si);};
  });
  const t=document.createElement("button");t.className="tab";t.dataset.i=SESS.length;t.textContent="완료";t.onclick=()=>go(SESS.length);nav.appendChild(t);
- const done=document.createElement("section");done.className="sec";done.id="sec"+SESS.length;done.innerHTML=`<h2><small>완료</small>오늘의 결과</h2><div id="doneBody"><div class="notice">아직 채점 전입니다 — 하단의 <b>채점하기</b>를 누르세요.</div></div>`;main.appendChild(done);
+ const done=document.createElement("section");done.className="sec";done.id="sec"+SESS.length;done.innerHTML=`<h2><small>완료</small>오늘의 결과</h2><div id="doneBody"><div class="notice">아직 채점 전입니다 — 하단의 <b>전체 결과 보기</b>를 누르세요.</div></div>`;main.appendChild(done);
  document.querySelectorAll("input.ans, textarea.free, #userName").forEach(el=>{
   if(store[el.id]!==undefined)el.value=store[el.id];
-  el.addEventListener("input",()=>{store[el.id]=el.value;save();progress();});
+  el.addEventListener("input",()=>{store[el.id]=el.value;save();progress();if(el.id==="userName")SESS.forEach((_,si)=>{if(store["__sub_"+SESS[si].id])renderSession(si);});});
  });
  document.getElementById("bPrev").onclick=()=>go(cur-1);
  document.getElementById("bNext").onclick=()=>go(cur+1);
@@ -139,16 +178,19 @@ function build(){
  document.getElementById("bReset").onclick=()=>{if(!confirm("이 브라우저에 저장된 답을 모두 지웁니다. 계속할까요?"))return;for(const k in store)delete store[k];graded=false;save();location.reload();};
  document.getElementById("bGrade").onclick=()=>{
   if(graded){const r=gradeAll(true);renderDone(r);go(SESS.length);return;}
-  if(!confirm("답을 다 채웠나요? 채점을 시작합니다."))return;
+  if(!confirm("모든 세션을 한꺼번에 채점해 전체 결과를 봅니다. 계속할까요?"))return;
   const r=gradeAll(false);renderDone(r);go(SESS.length);
  };
  if(graded){const r=gradeAll(true);renderDone(r);}
+ SESS.forEach((_,si)=>renderSession(si));
  progress();go(0);
 }
 function progress(){
  SESS.forEach((s,si)=>{
   const n=s.qs.length;let f=0;s.qs.forEach((_,qi)=>{if((store[qid(si,qi)]||"").trim())f++;});
-  const p=document.querySelector(`.tab[data-i="${si}"] .p`);p.textContent=f===0?"":(f===n?"●":"◐");
+  const tab=document.querySelector(`.tab[data-i="${si}"]`);const p=tab.querySelector(".p");
+  const sub=!!store["__sub_"+s.id];tab.classList.toggle("sub",sub);
+  p.textContent=sub?"":(f===0?"":(f===n?"●":"◐"));
  });
 }
 function gradeAll(silent){
@@ -167,12 +209,57 @@ function gradeAll(silent){
  });
  return {per,correct,total};
 }
+function gradeSession(si){
+ const s=SESS[si];let c=0;const rows=[];
+ s.qs.forEach((q,qi)=>{const id=qid(si,qi);const v=(store[id]||"").trim();const ok=new RegExp(q[1],"i").test(v);
+  const fb=document.getElementById("fb_"+id);if(fb){fb.textContent=ok?"✓ 정답":"✗ 다시 — 도구를 한 번 더 넘겨 보세요";fb.className="fb "+(ok?"ok":"ng");}
+  if(ok)c++;rows.push({q:q[0],v,ok});});
+ return {c,n:s.qs.length,rows,obs:(store[s.id+"obs"]||"").trim()};
+}
+function submitSession(si,silent){
+ const s=SESS[si];
+ const empty=s.qs.filter((_,qi)=>!(store[qid(si,qi)]||"").trim()).length;
+ if(!silent&&empty>0&&!confirm(`${s.id} 빈칸이 ${empty}개 있습니다. 그래도 제출 화면을 만들까요?`))return;
+ if(!store["__sub_"+s.id])store["__sub_"+s.id]=new Date().toISOString();
+ save();renderSession(si);progress();
+ if(!silent)openCard(si);
+}
+function cardHTML(si){
+ const s=SESS[si];const iso=store["__sub_"+s.id];if(!iso)return "";
+ const r=gradeSession(si);
+ const name=(store.userName||"").trim()||"(이름 미기입)";
+ const d=new Date(iso);const ts=d.toLocaleDateString("ko-KR")+" "+d.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});
+ let h=`<div class="card"><div class="top"><div class="chk">✓</div><div class="meta"><b>${s.id} · ${esc(s.title)}</b><div class="who"><span>${esc(name)}</span> 님 제출</div><div class="ts">${ts}</div></div><div class="sc">${r.c} / ${r.n}</div></div>`;
+ r.rows.forEach((x,i)=>{h+=`<div class="row">Q${i+1}. ${x.q}<br>답: <span class="a">${esc(x.v)||"(빈칸)"}</span> <span class="${x.ok?"ok":"ng"}">${x.ok?"✓":"✗"}</span></div>`;});
+ if(r.obs)h+=`<div class="row free">실습 기록: <span class="a">${esc(r.obs)}</span></div>`;
+ h+=`<div class="cap">📸 이 카드를 캡처해서 <b>[강사 확정: 제출 채널]</b>의 내 이름 아래에 올리세요. 고칠 것이 있으면 닫은 뒤 <b>수정하기</b> → 답 수정 → 다시 <b>제출 화면 만들기</b>.</div></div>`;
+ return h;
+}
+function openCard(si){
+ document.getElementById("dBody").innerHTML=cardHTML(si);document.getElementById("dMsg").style.display="none";
+ const ov=document.getElementById("overlay");ov.classList.add("on");ov.dataset.si=si;
+ document.body.style.overflow="hidden";document.getElementById("dClose").focus();
+}
+function closeCard(){document.getElementById("overlay").classList.remove("on");document.body.style.overflow="";}
+function renderSession(si){
+ const s=SESS[si];const sec=document.getElementById("sec"+si);const box=document.getElementById("card"+si);
+ const iso=store["__sub_"+s.id];
+ const subBtn=sec.querySelector(`[data-sub="${si}"]`),editBtn=sec.querySelector(`[data-edit="${si}"]`);
+ sec.querySelectorAll("input.ans, textarea.free").forEach(e=>e.disabled=!!iso);
+ sec.classList.toggle("locked",!!iso);
+ subBtn.style.display=iso?"none":"";editBtn.style.display=iso?"":"none";
+ if(!iso){box.innerHTML="";return;}
+ const r=gradeSession(si);
+ box.innerHTML=`<div class="reopen"><button class="btn primary" data-open="${si}">📸 ${s.id} 제출 카드 열기</button><span class="cap">제출됨 · ${r.c} / ${r.n}</span></div>`;
+ box.querySelector(`[data-open="${si}"]`).onclick=()=>openCard(si);
+}
 function esc(t){return (t||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
 function renderDone(r){
  const name=(store.userName||"").trim()||"(이름 미기입)";
  const d=new Date();const ts=d.toLocaleDateString("ko-KR")+" "+d.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});
  let h=`<div class="score"><div class="big">${r.correct} / ${r.total}</div><div class="who"><b>${esc(name)}</b> 님 · ${ts}</div><div class="per">`+r.per.map(p=>`<div><b>${p.id}</b>${p.c} / ${p.n}</div>`).join("")+`</div></div>`;
- h+=`<div class="notice">제출: 이 화면(점수 상자 포함)을 <b>[강사 확정: 제출 채널]</b>에 제출합니다. 인쇄 / PDF 버튼은 전 세션의 답을 펼쳐서 출력합니다.</div>`;
+ const subs=SESS.filter(s=>store["__sub_"+s.id]).map(s=>s.id);
+ h+=`<div class="notice">세션별 제출 카드: <b>${subs.length} / ${SESS.length}</b> (${subs.join(" · ")||"없음"}). 제출은 각 세션 탭의 카드를 캡처하는 방식이고, 이 화면은 하루 전체 점검용입니다. 인쇄 / PDF 버튼은 전 세션의 답을 펼쳐서 출력합니다.</div>`;
  SESS.forEach((s,si)=>{
   h+=`<div class="tr"><h3>${s.id} · ${esc(s.title)}</h3>`;
   s.qs.forEach((q,qi)=>{const v=(store[qid(si,qi)]||"").trim();const ok=new RegExp(q[1],"i").test(v);
@@ -191,6 +278,46 @@ function go(i){
  window.scrollTo({top:0});
 }
 build();
+document.getElementById("dClose").onclick=closeCard;
+document.getElementById("overlay").addEventListener("click",e=>{if(e.target.id==="overlay")closeCard();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeCard();});
+function renderCardBlob(){
+ const card=document.querySelector("#dBody .card");
+ return new Promise((res,rej)=>{
+  try{
+   const css=Array.from(document.styleSheets).flatMap(sh=>{try{return Array.from(sh.cssRules).map(r=>r.cssText);}catch(e){return [];}}).join("\n")
+     .replace(/:root\s*\{/g,":root,.cap-root{").replace(/&/g,"&amp;").replace(/</g,"&lt;");
+   const cardXml=new XMLSerializer().serializeToString(card);
+   const pad=18, w=Math.ceil(card.getBoundingClientRect().width)+pad*2, h=Math.ceil(card.scrollHeight)+pad*2;
+   const html=`<div xmlns="http://www.w3.org/1999/xhtml" class="cap-root" style="width:${w}px;height:${h}px;background:#0f141d;padding:${pad}px;box-sizing:border-box;color:#dce6f5;font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif"><style>${css}</style>${cardXml}</div>`;
+   const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><foreignObject width="100%" height="100%">${html}</foreignObject></svg>`;
+   const img=new Image();const scale=2;
+   img.onload=()=>{try{const cv=document.createElement("canvas");cv.width=w*scale;cv.height=h*scale;const ctx=cv.getContext("2d");ctx.scale(scale,scale);ctx.drawImage(img,0,0);cv.toBlob(bl=>bl?res(bl):rej(new Error("blob")),"image/png");}catch(e){rej(e);}};
+   img.onerror=()=>rej(new Error("img"));
+   img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+  }catch(e){rej(e);}
+ });
+}
+function captureCard(){
+ const msg=document.getElementById("dMsg");
+ const show=(t,ok)=>{msg.style.display="";msg.textContent=t;msg.style.color=ok?"var(--good)":"var(--hot)";};
+ const FAIL="이 브라우저에서는 클립보드 복사가 안 됩니다 — 화면 캡처 도구(Win+Shift+S / Cmd+Shift+4)로 캡처하세요.";
+ if(!document.querySelector("#dBody .card"))return;
+ if(!navigator.clipboard||!window.ClipboardItem){show(FAIL,false);return;}
+ show("캡처 중…",true);
+ try{
+  navigator.clipboard.write([new ClipboardItem({"image/png":renderCardBlob()})])
+   .then(()=>show("클립보드에 복사됨 — 제출 채널에 붙여넣기(Ctrl+V / Cmd+V)",true))
+   .catch(()=>show(FAIL,false));
+ }catch(e){
+  // ClipboardItem이 Promise 값을 받지 못하는 구형 브라우저: blob을 먼저 만든 뒤 시도
+  renderCardBlob().then(bl=>navigator.clipboard.write([new ClipboardItem({"image/png":bl})]))
+   .then(()=>show("클립보드에 복사됨 — 제출 채널에 붙여넣기(Ctrl+V / Cmd+V)",true))
+   .catch(()=>show(FAIL,false));
+ }
+}
+document.getElementById("dCapture").onclick=captureCard;
+document.getElementById("dPrint").onclick=()=>{document.body.classList.add("printing");window.print();setTimeout(()=>document.body.classList.remove("printing"),500);};
 </script>
 </body>
 </html>
