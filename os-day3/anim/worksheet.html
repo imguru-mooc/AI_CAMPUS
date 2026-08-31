@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux &amp; Shell Day 3 워크시트 — 커널이 파일을 다루는 방식 → 스크립트 자동화</title>
+<style>
+:root{
+  --bg:#0f141d;--panel:#161d2a;--panel2:#1b2434;--line:#26314a;
+  --ink:#dce6f5;--dim:#7d8ba3;--amber:#ffd166;--warnc:#ff9f43;
+  --hot:#ff5d73;--accent:#4cc9f0;--good:#7ee787;--purple:#c3a6ff;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);min-height:100vh;padding:22px 14px 90px;
+ font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+.wrap{max-width:900px;margin:0 auto}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+h1{font-size:clamp(19px,4vw,26px);font-weight:800;margin-top:6px}
+h1 b{color:var(--amber)}
+.sub{color:var(--dim);font-size:13.5px;margin-top:6px;line-height:1.6}
+.sub b{color:var(--good)}
+.namerow{margin-top:10px;display:flex;align-items:center;gap:8px}
+.namerow label{font-family:var(--mono);font-size:12.5px;color:var(--accent);font-weight:800}
+.namerow input{max-width:220px}
+.notice{background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:9px 12px;font-size:12px;color:var(--dim);margin-top:10px;line-height:1.6}
+.notice b{color:var(--warnc)}
+nav{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0}
+.tab{font-family:var(--mono);font-size:12.5px;padding:8px 13px;border-radius:9px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.tab.on{background:var(--accent);color:#08131c;border-color:var(--accent);font-weight:800}
+.tab .p{margin-left:6px;color:var(--amber)}
+.tab.on .p{color:#08131c}
+.sec{display:none}.sec.on{display:block}
+h2{font-size:19px;font-weight:800;margin:6px 0 4px}
+h2 small{font-family:var(--mono);font-size:12px;color:var(--accent);margin-right:8px}
+.arrive{border-left:3px solid var(--amber);padding:8px 12px;background:var(--panel2);border-radius:0 10px 10px 0;font-size:13.5px;line-height:1.6;margin:10px 0}
+.arrive b{color:var(--amber);font-family:var(--mono);font-size:12px;margin-right:6px}
+.tools{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 14px;align-items:center}
+.tools .cap{font-family:var(--mono);font-size:11.5px;color:var(--dim)}
+.tool{font-size:13px;padding:8px 13px;border-radius:9px;background:var(--panel2);color:var(--ink);border:1px solid var(--accent);text-decoration:none}
+.tool:hover{background:var(--accent);color:#08131c}
+.q{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.q .n{font-family:var(--mono);font-size:11.5px;color:var(--accent);font-weight:800}
+.q .qt{font-size:14.5px;line-height:1.6;margin:4px 0 8px}
+.q .hint{font-size:12px;color:var(--dim);margin-bottom:6px}
+.field label{display:block;font-family:var(--mono);font-size:11px;color:var(--dim);margin-bottom:4px}
+input[type=text],textarea{width:100%;padding:9px 11px;font-size:14px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;font-family:inherit}
+textarea{min-height:70px;resize:vertical}
+input:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.fb{font-family:var(--mono);font-size:12px;margin-top:6px;min-height:14px}
+.fb.ok{color:var(--good)}.fb.ng{color:var(--hot)}
+.obs{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:14px 0}
+.obs .cap{font-family:var(--mono);font-size:11.5px;color:var(--purple);font-weight:800;margin-bottom:6px}
+.confirm{margin:14px 0 30px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel);font-size:14px;line-height:1.7}
+.confirm .cap{font-family:var(--mono);font-size:11.5px;color:var(--good);font-weight:800;display:block;margin-bottom:4px}
+.bar{position:fixed;left:0;right:0;bottom:0;background:rgba(15,20,29,.96);border-top:1px solid var(--line);padding:10px 14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;backdrop-filter:blur(6px)}
+.btn{font-family:inherit;font-size:13.5px;padding:9px 15px;border-radius:9px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.btn.primary{background:var(--amber);color:#1a1200;border-color:var(--amber);font-weight:800}
+.btn:disabled{opacity:.35;cursor:default}
+/* done */
+.score{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:18px;text-align:center;margin:10px 0 14px}
+.score .big{font-family:var(--mono);font-size:38px;font-weight:800;color:var(--amber)}
+.score .who{font-size:15px;margin-top:4px}
+.score .who b{color:var(--accent)}
+.per{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.per div{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:8px;font-family:var(--mono);font-size:12px}
+.per div b{display:block;color:var(--accent);margin-bottom:3px}
+.tr{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:var(--panel)}
+.tr h3{font-size:14px;margin-bottom:6px;font-family:var(--mono);color:var(--accent)}
+.tr .row{font-size:13px;line-height:1.6;padding:4px 0;border-top:1px dashed var(--line)}
+.tr .row .a{font-family:var(--mono);color:var(--ink)}
+.tr .row .ok{color:var(--good)}.tr .row .ng{color:var(--hot)}
+.tr .row.free .a{color:var(--purple)}
+@media (max-width:600px){.per{grid-template-columns:repeat(2,1fr)}}
+@media print{
+ body{background:#fff;color:#000;padding:0}
+ .bar,nav,.tools,.notice{display:none}
+ .sec{display:block!important;page-break-inside:avoid}
+ .q,.obs,.confirm,.tr,.score,.arrive{background:#fff;border-color:#999;color:#000}
+ input[type=text],textarea{background:#fff;color:#000;border-color:#999}
+ .eyebrow,.q .n,h2 small,.tr h3{color:#333}
+ .score .big{color:#000}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+ <div class="eyebrow">Linux &amp; Shell · Day 3 · 워크시트</div>
+ <h1>커널이 파일을 다루는 방식 → <b>스크립트 자동화</b></h1>
+ <div class="sub">각 세션의 <b>도구 ▶</b>(애니메이션)를 열어 시나리오를 끝까지 넘겨 본 뒤 답을 적습니다. 답은 입력하는 즉시 이 브라우저에 자동 저장됩니다.
+ 오늘의 도착점: <b>Jetson을 켜기만 하면 로그 수집 스크립트가 자동으로 뜨고, SSH를 끊어도 죽지 않으며, 죽으면 스스로 다시 뜬다</b> — 그리고 그 한 줄 한 줄이 커널 안의 어떤 구조를 움직이는지 설명할 수 있다.</div>
+ <div class="namerow"><label for="userName">이름</label><input type="text" id="userName" placeholder="이름을 적어 주세요"></div>
+ <div class="notice">도구 ▶ 버튼은 <b>같은 폴더</b>의 애니메이션 파일을 엽니다(상대 링크). 세션 구성은 Day 3 커리큘럼 문서의 S1~S8과 같습니다. 채점 후 완료 화면의 <b>제출 방식</b>은 <b>[강사 확정]</b> 항목입니다.</div>
+</header>
+<nav id="nav"></nav>
+<main id="main"></main>
+</div>
+<div class="bar">
+ <button class="btn" id="bPrev">◀ 이전 세션</button>
+ <button class="btn" id="bNext">다음 세션 ▶</button>
+ <button class="btn primary" id="bGrade">채점하기</button>
+ <button class="btn" id="bPrint">인쇄 / PDF</button>
+ <button class="btn" id="bReset">답 지우기</button>
+</div>
+<script>
+const SESS = [{"id": "S1", "title": "open()·close() — 커널 안의 다섯 상자", "arrive": "fd가 배열 인덱스이고, 파일은 이름이 아니라 inode라는 것을 /proc/&lt;PID&gt;/fd 로 눈으로 확인한다.", "tools": [["#1 open() — 경로 탐색에서 fd까지", "a01_open_fd_dentry_inode.html"], ["#4 close()와 rm — 참조 카운트", "a04_close_refcount_unlink.html"]], "qs": [["fd 테이블에서 0·1·2가 이미 차 있을 때, 새로 open한 파일이 받는 번호는?", "^\\s*3\\s*$", "도구 #1 정상 open 마지막 단계"], ["경로 조각 '/', 'home', 'user', 'a.txt'를 하나씩 짚어가는 커널 자료구조의 이름은?", "dentry|디엔트리|덴트리|디렉터리\\s*엔트리", "영문 이름"], ["권한·크기·블록 위치를 갖고 있어서 '파일의 본체'라 부를 수 있는 자료구조는?", "inode|아이노드|아이 노드", ""], ["없는 파일을 open하면 반환값은 -1이고 errno는? (영문 상수)", "ENOENT", "도구 #1 두 번째 시나리오"], ["열려 있는 파일을 rm 해도 블록이 해제되지 않는 이유 — 무엇이 inode를 붙잡고 있나요?", "struct\\s*file|참조|refcount|열려|열린|프로세스", "도구 #4 두 번째 시나리오"], ["실습에서 rm 한 뒤 ls -l /proc/&lt;PID&gt;/fd 에 파일명 옆에 붙는 표시는?", "deleted", "괄호 안의 영문"]], "obs": "실습 기록: /proc/&lt;PID&gt;/fd 에서 본 3번 슬롯의 내용을 그대로 적어 두세요.", "confirm": "「왼쪽 화면에서 실패한 건 셸이 막은 건가요, 커널이 막은 건가요?」 — 답이 '커널'이면 S2로."}, {"id": "S2", "title": "read()·write() — 디스크는 언제 움직이나", "arrive": "read는 두 번째부터 빠르고, write는 아직 디스크에 없다 — time cat 세 번으로 증명한다.", "tools": [["#2 read() — 페이지 캐시 히트/미스", "a02_read_page_cache.html"], ["#3 write() — dirty와 writeback", "a03_write_dirty_writeback.html"]], "qs": [["첫 번째 read가 느린 이유를 '캐시 ○○'로 답하면?", "미스|miss", ""], ["같은 구간을 두 번째로 read하면 디스크에 가나요? (예/아니오)", "아니|no|안\\s*감|안\\s*갑|가지\\s*않", ""], ["파일의 현재 읽기 위치 f_pos는 어느 자료구조 안에 있나요?", "struct\\s*file|파일\\s*구조체|file\\s*구조체", "inode가 아닙니다"], ["write() 직후 페이지 캐시의 페이지에 붙는 표시는?", "dirty|더티", ""], ["dirty 페이지를 나중에 디스크로 내려보내는 커널 쪽 주체는?", "writeback|라이트백|write-back|flush|플러시|커널\\s*스레드", "도구 #3 첫 시나리오 5단계"], ["write 직후 '지금 당장' 디스크에 내리게 하는 시스템 콜은?", "fsync|sync", ""], ["write가 3을 반환한 직후 전원이 끊기면 재부팅 후 파일 내용은 'hello'와 'new' 중?", "hello", "도구 #3 세 번째 시나리오"]], "obs": "실습 기록: time cat big 세 번의 real 시간 (느림 → 빠름 → drop_caches 후)을 적어 두세요.", "confirm": "「Jetson 전원을 그냥 뽑으면 방금 저장한 파일이 사라질 수 있는 이유는?」 — 'dirty 페이지가 아직 안 내려가서'면 S3로."}, {"id": "S3", "title": "fork()·dup2() — fd는 복사되고 파일은 공유된다", "arrive": "fd 테이블은 복사, struct file은 공유 — 그래서 f_pos가 같이 움직이고, 그래서 > 리다이렉션이 된다.", "tools": [["#5 fork·dup2 — fd 테이블 복사와 struct file 공유", "a05_fork_dup2_fd_share.html"]], "qs": [["fork 시 fd 테이블은 복사됩니다. 그럼 부모와 자식이 '공유'하는 것은?", "struct\\s*file|f_pos|오프셋|파일\\s*구조체", ""], ["부모가 100바이트 읽은 뒤 자식이 read하면 몇 번째 바이트부터 읽나요?", "100", "숫자"], ["`ls > out.txt`에서 자식이 1번 슬롯의 화살표를 파일로 바꾸는 시스템 콜은?", "dup2|dup", ""], ["ls는 자기 출력이 파일로 가는 것을 아나요? (안다/모른다)", "모른|모름|몰라|아니|no", ""], ["리다이렉션(>)이 적용되는 것은 부모 bash인가요, 자식인가요?", "자식|child", ""], ["실습에서 `exec 1>out.txt` 후 /proc/$$/fd/1 이 가리키는 것은?", "out\\.txt", "파일명"]], "obs": "실습 기록: /proc/$$/fd/1 이 pts → out.txt → /dev/tty 로 바뀐 것을 순서대로 적어 두세요.", "confirm": "「`ls > out.txt`에서 ls는 자기 출력이 파일로 가는 걸 아나요?」 — '모른다, fd 1이 바뀌었을 뿐'이면 오전 종료."}, {"id": "S4", "title": "./collect.sh — 스크립트가 실행되고 프로세스가 된다", "arrive": "실행 권한은 커널이 검사하고, 스크립트는 한 줄마다 fork·exec·wait를 반복하는 공장이다.", "tools": [["#11 ./run.sh — 커널이 #!을 읽는 순간", "a11_execve_shebang.html"], ["#12 fork·exec·wait·$? 루프", "a12_fork_exec_wait_loop.html"]], "qs": [["`./run.sh`에서 run.sh의 실행 권한(x)을 검사하는 주체는 셸인가요, 커널인가요?", "커널|kernel|execve", ""], ["커널이 '이 파일은 스크립트'라고 판단하는 근거인 파일의 첫 두 글자는?", "#!|shebang|셔뱅|샵뱅|해시뱅", ""], ["`bash run.sh`는 x 비트가 없어도 됩니다. 이때 커널이 x 비트를 검사하는 파일은?", "/bin/bash|bash", "run.sh가 아닙니다"], ["bash가 외부 명령 하나를 실행할 때 부르는 세 시스템 콜을 순서대로 (예: a → b → c)", "fork.*exec.*wait", "도구 #12 루프 한 바퀴"], ["명령이 성공했을 때 $? 값은?", "^\\s*0\\s*$", "숫자"], ["cd가 자식 프로세스가 아니라 bash 자신이 실행하는 '빌트인'이어야 하는 이유는?", "자식|child|프로세스|cwd|디렉터리|돌아오|부모", "도구 #12 세 번째 시나리오"]], "obs": "실습 기록: Permission denied 가 뜬 명령과, echo $? 로 본 값 두 가지(0 / 0이 아닌 값)를 적어 두세요.", "confirm": "「cd를 스크립트에 넣었는데 내 터미널은 왜 제자리인가요?」 — '자식 프로세스에서만 이동했다'면 S5로."}, {"id": "S5", "title": "변수의 수명과 스크립트의 판단", "arrive": "변수는 프로세스 경계를 한 방향으로만 넘고, if는 $?를 읽는다.", "tools": [["#13 ./ vs source vs export", "a13_source_vs_exec_env.html"], ["#15 if · && · || — 종료 코드", "a15_if_exit_status.html"]], "qs": [["`./collect.sh`가 만든 LOG_DIR이 터미널에서 빈 값인 이유는?", "자식|프로세스|사라|소멸|종료|복사", ""], ["fork 없이 현재 셸 안에서 스크립트를 실행하는 명령은?", "source|^\\s*\\.\\s*$|\\.\\s+collect", ""], ["export한 변수가 자식으로 복사되는 시점은 어느 시스템 콜 때인가요?", "exec|execve|fork", ""], ["자식이 export 변수를 바꾸면 부모 터미널의 값도 바뀌나요? (예/아니오)", "아니|no|안\\s*바|않", ""], ["`[ -d ~/logs ]`에서 ~/logs가 없으면 $? 값은?", "^\\s*1\\s*$|0이\\s*아닌|0\\s*아닌|non-?zero", "도구 #15 두 번째 시나리오"], ["`a || b`에서 b가 실행되는 조건은? (a의 종료 코드 기준)", "실패|0이\\s*아|0\\s*아닐|아니면|1|non-?zero|거짓", ""], ["`if cmd; then` 은 cmd의 무엇이 0인지 검사하는 것인가요?", "\\$\\?|종료\\s*코드|exit|status|반환", ""]], "obs": "실습 기록: echo $LOG_DIR 이 빈 값 / ~/logs 로 나뉜 두 명령을 적고, mkdir가 두 번째 실행에서 안 돈 것을 확인했는지 표시하세요.", "confirm": "「`[ -d ~/logs ]`가 실패하면 $?는 몇인가요?」 — '0이 아닌 값'이면 S6으로."}, {"id": "S6", "title": "파이프로 로그 만들기", "arrive": "파이프는 S3의 dup2를 두 프로세스에 동시에 적용한 것이다 — collect.sh 본체가 완성된다.", "tools": [["#14 sensor | grep > log — 파이프 버퍼", "a14_pipe_buffer_dup2.html"]], "qs": [["`a | b`의 데이터가 쌓이는 버퍼는 유저 공간과 커널 중 어디에 있나요?", "커널|kernel", ""], ["`a | b`에서 b는 a가 끝난 뒤 시작하나요, 동시에 도나요?", "동시|같이|함께|simult|both", ""], ["파이프 버퍼(64 KB)가 꽉 차면 왼쪽 프로세스는 어떻게 되나요?", "멈|블록|block|대기|잠|기다", "데이터는 버려지지 않습니다"], ["`sensor | head -1`에서 head가 먼저 끝나면 sensor가 받는 시그널은?", "SIGPIPE|PIPE", ""], ["`2>&1` 은 무엇을 어디로 보내라는 뜻인가요?", "(stderr|2|에러|오류|표준\\s*에러).*(1|stdout|표준\\s*출력|같은)", ""], ["파이프 양쪽 프로세스가 각자 stdout/stdin을 버퍼에 꽂을 때 쓰는 시스템 콜은?", "dup2|dup", "S3와 같은 답"]], "obs": "실습 기록: tail -5 sensor.log 의 마지막 한 줄을 그대로 적어 두세요.", "confirm": "「`|` 왼쪽이 끝나기 전에 오른쪽이 시작할 수 있나요?」 — '있다'면 S7로."}, {"id": "S7", "title": "사람 없이 돌게 하기 — 백그라운드와 cron", "arrive": "터미널을 닫으면 커널이 SIGHUP을 보내고, cron은 내 터미널 환경을 모른다.", "tools": [["#16 & · SIGHUP · nohup · setsid", "a16_sighup_nohup_setsid.html"], ["#17 cron — 1분 루프와 환경", "a17_cron_daemon_env.html"]], "qs": [["SSH를 끊었을 때 세션의 프로세스들에게 전달되는 시그널은?", "SIGHUP|HUP", ""], ["그 시그널을 보내는 주체는? (셸 / 커널 / sshd 중)", "커널|kernel", ""], ["SIGHUP을 무시하도록 처리기를 바꾼 뒤 실행해 주는 명령은?", "nohup", ""], ["setsid가 nohup과 다른 점 — 프로세스를 무엇에서 떼어내나요?", "세션|session|터미널|SID", ""], ["crontab 다섯 칸의 첫 번째 칸은 무엇을 뜻하나요?", "분|minute", ""], ["`* * * * *` 는 얼마마다 실행되나요?", "1\\s*분|매\\s*분|every\\s*minute|분마다", ""], ["터미널에서는 되는데 cron에서만 안 될 때, 첫 번째로 의심할 것은?", "PATH|환경|env|절대\\s*경로", "도구 #17 세 번째 시나리오"]], "obs": "실습 기록: 재접속 후 ps 결과(없음 / 있음)와, cron 로그가 1분 간격으로 몇 줄 쌓였는지 적어 두세요.", "confirm": "「SSH를 끊었을 때 스크립트를 죽인 건 누구인가요?」 — '커널의 SIGHUP'이면 S8로."}, {"id": "S8", "title": "systemd — 켜기만 하면 뜨고, 죽으면 다시 뜬다 (도착점)", "arrive": "오늘 만든 collect.sh를 unit 파일 10줄로 서비스에 올리고, 재부팅 후 active (running)을 확인한다.", "tools": [["#18 systemd — 부팅 · 재시작 · stop", "a18_systemd_boot_restart.html"]], "qs": [["부팅 시 커널이 띄우는 첫 프로세스(PID 1)의 이름은?", "systemd|init", ""], ["unit 파일의 `After=network.target` 은 무슨 뜻인가요?", "먼저|이후|after|순서|뒤에|다음", ""], ["서비스가 죽었을 때 systemd가 다시 띄우게 하는 unit 옵션은?", "Restart", ""], ["`systemctl stop`으로 멈춘 서비스도 Restart=on-failure 때문에 다시 뜨나요? (예/아니오)", "아니|no|안\\s*뜨|않", ""], ["부팅 때 자동으로 시작되도록 등록하는 systemctl 하위 명령은?", "enable", ""], ["systemd가 자식 서비스의 종료를 알아채는 방식은 S4의 어떤 시스템 콜과 같나요?", "wait", ""], ["종합: 지금 돌고 있는 collect.sh 안의 `>> sensor.log` 는 자식 프로세스 fd 테이블의 몇 번 슬롯을 파일로 바꾼 것인가요?", "^\\s*1\\s*$|1번|stdout|표준\\s*출력", "S3·S6의 답이 다시 나옵니다"]], "obs": "하루 요약: 오전 그림(fd 테이블 · struct file · inode · fork) 위에서 오늘 만든 서비스가 어떻게 돌고 있는지 세 문장으로 적어 두세요.", "confirm": "「지금 collect.sh는 누가 띄웠고, 그 안의 >>는 커널에서 무엇을 바꿨나요?」 — 'systemd가 fork했고, 자식의 fd 1이 로그 파일 inode를 가리킨다'면 하루 종료. 짝에게 1분 설명 후 제출."}];
+const KEY="ws_linux_day3";
+let cur=0, graded=false;
+const store={};
+try{Object.assign(store, JSON.parse(localStorage.getItem(KEY)||"{}"));}catch(e){}
+graded=!!store.__graded;
+function save(){try{store.__graded=graded;localStorage.setItem(KEY,JSON.stringify(store));}catch(e){}}
+function qid(si,qi){return SESS[si].id+"q"+(qi+1);}
+function build(){
+ const nav=document.getElementById("nav"), main=document.getElementById("main");
+ SESS.forEach((s,si)=>{
+  const t=document.createElement("button");t.className="tab";t.dataset.i=si;t.innerHTML=s.id+'<span class="p"></span>';t.onclick=()=>go(si);nav.appendChild(t);
+  const sec=document.createElement("section");sec.className="sec";sec.id="sec"+si;
+  let h=`<h2><small>${s.id}</small>${s.title}</h2><div class="arrive"><b>도착점</b>${s.arrive}</div>`;
+  h+=`<div class="tools"><span class="cap">도구 ▶</span>`+s.tools.map(t=>`<a class="tool" href="${t[1]}" target="_blank" rel="noopener">${t[0]}</a>`).join("")+`</div>`;
+  s.qs.forEach((q,qi)=>{
+   const id=qid(si,qi);
+   h+=`<div class="q"><div class="n">${s.id} · Q${qi+1}</div><div class="qt">${q[0]}</div>${q[2]?`<div class="hint">힌트: ${q[2]}</div>`:""}<div class="field"><label for="${id}">답</label><input type="text" class="ans" id="${id}" data-re="${q[1].replace(/"/g,'&quot;')}"></div><div class="fb" id="fb_${id}"></div></div>`;
+  });
+  h+=`<div class="obs"><div class="cap">실습 기록 (채점 없음)</div><textarea class="free" id="${s.id}obs" placeholder="${s.obs}"></textarea></div>`;
+  h+=`<div class="confirm"><span class="cap">확인 문구</span>${s.confirm}</div>`;
+  sec.innerHTML=h;main.appendChild(sec);
+ });
+ const t=document.createElement("button");t.className="tab";t.dataset.i=SESS.length;t.textContent="완료";t.onclick=()=>go(SESS.length);nav.appendChild(t);
+ const done=document.createElement("section");done.className="sec";done.id="sec"+SESS.length;done.innerHTML=`<h2><small>완료</small>오늘의 결과</h2><div id="doneBody"><div class="notice">아직 채점 전입니다 — 하단의 <b>채점하기</b>를 누르세요.</div></div>`;main.appendChild(done);
+ document.querySelectorAll("input.ans, textarea.free, #userName").forEach(el=>{
+  if(store[el.id]!==undefined)el.value=store[el.id];
+  el.addEventListener("input",()=>{store[el.id]=el.value;save();progress();});
+ });
+ document.getElementById("bPrev").onclick=()=>go(cur-1);
+ document.getElementById("bNext").onclick=()=>go(cur+1);
+ document.getElementById("bPrint").onclick=()=>window.print();
+ document.getElementById("bReset").onclick=()=>{if(!confirm("이 브라우저에 저장된 답을 모두 지웁니다. 계속할까요?"))return;for(const k in store)delete store[k];graded=false;save();location.reload();};
+ document.getElementById("bGrade").onclick=()=>{
+  if(graded){const r=gradeAll(true);renderDone(r);go(SESS.length);return;}
+  if(!confirm("답을 다 채웠나요? 채점을 시작합니다."))return;
+  const r=gradeAll(false);renderDone(r);go(SESS.length);
+ };
+ if(graded){const r=gradeAll(true);renderDone(r);}
+ progress();go(0);
+}
+function progress(){
+ SESS.forEach((s,si)=>{
+  const n=s.qs.length;let f=0;s.qs.forEach((_,qi)=>{if((store[qid(si,qi)]||"").trim())f++;});
+  const p=document.querySelector(`.tab[data-i="${si}"] .p`);p.textContent=f===0?"":(f===n?"●":"◐");
+ });
+}
+function gradeAll(silent){
+ graded=true;save();
+ const per=[];let correct=0,total=0;
+ SESS.forEach((s,si)=>{
+  let c=0;
+  s.qs.forEach((q,qi)=>{
+   const id=qid(si,qi);const v=(store[id]||"").trim();
+   const ok=new RegExp(q[1],"i").test(v);
+   const fb=document.getElementById("fb_"+id);
+   if(fb){fb.textContent=ok?"✓ 정답":"✗ 다시 — 도구를 한 번 더 넘겨 보세요";fb.className="fb "+(ok?"ok":"ng");}
+   if(ok)c++;
+  });
+  per.push({id:s.id,c,n:s.qs.length});correct+=c;total+=s.qs.length;
+ });
+ return {per,correct,total};
+}
+function esc(t){return (t||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+function renderDone(r){
+ const name=(store.userName||"").trim()||"(이름 미기입)";
+ const d=new Date();const ts=d.toLocaleDateString("ko-KR")+" "+d.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});
+ let h=`<div class="score"><div class="big">${r.correct} / ${r.total}</div><div class="who"><b>${esc(name)}</b> 님 · ${ts}</div><div class="per">`+r.per.map(p=>`<div><b>${p.id}</b>${p.c} / ${p.n}</div>`).join("")+`</div></div>`;
+ h+=`<div class="notice">제출: 이 화면(점수 상자 포함)을 <b>[강사 확정: 제출 채널]</b>에 제출합니다. 인쇄 / PDF 버튼은 전 세션의 답을 펼쳐서 출력합니다.</div>`;
+ SESS.forEach((s,si)=>{
+  h+=`<div class="tr"><h3>${s.id} · ${esc(s.title)}</h3>`;
+  s.qs.forEach((q,qi)=>{const v=(store[qid(si,qi)]||"").trim();const ok=new RegExp(q[1],"i").test(v);
+   h+=`<div class="row">Q${qi+1}. ${q[0]}<br>답: <span class="a">${esc(v)||"(빈칸)"}</span> <span class="${ok?"ok":"ng"}">${ok?"✓":"✗"}</span></div>`;});
+  const o=(store[s.id+"obs"]||"").trim();if(o)h+=`<div class="row free">실습 기록: <span class="a">${esc(o)}</span></div>`;
+  h+=`</div>`;
+ });
+ document.getElementById("doneBody").innerHTML=h;
+}
+function go(i){
+ cur=Math.max(0,Math.min(SESS.length,i));
+ document.querySelectorAll(".sec").forEach((s,k)=>s.classList.toggle("on",k===cur));
+ document.querySelectorAll(".tab").forEach((t,k)=>t.classList.toggle("on",k===cur));
+ document.getElementById("bPrev").disabled=cur===0;
+ document.getElementById("bNext").disabled=cur===SESS.length;
+ window.scrollTo({top:0});
+}
+build();
+</script>
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>스크립트의 한 줄이 실행되는 루프 — fork·exec·wait·$?</title>
+<style>
+:root{
+  --bg:#0f141d;--panel:#161d2a;--panel2:#1b2434;--line:#26314a;
+  --ink:#dce6f5;--dim:#7d8ba3;--amber:#ffd166;--warnc:#ff9f43;
+  --hot:#ff5d73;--accent:#4cc9f0;--good:#7ee787;--purple:#c3a6ff;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);min-height:100vh;padding:22px 14px 60px;
+ font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+.wrap{max-width:980px;margin:0 auto}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+h1{font-size:clamp(19px,4vw,26px);font-weight:800;margin-top:6px}
+h1 b{color:var(--amber)}
+.sub{color:var(--dim);font-size:13.5px;margin-top:6px;line-height:1.6}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 10px;align-items:center}
+.chips .cap{font-family:var(--mono);font-size:11.5px;color:var(--dim);margin-right:4px}
+.chip{font-family:var(--mono);font-size:12.5px;padding:8px 13px;border-radius:9px;background:var(--panel2);
+ color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.chip.on{background:var(--accent);color:#08131c;border-color:var(--accent);font-weight:800}
+.predict{background:var(--panel2);border-left:3px solid var(--purple);padding:9px 12px;
+ border-radius:0 10px 10px 0;font-size:13.5px;line-height:1.6}
+.predict b{color:var(--purple);font-family:var(--mono);font-size:12px;margin-right:6px}
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px;margin-top:12px}
+svg{width:100%;height:auto;display:block}
+.zone text{fill:var(--dim);font-family:var(--mono);font-size:11px;letter-spacing:.12em}
+.zone line{stroke:var(--line);stroke-dasharray:6 5}
+.node rect{fill:var(--panel2);stroke:var(--line);stroke-width:1.5;transition:stroke .2s}
+.node.g-user rect{stroke:#2a6f8a}
+.node.g-kernel rect{stroke:#7a6a2a}
+.node.g-disk rect{stroke:#6a5a9a}
+.node.g-proc rect{stroke:#3a7a55}
+.node .t{fill:var(--ink);font-weight:800;font-size:13px}
+.node .l{fill:var(--dim);font-family:var(--mono);font-size:11px}
+.node.on rect{stroke:var(--amber)!important;stroke-width:2.5;filter:drop-shadow(0 0 7px rgba(255,209,102,.55))}
+.node.on .l{fill:var(--ink)}
+.node.ok rect{stroke:var(--good)!important;stroke-width:2.2}
+.node.bad rect{stroke:var(--hot)!important;stroke-width:2.2}
+.node.bad .t{fill:var(--hot)}
+.node.warn rect{stroke:var(--warnc)!important;stroke-width:2.2}
+.node.ghost{opacity:.26}
+.node.ghost rect{stroke-dasharray:5 4}
+.arrow{stroke:var(--accent);stroke-width:2.2;fill:none;marker-end:url(#ah)}
+.arrow.hot{stroke:var(--hot);marker-end:url(#ahh)}
+.alabel{fill:var(--accent);font-family:var(--mono);font-size:10.5px;font-weight:700}
+.alabel.hot{fill:var(--hot)}
+.narr{margin-top:12px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+ padding:14px 16px;min-height:78px;display:flex;gap:14px;align-items:flex-start}
+.stepno{font-family:var(--mono);font-size:22px;color:var(--amber);font-weight:800;min-width:52px;line-height:1.1}
+.stepno small{display:block;font-size:10px;color:var(--dim);letter-spacing:.1em}
+.narr p{font-size:15px;line-height:1.7}
+.narr p.end{color:var(--good)}
+.ctrl{display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap}
+.btn{font-family:inherit;font-size:13.5px;padding:9px 15px;border-radius:9px;background:var(--panel2);
+ color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.btn:disabled{opacity:.35;cursor:default}
+.btn.primary{background:var(--amber);color:#1a1200;border-color:var(--amber);font-weight:800}
+.btn:focus-visible,.chip:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.dots{display:flex;gap:5px;margin-left:auto;flex-wrap:wrap}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--line)}
+.dot.done{background:var(--accent)}
+.dot.on{background:var(--amber);transform:scale(1.25)}
+.foot{margin-top:14px;color:var(--dim);font-size:12px;line-height:1.6}
+.foot code{font-family:var(--mono);color:var(--ink)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="eyebrow">Linux &amp; Shell · Day 3 · 애니메이션 #12</div>
+  <h1>한 줄이 프로세스가 된다 — <b>fork · exec · wait · $?</b></h1>
+  <div class="sub">bash는 한 줄을 읽을 때마다 자식을 낳고, 기다리고, 종료 코드를 받습니다. cd가 예외인 이유도 여기서.</div>
+</header>
+<div class="chips" id="chips"><span class="cap">시나리오</span></div>
+<div class="predict" id="predict"></div>
+<div class="stage"><svg id="svg" viewBox="0 0 960 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="한 줄이 프로세스가 된다 — <b>fork · exec · wait · $?</b>">
+<defs>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#4cc9f0"/></marker>
+<marker id="ahh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#ff5d73"/></marker>
+</defs>
+<g id="layer"></g>
+</svg></div>
+<div class="narr"><div class="stepno" id="stepno">0<small>STEP</small></div><p id="text"></p></div>
+<div class="ctrl">
+  <button class="btn" id="prev">◀ 이전</button>
+  <button class="btn primary" id="next">다음 단계 ▶</button>
+  <button class="btn" id="reset">↺ 처음으로</button>
+  <div class="dots" id="dots"></div>
+</div>
+<div class="foot">Day 3 · S4 · 실습: <code>echo $?</code> 관찰, 스크립트 안 <code>cd</code> 후 터미널 <code>pwd</code> · 키보드 ← → 로도 넘길 수 있습니다.</div>
+</div>
+<script>
+const A = {"h": 340, "zones": [{"x": 270, "lx": 20, "label": "bash"}, {"lx": 300, "label": "커널"}, {"x": 540, "lx": 560, "label": "프로그램"}], "nodes": [{"id": "bash", "x": 20, "y": 40, "w": 230, "title": "bash (PID 500)", "lines": ["읽은 줄: ls -l", "$? = ?", "상태: 실행 중", "cwd: /home/user"], "g": "proc", "h": 0}, {"id": "chi", "x": 20, "y": 200, "w": 230, "title": "자식 (PID 501)", "lines": ["(아직 없음)"], "g": "proc", "h": 0, "state": "ghost"}, {"id": "k", "x": 300, "y": 120, "w": 220, "title": "커널", "lines": ["fork / execve / wait", "종료 상태 전달"], "g": "kernel", "h": 0}, {"id": "prog", "x": 560, "y": 60, "w": 190, "title": "/bin/ls", "lines": ["디렉터리 목록 출력"], "g": "disk", "h": 0}, {"id": "out", "x": 560, "y": 200, "w": 190, "title": "터미널 출력", "lines": [""], "g": "disk", "h": 0}], "arrows": [{"id": "f", "from": "bash", "to": "chi", "label": "fork"}, {"id": "e", "from": "chi", "to": "prog", "label": "execve"}, {"id": "w", "from": "bash", "to": "k", "label": "wait"}, {"id": "x", "from": "k", "to": "bash", "label": "exit 상태"}, {"id": "o", "from": "chi", "to": "out", "label": "write"}], "scenarios": [{"name": "ls -l (성공)", "predict": "bash는 ls가 끝나기 전에 다음 줄로 넘어갈까요?", "start": "스크립트의 한 줄 `ls -l`을 실행합니다.", "steps": [{"t": "bash가 한 줄 읽음: ls -l. 빌트인이 아니므로 프로세스가 필요합니다.", "on": ["bash"], "arr": []}, {"t": "fork(): 자식 501 — bash의 복사본.", "on": ["bash", "chi"], "arr": ["f"], "set": {"chi": ["bash 복사본"]}, "state": {"chi": ""}}, {"t": "부모는 wait()에서 멈춥니다. 자식이 끝날 때까지 다음 줄로 안 갑니다.", "on": ["bash", "k"], "arr": ["w"], "set": {"bash": ["읽은 줄: ls -l", "$? = ?", "상태: wait 중 (blocked)", "cwd: /home/user"]}}, {"t": "자식은 execve(\"/bin/ls\") → 몸이 ls로 바뀝니다.", "on": ["chi", "prog"], "arr": ["e"], "set": {"chi": ["fd 테이블은 bash 것 그대로"]}, "title": {"chi": "ls -l (PID 501)"}}, {"t": "ls가 목록을 출력하고 exit(0).", "on": ["chi", "out"], "arr": ["o"], "set": {"chi": ["exit(0)"], "out": ["total 12", "-rw-r--r-- a.txt", "…"]}}, {"t": "커널이 종료 상태 0을 부모에게 전달 → wait 반환.", "on": ["k", "bash"], "arr": ["x"]}, {"t": "$? = 0. 자식은 사라지고, bash는 다음 줄을 읽습니다.", "on": ["bash"], "arr": [], "set": {"bash": ["읽은 줄: (다음 줄)", "$? = 0", "상태: 실행 중", "cwd: /home/user"]}, "state": {"chi": "ghost", "bash": "ok"}}]}, {"name": "ls /nonexist (실패)", "predict": "실패한 명령의 $?는 0일까요, 0이 아닐까요?", "start": "없는 디렉터리를 ls 합니다.", "init": {"set": {"bash": ["읽은 줄: ls /nonexist", "$? = ?", "상태: 실행 중", "cwd: /home/user"]}}, "steps": [{"t": "fork → 자식 501, 부모 wait.", "on": ["bash", "chi", "k"], "arr": ["f", "w"], "set": {"chi": ["bash 복사본"], "bash": ["읽은 줄: ls /nonexist", "$? = ?", "상태: wait 중", "cwd: /home/user"]}, "state": {"chi": ""}}, {"t": "자식 execve(/bin/ls). ls가 /nonexist를 open 시도 → ENOENT.", "on": ["chi", "prog"], "arr": ["e"], "title": {"chi": "ls /nonexist (PID 501)"}}, {"t": "ls가 stderr에 'No such file or directory'를 쓰고 exit(2).", "on": ["chi", "out"], "arr": ["o"], "set": {"chi": ["exit(2)"], "out": ["ls: cannot access…", "No such file…"]}, "state": {"chi": "bad"}}, {"t": "커널이 종료 상태 2를 부모에게 전달.", "on": ["k", "bash"], "arr": ["x"]}, {"t": "$? = 2. '0이 아니면 실패'. 스크립트의 if·&&·|| 는 이 값을 봅니다.", "on": ["bash"], "arr": [], "set": {"bash": ["읽은 줄: (다음 줄)", "$? = 2", "상태: 실행 중", "cwd: /home/user"]}, "state": {"chi": "ghost", "bash": "warn"}}]}, {"name": "cd /tmp (빌트인)", "predict": "cd도 fork로 실행한다면 무슨 일이 벌어질까요?", "start": "스크립트의 한 줄 `cd /tmp`.", "init": {"set": {"bash": ["읽은 줄: cd /tmp", "$? = ?", "상태: 실행 중", "cwd: /home/user"]}, "title": {"prog": "(가정) /bin/cd"}}, "steps": [{"t": "한 줄 읽음: cd /tmp. 만약 이것도 fork로 실행한다면?", "on": ["bash"], "arr": []}, {"t": "(가정) fork → 자식이 chdir(\"/tmp\") → 자식의 cwd만 /tmp.", "on": ["chi"], "arr": ["f"], "set": {"chi": ["cwd: /tmp"]}, "state": {"chi": ""}}, {"t": "자식 종료. 부모의 cwd는 /home/user 그대로 — 'cd가 안 먹은 것'처럼 보입니다.", "on": ["bash"], "arr": ["x"], "state": {"chi": "ghost", "bash": "warn"}}, {"t": "그래서 cd는 빌트인: fork 없이 bash 자신이 chdir을 호출합니다.", "on": ["bash"], "arr": [], "set": {"bash": ["읽은 줄: cd /tmp (빌트인)", "$? = 0", "상태: 실행 중", "cwd: /tmp ✓"]}, "state": {"bash": "ok"}}, {"t": "스크립트 안의 cd가 터미널에 안 남는 이유: 스크립트 자체가 터미널 bash의 '자식' bash이기 때문.", "on": ["bash", "chi"], "arr": []}]}]};
+const NS="http://www.w3.org/2000/svg";
+let sc=0, st=0;
+function el(n,a,txt){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;return e;}
+function state(){
+  const S=A.scenarios[sc];
+  const lines={},states={},titles={};
+  const apply=(o)=>{if(!o)return;if(o.set)for(const k in o.set)lines[k]=o.set[k];if(o.state)for(const k in o.state)states[k]=o.state[k];if(o.title)for(const k in o.title)titles[k]=o.title[k];};
+  apply(S.init);
+  for(let i=0;i<st;i++)apply(S.steps[i]);
+  return {lines,states,titles,cur:S.steps[st-1]||{on:[],arr:[]}};
+}
+function render(){
+  const {lines,states,titles,cur}=state();
+  const L=document.getElementById("layer");L.innerHTML="";
+  (A.zones||[]).forEach(z=>{const g=el("g",{class:"zone"});
+    if(z.x!=null)g.appendChild(el("line",{x1:z.x,y1:8,x2:z.x,y2:A.h-8}));
+    g.appendChild(el("text",{x:z.lx,y:22},z.label));L.appendChild(g);});
+  const rects={};
+  A.nodes.forEach(n=>{
+    const ln=lines[n.id]!==undefined?lines[n.id]:(n.lines||[]);
+    const h=Math.max(n.h||0,34+ln.length*15+(ln.length?8:0));
+    rects[n.id]={x:n.x,y:n.y,w:n.w,h};
+  });
+  A.arrows.forEach(a=>{
+    const act=(cur.arr||[]).includes(a.id);if(!act)return;
+    const s=rects[a.from],t=rects[a.to];if(!s||!t)return;
+    let x1,y1,x2,y2;
+    const scx=s.x+s.w/2,scy=s.y+s.h/2,tcx=t.x+t.w/2,tcy=t.y+t.h/2;
+    if(t.x>=s.x+s.w){x1=s.x+s.w;y1=scy;x2=t.x;y2=tcy;}
+    else if(t.x+t.w<=s.x){x1=s.x;y1=scy;x2=t.x+t.w;y2=tcy;}
+    else if(t.y>=s.y+s.h){x1=scx;y1=s.y+s.h;x2=tcx;y2=t.y;}
+    else{x1=scx;y1=s.y;x2=tcx;y2=t.y+t.h;}
+    const hot=a.hot?" hot":"";
+    L.appendChild(el("line",{class:"arrow"+hot,x1,y1,x2,y2}));
+    if(a.label){const mx=(x1+x2)/2,my=(y1+y2)/2-7;L.appendChild(el("text",{class:"alabel"+hot,x:mx,y:my,"text-anchor":"middle"},a.label));}
+  });
+  A.nodes.forEach(n=>{
+    const r=rects[n.id];const ln=lines[n.id]!==undefined?lines[n.id]:(n.lines||[]);
+    const stt=states[n.id]!==undefined?states[n.id]:(n.state||"");
+    const on=(cur.on||[]).includes(n.id);
+    const g=el("g",{class:"node g-"+(n.g||"kernel")+(on?" on":"")+(stt?" "+stt:"")});
+    g.appendChild(el("rect",{x:r.x,y:r.y,width:r.w,height:r.h,rx:10}));
+    g.appendChild(el("text",{class:"t",x:r.x+12,y:r.y+21},titles[n.id]||n.title));
+    ln.forEach((s,i)=>g.appendChild(el("text",{class:"l",x:r.x+12,y:r.y+42+i*15},s)));
+    L.appendChild(g);
+  });
+  const S=A.scenarios[sc];
+  document.getElementById("stepno").innerHTML=st+"<small>STEP "+st+"/"+S.steps.length+"</small>";
+  const p=document.getElementById("text");
+  p.textContent=st===0?S.start:cur.t;
+  p.className=(st===S.steps.length)?"end":"";
+  document.getElementById("prev").disabled=st===0;
+  document.getElementById("next").disabled=st===S.steps.length;
+  const D=document.getElementById("dots");D.innerHTML="";
+  S.steps.forEach((_,i)=>{const d=document.createElement("span");d.className="dot"+(i<st?" done":"")+(i===st-1?" on":"");D.appendChild(d);});
+  document.querySelectorAll(".chip").forEach((c,i)=>c.classList.toggle("on",i===sc));
+  document.getElementById("predict").innerHTML="<b>먼저 예측</b>"+S.predict;
+}
+function go(i){st=Math.max(0,Math.min(A.scenarios[sc].steps.length,i));render();}
+document.getElementById("prev").onclick=()=>go(st-1);
+document.getElementById("next").onclick=()=>go(st+1);
+document.getElementById("reset").onclick=()=>go(0);
+document.addEventListener("keydown",e=>{if(e.key==="ArrowRight")go(st+1);if(e.key==="ArrowLeft")go(st-1);});
+const C=document.getElementById("chips");
+A.scenarios.forEach((s,i)=>{const b=document.createElement("button");b.className="chip";b.textContent=s.name;b.onclick=()=>{sc=i;st=0;render();};C.appendChild(b);});
+render();
+</script>
+</body>
+</html>

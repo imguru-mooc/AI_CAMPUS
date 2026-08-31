@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>./run.sh vs source run.sh — 변수는 어디까지 살아있나</title>
+<style>
+:root{
+  --bg:#0f141d;--panel:#161d2a;--panel2:#1b2434;--line:#26314a;
+  --ink:#dce6f5;--dim:#7d8ba3;--amber:#ffd166;--warnc:#ff9f43;
+  --hot:#ff5d73;--accent:#4cc9f0;--good:#7ee787;--purple:#c3a6ff;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);min-height:100vh;padding:22px 14px 60px;
+ font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+.wrap{max-width:980px;margin:0 auto}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+h1{font-size:clamp(19px,4vw,26px);font-weight:800;margin-top:6px}
+h1 b{color:var(--amber)}
+.sub{color:var(--dim);font-size:13.5px;margin-top:6px;line-height:1.6}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 10px;align-items:center}
+.chips .cap{font-family:var(--mono);font-size:11.5px;color:var(--dim);margin-right:4px}
+.chip{font-family:var(--mono);font-size:12.5px;padding:8px 13px;border-radius:9px;background:var(--panel2);
+ color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.chip.on{background:var(--accent);color:#08131c;border-color:var(--accent);font-weight:800}
+.predict{background:var(--panel2);border-left:3px solid var(--purple);padding:9px 12px;
+ border-radius:0 10px 10px 0;font-size:13.5px;line-height:1.6}
+.predict b{color:var(--purple);font-family:var(--mono);font-size:12px;margin-right:6px}
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px;margin-top:12px}
+svg{width:100%;height:auto;display:block}
+.zone text{fill:var(--dim);font-family:var(--mono);font-size:11px;letter-spacing:.12em}
+.zone line{stroke:var(--line);stroke-dasharray:6 5}
+.node rect{fill:var(--panel2);stroke:var(--line);stroke-width:1.5;transition:stroke .2s}
+.node.g-user rect{stroke:#2a6f8a}
+.node.g-kernel rect{stroke:#7a6a2a}
+.node.g-disk rect{stroke:#6a5a9a}
+.node.g-proc rect{stroke:#3a7a55}
+.node .t{fill:var(--ink);font-weight:800;font-size:13px}
+.node .l{fill:var(--dim);font-family:var(--mono);font-size:11px}
+.node.on rect{stroke:var(--amber)!important;stroke-width:2.5;filter:drop-shadow(0 0 7px rgba(255,209,102,.55))}
+.node.on .l{fill:var(--ink)}
+.node.ok rect{stroke:var(--good)!important;stroke-width:2.2}
+.node.bad rect{stroke:var(--hot)!important;stroke-width:2.2}
+.node.bad .t{fill:var(--hot)}
+.node.warn rect{stroke:var(--warnc)!important;stroke-width:2.2}
+.node.ghost{opacity:.26}
+.node.ghost rect{stroke-dasharray:5 4}
+.arrow{stroke:var(--accent);stroke-width:2.2;fill:none;marker-end:url(#ah)}
+.arrow.hot{stroke:var(--hot);marker-end:url(#ahh)}
+.alabel{fill:var(--accent);font-family:var(--mono);font-size:10.5px;font-weight:700}
+.alabel.hot{fill:var(--hot)}
+.narr{margin-top:12px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+ padding:14px 16px;min-height:78px;display:flex;gap:14px;align-items:flex-start}
+.stepno{font-family:var(--mono);font-size:22px;color:var(--amber);font-weight:800;min-width:52px;line-height:1.1}
+.stepno small{display:block;font-size:10px;color:var(--dim);letter-spacing:.1em}
+.narr p{font-size:15px;line-height:1.7}
+.narr p.end{color:var(--good)}
+.ctrl{display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap}
+.btn{font-family:inherit;font-size:13.5px;padding:9px 15px;border-radius:9px;background:var(--panel2);
+ color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.btn:disabled{opacity:.35;cursor:default}
+.btn.primary{background:var(--amber);color:#1a1200;border-color:var(--amber);font-weight:800}
+.btn:focus-visible,.chip:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.dots{display:flex;gap:5px;margin-left:auto;flex-wrap:wrap}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--line)}
+.dot.done{background:var(--accent)}
+.dot.on{background:var(--amber);transform:scale(1.25)}
+.foot{margin-top:14px;color:var(--dim);font-size:12px;line-height:1.6}
+.foot code{font-family:var(--mono);color:var(--ink)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="eyebrow">Linux &amp; Shell · Day 3 · 애니메이션 #13</div>
+  <h1><b>./</b> vs <b>source</b> — 변수는 어디까지 살아있나</h1>
+  <div class="sub">변수는 프로세스 안에 삽니다. export는 exec 시점에 자식으로 복사될 뿐, 자식이 바꿔도 부모로 돌아오지 않습니다.</div>
+</header>
+<div class="chips" id="chips"><span class="cap">시나리오</span></div>
+<div class="predict" id="predict"></div>
+<div class="stage"><svg id="svg" viewBox="0 0 960 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="<b>./</b> vs <b>source</b> — 변수는 어디까지 살아있나">
+<defs>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#4cc9f0"/></marker>
+<marker id="ahh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#ff5d73"/></marker>
+</defs>
+<g id="layer"></g>
+</svg></div>
+<div class="narr"><div class="stepno" id="stepno">0<small>STEP</small></div><p id="text"></p></div>
+<div class="ctrl">
+  <button class="btn" id="prev">◀ 이전</button>
+  <button class="btn primary" id="next">다음 단계 ▶</button>
+  <button class="btn" id="reset">↺ 처음으로</button>
+  <div class="dots" id="dots"></div>
+</div>
+<div class="foot">Day 3 · S5 · 실습: <code>./collect.sh</code> 후 <code>echo $LOG_DIR</code> / <code>source collect.sh</code> 후 다시 · 키보드 ← → 로도 넘길 수 있습니다.</div>
+</div>
+<script>
+const A = {"h": 300, "zones": [{"x": 380, "lx": 20, "label": "터미널"}, {"lx": 410, "label": "자식 프로세스"}, {"x": 700, "lx": 720, "label": "파일"}], "nodes": [{"id": "term", "x": 20, "y": 40, "w": 340, "title": "터미널 bash (PID 500)", "lines": ["LOG_DIR = (없음)", "PATH = /usr/bin:…", "$ ./collect.sh"], "g": "proc", "h": 0}, {"id": "chi", "x": 410, "y": 40, "w": 270, "title": "자식 bash (PID 501)", "lines": ["(아직 없음)"], "g": "proc", "h": 0, "state": "ghost"}, {"id": "sh", "x": 720, "y": 40, "w": 220, "title": "collect.sh", "lines": ["LOG_DIR=~/logs", "echo $LOG_DIR"], "g": "disk", "h": 0}], "arrows": [{"id": "f", "from": "term", "to": "chi", "label": "fork+execve"}, {"id": "env", "from": "term", "to": "chi", "label": "envp 복사"}, {"id": "r", "from": "chi", "to": "sh", "label": "읽기"}, {"id": "rs", "from": "term", "to": "sh", "label": "읽기 (fork 없음)"}], "scenarios": [{"name": "./collect.sh", "predict": "스크립트가 만든 LOG_DIR는 스크립트가 끝난 뒤 터미널에서 보일까요?", "start": "터미널에서 ./collect.sh 를 실행합니다.", "steps": [{"t": "./collect.sh → fork+execve → 자식 bash 501이 파일을 읽습니다.", "on": ["term", "chi", "sh"], "arr": ["f", "r"], "set": {"chi": ["LOG_DIR = (없음)"]}, "state": {"chi": ""}}, {"t": "자식이 LOG_DIR=~/logs 실행 → 자식의 변수 상자에만 생깁니다.", "on": ["chi"], "arr": ["r"], "set": {"chi": ["LOG_DIR = ~/logs"]}, "state": {"chi": "ok"}}, {"t": "echo $LOG_DIR → 자식 안에서는 ~/logs 출력. 스크립트 끝 → 자식 종료 → 변수 상자도 함께 소멸.", "on": ["chi"], "arr": [], "set": {"chi": ["(종료 — 변수 소멸)"]}, "state": {"chi": "ghost"}}, {"t": "터미널에서 echo $LOG_DIR → 빈 값. 변수는 자식 → 부모로 절대 올라오지 않습니다.", "on": ["term"], "arr": [], "set": {"term": ["LOG_DIR = (없음)", "PATH = /usr/bin:…", "$ echo $LOG_DIR  →  (빈 값)"]}, "state": {"term": "warn"}}]}, {"name": "source collect.sh", "predict": "source는 무엇을 안 하기에 변수가 남을까요?", "start": "같은 파일을 source로 실행합니다.", "init": {"set": {"term": ["LOG_DIR = (없음)", "PATH = /usr/bin:…", "$ source collect.sh"]}}, "steps": [{"t": "source collect.sh: fork 없음. 터미널 bash가 파일을 직접 읽어 실행합니다.", "on": ["term", "sh"], "arr": ["rs"]}, {"t": "LOG_DIR=~/logs 가 터미널 bash 자신의 상자에 생깁니다.", "on": ["term"], "arr": ["rs"], "set": {"term": ["LOG_DIR = ~/logs ✓", "PATH = /usr/bin:…", "$ source collect.sh"]}, "state": {"term": "ok"}}, {"t": "echo $LOG_DIR → ~/logs. 그래서 .bashrc·환경 설정 파일은 source(또는 .)로 읽습니다.", "on": ["term"], "arr": [], "set": {"term": ["LOG_DIR = ~/logs ✓", "PATH = /usr/bin:…", "$ echo $LOG_DIR  →  ~/logs"]}}]}, {"name": "export → 자식이 바꾸면?", "predict": "export한 변수를 자식 스크립트가 바꾸면 터미널의 값도 바뀔까요?", "start": "터미널에서 export 한 뒤 스크립트를 실행합니다.", "init": {"set": {"term": ["LOG_DIR = ~/logs (export)", "PATH = /usr/bin:…", "$ ./collect.sh"], "sh": ["echo $LOG_DIR", "LOG_DIR=/tmp"]}}, "steps": [{"t": "export LOG_DIR=~/logs → '자식에게 물려줄 변수'로 표시됩니다.", "on": ["term"], "arr": [], "state": {"term": "ok"}}, {"t": "./collect.sh → fork+execve. execve 시점에 환경변수가 자식으로 복사됩니다.", "on": ["term", "chi"], "arr": ["f", "env"], "set": {"chi": ["LOG_DIR = ~/logs (복사본)"]}, "state": {"chi": ""}}, {"t": "자식이 echo $LOG_DIR → ~/logs. 물려받은 값이 보입니다.", "on": ["chi", "sh"], "arr": ["r"]}, {"t": "자식이 LOG_DIR=/tmp 로 바꿈 — 자식의 복사본만 바뀝니다.", "on": ["chi"], "arr": ["r"], "set": {"chi": ["LOG_DIR = /tmp (복사본만 변경)"]}, "state": {"chi": "warn"}}, {"t": "자식 종료. 터미널의 LOG_DIR은 여전히 ~/logs. 흐름은 부모 → 자식 한 방향뿐입니다.", "on": ["term"], "arr": [], "set": {"chi": ["(종료)"], "term": ["LOG_DIR = ~/logs (export) ✓", "PATH = /usr/bin:…", "$ echo $LOG_DIR  →  ~/logs"]}, "state": {"chi": "ghost"}}]}]};
+const NS="http://www.w3.org/2000/svg";
+let sc=0, st=0;
+function el(n,a,txt){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;return e;}
+function state(){
+  const S=A.scenarios[sc];
+  const lines={},states={},titles={};
+  const apply=(o)=>{if(!o)return;if(o.set)for(const k in o.set)lines[k]=o.set[k];if(o.state)for(const k in o.state)states[k]=o.state[k];if(o.title)for(const k in o.title)titles[k]=o.title[k];};
+  apply(S.init);
+  for(let i=0;i<st;i++)apply(S.steps[i]);
+  return {lines,states,titles,cur:S.steps[st-1]||{on:[],arr:[]}};
+}
+function render(){
+  const {lines,states,titles,cur}=state();
+  const L=document.getElementById("layer");L.innerHTML="";
+  (A.zones||[]).forEach(z=>{const g=el("g",{class:"zone"});
+    if(z.x!=null)g.appendChild(el("line",{x1:z.x,y1:8,x2:z.x,y2:A.h-8}));
+    g.appendChild(el("text",{x:z.lx,y:22},z.label));L.appendChild(g);});
+  const rects={};
+  A.nodes.forEach(n=>{
+    const ln=lines[n.id]!==undefined?lines[n.id]:(n.lines||[]);
+    const h=Math.max(n.h||0,34+ln.length*15+(ln.length?8:0));
+    rects[n.id]={x:n.x,y:n.y,w:n.w,h};
+  });
+  A.arrows.forEach(a=>{
+    const act=(cur.arr||[]).includes(a.id);if(!act)return;
+    const s=rects[a.from],t=rects[a.to];if(!s||!t)return;
+    let x1,y1,x2,y2;
+    const scx=s.x+s.w/2,scy=s.y+s.h/2,tcx=t.x+t.w/2,tcy=t.y+t.h/2;
+    if(t.x>=s.x+s.w){x1=s.x+s.w;y1=scy;x2=t.x;y2=tcy;}
+    else if(t.x+t.w<=s.x){x1=s.x;y1=scy;x2=t.x+t.w;y2=tcy;}
+    else if(t.y>=s.y+s.h){x1=scx;y1=s.y+s.h;x2=tcx;y2=t.y;}
+    else{x1=scx;y1=s.y;x2=tcx;y2=t.y+t.h;}
+    const hot=a.hot?" hot":"";
+    L.appendChild(el("line",{class:"arrow"+hot,x1,y1,x2,y2}));
+    if(a.label){const mx=(x1+x2)/2,my=(y1+y2)/2-7;L.appendChild(el("text",{class:"alabel"+hot,x:mx,y:my,"text-anchor":"middle"},a.label));}
+  });
+  A.nodes.forEach(n=>{
+    const r=rects[n.id];const ln=lines[n.id]!==undefined?lines[n.id]:(n.lines||[]);
+    const stt=states[n.id]!==undefined?states[n.id]:(n.state||"");
+    const on=(cur.on||[]).includes(n.id);
+    const g=el("g",{class:"node g-"+(n.g||"kernel")+(on?" on":"")+(stt?" "+stt:"")});
+    g.appendChild(el("rect",{x:r.x,y:r.y,width:r.w,height:r.h,rx:10}));
+    g.appendChild(el("text",{class:"t",x:r.x+12,y:r.y+21},titles[n.id]||n.title));
+    ln.forEach((s,i)=>g.appendChild(el("text",{class:"l",x:r.x+12,y:r.y+42+i*15},s)));
+    L.appendChild(g);
+  });
+  const S=A.scenarios[sc];
+  document.getElementById("stepno").innerHTML=st+"<small>STEP "+st+"/"+S.steps.length+"</small>";
+  const p=document.getElementById("text");
+  p.textContent=st===0?S.start:cur.t;
+  p.className=(st===S.steps.length)?"end":"";
+  document.getElementById("prev").disabled=st===0;
+  document.getElementById("next").disabled=st===S.steps.length;
+  const D=document.getElementById("dots");D.innerHTML="";
+  S.steps.forEach((_,i)=>{const d=document.createElement("span");d.className="dot"+(i<st?" done":"")+(i===st-1?" on":"");D.appendChild(d);});
+  document.querySelectorAll(".chip").forEach((c,i)=>c.classList.toggle("on",i===sc));
+  document.getElementById("predict").innerHTML="<b>먼저 예측</b>"+S.predict;
+}
+function go(i){st=Math.max(0,Math.min(A.scenarios[sc].steps.length,i));render();}
+document.getElementById("prev").onclick=()=>go(st-1);
+document.getElementById("next").onclick=()=>go(st+1);
+document.getElementById("reset").onclick=()=>go(0);
+document.addEventListener("keydown",e=>{if(e.key==="ArrowRight")go(st+1);if(e.key==="ArrowLeft")go(st-1);});
+const C=document.getElementById("chips");
+A.scenarios.forEach((s,i)=>{const b=document.createElement("button");b.className="chip";b.textContent=s.name;b.onclick=()=>{sc=i;st=0;render();};C.appendChild(b);});
+render();
+</script>
+</body>
+</html>

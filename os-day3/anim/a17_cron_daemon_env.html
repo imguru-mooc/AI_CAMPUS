@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>cron — 매 분 깨어나 crontab을 대조하는 데몬</title>
+<style>
+:root{
+  --bg:#0f141d;--panel:#161d2a;--panel2:#1b2434;--line:#26314a;
+  --ink:#dce6f5;--dim:#7d8ba3;--amber:#ffd166;--warnc:#ff9f43;
+  --hot:#ff5d73;--accent:#4cc9f0;--good:#7ee787;--purple:#c3a6ff;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);min-height:100vh;padding:22px 14px 60px;
+ font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+.wrap{max-width:980px;margin:0 auto}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+h1{font-size:clamp(19px,4vw,26px);font-weight:800;margin-top:6px}
+h1 b{color:var(--amber)}
+.sub{color:var(--dim);font-size:13.5px;margin-top:6px;line-height:1.6}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 10px;align-items:center}
+.chips .cap{font-family:var(--mono);font-size:11.5px;color:var(--dim);margin-right:4px}
+.chip{font-family:var(--mono);font-size:12.5px;padding:8px 13px;border-radius:9px;background:var(--panel2);
+ color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.chip.on{background:var(--accent);color:#08131c;border-color:var(--accent);font-weight:800}
+.predict{background:var(--panel2);border-left:3px solid var(--purple);padding:9px 12px;
+ border-radius:0 10px 10px 0;font-size:13.5px;line-height:1.6}
+.predict b{color:var(--purple);font-family:var(--mono);font-size:12px;margin-right:6px}
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px;margin-top:12px}
+svg{width:100%;height:auto;display:block}
+.zone text{fill:var(--dim);font-family:var(--mono);font-size:11px;letter-spacing:.12em}
+.zone line{stroke:var(--line);stroke-dasharray:6 5}
+.node rect{fill:var(--panel2);stroke:var(--line);stroke-width:1.5;transition:stroke .2s}
+.node.g-user rect{stroke:#2a6f8a}
+.node.g-kernel rect{stroke:#7a6a2a}
+.node.g-disk rect{stroke:#6a5a9a}
+.node.g-proc rect{stroke:#3a7a55}
+.node .t{fill:var(--ink);font-weight:800;font-size:13px}
+.node .l{fill:var(--dim);font-family:var(--mono);font-size:11px}
+.node.on rect{stroke:var(--amber)!important;stroke-width:2.5;filter:drop-shadow(0 0 7px rgba(255,209,102,.55))}
+.node.on .l{fill:var(--ink)}
+.node.ok rect{stroke:var(--good)!important;stroke-width:2.2}
+.node.bad rect{stroke:var(--hot)!important;stroke-width:2.2}
+.node.bad .t{fill:var(--hot)}
+.node.warn rect{stroke:var(--warnc)!important;stroke-width:2.2}
+.node.ghost{opacity:.26}
+.node.ghost rect{stroke-dasharray:5 4}
+.arrow{stroke:var(--accent);stroke-width:2.2;fill:none;marker-end:url(#ah)}
+.arrow.hot{stroke:var(--hot);marker-end:url(#ahh)}
+.alabel{fill:var(--accent);font-family:var(--mono);font-size:10.5px;font-weight:700}
+.alabel.hot{fill:var(--hot)}
+.narr{margin-top:12px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+ padding:14px 16px;min-height:78px;display:flex;gap:14px;align-items:flex-start}
+.stepno{font-family:var(--mono);font-size:22px;color:var(--amber);font-weight:800;min-width:52px;line-height:1.1}
+.stepno small{display:block;font-size:10px;color:var(--dim);letter-spacing:.1em}
+.narr p{font-size:15px;line-height:1.7}
+.narr p.end{color:var(--good)}
+.ctrl{display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap}
+.btn{font-family:inherit;font-size:13.5px;padding:9px 15px;border-radius:9px;background:var(--panel2);
+ color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.btn:disabled{opacity:.35;cursor:default}
+.btn.primary{background:var(--amber);color:#1a1200;border-color:var(--amber);font-weight:800}
+.btn:focus-visible,.chip:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.dots{display:flex;gap:5px;margin-left:auto;flex-wrap:wrap}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--line)}
+.dot.done{background:var(--accent)}
+.dot.on{background:var(--amber);transform:scale(1.25)}
+.foot{margin-top:14px;color:var(--dim);font-size:12px;line-height:1.6}
+.foot code{font-family:var(--mono);color:var(--ink)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="eyebrow">Linux &amp; Shell · Day 3 · 애니메이션 #17</div>
+  <h1><b>cron</b> — 매 분 깨어나 crontab을 대조하는 데몬</h1>
+  <div class="sub">crond는 1분마다 깨어나 다섯 칸을 현재 시각과 맞춰 봅니다. 자식에게 주는 환경은 터미널의 것이 아닙니다.</div>
+</header>
+<div class="chips" id="chips"><span class="cap">시나리오</span></div>
+<div class="predict" id="predict"></div>
+<div class="stage"><svg id="svg" viewBox="0 0 960 330" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="<b>cron</b> — 매 분 깨어나 crontab을 대조하는 데몬">
+<defs>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#4cc9f0"/></marker>
+<marker id="ahh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#ff5d73"/></marker>
+</defs>
+<g id="layer"></g>
+</svg></div>
+<div class="narr"><div class="stepno" id="stepno">0<small>STEP</small></div><p id="text"></p></div>
+<div class="ctrl">
+  <button class="btn" id="prev">◀ 이전</button>
+  <button class="btn primary" id="next">다음 단계 ▶</button>
+  <button class="btn" id="reset">↺ 처음으로</button>
+  <div class="dots" id="dots"></div>
+</div>
+<div class="foot">Day 3 · S7 · 실습: <code>crontab -e</code> 로 <code>* * * * *</code> 등록 후 3분 대기, 상대경로로 바꿔 실패 재현 · 키보드 ← → 로도 넘길 수 있습니다.</div>
+</div>
+<script>
+const A = {"h": 330, "zones": [{"lx": 20, "label": "시계"}, {"x": 270, "lx": 290, "label": "crond"}, {"x": 580, "lx": 600, "label": "crontab / 자식"}], "nodes": [{"id": "clk", "x": 20, "y": 40, "w": 230, "title": "현재 시각", "lines": ["화 10:41:00"], "g": "user", "h": 0}, {"id": "cron", "x": 300, "y": 40, "w": 250, "title": "crond (데몬)", "lines": ["잠자는 중", "깨어나면 crontab 대조"], "g": "proc", "h": 0}, {"id": "env", "x": 300, "y": 190, "w": 250, "title": "cron의 환경", "lines": ["PATH=/usr/bin:/bin", "HOME=/home/user", "(터미널 변수 없음)"], "g": "kernel", "h": 0}, {"id": "ct", "x": 600, "y": 40, "w": 340, "title": "crontab -l", "lines": ["* * * * *   /home/user/collect.sh", "0 9 * * 1   /home/user/backup.sh"], "g": "disk", "h": 0}, {"id": "chi", "x": 600, "y": 190, "w": 340, "title": "자식 (fork/exec)", "lines": ["(아직 없음)"], "g": "proc", "h": 0, "state": "ghost"}], "arrows": [{"id": "t", "from": "clk", "to": "cron", "label": "1분 경과"}, {"id": "c", "from": "cron", "to": "ct", "label": "대조"}, {"id": "f", "from": "cron", "to": "chi", "label": "fork/exec"}, {"id": "e", "from": "env", "to": "chi", "label": "envp"}], "scenarios": [{"name": "매 분 (* * * * *)", "predict": "crond는 스크립트가 끝나기를 기다릴까요? 1분 뒤에 또 실행할까요?", "start": "화요일 10:41:00 입니다.", "steps": [{"t": "10:41:00 — crond가 깨어납니다.", "on": ["clk", "cron"], "arr": ["t"], "set": {"cron": ["깨어남", "crontab 대조 시작"]}}, {"t": "crontab 각 줄의 5칸(분 시 일 월 요일)을 현재 시각과 대조.", "on": ["cron", "ct"], "arr": ["c"]}, {"t": "1행 * * * * * → 항상 일치.", "on": ["ct"], "arr": [], "set": {"ct": ["* * * * *   /home/user/collect.sh  ✓ 일치", "0 9 * * 1   /home/user/backup.sh"]}, "state": {"ct": "ok"}}, {"t": "2행 0 9 * * 1 → 분·시·요일 불일치 → 건너뜀.", "on": ["ct"], "arr": [], "set": {"ct": ["* * * * *   /home/user/collect.sh  ✓ 일치", "0 9 * * 1   /home/user/backup.sh  ✗ 불일치"]}}, {"t": "일치한 줄만 fork/exec. 환경은 터미널이 아니라 cron의 최소 환경(envp)입니다.", "on": ["cron", "env", "chi"], "arr": ["f", "e"], "set": {"chi": ["/home/user/collect.sh 실행 중", "PATH=/usr/bin:/bin"]}, "state": {"chi": ""}}, {"t": "crond는 기다리지 않고 다시 잠듭니다. 10:42:00 — 또 깨어나 반복. 사람이 없어도 1분마다.", "on": ["clk", "cron"], "arr": ["t"], "set": {"clk": ["화 10:42:00"], "cron": ["잠자는 중", "깨어나면 crontab 대조"]}}]}, {"name": "월요일 09:00", "predict": "두 줄이 동시에 일치하면 어떻게 될까요?", "start": "월요일 09:00:00 입니다.", "init": {"set": {"clk": ["월 09:00:00"]}}, "steps": [{"t": "09:00:00 — crond 깨어남.", "on": ["clk", "cron"], "arr": ["t"]}, {"t": "1행 * * * * * → 일치.", "on": ["ct"], "arr": ["c"], "set": {"ct": ["* * * * *   /home/user/collect.sh  ✓", "0 9 * * 1   /home/user/backup.sh"]}}, {"t": "2행 0 9 * * 1 → 분 0·시 9·월요일 → 일치!", "on": ["ct"], "arr": [], "set": {"ct": ["* * * * *   /home/user/collect.sh  ✓", "0 9 * * 1   /home/user/backup.sh  ✓"]}, "state": {"ct": "ok"}}, {"t": "둘 다 fork. 두 스크립트가 동시에 뜹니다 — 서로 기다리지 않습니다.", "on": ["chi"], "arr": ["f", "e"], "set": {"chi": ["collect.sh (PID 810)", "backup.sh (PID 811)"]}, "state": {"chi": "ok"}}]}, {"name": "PATH 문제 (127)", "predict": "터미널에서는 되는 `python3 sensor.py`가 cron에서만 안 될 때, 첫 번째로 의심할 것은?", "start": "crontab에 `python3 sensor.py`를 등록했습니다. python3는 /usr/local/bin에 있습니다.", "init": {"set": {"ct": ["* * * * *   python3 sensor.py"]}}, "steps": [{"t": "터미널에서는 잘 됩니다 — 터미널 PATH에 /usr/local/bin이 있어서.", "on": ["clk"], "arr": []}, {"t": "cron이 fork/exec: 자식의 PATH=/usr/bin:/bin 뿐입니다.", "on": ["cron", "env", "chi"], "arr": ["f", "e"], "set": {"chi": ["python3 sensor.py", "PATH=/usr/bin:/bin"]}, "state": {"chi": ""}}, {"t": "/usr/bin과 /bin에는 python3가 없음 → 'command not found' → exit 127. 오류는 화면이 아니라 메일함 또는 /var/log/syslog로.", "on": ["chi"], "arr": [], "set": {"chi": ["sh: python3: command not found", "exit 127"]}, "state": {"chi": "bad"}}, {"t": "해결: 절대경로 /usr/local/bin/python3, 또는 crontab 맨 위에 PATH=… 지정. '터미널에선 되는데 cron에선 안 됨'의 1순위 원인.", "on": ["ct", "env"], "arr": [], "set": {"ct": ["PATH=/usr/local/bin:/usr/bin:/bin", "* * * * *   python3 /home/user/sensor.py"]}, "state": {"ct": "ok", "chi": "ghost"}}]}]};
+const NS="http://www.w3.org/2000/svg";
+let sc=0, st=0;
+function el(n,a,txt){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;return e;}
+function state(){
+  const S=A.scenarios[sc];
+  const lines={},states={},titles={};
+  const apply=(o)=>{if(!o)return;if(o.set)for(const k in o.set)lines[k]=o.set[k];if(o.state)for(const k in o.state)states[k]=o.state[k];if(o.title)for(const k in o.title)titles[k]=o.title[k];};
+  apply(S.init);
+  for(let i=0;i<st;i++)apply(S.steps[i]);
+  return {lines,states,titles,cur:S.steps[st-1]||{on:[],arr:[]}};
+}
+function render(){
+  const {lines,states,titles,cur}=state();
+  const L=document.getElementById("layer");L.innerHTML="";
+  (A.zones||[]).forEach(z=>{const g=el("g",{class:"zone"});
+    if(z.x!=null)g.appendChild(el("line",{x1:z.x,y1:8,x2:z.x,y2:A.h-8}));
+    g.appendChild(el("text",{x:z.lx,y:22},z.label));L.appendChild(g);});
+  const rects={};
+  A.nodes.forEach(n=>{
+    const ln=lines[n.id]!==undefined?lines[n.id]:(n.lines||[]);
+    const h=Math.max(n.h||0,34+ln.length*15+(ln.length?8:0));
+    rects[n.id]={x:n.x,y:n.y,w:n.w,h};
+  });
+  A.arrows.forEach(a=>{
+    const act=(cur.arr||[]).includes(a.id);if(!act)return;
+    const s=rects[a.from],t=rects[a.to];if(!s||!t)return;
+    let x1,y1,x2,y2;
+    const scx=s.x+s.w/2,scy=s.y+s.h/2,tcx=t.x+t.w/2,tcy=t.y+t.h/2;
+    if(t.x>=s.x+s.w){x1=s.x+s.w;y1=scy;x2=t.x;y2=tcy;}
+    else if(t.x+t.w<=s.x){x1=s.x;y1=scy;x2=t.x+t.w;y2=tcy;}
+    else if(t.y>=s.y+s.h){x1=scx;y1=s.y+s.h;x2=tcx;y2=t.y;}
+    else{x1=scx;y1=s.y;x2=tcx;y2=t.y+t.h;}
+    const hot=a.hot?" hot":"";
+    L.appendChild(el("line",{class:"arrow"+hot,x1,y1,x2,y2}));
+    if(a.label){const mx=(x1+x2)/2,my=(y1+y2)/2-7;L.appendChild(el("text",{class:"alabel"+hot,x:mx,y:my,"text-anchor":"middle"},a.label));}
+  });
+  A.nodes.forEach(n=>{
+    const r=rects[n.id];const ln=lines[n.id]!==undefined?lines[n.id]:(n.lines||[]);
+    const stt=states[n.id]!==undefined?states[n.id]:(n.state||"");
+    const on=(cur.on||[]).includes(n.id);
+    const g=el("g",{class:"node g-"+(n.g||"kernel")+(on?" on":"")+(stt?" "+stt:"")});
+    g.appendChild(el("rect",{x:r.x,y:r.y,width:r.w,height:r.h,rx:10}));
+    g.appendChild(el("text",{class:"t",x:r.x+12,y:r.y+21},titles[n.id]||n.title));
+    ln.forEach((s,i)=>g.appendChild(el("text",{class:"l",x:r.x+12,y:r.y+42+i*15},s)));
+    L.appendChild(g);
+  });
+  const S=A.scenarios[sc];
+  document.getElementById("stepno").innerHTML=st+"<small>STEP "+st+"/"+S.steps.length+"</small>";
+  const p=document.getElementById("text");
+  p.textContent=st===0?S.start:cur.t;
+  p.className=(st===S.steps.length)?"end":"";
+  document.getElementById("prev").disabled=st===0;
+  document.getElementById("next").disabled=st===S.steps.length;
+  const D=document.getElementById("dots");D.innerHTML="";
+  S.steps.forEach((_,i)=>{const d=document.createElement("span");d.className="dot"+(i<st?" done":"")+(i===st-1?" on":"");D.appendChild(d);});
+  document.querySelectorAll(".chip").forEach((c,i)=>c.classList.toggle("on",i===sc));
+  document.getElementById("predict").innerHTML="<b>먼저 예측</b>"+S.predict;
+}
+function go(i){st=Math.max(0,Math.min(A.scenarios[sc].steps.length,i));render();}
+document.getElementById("prev").onclick=()=>go(st-1);
+document.getElementById("next").onclick=()=>go(st+1);
+document.getElementById("reset").onclick=()=>go(0);
+document.addEventListener("keydown",e=>{if(e.key==="ArrowRight")go(st+1);if(e.key==="ArrowLeft")go(st-1);});
+const C=document.getElementById("chips");
+A.scenarios.forEach((s,i)=>{const b=document.createElement("button");b.className="chip";b.textContent=s.name;b.onclick=()=>{sc=i;st=0;render();};C.appendChild(b);});
+render();
+</script>
+</body>
+</html>

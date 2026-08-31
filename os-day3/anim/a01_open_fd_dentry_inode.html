@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>open() — 경로 탐색에서 fd 번호가 나오기까지</title>
+<style>
+:root{
+  --bg:#0f141d;--panel:#161d2a;--panel2:#1b2434;--line:#26314a;
+  --ink:#dce6f5;--dim:#7d8ba3;--amber:#ffd166;--warnc:#ff9f43;
+  --hot:#ff5d73;--accent:#4cc9f0;--good:#7ee787;--purple:#c3a6ff;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);min-height:100vh;padding:22px 14px 60px;
+ font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+.wrap{max-width:980px;margin:0 auto}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+h1{font-size:clamp(19px,4vw,26px);font-weight:800;margin-top:6px}
+h1 b{color:var(--amber)}
+.sub{color:var(--dim);font-size:13.5px;margin-top:6px;line-height:1.6}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 10px;align-items:center}
+.chips .cap{font-family:var(--mono);font-size:11.5px;color:var(--dim);margin-right:4px}
+.chip{font-family:var(--mono);font-size:12.5px;padding:8px 13px;border-radius:9px;background:var(--panel2);
+ color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.chip.on{background:var(--accent);color:#08131c;border-color:var(--accent);font-weight:800}
+.predict{background:var(--panel2);border-left:3px solid var(--purple);padding:9px 12px;
+ border-radius:0 10px 10px 0;font-size:13.5px;line-height:1.6}
+.predict b{color:var(--purple);font-family:var(--mono);font-size:12px;margin-right:6px}
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px;margin-top:12px}
+svg{width:100%;height:auto;display:block}
+.zone text{fill:var(--dim);font-family:var(--mono);font-size:11px;letter-spacing:.12em}
+.zone line{stroke:var(--line);stroke-dasharray:6 5}
+.node rect{fill:var(--panel2);stroke:var(--line);stroke-width:1.5;transition:stroke .2s}
+.node.g-user rect{stroke:#2a6f8a}
+.node.g-kernel rect{stroke:#7a6a2a}
+.node.g-disk rect{stroke:#6a5a9a}
+.node.g-proc rect{stroke:#3a7a55}
+.node .t{fill:var(--ink);font-weight:800;font-size:13px}
+.node .l{fill:var(--dim);font-family:var(--mono);font-size:11px}
+.node.on rect{stroke:var(--amber)!important;stroke-width:2.5;filter:drop-shadow(0 0 7px rgba(255,209,102,.55))}
+.node.on .l{fill:var(--ink)}
+.node.ok rect{stroke:var(--good)!important;stroke-width:2.2}
+.node.bad rect{stroke:var(--hot)!important;stroke-width:2.2}
+.node.bad .t{fill:var(--hot)}
+.node.warn rect{stroke:var(--warnc)!important;stroke-width:2.2}
+.node.ghost{opacity:.26}
+.node.ghost rect{stroke-dasharray:5 4}
+.arrow{stroke:var(--accent);stroke-width:2.2;fill:none;marker-end:url(#ah)}
+.arrow.hot{stroke:var(--hot);marker-end:url(#ahh)}
+.alabel{fill:var(--accent);font-family:var(--mono);font-size:10.5px;font-weight:700}
+.alabel.hot{fill:var(--hot)}
+.narr{margin-top:12px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+ padding:14px 16px;min-height:78px;display:flex;gap:14px;align-items:flex-start}
+.stepno{font-family:var(--mono);font-size:22px;color:var(--amber);font-weight:800;min-width:52px;line-height:1.1}
+.stepno small{display:block;font-size:10px;color:var(--dim);letter-spacing:.1em}
+.narr p{font-size:15px;line-height:1.7}
+.narr p.end{color:var(--good)}
+.ctrl{display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap}
+.btn{font-family:inherit;font-size:13.5px;padding:9px 15px;border-radius:9px;background:var(--panel2);
+ color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.btn:disabled{opacity:.35;cursor:default}
+.btn.primary{background:var(--amber);color:#1a1200;border-color:var(--amber);font-weight:800}
+.btn:focus-visible,.chip:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.dots{display:flex;gap:5px;margin-left:auto;flex-wrap:wrap}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--line)}
+.dot.done{background:var(--accent)}
+.dot.on{background:var(--amber);transform:scale(1.25)}
+.foot{margin-top:14px;color:var(--dim);font-size:12px;line-height:1.6}
+.foot code{font-family:var(--mono);color:var(--ink)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="eyebrow">Linux &amp; Shell · Day 3 · 애니메이션 #1</div>
+  <h1><b>open()</b> 한 번에 커널 안에서 벌어지는 일</h1>
+  <div class="sub">fd 테이블 · struct file · dentry · inode. 파일 이름이 숫자 3이 되기까지의 경로를 한 칸씩 따라갑니다.</div>
+</header>
+<div class="chips" id="chips"><span class="cap">시나리오</span></div>
+<div class="predict" id="predict"></div>
+<div class="stage"><svg id="svg" viewBox="0 0 960 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="<b>open()</b> 한 번에 커널 안에서 벌어지는 일">
+<defs>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#4cc9f0"/></marker>
+<marker id="ahh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#ff5d73"/></marker>
+</defs>
+<g id="layer"></g>
+</svg></div>
+<div class="narr"><div class="stepno" id="stepno">0<small>STEP</small></div><p id="text"></p></div>
+<div class="ctrl">
+  <button class="btn" id="prev">◀ 이전</button>
+  <button class="btn primary" id="next">다음 단계 ▶</button>
+  <button class="btn" id="reset">↺ 처음으로</button>
+  <div class="dots" id="dots"></div>
+</div>
+<div class="foot">Day 3 · S1 · 실습: <code>ls -l /proc/&lt;PID&gt;/fd</code> 로 3번 슬롯을 직접 확인 · 키보드 ← → 로도 넘길 수 있습니다.</div>
+</div>
+<script>
+const A = {"h": 340, "zones": [{"x": 270, "lx": 20, "label": "유저 공간"}, {"lx": 300, "label": "커널"}], "nodes": [{"id": "proc", "x": 20, "y": 40, "w": 230, "title": "프로세스 PID 1234", "lines": ["open(\"/home/user/a.txt\")", "fd = ?"], "g": "user", "h": 0}, {"id": "fdt", "x": 20, "y": 160, "w": 230, "title": "fd 테이블", "lines": ["0 → 터미널", "1 → 터미널", "2 → 터미널", "3 → (비어 있음)"], "g": "user", "h": 0}, {"id": "d0", "x": 300, "y": 40, "w": 70, "title": "/", "lines": ["dentry"], "g": "kernel", "h": 0}, {"id": "d1", "x": 385, "y": 40, "w": 80, "title": "home", "lines": ["dentry"], "g": "kernel", "h": 0}, {"id": "d2", "x": 480, "y": 40, "w": 80, "title": "user", "lines": ["dentry"], "g": "kernel", "h": 0}, {"id": "d3", "x": 575, "y": 40, "w": 90, "title": "a.txt", "lines": ["dentry"], "g": "kernel", "h": 0}, {"id": "file", "x": 300, "y": 180, "w": 210, "title": "struct file", "lines": ["(아직 없음)"], "g": "kernel", "h": 0, "state": "ghost"}, {"id": "inode", "x": 560, "y": 180, "w": 200, "title": "inode #8812", "lines": ["권한 rw-r--r--", "크기 12 KB", "블록 → #10457"], "g": "kernel", "h": 0}, {"id": "disk", "x": 800, "y": 180, "w": 140, "title": "디스크", "lines": ["블록 #10457"], "g": "disk", "h": 0}], "arrows": [{"id": "sys", "from": "proc", "to": "d0", "label": "open()"}, {"id": "d01", "from": "d0", "to": "d1"}, {"id": "d12", "from": "d1", "to": "d2"}, {"id": "d23", "from": "d2", "to": "d3"}, {"id": "d3i", "from": "d3", "to": "inode"}, {"id": "fi", "from": "file", "to": "inode"}, {"id": "ff", "from": "fdt", "to": "file", "label": "fd 3"}], "scenarios": [{"name": "정상 open", "predict": "fd 테이블에서 0·1·2가 이미 차 있다면 새 파일은 몇 번을 받을까요? 그 번호는 커널이 정할까요, 프로그램이 정할까요?", "start": "프로세스가 /home/user/a.txt를 읽기 전용으로 열려고 합니다. 다음 단계 ▶를 눌러 따라가세요.", "steps": [{"t": "open(\"/home/user/a.txt\") 호출. 시스템 콜 경계를 넘어 커널로 들어갑니다.", "on": ["proc"], "arr": ["sys"]}, {"t": "경로 탐색 시작. 첫 조각 '/'를 dentry 캐시에서 찾습니다 — 캐시 히트.", "on": ["d0"], "arr": []}, {"t": "'home' dentry — 캐시 히트. 디스크에 안 갑니다.", "on": ["d1"], "arr": ["d01"]}, {"t": "'user' dentry — 캐시 히트.", "on": ["d2"], "arr": ["d12"]}, {"t": "'a.txt' dentry를 찾았습니다. 이 dentry가 inode #8812를 가리킵니다. 이름은 여기까지, 이제부터는 inode.", "on": ["d3", "inode"], "arr": ["d23", "d3i"]}, {"t": "inode의 권한 비트 검사: rw-r--r-- 이고 읽기 요청이므로 통과.", "on": ["inode"], "arr": [], "state": {"inode": "ok"}}, {"t": "struct file을 새로 만듭니다. f_pos=0, inode를 가리키고, 참조 수 1.", "on": ["file"], "arr": ["fi"], "set": {"file": ["f_pos = 0", "f_inode → #8812", "참조 수 1"]}, "state": {"file": ""}}, {"t": "fd 테이블에서 빈 슬롯을 찾습니다. 0·1·2는 터미널이 쓰고 있으니 3번.", "on": ["fdt"], "arr": []}, {"t": "3번 슬롯이 struct file을 가리키게 하고 숫자 3을 돌려줍니다. 이제 프로그램에게 이 파일은 그냥 '3'입니다.", "on": ["fdt", "proc"], "arr": ["ff"], "set": {"fdt": ["0 → 터미널", "1 → 터미널", "2 → 터미널", "3 → struct file ✓"], "proc": ["open(\"/home/user/a.txt\")", "fd = 3 ✓"]}}]}, {"name": "없는 파일 (ENOENT)", "predict": "파일이 없으면 커널은 어디까지 진행하고 멈출까요? struct file은 만들어질까요?", "start": "이번엔 /home/user/a.txt가 존재하지 않습니다.", "steps": [{"t": "open() 호출, 커널 진입.", "on": ["proc"], "arr": ["sys"]}, {"t": "'/' — 캐시 히트.", "on": ["d0"], "arr": []}, {"t": "'home' — 캐시 히트.", "on": ["d1"], "arr": ["d01"]}, {"t": "'user' — 캐시 히트.", "on": ["d2"], "arr": ["d12"]}, {"t": "'a.txt'가 캐시에도, 디스크의 user 디렉터리에도 없습니다. '없음'을 기억하는 음수 dentry가 남습니다.", "on": ["d3"], "arr": ["d23"], "set": {"d3": ["(없음)"]}, "state": {"d3": "bad"}}, {"t": "struct file은 만들지 않고 fd 테이블도 그대로. -1과 errno=ENOENT를 돌려줍니다. 'No such file or directory'.", "on": ["proc", "fdt"], "arr": [], "set": {"proc": ["open(\"/home/user/a.txt\")", "fd = -1 (ENOENT)"]}, "state": {"proc": "bad"}}]}, {"name": "권한 없음 (EACCES)", "predict": "파일은 있지만 권한이 없을 때, 검사는 dentry에서 할까요 inode에서 할까요?", "start": "파일은 있지만 권한이 ---------- 이고 내 파일도 아닙니다.", "init": {"set": {"inode": ["권한 ----------", "크기 12 KB", "블록 → #10457"]}}, "steps": [{"t": "open() 호출, 커널 진입.", "on": ["proc"], "arr": ["sys"]}, {"t": "경로 탐색 '/' → 'home' → 'user' — 모두 히트.", "on": ["d0", "d1", "d2"], "arr": ["d01", "d12"]}, {"t": "'a.txt' dentry → inode #8812. 이름 찾기는 성공했습니다.", "on": ["d3", "inode"], "arr": ["d23", "d3i"]}, {"t": "inode의 권한 검사: ---------- 이고 소유자도 아님 → 읽기 불가. 여기서 멈춤.", "on": ["inode"], "arr": [], "state": {"inode": "bad"}}, {"t": "-1, errno=EACCES. 셸이 보여주는 'Permission denied'는 이 지점에서 나옵니다. 검사한 건 셸이 아니라 커널.", "on": ["proc"], "arr": [], "set": {"proc": ["open(\"/home/user/a.txt\")", "fd = -1 (EACCES)"]}, "state": {"proc": "bad"}}]}]};
+const NS="http://www.w3.org/2000/svg";
+let sc=0, st=0;
+function el(n,a,txt){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;return e;}
+function state(){
+  const S=A.scenarios[sc];
+  const lines={},states={},titles={};
+  const apply=(o)=>{if(!o)return;if(o.set)for(const k in o.set)lines[k]=o.set[k];if(o.state)for(const k in o.state)states[k]=o.state[k];if(o.title)for(const k in o.title)titles[k]=o.title[k];};
+  apply(S.init);
+  for(let i=0;i<st;i++)apply(S.steps[i]);
+  return {lines,states,titles,cur:S.steps[st-1]||{on:[],arr:[]}};
+}
+function render(){
+  const {lines,states,titles,cur}=state();
+  const L=document.getElementById("layer");L.innerHTML="";
+  (A.zones||[]).forEach(z=>{const g=el("g",{class:"zone"});
+    if(z.x!=null)g.appendChild(el("line",{x1:z.x,y1:8,x2:z.x,y2:A.h-8}));
+    g.appendChild(el("text",{x:z.lx,y:22},z.label));L.appendChild(g);});
+  const rects={};
+  A.nodes.forEach(n=>{
+    const ln=lines[n.id]!==undefined?lines[n.id]:(n.lines||[]);
+    const h=Math.max(n.h||0,34+ln.length*15+(ln.length?8:0));
+    rects[n.id]={x:n.x,y:n.y,w:n.w,h};
+  });
+  A.arrows.forEach(a=>{
+    const act=(cur.arr||[]).includes(a.id);if(!act)return;
+    const s=rects[a.from],t=rects[a.to];if(!s||!t)return;
+    let x1,y1,x2,y2;
+    const scx=s.x+s.w/2,scy=s.y+s.h/2,tcx=t.x+t.w/2,tcy=t.y+t.h/2;
+    if(t.x>=s.x+s.w){x1=s.x+s.w;y1=scy;x2=t.x;y2=tcy;}
+    else if(t.x+t.w<=s.x){x1=s.x;y1=scy;x2=t.x+t.w;y2=tcy;}
+    else if(t.y>=s.y+s.h){x1=scx;y1=s.y+s.h;x2=tcx;y2=t.y;}
+    else{x1=scx;y1=s.y;x2=tcx;y2=t.y+t.h;}
+    const hot=a.hot?" hot":"";
+    L.appendChild(el("line",{class:"arrow"+hot,x1,y1,x2,y2}));
+    if(a.label){const mx=(x1+x2)/2,my=(y1+y2)/2-7;L.appendChild(el("text",{class:"alabel"+hot,x:mx,y:my,"text-anchor":"middle"},a.label));}
+  });
+  A.nodes.forEach(n=>{
+    const r=rects[n.id];const ln=lines[n.id]!==undefined?lines[n.id]:(n.lines||[]);
+    const stt=states[n.id]!==undefined?states[n.id]:(n.state||"");
+    const on=(cur.on||[]).includes(n.id);
+    const g=el("g",{class:"node g-"+(n.g||"kernel")+(on?" on":"")+(stt?" "+stt:"")});
+    g.appendChild(el("rect",{x:r.x,y:r.y,width:r.w,height:r.h,rx:10}));
+    g.appendChild(el("text",{class:"t",x:r.x+12,y:r.y+21},titles[n.id]||n.title));
+    ln.forEach((s,i)=>g.appendChild(el("text",{class:"l",x:r.x+12,y:r.y+42+i*15},s)));
+    L.appendChild(g);
+  });
+  const S=A.scenarios[sc];
+  document.getElementById("stepno").innerHTML=st+"<small>STEP "+st+"/"+S.steps.length+"</small>";
+  const p=document.getElementById("text");
+  p.textContent=st===0?S.start:cur.t;
+  p.className=(st===S.steps.length)?"end":"";
+  document.getElementById("prev").disabled=st===0;
+  document.getElementById("next").disabled=st===S.steps.length;
+  const D=document.getElementById("dots");D.innerHTML="";
+  S.steps.forEach((_,i)=>{const d=document.createElement("span");d.className="dot"+(i<st?" done":"")+(i===st-1?" on":"");D.appendChild(d);});
+  document.querySelectorAll(".chip").forEach((c,i)=>c.classList.toggle("on",i===sc));
+  document.getElementById("predict").innerHTML="<b>먼저 예측</b>"+S.predict;
+}
+function go(i){st=Math.max(0,Math.min(A.scenarios[sc].steps.length,i));render();}
+document.getElementById("prev").onclick=()=>go(st-1);
+document.getElementById("next").onclick=()=>go(st+1);
+document.getElementById("reset").onclick=()=>go(0);
+document.addEventListener("keydown",e=>{if(e.key==="ArrowRight")go(st+1);if(e.key==="ArrowLeft")go(st-1);});
+const C=document.getElementById("chips");
+A.scenarios.forEach((s,i)=>{const b=document.createElement("button");b.className="chip";b.textContent=s.name;b.onclick=()=>{sc=i;st=0;render();};C.appendChild(b);});
+render();
+</script>
+</body>
+</html>

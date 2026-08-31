@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>& 와 터미널 닫기 — SIGHUP이 프로세스를 죽이는 경로</title>
+<style>
+:root{
+  --bg:#0f141d;--panel:#161d2a;--panel2:#1b2434;--line:#26314a;
+  --ink:#dce6f5;--dim:#7d8ba3;--amber:#ffd166;--warnc:#ff9f43;
+  --hot:#ff5d73;--accent:#4cc9f0;--good:#7ee787;--purple:#c3a6ff;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);min-height:100vh;padding:22px 14px 60px;
+ font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+.wrap{max-width:980px;margin:0 auto}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+h1{font-size:clamp(19px,4vw,26px);font-weight:800;margin-top:6px}
+h1 b{color:var(--amber)}
+.sub{color:var(--dim);font-size:13.5px;margin-top:6px;line-height:1.6}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 10px;align-items:center}
+.chips .cap{font-family:var(--mono);font-size:11.5px;color:var(--dim);margin-right:4px}
+.chip{font-family:var(--mono);font-size:12.5px;padding:8px 13px;border-radius:9px;background:var(--panel2);
+ color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.chip.on{background:var(--accent);color:#08131c;border-color:var(--accent);font-weight:800}
+.predict{background:var(--panel2);border-left:3px solid var(--purple);padding:9px 12px;
+ border-radius:0 10px 10px 0;font-size:13.5px;line-height:1.6}
+.predict b{color:var(--purple);font-family:var(--mono);font-size:12px;margin-right:6px}
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px;margin-top:12px}
+svg{width:100%;height:auto;display:block}
+.zone text{fill:var(--dim);font-family:var(--mono);font-size:11px;letter-spacing:.12em}
+.zone line{stroke:var(--line);stroke-dasharray:6 5}
+.node rect{fill:var(--panel2);stroke:var(--line);stroke-width:1.5;transition:stroke .2s}
+.node.g-user rect{stroke:#2a6f8a}
+.node.g-kernel rect{stroke:#7a6a2a}
+.node.g-disk rect{stroke:#6a5a9a}
+.node.g-proc rect{stroke:#3a7a55}
+.node .t{fill:var(--ink);font-weight:800;font-size:13px}
+.node .l{fill:var(--dim);font-family:var(--mono);font-size:11px}
+.node.on rect{stroke:var(--amber)!important;stroke-width:2.5;filter:drop-shadow(0 0 7px rgba(255,209,102,.55))}
+.node.on .l{fill:var(--ink)}
+.node.ok rect{stroke:var(--good)!important;stroke-width:2.2}
+.node.bad rect{stroke:var(--hot)!important;stroke-width:2.2}
+.node.bad .t{fill:var(--hot)}
+.node.warn rect{stroke:var(--warnc)!important;stroke-width:2.2}
+.node.ghost{opacity:.26}
+.node.ghost rect{stroke-dasharray:5 4}
+.arrow{stroke:var(--accent);stroke-width:2.2;fill:none;marker-end:url(#ah)}
+.arrow.hot{stroke:var(--hot);marker-end:url(#ahh)}
+.alabel{fill:var(--accent);font-family:var(--mono);font-size:10.5px;font-weight:700}
+.alabel.hot{fill:var(--hot)}
+.narr{margin-top:12px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+ padding:14px 16px;min-height:78px;display:flex;gap:14px;align-items:flex-start}
+.stepno{font-family:var(--mono);font-size:22px;color:var(--amber);font-weight:800;min-width:52px;line-height:1.1}
+.stepno small{display:block;font-size:10px;color:var(--dim);letter-spacing:.1em}
+.narr p{font-size:15px;line-height:1.7}
+.narr p.end{color:var(--good)}
+.ctrl{display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap}
+.btn{font-family:inherit;font-size:13.5px;padding:9px 15px;border-radius:9px;background:var(--panel2);
+ color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.btn:disabled{opacity:.35;cursor:default}
+.btn.primary{background:var(--amber);color:#1a1200;border-color:var(--amber);font-weight:800}
+.btn:focus-visible,.chip:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.dots{display:flex;gap:5px;margin-left:auto;flex-wrap:wrap}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--line)}
+.dot.done{background:var(--accent)}
+.dot.on{background:var(--amber);transform:scale(1.25)}
+.foot{margin-top:14px;color:var(--dim);font-size:12px;line-height:1.6}
+.foot code{font-family:var(--mono);color:var(--ink)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="eyebrow">Linux &amp; Shell · Day 3 · 애니메이션 #16</div>
+  <h1>접속을 끊으면 왜 죽나 — <b>SIGHUP · nohup · setsid</b></h1>
+  <div class="sub">터미널이 사라지면 커널이 그 세션 전체에 SIGHUP을 보냅니다. 살아남는 방법은 무시하거나(nohup), 세션을 떠나거나(setsid).</div>
+</header>
+<div class="chips" id="chips"><span class="cap">시나리오</span></div>
+<div class="predict" id="predict"></div>
+<div class="stage"><svg id="svg" viewBox="0 0 960 330" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="접속을 끊으면 왜 죽나 — <b>SIGHUP · nohup · setsid</b>">
+<defs>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#4cc9f0"/></marker>
+<marker id="ahh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#ff5d73"/></marker>
+</defs>
+<g id="layer"></g>
+</svg></div>
+<div class="narr"><div class="stepno" id="stepno">0<small>STEP</small></div><p id="text"></p></div>
+<div class="ctrl">
+  <button class="btn" id="prev">◀ 이전</button>
+  <button class="btn primary" id="next">다음 단계 ▶</button>
+  <button class="btn" id="reset">↺ 처음으로</button>
+  <div class="dots" id="dots"></div>
+</div>
+<div class="foot">Day 3 · S7 · 실습: SSH에서 <code>&amp;</code> → 끊고 재접속 → <code>ps</code> / <code>nohup</code>으로 재시도 · 키보드 ← → 로도 넘길 수 있습니다.</div>
+</div>
+<script>
+const A = {"h": 330, "zones": [{"lx": 20, "label": "SSH / 터미널"}, {"x": 260, "lx": 280, "label": "세션 (SID 500)"}, {"x": 760, "lx": 780, "label": "커널"}], "nodes": [{"id": "ssh", "x": 20, "y": 40, "w": 220, "title": "sshd + 터미널 pts/0", "lines": ["연결됨"], "g": "user", "h": 0}, {"id": "bash", "x": 290, "y": 60, "w": 210, "title": "bash (PID 500)", "lines": ["세션 리더 SID 500", "제어 터미널 pts/0"], "g": "proc", "h": 0}, {"id": "app", "x": 530, "y": 60, "w": 210, "title": "collect.sh & (PID 777)", "lines": ["SID 500", "SIGHUP: 기본(종료)"], "g": "proc", "h": 0}, {"id": "k", "x": 790, "y": 40, "w": 150, "title": "커널", "lines": ["시그널 전달"], "g": "kernel", "h": 0}, {"id": "ps", "x": 290, "y": 210, "w": 450, "title": "재접속 후 ps aux | grep collect", "lines": ["?"], "g": "user", "h": 0}], "arrows": [{"id": "h1", "from": "k", "to": "bash", "label": "SIGHUP", "hot": true}, {"id": "h2", "from": "k", "to": "app", "label": "SIGHUP", "hot": true}], "scenarios": [{"name": "& 후 SSH 종료", "predict": "백그라운드(&)로 띄운 프로세스는 SSH를 끊어도 살아 있을까요?", "start": "SSH로 접속해 ./collect.sh & 를 실행했습니다.", "steps": [{"t": "collect.sh &: bash가 fork. 자식은 같은 세션(SID 500), 같은 제어 터미널 pts/0.", "on": ["bash", "app"], "arr": []}, {"t": "SSH 접속을 끊음 → 터미널 pts/0이 사라집니다.", "on": ["ssh"], "arr": [], "set": {"ssh": ["연결 끊김"]}, "state": {"ssh": "bad"}}, {"t": "커널이 그 터미널의 세션 전체에 SIGHUP을 보냅니다. 기본 동작은 종료.", "on": ["k", "bash", "app"], "arr": ["h1", "h2"]}, {"t": "bash 종료. collect.sh도 기본 처리기 → 종료.", "on": ["bash", "app"], "arr": [], "set": {"bash": ["(종료)"], "app": ["(종료)"]}, "state": {"bash": "bad", "app": "bad"}}, {"t": "재접속 후 ps → 없음.", "on": ["ps"], "arr": [], "set": {"ps": ["(결과 없음)"]}, "state": {"ps": "bad"}}]}, {"name": "nohup", "predict": "nohup은 프로세스를 어디로 옮길까요, 아니면 무엇을 바꿀까요?", "start": "nohup ./collect.sh & 로 실행합니다.", "steps": [{"t": "nohup이 먼저 SIGHUP 처리를 '무시'로 바꾼 뒤 exec. 출력은 nohup.out으로 돌립니다.", "on": ["app"], "arr": [], "set": {"app": ["SID 500", "SIGHUP: 무시 (SIG_IGN)"]}, "state": {"app": "ok"}}, {"t": "SSH 끊김 → 커널이 SID 500에 SIGHUP 발송.", "on": ["ssh", "k", "bash", "app"], "arr": ["h1", "h2"], "set": {"ssh": ["연결 끊김"]}, "state": {"ssh": "bad"}}, {"t": "bash는 죽지만 collect.sh는 시그널을 무시 → 생존. 세션은 그대로, 처리기만 바꾼 것.", "on": ["bash", "app"], "arr": [], "set": {"bash": ["(종료)"]}, "state": {"bash": "bad"}}, {"t": "재접속 후 ps → 살아 있음.", "on": ["ps"], "arr": [], "set": {"ps": ["user 777 … ./collect.sh"]}, "state": {"ps": "ok"}}]}, {"name": "setsid", "predict": "setsid는 시그널을 무시하는 것과 무엇이 다를까요?", "start": "setsid ./collect.sh & 로 실행합니다.", "steps": [{"t": "setsid: 자식이 새 세션(SID 777)의 리더가 됩니다 — 제어 터미널 없음.", "on": ["app"], "arr": [], "set": {"app": ["SID 777 (새 세션)", "제어 터미널 없음"]}, "state": {"app": "ok"}}, {"t": "SSH 끊김 → 커널은 pts/0의 세션, 즉 SID 500에만 SIGHUP.", "on": ["ssh", "k", "bash"], "arr": ["h1"], "set": {"ssh": ["연결 끊김"], "bash": ["(종료)"]}, "state": {"ssh": "bad", "bash": "bad"}}, {"t": "777은 다른 세션이라 시그널 자체를 받지 않습니다. systemd 서비스가 터미널과 무관하게 사는 원리와 같습니다.", "on": ["app", "ps"], "arr": [], "set": {"ps": ["user 777 … ./collect.sh"]}, "state": {"ps": "ok"}}]}]};
+const NS="http://www.w3.org/2000/svg";
+let sc=0, st=0;
+function el(n,a,txt){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;return e;}
+function state(){
+  const S=A.scenarios[sc];
+  const lines={},states={},titles={};
+  const apply=(o)=>{if(!o)return;if(o.set)for(const k in o.set)lines[k]=o.set[k];if(o.state)for(const k in o.state)states[k]=o.state[k];if(o.title)for(const k in o.title)titles[k]=o.title[k];};
+  apply(S.init);
+  for(let i=0;i<st;i++)apply(S.steps[i]);
+  return {lines,states,titles,cur:S.steps[st-1]||{on:[],arr:[]}};
+}
+function render(){
+  const {lines,states,titles,cur}=state();
+  const L=document.getElementById("layer");L.innerHTML="";
+  (A.zones||[]).forEach(z=>{const g=el("g",{class:"zone"});
+    if(z.x!=null)g.appendChild(el("line",{x1:z.x,y1:8,x2:z.x,y2:A.h-8}));
+    g.appendChild(el("text",{x:z.lx,y:22},z.label));L.appendChild(g);});
+  const rects={};
+  A.nodes.forEach(n=>{
+    const ln=lines[n.id]!==undefined?lines[n.id]:(n.lines||[]);
+    const h=Math.max(n.h||0,34+ln.length*15+(ln.length?8:0));
+    rects[n.id]={x:n.x,y:n.y,w:n.w,h};
+  });
+  A.arrows.forEach(a=>{
+    const act=(cur.arr||[]).includes(a.id);if(!act)return;
+    const s=rects[a.from],t=rects[a.to];if(!s||!t)return;
+    let x1,y1,x2,y2;
+    const scx=s.x+s.w/2,scy=s.y+s.h/2,tcx=t.x+t.w/2,tcy=t.y+t.h/2;
+    if(t.x>=s.x+s.w){x1=s.x+s.w;y1=scy;x2=t.x;y2=tcy;}
+    else if(t.x+t.w<=s.x){x1=s.x;y1=scy;x2=t.x+t.w;y2=tcy;}
+    else if(t.y>=s.y+s.h){x1=scx;y1=s.y+s.h;x2=tcx;y2=t.y;}
+    else{x1=scx;y1=s.y;x2=tcx;y2=t.y+t.h;}
+    const hot=a.hot?" hot":"";
+    L.appendChild(el("line",{class:"arrow"+hot,x1,y1,x2,y2}));
+    if(a.label){const mx=(x1+x2)/2,my=(y1+y2)/2-7;L.appendChild(el("text",{class:"alabel"+hot,x:mx,y:my,"text-anchor":"middle"},a.label));}
+  });
+  A.nodes.forEach(n=>{
+    const r=rects[n.id];const ln=lines[n.id]!==undefined?lines[n.id]:(n.lines||[]);
+    const stt=states[n.id]!==undefined?states[n.id]:(n.state||"");
+    const on=(cur.on||[]).includes(n.id);
+    const g=el("g",{class:"node g-"+(n.g||"kernel")+(on?" on":"")+(stt?" "+stt:"")});
+    g.appendChild(el("rect",{x:r.x,y:r.y,width:r.w,height:r.h,rx:10}));
+    g.appendChild(el("text",{class:"t",x:r.x+12,y:r.y+21},titles[n.id]||n.title));
+    ln.forEach((s,i)=>g.appendChild(el("text",{class:"l",x:r.x+12,y:r.y+42+i*15},s)));
+    L.appendChild(g);
+  });
+  const S=A.scenarios[sc];
+  document.getElementById("stepno").innerHTML=st+"<small>STEP "+st+"/"+S.steps.length+"</small>";
+  const p=document.getElementById("text");
+  p.textContent=st===0?S.start:cur.t;
+  p.className=(st===S.steps.length)?"end":"";
+  document.getElementById("prev").disabled=st===0;
+  document.getElementById("next").disabled=st===S.steps.length;
+  const D=document.getElementById("dots");D.innerHTML="";
+  S.steps.forEach((_,i)=>{const d=document.createElement("span");d.className="dot"+(i<st?" done":"")+(i===st-1?" on":"");D.appendChild(d);});
+  document.querySelectorAll(".chip").forEach((c,i)=>c.classList.toggle("on",i===sc));
+  document.getElementById("predict").innerHTML="<b>먼저 예측</b>"+S.predict;
+}
+function go(i){st=Math.max(0,Math.min(A.scenarios[sc].steps.length,i));render();}
+document.getElementById("prev").onclick=()=>go(st-1);
+document.getElementById("next").onclick=()=>go(st+1);
+document.getElementById("reset").onclick=()=>go(0);
+document.addEventListener("keydown",e=>{if(e.key==="ArrowRight")go(st+1);if(e.key==="ArrowLeft")go(st-1);});
+const C=document.getElementById("chips");
+A.scenarios.forEach((s,i)=>{const b=document.createElement("button");b.className="chip";b.textContent=s.name;b.onclick=()=>{sc=i;st=0;render();};C.appendChild(b);});
+render();
+</script>
+</body>
+</html>

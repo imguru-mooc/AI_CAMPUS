@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>read() — 페이지 캐시 히트와 미스</title>
+<style>
+:root{
+  --bg:#0f141d;--panel:#161d2a;--panel2:#1b2434;--line:#26314a;
+  --ink:#dce6f5;--dim:#7d8ba3;--amber:#ffd166;--warnc:#ff9f43;
+  --hot:#ff5d73;--accent:#4cc9f0;--good:#7ee787;--purple:#c3a6ff;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);min-height:100vh;padding:22px 14px 60px;
+ font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+.wrap{max-width:980px;margin:0 auto}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+h1{font-size:clamp(19px,4vw,26px);font-weight:800;margin-top:6px}
+h1 b{color:var(--amber)}
+.sub{color:var(--dim);font-size:13.5px;margin-top:6px;line-height:1.6}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 10px;align-items:center}
+.chips .cap{font-family:var(--mono);font-size:11.5px;color:var(--dim);margin-right:4px}
+.chip{font-family:var(--mono);font-size:12.5px;padding:8px 13px;border-radius:9px;background:var(--panel2);
+ color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.chip.on{background:var(--accent);color:#08131c;border-color:var(--accent);font-weight:800}
+.predict{background:var(--panel2);border-left:3px solid var(--purple);padding:9px 12px;
+ border-radius:0 10px 10px 0;font-size:13.5px;line-height:1.6}
+.predict b{color:var(--purple);font-family:var(--mono);font-size:12px;margin-right:6px}
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px;margin-top:12px}
+svg{width:100%;height:auto;display:block}
+.zone text{fill:var(--dim);font-family:var(--mono);font-size:11px;letter-spacing:.12em}
+.zone line{stroke:var(--line);stroke-dasharray:6 5}
+.node rect{fill:var(--panel2);stroke:var(--line);stroke-width:1.5;transition:stroke .2s}
+.node.g-user rect{stroke:#2a6f8a}
+.node.g-kernel rect{stroke:#7a6a2a}
+.node.g-disk rect{stroke:#6a5a9a}
+.node.g-proc rect{stroke:#3a7a55}
+.node .t{fill:var(--ink);font-weight:800;font-size:13px}
+.node .l{fill:var(--dim);font-family:var(--mono);font-size:11px}
+.node.on rect{stroke:var(--amber)!important;stroke-width:2.5;filter:drop-shadow(0 0 7px rgba(255,209,102,.55))}
+.node.on .l{fill:var(--ink)}
+.node.ok rect{stroke:var(--good)!important;stroke-width:2.2}
+.node.bad rect{stroke:var(--hot)!important;stroke-width:2.2}
+.node.bad .t{fill:var(--hot)}
+.node.warn rect{stroke:var(--warnc)!important;stroke-width:2.2}
+.node.ghost{opacity:.26}
+.node.ghost rect{stroke-dasharray:5 4}
+.arrow{stroke:var(--accent);stroke-width:2.2;fill:none;marker-end:url(#ah)}
+.arrow.hot{stroke:var(--hot);marker-end:url(#ahh)}
+.alabel{fill:var(--accent);font-family:var(--mono);font-size:10.5px;font-weight:700}
+.alabel.hot{fill:var(--hot)}
+.narr{margin-top:12px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+ padding:14px 16px;min-height:78px;display:flex;gap:14px;align-items:flex-start}
+.stepno{font-family:var(--mono);font-size:22px;color:var(--amber);font-weight:800;min-width:52px;line-height:1.1}
+.stepno small{display:block;font-size:10px;color:var(--dim);letter-spacing:.1em}
+.narr p{font-size:15px;line-height:1.7}
+.narr p.end{color:var(--good)}
+.ctrl{display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap}
+.btn{font-family:inherit;font-size:13.5px;padding:9px 15px;border-radius:9px;background:var(--panel2);
+ color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.btn:disabled{opacity:.35;cursor:default}
+.btn.primary{background:var(--amber);color:#1a1200;border-color:var(--amber);font-weight:800}
+.btn:focus-visible,.chip:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.dots{display:flex;gap:5px;margin-left:auto;flex-wrap:wrap}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--line)}
+.dot.done{background:var(--accent)}
+.dot.on{background:var(--amber);transform:scale(1.25)}
+.foot{margin-top:14px;color:var(--dim);font-size:12px;line-height:1.6}
+.foot code{font-family:var(--mono);color:var(--ink)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="eyebrow">Linux &amp; Shell · Day 3 · 애니메이션 #2</div>
+  <h1><b>read()</b> — 디스크는 언제 실제로 움직이나</h1>
+  <div class="sub">fd → struct file → f_pos → inode → 페이지 캐시 → (미스일 때만) 디스크. 두 번째 read가 빠른 이유.</div>
+</header>
+<div class="chips" id="chips"><span class="cap">시나리오</span></div>
+<div class="predict" id="predict"></div>
+<div class="stage"><svg id="svg" viewBox="0 0 960 350" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="<b>read()</b> — 디스크는 언제 실제로 움직이나">
+<defs>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#4cc9f0"/></marker>
+<marker id="ahh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#ff5d73"/></marker>
+</defs>
+<g id="layer"></g>
+</svg></div>
+<div class="narr"><div class="stepno" id="stepno">0<small>STEP</small></div><p id="text"></p></div>
+<div class="ctrl">
+  <button class="btn" id="prev">◀ 이전</button>
+  <button class="btn primary" id="next">다음 단계 ▶</button>
+  <button class="btn" id="reset">↺ 처음으로</button>
+  <div class="dots" id="dots"></div>
+</div>
+<div class="foot">Day 3 · S2 · 실습: <code>time cat big &gt; /dev/null</code> 두 번, <code>drop_caches</code> 후 한 번 더 · 키보드 ← → 로도 넘길 수 있습니다.</div>
+</div>
+<script>
+const A = {"h": 350, "zones": [{"x": 270, "lx": 20, "label": "유저 공간"}, {"lx": 300, "label": "커널"}, {"x": 770, "lx": 790, "label": "디스크"}], "nodes": [{"id": "proc", "x": 20, "y": 40, "w": 230, "title": "프로세스 PID 1234", "lines": ["read(3, buf, 4096)", "buf: (비어 있음)", "상태: 실행 중"], "g": "user", "h": 0}, {"id": "fdt", "x": 20, "y": 170, "w": 230, "title": "fd 테이블", "lines": ["3 → struct file"], "g": "user", "h": 0}, {"id": "proc2", "x": 20, "y": 250, "w": 230, "title": "프로세스 PID 5678", "lines": ["read(3, buf, 4096)"], "g": "user", "h": 0, "state": "ghost"}, {"id": "file", "x": 300, "y": 60, "w": 200, "title": "struct file (1234)", "lines": ["f_pos = 0", "f_inode → #8812"], "g": "kernel", "h": 0}, {"id": "file2", "x": 300, "y": 220, "w": 200, "title": "struct file (5678)", "lines": ["f_pos = 0", "f_inode → #8812"], "g": "kernel", "h": 0, "state": "ghost"}, {"id": "inode", "x": 540, "y": 60, "w": 200, "title": "inode #8812", "lines": ["address_space →"], "g": "kernel", "h": 0}, {"id": "pc", "x": 540, "y": 200, "w": 200, "title": "페이지 캐시", "lines": ["페이지 0: (없음)", "페이지 1: (없음)"], "g": "kernel", "h": 0}, {"id": "disk", "x": 790, "y": 200, "w": 150, "title": "블록 #10457", "lines": ["'hello…' 4096 B"], "g": "disk", "h": 0}], "arrows": [{"id": "a1", "from": "fdt", "to": "file"}, {"id": "a2", "from": "file", "to": "inode"}, {"id": "a3", "from": "inode", "to": "pc"}, {"id": "a4", "from": "pc", "to": "disk", "label": "블록 I/O (ms)"}, {"id": "a5", "from": "pc", "to": "proc", "label": "copy_to_user"}, {"id": "b1", "from": "proc2", "to": "file2"}, {"id": "b2", "from": "file2", "to": "inode"}], "scenarios": [{"name": "첫 read (캐시 미스)", "predict": "read()가 돌려주는 데이터는 디스크에서 직접 유저 버퍼로 갈까요, 아니면 중간에 어딘가를 거칠까요?", "start": "처음 여는 파일을 4096바이트 읽습니다.", "steps": [{"t": "read(3, buf, 4096) 호출. fd 3을 따라 struct file로.", "on": ["proc", "fdt"], "arr": ["a1"]}, {"t": "struct file의 f_pos=0. '0번째 바이트부터 4096바이트'라는 뜻.", "on": ["file"], "arr": []}, {"t": "inode → address_space(페이지 캐시)에서 페이지 0을 찾습니다.", "on": ["inode", "pc"], "arr": ["a2", "a3"]}, {"t": "페이지 0이 없습니다 — 캐시 미스. 디스크에 블록 읽기를 요청하고 프로세스는 잠듭니다(밀리초).", "on": ["pc", "disk"], "arr": ["a4"], "set": {"proc": ["read(3, buf, 4096)", "buf: (비어 있음)", "상태: 대기 (sleep)"]}, "state": {"pc": "warn"}}, {"t": "블록이 도착해 페이지 0이 채워졌습니다. 이 페이지는 커널 메모리에 계속 남습니다.", "on": ["pc"], "arr": [], "set": {"pc": ["페이지 0: 'hello…' ✓", "페이지 1: (없음)"]}, "state": {"pc": "ok"}}, {"t": "copy_to_user — 페이지 내용을 유저 버퍼 buf로 복사.", "on": ["pc", "proc"], "arr": ["a5"], "set": {"proc": ["read(3, buf, 4096)", "buf: 'hello…'", "상태: 실행 중"]}}, {"t": "f_pos를 4096으로 전진시키고 4096을 반환합니다.", "on": ["file", "proc"], "arr": [], "set": {"file": ["f_pos = 4096", "f_inode → #8812"], "proc": ["반환 = 4096", "buf: 'hello…'", "상태: 실행 중"]}}]}, {"name": "두 번째 read (캐시 히트)", "predict": "같은 구간을 다시 읽으면 디스크에 갈까요?", "start": "같은 파일의 같은 구간을 한 번 더 읽습니다.", "init": {"set": {"pc": ["페이지 0: 'hello…' ✓", "페이지 1: (없음)"], "file": ["f_pos = 4096", "f_inode → #8812"]}}, "steps": [{"t": "lseek(3, 0, SEEK_SET): f_pos만 0으로 되돌립니다. 데이터는 안 움직입니다.", "on": ["file"], "arr": [], "set": {"file": ["f_pos = 0", "f_inode → #8812"]}}, {"t": "read(3, buf, 4096) 다시 호출.", "on": ["proc", "fdt"], "arr": ["a1"]}, {"t": "페이지 0이 이미 캐시에 있습니다 — 히트. 디스크로 가지 않습니다.", "on": ["pc"], "arr": ["a2", "a3"], "state": {"pc": "ok", "disk": "ghost"}}, {"t": "copy_to_user만 하고 즉시 반환(마이크로초). 두 번째 read가 수백 배 빠른 이유입니다.", "on": ["pc", "proc"], "arr": ["a5"], "set": {"file": ["f_pos = 4096", "f_inode → #8812"], "proc": ["반환 = 4096", "buf: 'hello…'", "상태: 실행 중"]}}]}, {"name": "다른 프로세스가 같은 파일", "predict": "다른 프로세스가 같은 파일을 열면 페이지 캐시를 새로 만들까요, 같이 쓸까요? f_pos는요?", "start": "PID 5678이 같은 파일을 열고 읽습니다.", "init": {"set": {"pc": ["페이지 0: 'hello…' ✓", "페이지 1: (없음)"], "file": ["f_pos = 4096", "f_inode → #8812"]}}, "steps": [{"t": "PID 5678이 open → 자기 struct file(f_pos=0)을 따로 갖습니다. inode는 같은 #8812.", "on": ["proc2", "file2"], "arr": ["b1", "b2"], "state": {"proc2": "", "file2": ""}}, {"t": "read → 같은 inode → 같은 페이지 캐시 → 히트. 디스크 안 감.", "on": ["file2", "inode", "pc"], "arr": ["b2", "a3"], "state": {"pc": "ok"}}, {"t": "정리: 페이지 캐시는 파일(inode) 단위로 시스템 전체가 공유, f_pos는 열기(struct file) 단위로 따로.", "on": ["file", "file2", "pc"], "arr": [], "set": {"file2": ["f_pos = 4096", "f_inode → #8812"]}}]}]};
+const NS="http://www.w3.org/2000/svg";
+let sc=0, st=0;
+function el(n,a,txt){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;return e;}
+function state(){
+  const S=A.scenarios[sc];
+  const lines={},states={},titles={};
+  const apply=(o)=>{if(!o)return;if(o.set)for(const k in o.set)lines[k]=o.set[k];if(o.state)for(const k in o.state)states[k]=o.state[k];if(o.title)for(const k in o.title)titles[k]=o.title[k];};
+  apply(S.init);
+  for(let i=0;i<st;i++)apply(S.steps[i]);
+  return {lines,states,titles,cur:S.steps[st-1]||{on:[],arr:[]}};
+}
+function render(){
+  const {lines,states,titles,cur}=state();
+  const L=document.getElementById("layer");L.innerHTML="";
+  (A.zones||[]).forEach(z=>{const g=el("g",{class:"zone"});
+    if(z.x!=null)g.appendChild(el("line",{x1:z.x,y1:8,x2:z.x,y2:A.h-8}));
+    g.appendChild(el("text",{x:z.lx,y:22},z.label));L.appendChild(g);});
+  const rects={};
+  A.nodes.forEach(n=>{
+    const ln=lines[n.id]!==undefined?lines[n.id]:(n.lines||[]);
+    const h=Math.max(n.h||0,34+ln.length*15+(ln.length?8:0));
+    rects[n.id]={x:n.x,y:n.y,w:n.w,h};
+  });
+  A.arrows.forEach(a=>{
+    const act=(cur.arr||[]).includes(a.id);if(!act)return;
+    const s=rects[a.from],t=rects[a.to];if(!s||!t)return;
+    let x1,y1,x2,y2;
+    const scx=s.x+s.w/2,scy=s.y+s.h/2,tcx=t.x+t.w/2,tcy=t.y+t.h/2;
+    if(t.x>=s.x+s.w){x1=s.x+s.w;y1=scy;x2=t.x;y2=tcy;}
+    else if(t.x+t.w<=s.x){x1=s.x;y1=scy;x2=t.x+t.w;y2=tcy;}
+    else if(t.y>=s.y+s.h){x1=scx;y1=s.y+s.h;x2=tcx;y2=t.y;}
+    else{x1=scx;y1=s.y;x2=tcx;y2=t.y+t.h;}
+    const hot=a.hot?" hot":"";
+    L.appendChild(el("line",{class:"arrow"+hot,x1,y1,x2,y2}));
+    if(a.label){const mx=(x1+x2)/2,my=(y1+y2)/2-7;L.appendChild(el("text",{class:"alabel"+hot,x:mx,y:my,"text-anchor":"middle"},a.label));}
+  });
+  A.nodes.forEach(n=>{
+    const r=rects[n.id];const ln=lines[n.id]!==undefined?lines[n.id]:(n.lines||[]);
+    const stt=states[n.id]!==undefined?states[n.id]:(n.state||"");
+    const on=(cur.on||[]).includes(n.id);
+    const g=el("g",{class:"node g-"+(n.g||"kernel")+(on?" on":"")+(stt?" "+stt:"")});
+    g.appendChild(el("rect",{x:r.x,y:r.y,width:r.w,height:r.h,rx:10}));
+    g.appendChild(el("text",{class:"t",x:r.x+12,y:r.y+21},titles[n.id]||n.title));
+    ln.forEach((s,i)=>g.appendChild(el("text",{class:"l",x:r.x+12,y:r.y+42+i*15},s)));
+    L.appendChild(g);
+  });
+  const S=A.scenarios[sc];
+  document.getElementById("stepno").innerHTML=st+"<small>STEP "+st+"/"+S.steps.length+"</small>";
+  const p=document.getElementById("text");
+  p.textContent=st===0?S.start:cur.t;
+  p.className=(st===S.steps.length)?"end":"";
+  document.getElementById("prev").disabled=st===0;
+  document.getElementById("next").disabled=st===S.steps.length;
+  const D=document.getElementById("dots");D.innerHTML="";
+  S.steps.forEach((_,i)=>{const d=document.createElement("span");d.className="dot"+(i<st?" done":"")+(i===st-1?" on":"");D.appendChild(d);});
+  document.querySelectorAll(".chip").forEach((c,i)=>c.classList.toggle("on",i===sc));
+  document.getElementById("predict").innerHTML="<b>먼저 예측</b>"+S.predict;
+}
+function go(i){st=Math.max(0,Math.min(A.scenarios[sc].steps.length,i));render();}
+document.getElementById("prev").onclick=()=>go(st-1);
+document.getElementById("next").onclick=()=>go(st+1);
+document.getElementById("reset").onclick=()=>go(0);
+document.addEventListener("keydown",e=>{if(e.key==="ArrowRight")go(st+1);if(e.key==="ArrowLeft")go(st-1);});
+const C=document.getElementById("chips");
+A.scenarios.forEach((s,i)=>{const b=document.createElement("button");b.className="chip";b.textContent=s.name;b.onclick=()=>{sc=i;st=0;render();};C.appendChild(b);});
+render();
+</script>
+</body>
+</html>
