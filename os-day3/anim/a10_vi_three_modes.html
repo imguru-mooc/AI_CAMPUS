@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>vi 세 가지 모드 — 명령 · 편집 · ex</title>
+<style>
+:root{
+  --bg:#0f141d;--panel:#161d2a;--panel2:#1b2434;--line:#26314a;
+  --ink:#dce6f5;--dim:#7d8ba3;--amber:#ffd166;--warnc:#ff9f43;
+  --hot:#ff5d73;--accent:#4cc9f0;--good:#7ee787;--purple:#c3a6ff;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);min-height:100vh;padding:22px 14px 60px;
+ font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+.wrap{max-width:980px;margin:0 auto}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+h1{font-size:clamp(19px,4vw,26px);font-weight:800;margin-top:6px}
+h1 b{color:var(--amber)}
+.sub{color:var(--dim);font-size:13.5px;margin-top:6px;line-height:1.6}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 10px;align-items:center}
+.chips .cap{font-family:var(--mono);font-size:11.5px;color:var(--dim);margin-right:4px}
+.chip{font-family:var(--mono);font-size:12.5px;padding:8px 13px;border-radius:9px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.chip.on{background:var(--accent);color:#08131c;border-color:var(--accent);font-weight:800}
+.chip.freechip.on{background:var(--good)}
+.predict{background:var(--panel2);border-left:3px solid var(--purple);padding:9px 12px;border-radius:0 10px 10px 0;font-size:13.5px;line-height:1.6}
+.predict b{color:var(--purple);font-family:var(--mono);font-size:12px;margin-right:6px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+@media (max-width:760px){.grid{grid-template-columns:1fr}}
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px}
+svg{width:100%;height:auto;display:block}
+.m rect{fill:var(--panel2);stroke:var(--line);stroke-width:1.5;transition:stroke .2s}
+.m.normal rect{stroke:#7a5ab0}.m.insert rect{stroke:#2a8a7a}.m.ex rect{stroke:#b05a3a}
+.m.on rect{stroke:var(--amber)!important;stroke-width:2.5;filter:drop-shadow(0 0 7px rgba(255,209,102,.55))}
+.m .t{fill:var(--ink);font-weight:800;font-size:13px}
+.m .l{fill:var(--dim);font-family:var(--mono);font-size:10.5px}
+.m.on .l{fill:var(--ink)}
+.ar{stroke:var(--line);stroke-width:2;fill:none;marker-end:url(#ah)}
+.ar.on{stroke:var(--accent);marker-end:url(#ahc)}
+.al{fill:var(--dim);font-family:var(--mono);font-size:10.5px;font-weight:700}
+.al.on{fill:var(--accent)}
+/* terminal */
+.term{background:#0a0e15;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-family:var(--mono);font-size:13px;line-height:1.5;min-height:250px;display:flex;flex-direction:column;outline:none}
+.term:focus{border-color:var(--accent)}
+.tbar{font-size:10.5px;color:var(--dim);letter-spacing:.1em;margin-bottom:6px;display:flex;justify-content:space-between}
+.tbar b{color:var(--accent)}
+.lines{flex:1}
+.ln{white-space:pre;color:var(--ink);min-height:19.5px}
+.ln .no{color:var(--dim);display:inline-block;width:3ch;text-align:right;margin-right:1ch}
+.ln.tilde{color:var(--dim)}
+.cur{background:var(--amber);color:#1a1200;border-radius:2px}
+.cur.ins{background:transparent;color:inherit;border-left:2px solid var(--amber);margin-left:-1px}
+.status{margin-top:6px;border-top:1px dashed var(--line);padding-top:6px;display:flex;justify-content:space-between;gap:8px;font-size:12.5px;min-height:26px}
+.status .mode{font-weight:800}
+.status .mode.normal{color:var(--purple)}.status .mode.insert{color:var(--good)}.status .mode.ex{color:var(--warnc)}
+.status .msg{color:var(--hot)}
+.status .cmd{color:var(--ink)}
+.keys{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;min-height:26px}
+.key{font-family:var(--mono);font-size:12px;padding:3px 8px;border-radius:6px;background:var(--panel2);border:1px solid var(--line);color:var(--amber)}
+.key.esc{color:var(--hot)}
+.narr{margin-top:12px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-height:78px;display:flex;gap:14px;align-items:flex-start}
+.stepno{font-family:var(--mono);font-size:22px;color:var(--amber);font-weight:800;min-width:52px;line-height:1.1}
+.stepno small{display:block;font-size:10px;color:var(--dim);letter-spacing:.1em}
+.narr p{font-size:15px;line-height:1.7}
+.narr p.end{color:var(--good)}
+.ctrl{display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap}
+.btn{font-family:inherit;font-size:13.5px;padding:9px 15px;border-radius:9px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);cursor:pointer}
+.btn:disabled{opacity:.35;cursor:default}
+.btn.primary{background:var(--amber);color:#1a1200;border-color:var(--amber);font-weight:800}
+.btn:focus-visible,.chip:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.dots{display:flex;gap:5px;margin-left:auto;flex-wrap:wrap}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--line)}
+.dot.done{background:var(--accent)}.dot.on{background:var(--amber);transform:scale(1.25)}
+.free{margin-top:10px;background:var(--panel2);border:1px dashed var(--good);border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.7;display:none}
+.free.on{display:block}
+.free b{color:var(--good)}
+.free code{font-family:var(--mono);color:var(--amber)}
+.foot{margin-top:14px;color:var(--dim);font-size:12px;line-height:1.6}
+.foot code{font-family:var(--mono);color:var(--ink)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="eyebrow">Linux &amp; Shell · Day 3 · 애니메이션 #10</div>
+  <h1><b>vi</b> 세 가지 모드 — 명령 · 편집 · ex</h1>
+  <div class="sub">vi는 항상 명령 모드에서 시작하고, 편집 모드와 ex 모드는 명령 모드를 거쳐서만 오갑니다. 오른쪽 화면은 실제로 동작하는 작은 vi입니다 — 시나리오를 따라간 뒤 자유 모드에서 직접 키를 눌러 보세요.</div>
+</header>
+<div class="chips" id="chips"><span class="cap">시나리오</span></div>
+<div class="predict" id="predict"></div>
+<div class="grid">
+ <div class="stage"><svg id="svg" viewBox="0 0 460 330" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="vi 세 모드 전이도">
+  <defs>
+   <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#26314a"/></marker>
+   <marker id="ahc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#4cc9f0"/></marker>
+  </defs>
+  <g class="m normal" id="m_normal"><rect x="20" y="20" width="200" height="120" rx="10"/>
+   <text class="t" x="32" y="42">명령 모드 (normal)</text>
+   <text class="l" x="32" y="62">h j k l 이동</text><text class="l" x="32" y="78">x 삭제 · dd 줄 삭제</text>
+   <text class="l" x="32" y="94">yy 복사 · p 붙여넣기</text><text class="l" x="32" y="110">u 실행 취소</text><text class="l" x="32" y="126">vi 시작 시 기본 상태</text></g>
+  <g class="m insert" id="m_insert"><rect x="260" y="20" width="180" height="120" rx="10"/>
+   <text class="t" x="272" y="42">편집 모드 (insert)</text>
+   <text class="l" x="272" y="62">i 커서 앞 · a 커서 뒤</text><text class="l" x="272" y="78">o 아래 새 줄 · O 위</text>
+   <text class="l" x="272" y="94">I 줄 처음 · A 줄 끝</text><text class="l" x="272" y="110">글자를 타이핑</text><text class="l" x="272" y="126">-- INSERT -- 표시</text></g>
+  <g class="m ex" id="m_ex"><rect x="20" y="200" width="200" height="110" rx="10"/>
+   <text class="t" x="32" y="222">ex 모드 (command-line)</text>
+   <text class="l" x="32" y="242">:w 저장 · :q 종료</text><text class="l" x="32" y="258">:wq 저장+종료 · :q! 강제</text>
+   <text class="l" x="32" y="274">/단어 검색</text><text class="l" x="32" y="290">:set nu 줄 번호</text></g>
+  <g id="arr_ni"><line class="ar" x1="220" y1="55" x2="258" y2="55"/><text class="al" x="239" y="47" text-anchor="middle">i a o</text></g>
+  <g id="arr_in"><line class="ar" x1="260" y1="110" x2="222" y2="110"/><text class="al" x="239" y="124" text-anchor="middle">Esc</text></g>
+  <g id="arr_ne"><line class="ar" x1="80" y1="140" x2="80" y2="198"/><text class="al" x="70" y="172" text-anchor="end">: /</text></g>
+  <g id="arr_en"><line class="ar" x1="160" y1="200" x2="160" y2="142"/><text class="al" x="170" y="172" text-anchor="start">Enter · Esc</text></g>
+  <g id="hint"><rect x="260" y="200" width="180" height="110" rx="10" fill="#1b2434" stroke="#26314a" stroke-dasharray="5 4"/>
+   <text class="t" x="272" y="222" fill="#dce6f5" font-size="13" font-weight="800">막히면</text>
+   <text class="l" x="272" y="242" fill="#7d8ba3" font-family="JetBrains Mono,monospace" font-size="10.5">Esc Esc  → 명령 모드</text>
+   <text class="l" x="272" y="258" fill="#7d8ba3" font-family="JetBrains Mono,monospace" font-size="10.5">:q!  → 저장 없이 나감</text>
+   <text class="l" x="272" y="274" fill="#7d8ba3" font-family="JetBrains Mono,monospace" font-size="10.5">u    → 방금 것 되돌림</text>
+   <text class="l" x="272" y="290" fill="#7d8ba3" font-family="JetBrains Mono,monospace" font-size="10.5">화면 맨 아래 줄을 보라</text></g>
+ </svg></div>
+ <div>
+  <div class="term" id="term" tabindex="0" aria-label="미니 vi 화면">
+   <div class="tbar"><span>$ vi <b id="fname">collect.sh</b></span><span id="tfocus">클릭하면 키 입력 가능</span></div>
+   <div class="lines" id="lines"></div>
+   <div class="status"><span class="mode" id="mode"></span><span class="cmd" id="cmdline"></span><span class="msg" id="msg"></span></div>
+  </div>
+  <div class="keys" id="keys"></div>
+ </div>
+</div>
+<div class="narr"><div class="stepno" id="stepno">0<small>STEP</small></div><p id="text"></p></div>
+<div class="ctrl">
+  <button class="btn" id="prev">◀ 이전</button>
+  <button class="btn primary" id="next">다음 단계 ▶</button>
+  <button class="btn" id="reset">↺ 처음으로</button>
+  <div class="dots" id="dots"></div>
+</div>
+<div class="free" id="freebox"><b>자유 모드</b> — 오른쪽 vi 화면을 클릭한 뒤 실제 키를 누르세요. 지원: <code>h j k l</code> <code>i a o O I A</code> <code>x dd yy p u</code> <code>Esc</code> <code>:w :q :wq :q! :set nu</code> <code>/단어</code>. 목표: 세 줄짜리 collect.sh를 만들고 <code>:wq</code>로 저장하기. 저장되면 상태 줄에 "written"이 뜹니다.</div>
+<div class="foot">Day 3 · S4 앞 5분 · 실습 <code>vi collect.sh</code> → <code>i</code> → 입력 → <code>Esc</code> → <code>:wq</code> · 키보드 ← → 로 단계 이동 (자유 모드에서는 vi 키로 동작).</div>
+</div>
+<script>
+// ---------- mini vi
+const V={mode:"normal",lines:[""],cy:0,cx:0,cmd:"",yank:null,undo:[],msg:"",modified:false,nu:false,pending:"",written:false,search:""};
+const lns=document.getElementById("lines");
+function snap(){V.undo.push({lines:V.lines.slice(),cy:V.cy,cx:V.cx});if(V.undo.length>50)V.undo.shift();}
+function clamp(){V.cy=Math.max(0,Math.min(V.lines.length-1,V.cy));const L=V.lines[V.cy].length;const max=V.mode==="insert"?L:Math.max(0,L-1);V.cx=Math.max(0,Math.min(max,V.cx));}
+function esc(t){return t.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+function render(){
+ clamp();
+ let h="";const rows=8;
+ for(let i=0;i<rows;i++){
+  if(i<V.lines.length){
+   const s=V.lines[i];let body;
+   if(i===V.cy){
+    const before=esc(s.slice(0,V.cx)),ch=s[V.cx]!==undefined?esc(s[V.cx]):" ",after=esc(s.slice(V.cx+1));
+    body=V.mode==="insert"?before+'<span class="cur ins">'+(s[V.cx]!==undefined?esc(s[V.cx]):"&nbsp;")+'</span>'+after:before+'<span class="cur">'+ch+'</span>'+after;
+   }else body=esc(s)||"&nbsp;";
+   h+='<div class="ln">'+(V.nu?'<span class="no">'+(i+1)+'</span>':'')+body+'</div>';
+  }else h+='<div class="ln tilde">~</div>';
+ }
+ lns.innerHTML=h;
+ const m=document.getElementById("mode");m.className="mode "+V.mode;
+ m.textContent=V.mode==="insert"?"-- INSERT --":(V.mode==="ex"?"":"명령 모드"+(V.pending?"  ("+V.pending+" 대기)":""));
+ document.getElementById("cmdline").textContent=V.mode==="ex"?V.cmd:"";
+ document.getElementById("msg").textContent=V.msg;
+ ["normal","insert","ex"].forEach(x=>document.getElementById("m_"+x).classList.toggle("on",V.mode===x));
+}
+function setMode(nm,arrow){
+ const from=V.mode;V.mode=nm;
+ document.querySelectorAll("#svg .ar,#svg .al").forEach(e=>e.classList.remove("on"));
+ const id=arrow||({normal_insert:"arr_ni",insert_normal:"arr_in",normal_ex:"arr_ne",ex_normal:"arr_en"})[from+"_"+nm];
+ if(id){const g=document.getElementById(id);g.querySelector(".ar").classList.add("on");g.querySelector(".al").classList.add("on");}
+}
+function key(k){
+ V.msg="";
+ if(V.mode==="insert"){
+  if(k==="Escape"){setMode("normal");V.cx=Math.max(0,V.cx-1);}
+  else if(k==="Enter"){const s=V.lines[V.cy];V.lines.splice(V.cy,1,s.slice(0,V.cx),s.slice(V.cx));V.cy++;V.cx=0;V.modified=true;}
+  else if(k==="Backspace"){if(V.cx>0){const s=V.lines[V.cy];V.lines[V.cy]=s.slice(0,V.cx-1)+s.slice(V.cx);V.cx--;V.modified=true;}else if(V.cy>0){const prev=V.lines[V.cy-1];V.cx=prev.length;V.lines.splice(V.cy-1,2,prev+V.lines[V.cy]);V.cy--;V.modified=true;}}
+  else if(k.length===1){const s=V.lines[V.cy];V.lines[V.cy]=s.slice(0,V.cx)+k+s.slice(V.cx);V.cx++;V.modified=true;}
+ }else if(V.mode==="ex"){
+  if(k==="Escape"){V.cmd="";setMode("normal");}
+  else if(k==="Backspace"){V.cmd=V.cmd.slice(0,-1);if(!V.cmd)setMode("normal");}
+  else if(k==="Enter"){runEx(V.cmd);V.cmd="";setMode("normal");}
+  else if(k.length===1)V.cmd+=k;
+ }else{ // normal
+  if(V.pending){
+   const p=V.pending;V.pending="";
+   if(p==="d"&&k==="d"){snap();V.yank=[V.lines[V.cy]];V.lines.splice(V.cy,1);if(!V.lines.length)V.lines=[""];V.modified=true;V.msg="";}
+   else if(p==="y"&&k==="y"){V.yank=[V.lines[V.cy]];V.msg="1 line yanked";}
+   else V.msg="";
+  }
+  else if(k==="h")V.cx--;else if(k==="l")V.cx++;else if(k==="j")V.cy++;else if(k==="k")V.cy--;
+  else if(k==="x"){snap();const s=V.lines[V.cy];if(s.length){V.lines[V.cy]=s.slice(0,V.cx)+s.slice(V.cx+1);V.modified=true;}}
+  else if(k==="d"||k==="y")V.pending=k;
+  else if(k==="p"){if(V.yank){snap();V.lines.splice(V.cy+1,0,...V.yank);V.cy++;V.cx=0;V.modified=true;}}
+  else if(k==="u"){const u=V.undo.pop();if(u){V.lines=u.lines;V.cy=u.cy;V.cx=u.cx;V.msg="1 change; before";}else V.msg="Already at oldest change";}
+  else if(k==="i"){snap();setMode("insert");}
+  else if(k==="a"){snap();setMode("insert");if(V.lines[V.cy].length)V.cx++;}
+  else if(k==="I"){snap();setMode("insert");V.cx=0;}
+  else if(k==="A"){snap();setMode("insert");V.cx=V.lines[V.cy].length;}
+  else if(k==="o"){snap();V.lines.splice(V.cy+1,0,"");V.cy++;V.cx=0;setMode("insert");V.modified=true;}
+  else if(k==="O"){snap();V.lines.splice(V.cy,0,"");V.cx=0;setMode("insert");V.modified=true;}
+  else if(k===":"){V.cmd=":";setMode("ex");}
+  else if(k==="/"){V.cmd="/";setMode("ex");}
+  else if(k==="Escape"){V.pending="";}
+ }
+ render();
+}
+function runEx(c){
+ if(c[0]==="/"){const q=c.slice(1);if(!q)return;for(let i=1;i<=V.lines.length;i++){const y=(V.cy+i)%V.lines.length;const at=V.lines[y].indexOf(q);if(at>=0){V.cy=y;V.cx=at;V.msg="";return;}}V.msg="E486: Pattern not found: "+q;return;}
+ const cmd=c.slice(1).trim();
+ if(cmd==="w"){V.written=true;V.modified=false;V.msg='"collect.sh" '+V.lines.length+'L written';}
+ else if(cmd==="q"){if(V.modified)V.msg="E37: No write since last change (add ! to override)";else V.msg="(종료됨 — 셸 프롬프트로 돌아감)";}
+ else if(cmd==="wq"||cmd==="x"){V.written=true;V.modified=false;V.msg='"collect.sh" '+V.lines.length+'L written — 종료됨';}
+ else if(cmd==="q!"){V.msg="(저장하지 않고 종료됨)";}
+ else if(cmd==="set nu"||cmd==="set number"){V.nu=true;}
+ else if(cmd==="set nonu"){V.nu=false;}
+ else V.msg="E492: Not an editor command: "+cmd;
+}
+function resetVi(lines){Object.assign(V,{mode:"normal",lines:(lines&&lines.length)?lines.slice():[""],cy:0,cx:0,cmd:"",yank:null,undo:[],msg:"",modified:false,nu:false,pending:"",written:false});document.querySelectorAll("#svg .ar,#svg .al").forEach(e=>e.classList.remove("on"));render();}
+// ---------- scenarios
+function T(text){return text.split("");}  // type string as keys
+const SC=[
+ {name:"① 파일 만들기 (i → Esc → :wq)",predict:"편집 모드에서 곧바로 :wq 를 치면 어떻게 될까요?",
+  start:"vi collect.sh 로 새 파일을 엽니다. 지금은 명령 모드 — 글자를 쳐도 입력되지 않습니다.",
+  init:[],steps:[
+  {keys:["i"],t:"i 를 누르면 편집 모드. 상태 줄에 -- INSERT -- 가 뜨고, 이제부터 치는 글자가 들어갑니다."},
+  {keys:T("#!/bin/bash"),t:"첫 줄을 타이핑합니다. 편집 모드에서 키는 전부 '글자'입니다."},
+  {keys:["Enter",...T("echo start")],t:"Enter 로 줄을 바꾸고 둘째 줄을 칩니다."},
+  {keys:["Escape"],t:"Esc — 명령 모드로 돌아옵니다. -- INSERT -- 가 사라지고 커서가 한 칸 뒤로 갑니다. 여기서 :wq 를 치려면 반드시 이 상태여야 합니다."},
+  {keys:[":"],t:": 를 누르면 ex 모드. 화면 맨 아래 줄에 : 가 나타납니다."},
+  {keys:T("wq"),t:"w(저장) q(종료) 를 이어 칩니다. 아직 실행 전 — Enter 를 기다리는 중."},
+  {keys:["Enter"],t:"Enter — 저장하고 종료. 상태 줄의 written 메시지가 증거입니다. 순서: i → 입력 → Esc → :wq → Enter."},
+ ]},
+ {name:"② 편집 모드에서 :wq 를 치면?",predict:"학생이 가장 자주 하는 실수입니다. 파일에 무엇이 남을까요?",
+  start:"편집 모드에 들어가 있는 상태에서 시작합니다.",
+  init:["#!/bin/bash","echo start"],pre:["A"],steps:[
+  {keys:T(":wq"),t:"편집 모드에서 :wq 를 칩니다 — ex 모드로 가지 않고 그냥 글자 ':wq' 가 파일에 들어갑니다."},
+  {keys:["Enter"],t:"Enter 를 눌러도 줄만 바뀝니다. 아무것도 저장되지 않았고 종료도 안 됩니다."},
+  {keys:["Escape"],t:"해결: Esc. 명령 모드로 돌아옵니다."},
+  {keys:["u"],t:"u — 편집 모드에 들어가서 나올 때까지의 변경을 한 번에 되돌립니다. 잘못 들어간 ':wq' 가 사라집니다."},
+  {keys:[":",...T("wq"),"Enter"],t:"이제 명령 모드에서 :wq Enter. 상태 줄이 어떤 모드인지 항상 먼저 보는 습관이 이 실수를 막습니다."},
+ ]},
+ {name:"③ 줄 삭제·복사·붙여넣기",predict:"dd 로 지운 줄은 어디로 갈까요? p 는 커서 위에 붙일까요, 아래에 붙일까요?",
+  start:"세 줄짜리 파일. 명령 모드에서 편집 명령만으로 줄을 다룹니다.",
+  init:["#!/bin/bash","echo start","echo done"],steps:[
+  {keys:["j"],t:"j — 아래 줄로. h j k l 은 명령 모드의 이동키(← ↓ ↑ →)."},
+  {keys:["d","d"],t:"dd — 현재 줄을 삭제합니다. 삭제된 줄은 버퍼(레지스터)에 들어갑니다."},
+  {keys:["p"],t:"p — 버퍼의 줄을 커서 아래에 붙입니다. dd + p = 줄 이동."},
+  {keys:["y","y"],t:"yy — 현재 줄(echo start)을 복사(yank). 화면은 안 바뀌고 상태 줄에 yanked 만 뜹니다."},
+  {keys:["p"],t:"p — 복사한 줄이 아래에 붙습니다. 이제 echo start 가 두 개."},
+  {keys:["u"],t:"u — 마지막 변경을 되돌립니다. 여러 번 누르면 계속 되돌아갑니다."},
+  {keys:[":",...T("set nu"),"Enter"],t:":set nu — 줄 번호 표시. ex 명령은 저장·종료만이 아니라 설정에도 씁니다."},
+ ]},
+ {name:"④ 검색과 강제 종료",predict:"저장하지 않고 :q 를 치면 vi 가 그냥 나가 줄까요?",
+  start:"긴 파일에서 단어를 찾고, 수정한 뒤 저장 없이 나가려는 상황.",
+  init:["#!/bin/bash","LOG_DIR=~/logs","[ -d \"$LOG_DIR\" ] || mkdir -p \"$LOG_DIR\"","echo start"],steps:[
+  {keys:["/",...T("mkdir"),"Enter"],t:"/mkdir Enter — 다음에 나오는 mkdir 로 커서가 점프합니다. / 도 ex 모드의 한 종류."},
+  {keys:["x"],t:"x — 커서 위 글자 하나 삭제. 파일이 '수정됨' 상태가 됩니다."},
+  {keys:[":",...T("q"),"Enter"],t:":q — vi 가 거부합니다. E37: 저장 안 된 변경이 있음. 이 메시지를 읽는 것이 중요합니다."},
+  {keys:[":",...T("q!"),"Enter"],t:":q! — ! 는 '알아, 그래도 버려' . 저장 없이 종료. 실수한 편집을 통째로 버릴 때 씁니다."},
+ ]},
+ {name:"자유 모드",predict:"목표: 세 줄짜리 collect.sh 를 만들고 :wq 로 저장하기. 어느 모드에 있는지 상태 줄로 확인하며 진행하세요.",
+  start:"오른쪽 vi 화면을 클릭하고 직접 키를 누르세요. 막히면 Esc 두 번.",init:[],steps:[],free:true},
+];
+let sc=0,st=0;
+function applyStep(step){step.keys.forEach(k=>key(k));showKeys(step.keys);}
+function showKeys(keys){const box=document.getElementById("keys");box.innerHTML="";keys.forEach(k=>{const s=document.createElement("span");s.className="key"+(k==="Escape"?" esc":"");s.textContent=k==="Escape"?"Esc":(k==="Enter"?"⏎":(k===" "?"␣":k));box.appendChild(s);});}
+function rebuild(){const S=SC[sc];resetVi(S.init);(S.pre||[]).forEach(k=>key(k));for(let i=0;i<st;i++)applyStep(S.steps[i]);if(st===0)showKeys([]);}
+function ui(){
+ const S=SC[sc];
+ document.getElementById("stepno").innerHTML=st+"<small>STEP "+st+"/"+S.steps.length+"</small>";
+ const p=document.getElementById("text");p.textContent=st===0?S.start:S.steps[st-1].t;p.className=(st===S.steps.length&&!S.free)?"end":"";
+ document.getElementById("prev").disabled=st===0;document.getElementById("next").disabled=st>=S.steps.length;
+ const D=document.getElementById("dots");D.innerHTML="";S.steps.forEach((_,i)=>{const d=document.createElement("span");d.className="dot"+(i<st?" done":"")+(i===st-1?" on":"");D.appendChild(d);});
+ document.querySelectorAll(".chip").forEach((c,i)=>c.classList.toggle("on",i===sc));
+ document.getElementById("predict").innerHTML="<b>먼저 예측</b>"+S.predict;
+ document.getElementById("freebox").classList.toggle("on",!!S.free);
+ document.getElementById("tfocus").textContent=S.free?"클릭 후 키 입력":"시나리오 재생 중 (자유 모드에서 직접 입력)";
+}
+function go(i){st=Math.max(0,Math.min(SC[sc].steps.length,i));rebuild();ui();}
+document.getElementById("prev").onclick=()=>go(st-1);
+document.getElementById("next").onclick=()=>go(st+1);
+document.getElementById("reset").onclick=()=>go(0);
+const C=document.getElementById("chips");
+SC.forEach((s,i)=>{const b=document.createElement("button");b.className="chip"+(s.free?" freechip":"");b.textContent=s.name;b.onclick=()=>{sc=i;st=0;rebuild();ui();if(s.free)document.getElementById("term").focus();};C.appendChild(b);});
+const term=document.getElementById("term");
+term.addEventListener("keydown",e=>{
+ if(!SC[sc].free)return;
+ if(e.ctrlKey||e.metaKey||e.altKey)return;
+ const k=e.key;
+ if(k==="Escape"||k==="Enter"||k==="Backspace"||k.length===1){e.preventDefault();key(k);showKeys([k]);}
+});
+document.addEventListener("keydown",e=>{
+ if(SC[sc].free&&document.activeElement===term)return;
+ if(e.key==="ArrowRight")go(st+1);if(e.key==="ArrowLeft")go(st-1);
+});
+rebuild();ui();
+</script>
+</body>
+</html>
