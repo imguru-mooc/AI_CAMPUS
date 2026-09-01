@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>형변환 · 자료형 흐름도 — Python Day 1</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono)}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.green{color:var(--green);border-color:var(--green)}.pill.red{color:var(--red);border-color:var(--red)}.pill.purple{color:var(--purple);border-color:var(--purple)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.run{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .row label{color:var(--dim);font-size:13px}
+  input[type=text]{background:#0a0f1c;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:14px;width:160px}
+  select{background:#0a0f1c;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-family:var(--mono)}
+  .grid{display:grid;grid-template-columns:1.4fr 1fr;gap:14px}
+  @media(max-width:820px){.grid{grid-template-columns:1fr}}
+  /* flow stage */
+  .stage{position:relative;height:300px}
+  .box{position:absolute;width:150px;height:92px;border:2px solid;border-radius:12px;background:#0e1628;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:box-shadow .3s}
+  .box .t{font-family:var(--mono);font-size:18px;font-weight:700}
+  .box .d{font-size:11px;color:var(--dim);margin-top:2px;text-align:center}
+  .box.int{left:0;top:0;border-color:var(--amber);color:var(--amber)}
+  .box.float{right:0;top:0;border-color:var(--blue);color:var(--blue)}
+  .box.str{left:0;bottom:0;border-color:var(--teal);color:var(--teal)}
+  .box.bool{right:0;bottom:0;border-color:var(--purple);color:var(--purple)}
+  .box.src{box-shadow:0 0 0 4px #ffffff22}
+  .box.hit{box-shadow:0 0 0 4px #4ade8066}
+  .box.miss{box-shadow:0 0 0 4px #f8717166}
+  .token{position:absolute;padding:6px 12px;border-radius:8px;font-family:var(--mono);font-size:16px;background:#1a2540;border:1px solid #fff4;color:#fff;transform:translate(-50%,-50%);transition:left .9s cubic-bezier(.4,0,.2,1),top .9s cubic-bezier(.4,0,.2,1),opacity .3s;white-space:nowrap;z-index:2}
+  .token.ok{background:#0d2216;border-color:var(--green);color:var(--green)}
+  .token.bad{background:#2a1212;border-color:var(--red);color:var(--red);animation:shake .4s}
+  @keyframes shake{0%,100%{margin-left:0}25%{margin-left:-6px}75%{margin-left:6px}}
+  svg.wire{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  svg.wire path{fill:none;stroke:#2a3a5c;stroke-width:2;stroke-dasharray:4 6}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:15px;white-space:pre-wrap;min-height:60px}
+  .code .k{color:var(--purple)}.code .e{color:var(--red)}.code .g{color:var(--green)}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}.explain b.purple{color:var(--purple)}
+  .explain code{font-family:var(--mono);color:var(--blue)}
+  table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:14px}
+  th{color:var(--dim);font-weight:600;text-align:left;padding:4px 8px;border-bottom:1px solid var(--line);font-size:12px}
+  td{padding:5px 8px;border-bottom:1px solid #16203a}
+  td.i{color:var(--amber)}td.f{color:var(--blue)}
+  .divrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+  .divrow input{width:70px}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>형변환 · 자료형 흐름도</h1>
+  <p class="sub">값 하나를 골라 다른 자료형으로 보내 봅니다. 성공하면 초록, 실패하면 빨강과 함께 오류 이름이 나옵니다. 아래에서는 <code style="font-family:var(--mono);color:var(--blue)">/</code>와 <code style="font-family:var(--mono);color:var(--blue)">//</code>의 결과 자료형 차이도 확인합니다.</p>
+  <div class="pills">
+    <span class="pill amber">int 정수</span><span class="pill blue">float 실수</span><span class="pill teal">str 문자열</span><span class="pill purple">bool 참/거짓</span><span class="pill red">ValueError = 값 모양이 맞지 않음</span>
+  </div>
+
+  <div class="panel">
+    <h2>프리셋</h2>
+    <div class="presets" id="presets"></div>
+    <div class="row" style="margin-top:12px">
+      <label>값 (Python 리터럴) <input type="text" id="valIn" value='"42"' spellcheck="false"></label>
+      <label>→ <select id="target"><option value="int">int()</option><option value="float">float()</option><option value="str">str()</option><option value="bool">bool()</option></select></label>
+      <button class="run" id="runBtn">변환</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <h2>자료형 상자</h2>
+      <div class="stage" id="stage">
+        <svg class="wire"><path d="M150,46 L500,46"/><path d="M150,254 L500,254"/><path d="M75,92 L75,208"/><path d="M575,92 L575,208"/><path d="M150,92 L500,208"/><path d="M150,208 L500,92"/></svg>
+        <div class="box int" id="b_int"><div class="t">int</div><div class="d">정수, 자릿수 제한 없음</div></div>
+        <div class="box float" id="b_float"><div class="t">float</div><div class="d">IEEE 754 배정밀도</div></div>
+        <div class="box str" id="b_str"><div class="t">str</div><div class="d">문자 나열, 불변</div></div>
+        <div class="box bool" id="b_bool"><div class="t">bool</div><div class="d">True / False</div></div>
+        <div class="token" id="token" style="opacity:0"></div>
+      </div>
+    </div>
+    <div>
+      <div class="panel"><h2>Python</h2><div class="code" id="code"></div></div>
+      <div class="panel"><h2>상태</h2><div class="status info" id="status">프리셋을 고르거나 값을 입력한 뒤 변환을 누르세요.</div></div>
+    </div>
+  </div>
+
+  <div class="panel explain" id="explain"></div>
+
+  <div class="panel">
+    <h2>나눗셈 연산자와 결과 자료형</h2>
+    <div class="divrow"><label>a <input type="text" id="da" value="7"></label><label>b <input type="text" id="db" value="2"></label><button id="divBtn">계산</button></div>
+    <table><thead><tr><th>식</th><th>결과</th><th>자료형</th><th>설명</th></tr></thead><tbody id="divTbl"></tbody></table>
+  </div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+/* ---- Python literal parse ---- */
+function parseLit(t){t=t.trim();
+  if(/^(["']).*\1$/s.test(t))return {ty:'str',v:t.slice(1,-1)};
+  if(t==='True')return{ty:'bool',v:true};if(t==='False')return{ty:'bool',v:false};
+  if(/^[+-]?\d+$/.test(t))return{ty:'int',v:parseInt(t,10)};
+  if(/^[+-]?(\d+\.\d*|\.\d+|\d+)([eE][+-]?\d+)?$/.test(t))return{ty:'float',v:parseFloat(t)};
+  return null;}
+function pyFloatStr(x){if(Number.isInteger(x)&&Math.abs(x)<1e16)return x.toFixed(1);if(x===Infinity)return'inf';if(x===-Infinity)return'-inf';if(Number.isNaN(x))return'nan';return String(x);}
+function show(o){switch(o.ty){case'str':return `'${o.v}'`;case'bool':return o.v?'True':'False';case'float':return pyFloatStr(o.v);default:return String(o.v);}}
+/* ---- conversions ---- */
+function convert(o,to){
+  const s=typeof o.v==='string'?o.v:null;
+  if(to==='int'){
+    if(o.ty==='int')return{ok:true,r:{ty:'int',v:o.v},why:'이미 정수. 같은 값을 돌려줍니다.'};
+    if(o.ty==='bool')return{ok:true,r:{ty:'int',v:o.v?1:0},why:'True는 1, False는 0으로.'};
+    if(o.ty==='float')return{ok:true,r:{ty:'int',v:Math.trunc(o.v)},why:`소수점 아래를 <b>버립니다</b>(반올림 아님). 반올림은 round(${pyFloatStr(o.v)}) = ${Math.round(o.v)}.`};
+    if(/^\s*[+-]?\d+\s*$/.test(s))return{ok:true,r:{ty:'int',v:parseInt(s,10)},why:'문자열이 정수 모양이면 성공. 양 끝 공백은 허용.'};
+    return{ok:false,err:`ValueError: invalid literal for int() with base 10: '${s}'`,why:'int()는 문자열 안에 <b>소수점이나 글자</b>가 있으면 실패합니다. 먼저 float()로 바꾼 뒤 int()로: <code>int(float("3.5"))</code>.'};}
+  if(to==='float'){
+    if(o.ty==='float')return{ok:true,r:o,why:'이미 실수.'};
+    if(o.ty==='int')return{ok:true,r:{ty:'float',v:o.v},why:'정수 → 실수. 표시에 .0 이 붙습니다.'};
+    if(o.ty==='bool')return{ok:true,r:{ty:'float',v:o.v?1:0},why:'True → 1.0, False → 0.0'};
+    const t=s.trim();
+    if(/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(t)||/^[+-]?(inf|nan|infinity)$/i.test(t))return{ok:true,r:{ty:'float',v:/inf/i.test(t)?(t.startsWith('-')?-Infinity:Infinity):(/nan/i.test(t)?NaN:parseFloat(t))},why:'실수 모양 문자열. 지수 표기(1.5e3)와 공백도 허용됩니다.'};
+    return{ok:false,err:`ValueError: could not convert string to float: '${s}'`,why:'숫자로 읽을 수 없는 글자가 섞여 있습니다. 시리얼 노이즈가 이런 오류를 만듭니다.'};}
+  if(to==='str'){return{ok:true,r:{ty:'str',v:show(o).replace(/^'|'$/g,'')},why:'str()은 어떤 값이든 <b>항상 성공</b>합니다. float는 3.0처럼 .0을 유지합니다.'};}
+  if(to==='bool'){
+    if(o.ty==='bool')return{ok:true,r:o,why:'이미 bool.'};
+    if(o.ty==='str')return{ok:true,r:{ty:'bool',v:s.length>0},why:s.length?`<b>비어 있지 않은</b> 문자열은 무엇이든 True. "${s}"도 True입니다 — 내용이 아니라 <b>길이</b>만 봅니다.`:'빈 문자열 ""만 False.'};
+    return{ok:true,r:{ty:'bool',v:o.v!==0},why:o.v===0?'0 과 0.0 은 False.':'0이 아닌 수는 모두 True.'};}
+}
+const POS={int:[75,46],float:[575,46],str:[75,254],bool:[575,254]};
+function pos(k){const st=$('#stage').getBoundingClientRect();const b=document.getElementById('b_'+k).getBoundingClientRect();return[b.left-st.left+b.width/2,b.top-st.top+b.height/2];}
+function setStatus(c,m){const s=$('#status');s.className='status '+c;s.innerHTML=m;}
+let busy=false;
+async function run(){
+  if(busy)return;const o=parseLit($('#valIn').value);const to=$('#target').value;
+  if(!o){setStatus('warn','값을 읽을 수 없습니다. 예: 42, 3.5, "42", True');return;}
+  busy=true;document.querySelectorAll('.box').forEach(b=>b.classList.remove('src','hit','miss'));
+  document.getElementById('b_'+o.ty).classList.add('src');
+  const tk=$('#token');const [x1,y1]=pos(o.ty),[x2,y2]=pos(to);
+  tk.className='token';tk.textContent=show(o);tk.style.transition='none';tk.style.left=x1+'px';tk.style.top=y1+'px';tk.style.opacity=1;
+  $('#code').innerHTML=`x = ${show(o)}        <span class="k"># ${o.ty}</span>\n${to}(x)`;
+  setStatus('info',`${o.ty} 값 ${show(o)} 을 ${to}() 로 보냅니다…`);
+  await new Promise(r=>setTimeout(r,80));tk.style.transition='';
+  const res=convert(o,to);
+  if(o.ty===to){await new Promise(r=>setTimeout(r,300));}
+  else{tk.style.left=x2+'px';tk.style.top=y2+'px';await new Promise(r=>setTimeout(r,950));}
+  if(res.ok){tk.className='token ok';tk.textContent=show(res.r);document.getElementById('b_'+to).classList.add('hit');
+    $('#code').innerHTML+=`\n<span class="g">→ ${show(res.r)}</span>   <span class="k"># ${res.r.ty}</span>`;setStatus('ok',res.why);}
+  else{tk.className='token bad';tk.textContent='✕';document.getElementById('b_'+to).classList.add('miss');
+    $('#code').innerHTML+=`\n<span class="e">${res.err}</span>`;setStatus('warn',res.why);}
+  busy=false;
+}
+const PRESETS=[
+ {n:'int("42")',v:'"42"',t:'int',ex:'<p>시리얼로 받은 값은 전부 <b class="teal">문자열</b>입니다. 계산하려면 반드시 숫자형으로 바꿔야 합니다. 정수 모양이면 <code>int()</code>가 바로 됩니다.</p>'},
+ {n:'int("3.5") ✕',v:'"3.5"',t:'int',ex:'<p>가장 흔한 실수. <code>int()</code>는 문자열 안의 소수점을 이해하지 못합니다. 두 단계로: <code>int(float("3.5"))</code> → 3.</p>'},
+ {n:'float("3.5")',v:'"3.5"',t:'float',ex:'<p>같은 문자열이라도 <code>float()</code>는 성공합니다. 값의 모양에 맞는 변환 함수를 고르는 것이 핵심입니다.</p>'},
+ {n:'int(3.99)',v:'3.99',t:'int',ex:'<p><code>int()</code>는 <b class="red">버림</b>입니다. 3.99 → 3. 반올림이 필요하면 <code>round()</code>. ADC 전압 계산 뒤 정수 mV로 만들 때 이 차이가 결과를 바꿉니다.</p>'},
+ {n:'float("1.5e3")',v:'"1.5e3"',t:'float',ex:'<p>지수 표기도 실수로 읽힙니다. 1.5e3 = 1500.0. 센서 데이터시트나 계측기 출력에서 자주 보는 형식입니다.</p>'},
+ {n:'str(3.0)',v:'3.0',t:'str',ex:'<p><code>str()</code>은 실패하지 않습니다. 3.0은 "3.0"이 됩니다(정수 3이 아님). 송신 문자열을 만들 때 <code>"T=" + str(temp)</code> 또는 f-string을 씁니다.</p>'},
+ {n:'bool("0") → True!',v:'"0"',t:'bool',ex:'<p>퀴즈 단골. <code>bool("0")</code>은 <b class="purple">True</b>입니다. 문자열은 내용이 아니라 <b>비어 있는지</b>만 봅니다. <code>"False"</code>도 True입니다. 정말 0인지 알고 싶으면 먼저 <code>int()</code>로 바꾸세요.</p>'},
+ {n:'bool("")',v:'""',t:'bool',ex:'<p>빈 문자열만 False. 시리얼에서 빈 줄이 오면 <code>if line:</code> 으로 걸러낼 수 있는 이유입니다.</p>'},
+ {n:'int(True)',v:'True',t:'int',ex:'<p>bool은 int의 특별한 형태라 True=1, False=0으로 계산됩니다. <code>sum([True, False, True])</code> = 2 처럼 참인 개수를 셀 때 활용합니다.</p>'},
+ {n:'float("abc") ✕',v:'"abc"',t:'float',ex:'<p>노이즈로 깨진 데이터. <code>float()</code>이 실패하면 프로그램이 멈추므로 Day 2에서 <code>try / except ValueError</code>로 감쌉니다.</p>'},
+];
+$('#presets').innerHTML=PRESETS.map(p=>`<button>${p.n}</button>`).join('');
+$('#presets').querySelectorAll('button').forEach((b,i)=>b.onclick=()=>{$('#presets').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));$('#valIn').value=PRESETS[i].v;$('#target').value=PRESETS[i].t;$('#explain').innerHTML=PRESETS[i].ex;run();});
+$('#runBtn').onclick=run;
+/* division table */
+function pyDivmod(a,b){return{q:Math.floor(a/b),r:a-b*Math.floor(a/b)};}
+function div(){const a=parseLit($('#da').value),b=parseLit($('#db').value);const tb=$('#divTbl');
+  if(!a||!b||!['int','float'].includes(a.ty)||!['int','float'].includes(b.ty)){tb.innerHTML='<tr><td colspan="4" style="color:var(--red)">숫자를 입력하세요</td></tr>';return;}
+  if(b.v===0){tb.innerHTML='<tr><td colspan="4" style="color:var(--red)">ZeroDivisionError: division by zero</td></tr>';return;}
+  const isF=a.ty==='float'||b.ty==='float';const {q,r}=pyDivmod(a.v,b.v);
+  const rows=[['a / b',pyFloatStr(a.v/b.v),'float','나눗셈은 <b>항상 float</b>'],['a // b',isF?pyFloatStr(q):String(q),isF?'float':'int','내림 나눗셈 (몫). 피연산자가 모두 int면 int'],['a % b',isF?pyFloatStr(r):String(r),isF?'float':'int','나머지. 부호는 b를 따름'],['a * b',isF?pyFloatStr(a.v*b.v):String(a.v*b.v),isF?'float':'int','int끼리는 int, 하나라도 float면 float'],['a ** b',isF?pyFloatStr(Math.pow(a.v,b.v)):String(Math.pow(a.v,b.v)),isF?'float':'int','거듭제곱']];
+  tb.innerHTML=rows.map(r=>`<tr><td>${r[0].replace(/a/,show(a)).replace(/b/,show(b))}</td><td class="${r[2]==='int'?'i':'f'}">${r[1]}</td><td class="${r[2]==='int'?'i':'f'}">${r[2]}</td><td style="color:var(--dim)">${r[3]}</td></tr>`).join('');}
+$('#divBtn').onclick=div;$('#da').oninput=div;$('#db').oninput=div;div();
+$('#presets').querySelector('button').click();
+</script>
+</body>
+</html>

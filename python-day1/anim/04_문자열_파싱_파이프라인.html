@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>문자열 파싱 파이프라인 — Python Day 1</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono)}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.green{color:var(--green);border-color:var(--green)}.pill.red{color:var(--red);border-color:var(--red)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.run{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  input[type=text]{background:#0a0f1c;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:14px;width:320px;max-width:100%}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .row label{color:var(--dim);font-size:13px}
+  input[type=range]{accent-color:var(--amber)}
+  /* pipeline */
+  .pipe{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;position:relative}
+  @media(max-width:820px){.pipe{grid-template-columns:1fr}}
+  .stage{background:#0e1628;border:1px solid var(--line);border-radius:10px;padding:10px;min-height:190px;transition:border-color .25s,box-shadow .25s;position:relative}
+  .stage.cur{border-color:var(--teal);box-shadow:0 0 0 2px #2dd4bf33}
+  .stage.ok{border-color:#245c37}.stage.fail{border-color:var(--red);box-shadow:0 0 0 2px #f8717133}
+  .stage .n{font-size:11px;color:var(--dim);font-family:var(--mono)}
+  .stage .t{font-family:var(--mono);color:var(--amber);font-size:13px;margin:2px 0 8px}
+  .stage .body{display:flex;flex-direction:column;gap:6px}
+  .chip{font-family:var(--mono);font-size:13px;background:#172239;border:1px solid #2a3a5c;border-radius:6px;padding:4px 8px;animation:slide .35s;overflow-wrap:anywhere}
+  .chip .ty{font-size:10px;color:var(--dim);margin-left:6px}
+  .chip.str{color:var(--teal)}.chip.num{color:var(--amber);border-color:#6b5322}.chip.list{color:var(--blue)}.chip.bad{color:var(--red);border-color:var(--red)}
+  .chip .key{color:var(--purple)}
+  .chip .ws{background:#2a3a5c;color:var(--red);border-radius:3px;padding:0 3px}
+  @keyframes slide{from{transform:translateX(-14px);opacity:0}to{transform:none;opacity:1}}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:8px 0;font-size:14px;overflow-x:auto}
+  .ln{padding:3px 12px;border-left:3px solid transparent;white-space:pre}
+  .ln.cur{background:#1f1a0c;border-left-color:var(--amber)}
+  .ln .k{color:var(--purple)}.ln .s{color:var(--teal)}.ln .c{color:#5d7292}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .result{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .meter{background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:8px 10px}.meter .k{font-size:12px;color:var(--dim)}.meter .v{font-family:var(--mono);font-size:18px;color:var(--amber)}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}
+  .explain code{font-family:var(--mono);color:var(--blue)}
+  .grid{display:grid;grid-template-columns:1.3fr 1fr;gap:14px}
+  @media(max-width:820px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>문자열 파싱 파이프라인</h1>
+  <p class="sub">시리얼로 받은 한 줄이 <code style="font-family:var(--mono);color:var(--blue)">strip → 프레임 검증 → split(",") → split("=") → 형변환</code> 단계를 거치며 숫자로 바뀌는 과정을 봅니다.</p>
+  <div class="pills">
+    <span class="pill teal">str</span><span class="pill blue">list</span><span class="pill amber">int / float</span><span class="pill red">손상 프레임 → 버림</span>
+  </div>
+  <div class="panel">
+    <h2>입력 프레임</h2>
+    <div class="presets" id="presets" style="margin-bottom:10px"></div>
+    <div class="row">
+      <input type="text" id="input" spellcheck="false">
+      <button class="run" id="runBtn">파싱 시작</button>
+      <button id="stepBtn">한 단계</button>
+      <label>속도 <input type="range" id="speed" min="100" max="1200" value="600"></label>
+    </div>
+    <div style="color:var(--dim);font-size:12px;margin-top:6px">개행은 <code style="font-family:var(--mono)">\n</code>, 공백은 그대로 입력하세요. repr 표시에서 <span class="ws">␣</span>는 공백, <span class="ws">\n</span>은 개행입니다.</div>
+  </div>
+
+  <div class="panel">
+    <h2>파이프라인</h2>
+    <div class="pipe" id="pipe"></div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="panel"><h2>Python 코드</h2><div class="code" id="code"></div></div>
+    </div>
+    <div>
+      <div class="panel"><h2>결과 변수</h2><div class="result"><div class="meter"><div class="k">T (float)</div><div class="v" id="rT">—</div></div><div class="meter"><div class="k">H (int)</div><div class="v" id="rH">—</div></div><div class="meter"><div class="k">D (int)</div><div class="v" id="rD">—</div></div></div></div>
+      <div class="panel"><h2>상태</h2><div class="status info" id="status"></div></div>
+    </div>
+  </div>
+  <div class="panel explain" id="explain"></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const PRESETS=[
+ {name:'정상 프레임',v:'$T=25.3,H=60,D=120*\\n',ex:'<p>가장 흔한 형태입니다. 마지막의 <code>\\n</code>은 송신 쪽이 <code>println</code>으로 붙인 개행이므로 <b class="teal">strip()</b>으로 먼저 지웁니다. 그 다음 프레임 기호를 확인하고 <code>[1:-1]</code>로 껍질을 벗긴 뒤 두 번 쪼개서 숫자로 바꿉니다.</p>'},
+ {name:'앞뒤 공백',v:'  $T=25.3, H=60 ,D=120*  ',ex:'<p><code>strip()</code>은 <b>양 끝</b> 공백만 지웁니다. 쉼표 옆의 공백 <code>" H=60 "</code>은 남아서 <code>split("=")</code> 후 <code>" H"</code>, <code>"60 "</code>이 됩니다. 값은 <code>int("60 ")</code>가 허용하지만 키 <code>" H"</code>는 <code>"H"</code>와 다릅니다. 조각마다 다시 <code>strip()</code>이 필요합니다.</p>'},
+ {name:'손상 프레임 ($ 없음)',v:'T=99.9,H=00,D=000',ex:'<p>프레임 검증에서 걸러집니다. 통신 중 앞부분이 잘리면 이런 줄이 옵니다. <b class="red">검증 없이</b> 바로 <code>split</code>하면 잘못된 값이 정상값처럼 들어가므로, 시작·끝 기호 확인은 꼭 필요합니다.</p>'},
+ {name:'필드 누락 (H=)',v:'$T=25.3,H=,D=120*',ex:'<p><code>"H="</code>를 <code>split("=")</code>하면 <code>["H", ""]</code>가 되고, <code>int("")</code>는 <b class="red">ValueError</b>를 냅니다. 프로그램이 여기서 멈추지 않게 하려면 Day 2의 <code>try / except</code>가 필요합니다.</p>'},
+ {name:'잘못된 숫자',v:'$T=2S.3,H=60,D=120*',ex:'<p>노이즈로 글자가 바뀌면 <code>float("2S.3")</code>이 실패합니다. 형변환 단계가 <b class="red">마지막 방어선</b>입니다. 실패 시 그 줄을 버리고 다음 줄로 넘어가는 처리를 Day 2에서 배웁니다.</p>'},
+];
+const CODE=['line = ser.readline().decode()   # 수신','line = line.strip()','if line.startswith("$") and line.endswith("*"):','    body = line[1:-1]','    fields = body.split(",")','    for field in fields:','        key, value = field.split("=")','        if key == "T": T = float(value)','        else:         val = int(value)','else:','    print("손상 프레임, 버림")'];
+const STAGES=[{n:'1',t:'strip()'},{n:'2',t:'프레임 검증'},{n:'3',t:'split(",")'},{n:'4',t:'split("=")'},{n:'5',t:'형변환'}];
+let active=0,steps=[],pos=-1,timer=null;
+const rep=s=>s.replace(/\\n/g,'\n');
+function reprHtml(s){return '"'+s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/ /g,'<span class="ws">␣</span>').replace(/\n/g,'<span class="ws">\\n</span>')+'"';}
+function renderPresets(){$('#presets').innerHTML=PRESETS.map((p,i)=>`<button data-i="${i}" class="${i===active?'active':''}">${p.name}</button>`).join('');$('#presets').querySelectorAll('button').forEach(b=>b.onclick=()=>{active=+b.dataset.i;$('#input').value=PRESETS[active].v;$('#explain').innerHTML=PRESETS[active].ex;renderPresets();build();});}
+function renderCode(cur){$('#code').innerHTML=CODE.map((l,i)=>`<div class="ln ${cur===i?'cur':''}">${l.replace(/</g,'&lt;').replace(/(#.*)$/,'<span class="c">$1</span>').replace(/("[^"]*")/g,'<span class="s">$1</span>').replace(/\b(if|and|else|for|in|print|float|int)\b/g,'<span class="k">$1</span>')}</div>`).join('');}
+function setStatus(c,m){const s=$('#status');s.className='status '+c;s.innerHTML=m;}
+
+/* build step list from input */
+function build(){
+  stop();pos=-1;const raw=rep($('#input').value);steps=[];
+  const stripped=raw.trim();
+  steps.push({stage:0,code:1,chips:[{h:reprHtml(stripped),ty:'str',c:'str'}],msg:`양 끝 공백·개행 제거 → 길이 ${raw.length} → ${stripped.length}`,cls:'info'});
+  const ok=stripped.startsWith('$')&&stripped.endsWith('*');
+  if(!ok){steps.push({stage:1,code:2,chips:[{h:`startswith("$") → ${stripped.startsWith('$')}`,c:stripped.startsWith('$')?'str':'bad'},{h:`endswith("*") → ${stripped.endsWith('*')}`,c:stripped.endsWith('*')?'str':'bad'}],msg:'프레임 기호가 맞지 않음 → 조건 거짓',cls:'warn',fail:true});
+    steps.push({stage:1,code:10,chips:[],msg:'손상 프레임, 버림. 다음 줄을 기다립니다.',cls:'warn',fail:true,end:true});return show();}
+  const body=stripped.slice(1,-1);
+  steps.push({stage:1,code:3,chips:[{h:'startswith("$") → True',c:'str'},{h:'endswith("*") → True',c:'str'},{h:'body = '+reprHtml(body),c:'str',ty:'str'}],msg:'조건 참 → [1:-1]로 $ 와 * 를 벗겨 body 생성',cls:'ok'});
+  const fields=body.split(',');
+  steps.push({stage:2,code:4,chips:[{h:'['+fields.map(f=>reprHtml(f)).join(', ')+']',c:'list',ty:`list, len ${fields.length}`}],msg:`쉼표로 나눠 리스트 ${fields.length}개 조각`,cls:'ok'});
+  const pairs=[];let bad=null;
+  fields.forEach(f=>{const p=f.split('=');pairs.push(p);});
+  steps.push({stage:3,code:6,chips:pairs.map(p=>({h:p.length===2?`<span class="key">${reprHtml(p[0])}</span> , ${reprHtml(p[1])}`:'['+p.map(reprHtml).join(', ')+']',c:p.length===2?'list':'bad',ty:p.length===2?'key, value':`조각 ${p.length}개 → 언패킹 오류`})),msg:'각 조각을 "=" 기준으로 키와 값으로 분리',cls:pairs.every(p=>p.length===2)?'ok':'warn',fail:!pairs.every(p=>p.length===2)});
+  if(!pairs.every(p=>p.length===2)){steps[steps.length-1].end=true;steps[steps.length-1].msg+=' — 조각이 2개가 아니면 <b>ValueError: not enough values to unpack</b>';return show();}
+  const res={};const chips=[];
+  for(const [k0,v0] of pairs){const k=k0.trim(),v=v0.trim();
+    const isT=k==='T';const num=isT?Number(v):(/^-?\d+$/.test(v)?parseInt(v,10):NaN);
+    if(v===''||Number.isNaN(num)){chips.push({h:`${isT?'float':'int'}(${reprHtml(v0)}) → <b>ValueError</b>`,c:'bad'});bad=k;break;}
+    res[k]=num;chips.push({h:`${isT?'float':'int'}(${reprHtml(v0)}) → ${isT?num.toFixed(1):num}`,c:'num',ty:isT?'float':'int',warn:k0!==k?`키 ${reprHtml(k0)}에 공백`:null});}
+  steps.push({stage:4,code:7,chips,msg:bad?`<b>${bad}</b> 값을 숫자로 바꿀 수 없음 → 프로그램 중단 (Day 2: try/except로 방어)`:'모든 값이 숫자로 변환됨',cls:bad?'warn':'ok',fail:!!bad,end:true,res});
+  show();
+}
+function show(){
+  $('#pipe').innerHTML=STAGES.map((s,i)=>{const done=steps.slice(0,pos+1).filter(x=>x.stage===i);const last=done[done.length-1];const cur=pos>=0&&steps[pos].stage===i;
+    return `<div class="stage ${cur?'cur':''} ${last?(last.fail?'fail':'ok'):''}"><div class="n">단계 ${s.n}</div><div class="t">${s.t}</div><div class="body">${done.map(d=>d.chips.map(c=>`<div class="chip ${c.c}">${c.h}${c.ty?`<span class="ty">${c.ty}</span>`:''}${c.warn?`<div style="font-size:11px;color:var(--red)">${c.warn}</div>`:''}</div>`).join('')).join('')}</div></div>`;}).join('');
+  const cur=steps[pos];renderCode(cur?cur.code:0);
+  ['T','H','D'].forEach(k=>{const r=cur&&cur.res&&cur.res[k];$('#r'+k).textContent=r===undefined||r===null?'—':(k==='T'?r.toFixed(1):r);});
+  if(pos<0)setStatus('info','"파싱 시작" 또는 "한 단계"를 누르세요. 원시 문자열: '+reprHtml(rep($('#input').value)));else setStatus(cur.cls,cur.msg);
+}
+function step(){if(pos>=steps.length-1)return;pos++;show();if(pos>=steps.length-1)stop();}
+function stop(){clearInterval(timer);timer=null;}
+$('#runBtn').onclick=()=>{build();step();timer=setInterval(()=>{if(pos>=steps.length-1)stop();else step();},1300-+$('#speed').value);};
+$('#stepBtn').onclick=()=>{if(pos<0||pos>=steps.length-1)build();step();};
+$('#input').onchange=()=>{build();};
+$('#input').value=PRESETS[0].v;$('#explain').innerHTML=PRESETS[0].ex;renderPresets();build();
+</script>
+</body>
+</html>

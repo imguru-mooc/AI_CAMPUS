@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Colab 셀 실행 순서 — Python Day 1</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono)}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.green{color:var(--green);border-color:var(--green)}.pill.red{color:var(--red);border-color:var(--red)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.danger{border-color:var(--red);color:var(--red)}
+  button:disabled{opacity:.4;cursor:default}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .grid{display:grid;grid-template-columns:1.5fr 1fr;gap:14px}
+  @media(max-width:820px){.grid{grid-template-columns:1fr}}
+  /* notebook mockup */
+  .nb{background:#0a0f1c;border:1px solid var(--line);border-radius:10px;padding:10px}
+  .nbbar{display:flex;gap:8px;align-items:center;padding:4px 6px 10px;border-bottom:1px solid var(--line);margin-bottom:8px;color:var(--dim);font-size:13px}
+  .nbbar .dot{width:10px;height:10px;border-radius:50%;background:#4ade80}
+  .nbbar .dot.dead{background:#f87171}
+  .cell{display:grid;grid-template-columns:70px 1fr;gap:8px;margin:6px 0;border:1px solid transparent;border-radius:8px;padding:6px;transition:border-color .2s,background .2s}
+  .cell.running{border-color:var(--amber);background:#1f1a0c44}
+  .cell.err{border-color:var(--red)}
+  .cell .gut{display:flex;flex-direction:column;align-items:center;gap:4px}
+  .runb{width:32px;height:32px;border-radius:50%;background:#172239;border:1px solid #2a3a5c;color:var(--teal);font-size:14px;padding:0;display:flex;align-items:center;justify-content:center}
+  .runb:hover{border-color:var(--teal)}
+  .cnt{font-family:var(--mono);font-size:11px;color:var(--dim)}
+  .cnt.fresh{color:var(--amber)}
+  .src{font-family:var(--mono);font-size:14px;white-space:pre;background:#0e1628;border-radius:6px;padding:8px 10px;color:var(--text)}
+  .src .c{color:#5d7292}.src .k{color:var(--purple)}.src .n{color:var(--amber)}.src .s{color:var(--teal)}
+  .outp{font-family:var(--mono);font-size:13px;white-space:pre-wrap;padding:6px 10px;color:var(--green);min-height:0}
+  .outp.err{color:var(--red)}
+  .outp.stale{color:#3f6e50}
+  .outp .lbl{color:var(--dim);font-size:11px}
+  table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:14px}
+  th{color:var(--dim);font-weight:600;text-align:left;padding:4px 8px;border-bottom:1px solid var(--line);font-size:12px}
+  td{padding:5px 8px;border-bottom:1px solid #16203a}
+  td.name{color:var(--blue)}td.val{color:var(--amber)}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}
+  .explain code{font-family:var(--mono);color:var(--blue)}
+  .hist{font-family:var(--mono);font-size:13px;color:var(--dim);min-height:22px}
+  .hist b{color:var(--amber)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Colab 셀 실행 순서</h1>
+  <p class="sub">노트북의 변수는 <b style="color:var(--amber)">셀의 위치</b>가 아니라 <b style="color:var(--teal)">실행한 순서</b>대로 만들어집니다. 셀 왼쪽의 ▶를 아무 순서로 눌러 보고, 오른쪽 커널 변수 표가 어떻게 달라지는지 보세요.</p>
+  <div class="pills">
+    <span class="pill amber">[n] 실행 번호</span><span class="pill teal">커널 = 변수가 사는 곳</span><span class="pill red">NameError = 아직 안 만든 변수</span><span class="pill green">출력은 그 순간의 스냅샷</span>
+  </div>
+  <div class="panel">
+    <h2>시나리오 (자동 재생)</h2>
+    <div class="presets" id="presets"></div>
+    <div class="row" style="margin-top:10px"><button class="danger" id="restart">런타임 다시 시작</button><button id="runAll">모두 실행 (위→아래)</button><span class="hist" id="hist"></span></div>
+  </div>
+  <div class="grid">
+    <div class="panel">
+      <h2>노트북</h2>
+      <div class="nb">
+        <div class="nbbar"><span class="dot" id="dot"></span><span id="kstate">런타임 연결됨</span><span style="margin-left:auto">Day1_practice.ipynb</span></div>
+        <div id="cells"></div>
+      </div>
+    </div>
+    <div>
+      <div class="panel"><h2>커널 변수</h2><table><thead><tr><th>이름</th><th>값</th><th>만든 셀</th></tr></thead><tbody id="vars"></tbody></table></div>
+      <div class="panel"><h2>상태</h2><div class="status info" id="status">▶를 눌러 셀을 실행하세요.</div></div>
+    </div>
+  </div>
+  <div class="panel explain" id="explain"><p>왼쪽의 <code>[ ]</code> 안 숫자는 <b class="amber">몇 번째로 실행됐는지</b>입니다. 위에서 아래 순서와 다르면 화면의 코드와 커널의 실제 상태가 어긋나기 시작합니다. 의심스러울 때는 <b class="red">런타임 다시 시작</b> 후 <b class="teal">모두 실행</b>이 가장 확실합니다.</p></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+/* 셀 정의: 실행 시 커널에 하는 일을 JS로 흉내 */
+const CELLS=[
+ {src:'adc_raw = 512\nvref = 3.3',needs:[],run:k=>{k.adc_raw=512;k.vref=3.3;return '';}},
+ {src:'voltage = adc_raw / 1023 * vref\nprint(voltage)',needs:['adc_raw','vref'],run:k=>{k.voltage=k.adc_raw/1023*k.vref;return String(k.voltage);}},
+ {src:'print(f"{voltage:.2f} V")',needs:['voltage'],run:k=>`${k.voltage.toFixed(2)} V`},
+ {src:'vref = 5.0   # 기준 전압을 바꿔 봄',needs:[],run:k=>{k.vref=5.0;return '';}},
+];
+let kernel={},origin={},counter=0,cells=[],hist=[],busy=false,alive=true;
+function reset(){kernel={};origin={};counter=0;hist=[];cells=CELLS.map(()=>({cnt:null,out:'',err:false,stale:false}));}
+function hl(s){return s.replace(/</g,'&lt;').replace(/(#.*)$/gm,'<span class="c">$1</span>').replace(/(f?"[^"]*")/g,'<span class="s">$1</span>').replace(/\b(print)\b/g,'<span class="k">$1</span>').replace(/\b(\d+\.?\d*)\b(?![^<]*<\/span>)/g,'<span class="n">$1</span>');}
+function render(running=-1){
+  $('#cells').innerHTML=CELLS.map((c,i)=>{const s=cells[i];return `<div class="cell ${running===i?'running':''} ${s.err?'err':''}"><div class="gut"><button class="runb" data-i="${i}" title="셀 실행" ${busy||!alive?'disabled':''}>▶</button><span class="cnt ${s.cnt===counter&&counter>0?'fresh':''}">[${s.cnt===null?' ':s.cnt}]</span></div><div><div class="src">${hl(c.src)}</div>${s.out?`<div class="outp ${s.err?'err':''} ${s.stale?'stale':''}">${s.stale?'<span class="lbl">(이전 실행의 출력) </span>':''}${s.out}</div>`:''}</div></div>`;}).join('');
+  $('#cells').querySelectorAll('.runb').forEach(b=>b.onclick=()=>runCell(+b.dataset.i));
+  const ks=Object.keys(kernel);$('#vars').innerHTML=ks.length?ks.map(k=>`<tr><td class="name">${k}</td><td class="val">${kernel[k]}</td><td style="color:var(--dim)">셀 ${origin[k]}</td></tr>`).join(''):'<tr><td colspan="3" style="color:var(--dim)">비어 있음</td></tr>';
+  $('#hist').innerHTML=hist.length?'실행 순서: '+hist.map(h=>`<b>${h}</b>`).join(' → '):'';
+  $('#dot').className='dot'+(alive?'':' dead');$('#kstate').textContent=alive?'런타임 연결됨':'런타임 종료됨 (다시 시작 필요)';
+}
+function setStatus(c,m){const s=$('#status');s.className='status '+c;s.innerHTML=m;}
+async function runCell(i,quiet=false){
+  if(busy||!alive)return;busy=true;const c=CELLS[i],s=cells[i];render(i);
+  await new Promise(r=>setTimeout(r,quiet?350:600));
+  counter++;s.cnt=counter;hist.push(i+1);s.stale=false;
+  const missing=c.needs.find(n=>!(n in kernel));
+  if(missing){s.err=true;s.out=`NameError: name '${missing}' is not defined`;setStatus('warn',`셀 ${i+1}은 <b>${missing}</b>를 쓰지만 커널에 아직 없습니다. 그 변수를 만드는 셀을 먼저 실행하세요.`);}
+  else{s.err=false;const out=c.run(kernel);s.out=out;Object.keys(kernel).forEach(k=>{if(!(k in origin))origin[k]=i+1;});
+    // update origin for vars this cell assigns
+    if(i===0){origin.adc_raw=1;origin.vref=1;}if(i===1)origin.voltage=2;if(i===3)origin.vref=4;
+    setStatus('ok',`셀 ${i+1} 실행 → [${counter}]. ${out?'출력: '+out:'변수만 바뀌고 출력은 없습니다.'}`);}
+  busy=false;render();
+}
+function restart(){reset();alive=true;cells.forEach(c=>{c.out='';c.cnt=null;c.err=false;});render();setStatus('info','런타임을 다시 시작했습니다. 커널 변수는 모두 사라졌고 실행 번호도 초기화됐습니다. 화면의 코드는 그대로입니다.');}
+$('#restart').onclick=restart;
+async function runAll(){for(let i=0;i<CELLS.length;i++){await runCell(i,true);}}
+$('#runAll').onclick=runAll;
+const SCEN=[
+ {name:'위에서 아래로',steps:[0,1,2],ex:'<p>정상 경로. 1이 변수를 만들고, 2가 그걸로 계산하고, 3이 출력합니다. 실행 번호가 [1][2][3]으로 순서와 일치합니다.</p>'},
+ {name:'2번 셀부터 실행',steps:['R',1],ex:'<p>가장 흔한 첫날 오류. 코드는 위에 있어도 <b class="red">실행하지 않았으면 커널에 없습니다</b>. 셀 2는 <code>adc_raw</code>를 찾지 못해 NameError. 해결: 셀 1을 먼저 실행.</p>'},
+ {name:'4 실행 후 3만 다시 실행',steps:['R',0,1,2,3,2],ex:'<p>셀 4로 <code>vref</code>를 5.0으로 바꿨는데 셀 3의 출력은 여전히 1.65 V입니다. <code>voltage</code>는 <b class="amber">셀 2를 실행한 순간</b>에 계산된 값이라, 셀 2를 다시 실행하기 전까지는 바뀌지 않습니다. 실행 순서 1→2→3→4→3 을 보세요.</p>'},
+ {name:'4 실행 후 2·3 다시 실행',steps:['R',0,1,2,3,1,2],ex:'<p>셀 2를 다시 실행하면 새 <code>vref</code>로 재계산되어 2.50 V가 됩니다. 화면에는 셀 3의 옛 출력이 남아 있을 수 있으니 <b>출력은 그 순간의 스냅샷</b>이라는 점을 기억하세요.</p>'},
+ {name:'런타임 재시작 후 3 실행',steps:[0,1,2,'R',2],ex:'<p>런타임을 다시 시작하면 <b class="red">커널 변수가 전부 사라집니다</b>. 화면에 코드와 이전 출력이 남아 있어도 <code>voltage</code>는 없습니다. 세션이 끊겼을 때(90분 무활동)도 같은 상황이 됩니다. 해결: 위에서부터 다시 실행.</p>'},
+];
+$('#presets').innerHTML=SCEN.map(s=>`<button>${s.name}</button>`).join('');
+$('#presets').querySelectorAll('button').forEach((b,i)=>b.onclick=async()=>{if(busy)return;$('#presets').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));$('#explain').innerHTML=SCEN[i].ex;restart();
+  for(const st of SCEN[i].steps){if(st==='R'){await new Promise(r=>setTimeout(r,500));restart();await new Promise(r=>setTimeout(r,500));}else{await runCell(st);await new Promise(r=>setTimeout(r,700));}}});
+reset();render();
+</script>
+</body>
+</html>

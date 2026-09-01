@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>비트 마스크 시뮬레이터 — Python Day 1</title>
+<style>
+  :root{
+    --bg:#0b1220; --panel:#111a2e; --line:#1f2b45; --text:#dbe4f0; --dim:#8a9bb8;
+    --amber:#f5b942; --teal:#2dd4bf; --blue:#60a5fa; --green:#4ade80; --red:#f87171; --purple:#c084fc;
+    --mono:"Consolas","D2Coding","JetBrains Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px;font-weight:700}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono)}
+  .pill.teal{color:var(--teal);border-color:var(--teal)} .pill.amber{color:var(--amber);border-color:var(--amber)}
+  .pill.blue{color:var(--blue);border-color:var(--blue)} .pill.green{color:var(--green);border-color:var(--green)}
+  .pill.red{color:var(--red);border-color:var(--red)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)} button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.run{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .grid{display:grid;grid-template-columns:1.4fr 1fr;gap:14px}
+  @media(max-width:820px){.grid{grid-template-columns:1fr}}
+  /* bit table */
+  .bits{display:grid;grid-template-columns:110px repeat(8,1fr) 90px;gap:4px;align-items:center;font-family:var(--mono)}
+  .bits .lbl{color:var(--dim);font-size:13px}
+  .bits .idx{text-align:center;color:var(--dim);font-size:12px}
+  .cell{height:44px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:6px;font-size:20px;background:#0e1628;transition:all .2s;user-select:none}
+  .cell.one{color:var(--amber);border-color:#6b5322;background:#1f1a0c}
+  .cell.zero{color:#4b5a75}
+  .cell.click{cursor:pointer} .cell.click:hover{border-color:var(--teal)}
+  .cell.hl{box-shadow:0 0 0 2px var(--teal) inset;transform:scale(1.06)}
+  .cell.res.one{color:var(--green);border-color:#245c37;background:#0d2216}
+  .cell.empty{color:transparent}
+  .val{font-size:13px;color:var(--dim);text-align:right}
+  .opcell{color:var(--purple);font-size:18px;text-align:center}
+  .ops{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+  .ops button{font-family:var(--mono);font-size:15px;padding:6px 14px}
+  /* LEDs */
+  .leds{display:flex;gap:10px;justify-content:center;margin:8px 0 4px}
+  .led{width:34px;height:34px;border-radius:50%;background:#1a2236;border:2px solid #2a3a5c;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;color:#4b5a75;transition:all .3s}
+  .led.on{background:#f5b942;box-shadow:0 0 14px #f5b942aa;color:#3a2e12;border-color:#f5b942}
+  .led.res.on{background:#4ade80;box-shadow:0 0 14px #4ade80aa;border-color:#4ade80;color:#0d2216}
+  .ledlbl{text-align:center;color:var(--dim);font-size:12px;margin-bottom:4px}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:15px;white-space:pre;overflow-x:auto}
+  .code .k{color:var(--purple)} .code .n{color:var(--amber)} .code .c{color:#5d7292}
+  .meters{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+  .meter{background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  .meter .k{font-size:12px;color:var(--dim)} .meter .v{font-family:var(--mono);font-size:17px}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}
+  .status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}
+  .status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0} .explain b.teal{color:var(--teal)} .explain b.amber{color:var(--amber)} .explain b.green{color:var(--green)} .explain b.red{color:var(--red)} .explain b.purple{color:var(--purple)}
+  .explain code{font-family:var(--mono);color:var(--blue)}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  input[type=range]{accent-color:var(--amber)}
+  .hidden{display:none}
+  /* 16-bit mode */
+  .bits16{display:grid;grid-template-columns:90px repeat(16,1fr);gap:3px;font-family:var(--mono);align-items:center}
+  .bits16 .cell{height:36px;font-size:15px}
+  .bits16 .lbl{color:var(--dim);font-size:12px}
+  .hi .cell.one{color:var(--blue);border-color:#2d4a7a;background:#0f1a30} .lo .cell.one{color:var(--teal);border-color:#1f5c55;background:#0d2422}
+  @media(prefers-reduced-motion:reduce){.cell,.led{transition:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>비트 마스크 시뮬레이터</h1>
+  <p class="sub">8비트 레지스터를 LED 8개처럼 놓고, 마스크와 연산자가 비트 하나하나에 어떻게 적용되는지 순서대로 확인합니다.</p>
+  <div class="pills">
+    <span class="pill amber">읽기 &amp; mask</span><span class="pill green">설정 | mask</span><span class="pill teal">해제 &amp; ~mask</span><span class="pill blue">토글 ^ mask</span><span class="pill red">8비트로 자르기 &amp; 0xFF</span>
+  </div>
+
+  <div class="panel">
+    <h2>프리셋</h2>
+    <div class="presets" id="presets"></div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="panel" id="mode8">
+        <h2>레지스터 연산 (A 셀과 마스크 셀은 클릭해서 바꿀 수 있습니다)</h2>
+        <div class="bits" id="bitTable"></div>
+        <div class="ops" id="ops"></div>
+        <div class="row">
+          <button class="run" id="runBtn">한 비트씩 실행</button>
+          <button id="instantBtn">바로 계산</button>
+          <label style="color:var(--dim);font-size:13px">속도 <input type="range" id="speed" min="80" max="700" value="320"></label>
+          <label style="color:var(--dim);font-size:13px">시프트 칸수 <input type="number" id="shiftN" min="1" max="7" value="1" style="width:50px;background:#0a0f1c;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font-family:var(--mono)"></label>
+        </div>
+      </div>
+      <div class="panel hidden" id="mode16">
+        <h2>16비트 값 분리·결합</h2>
+        <div class="bits16" id="bits16"></div>
+        <div class="row" style="margin-top:10px">
+          <button class="run" id="split16">분리 (&gt;&gt; 8, &amp; 0xFF)</button>
+          <button id="join16">결합 ((hi &lt;&lt; 8) | lo)</button>
+          <label style="color:var(--dim);font-size:13px">값 <input type="text" id="val16" value="0x12A5" style="width:90px;background:#0a0f1c;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font-family:var(--mono)"></label>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Python 코드</h2>
+        <div class="code" id="code"></div>
+      </div>
+    </div>
+    <div>
+      <div class="panel">
+        <h2>PORT 레지스터 LED</h2>
+        <div class="ledlbl">연산 전 (A)</div>
+        <div class="leds" id="ledsA"></div>
+        <div class="ledlbl" style="margin-top:8px">연산 후 (결과)</div>
+        <div class="leds" id="ledsR"></div>
+        <div class="meters">
+          <div class="meter"><div class="k">A</div><div class="v" id="mA">—</div></div>
+          <div class="meter"><div class="k">마스크</div><div class="v" id="mM">—</div></div>
+          <div class="meter"><div class="k">결과</div><div class="v" id="mR">—</div></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>상태</h2>
+        <div class="status info" id="status">프리셋을 고르거나 셀을 클릭해 값을 만든 뒤 실행하세요.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel explain" id="explain"></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const state={a:0,m:0,op:'AND',res:null,busy:false,mode:8};
+const OPS=[
+  {id:'AND',sym:'&',name:'AND',rule:'둘 다 1일 때만 1',color:'amber'},
+  {id:'OR',sym:'|',name:'OR',rule:'하나라도 1이면 1',color:'green'},
+  {id:'XOR',sym:'^',name:'XOR',rule:'서로 다르면 1',color:'blue'},
+  {id:'NOT',sym:'~',name:'NOT',rule:'0↔1 뒤집기',color:'teal'},
+  {id:'SHL',sym:'<<',name:'왼쪽 시프트',rule:'왼쪽으로 밀기, 오른쪽은 0 채움',color:'purple'},
+  {id:'SHR',sym:'>>',name:'오른쪽 시프트',rule:'오른쪽으로 밀기, 왼쪽은 0 채움',color:'purple'},
+];
+const PRESETS=[
+  {name:'LED 켜기 (설정)',a:0b00000000,m:1<<3,op:'OR',code:'LED = 1 << 3\nPORT = PORT | LED     # PORT |= LED',
+   ex:'<p><b class="green">설정(set)</b>은 <code>OR</code>를 씁니다. 마스크의 1인 자리는 무조건 1이 되고, 0인 자리는 원래 값이 그대로 남습니다. 3번 핀만 켜고 나머지 핀은 건드리지 않습니다.</p>'},
+  {name:'핀 끄기 (해제)',a:0b11111111,m:(~(1<<3))&0xFF,op:'AND',code:'LED = 1 << 3\nPORT = PORT & ~LED    # ~LED = 0b11110111\n# 파이썬에서는 (PORT & ~LED) & 0xFF 로 잘라 주는 습관',
+   ex:'<p><b class="teal">해제(clear)</b>는 마스크를 뒤집은 <code>~mask</code>와 <code>AND</code>합니다. 뒤집힌 마스크는 3번 자리만 0이므로, 그 자리만 0이 되고 나머지는 유지됩니다.</p><p>Python 정수는 비트 폭이 무한이라 <code>~LED</code>는 음수(-9)로 표시됩니다. 실제 8비트 값이 필요하면 <b class="red">&amp; 0xFF</b>로 잘라야 합니다.</p>'},
+  {name:'토글',a:0b00001000,m:1<<3,op:'XOR',code:'LED = 1 << 3\nPORT = PORT ^ LED     # 켜져 있으면 끄고, 꺼져 있으면 켬',
+   ex:'<p><b class="blue">토글(toggle)</b>은 <code>XOR</code>입니다. 마스크가 1인 자리는 값이 뒤집히고, 0인 자리는 그대로입니다. 같은 연산을 두 번 하면 원래대로 돌아옵니다 (깜빡이 구현에 사용).</p>'},
+  {name:'버튼 읽기',a:0b00100100,m:1<<5,op:'AND',code:'BTN = 1 << 5\nif PORT & BTN:        # 결과가 0이 아니면 참\n    print("BTN pressed")',
+   ex:'<p><b class="amber">읽기(test)</b>는 알고 싶은 자리만 1인 마스크와 <code>AND</code>합니다. 결과가 0이 아니면 그 비트가 켜져 있는 것입니다. 다른 핀 값은 모두 0으로 걸러져 판정에 영향을 주지 않습니다.</p>'},
+  {name:'하위 4비트만',a:0b11001010,m:0x0F,op:'AND',code:'low_nibble = value & 0x0F   # 0b00001111',
+   ex:'<p><code>0x0F</code> 마스크는 아래 4비트만 통과시킵니다. 센서에서 온 바이트의 일부 필드만 꺼낼 때 흔히 쓰는 패턴입니다. <code>0xF0</code>이면 상위 4비트만 남습니다.</p>'},
+  {name:'NOT과 8비트 자르기',a:0b11001010,m:0,op:'NOT',code:'a = 0b11001010        # 202\nprint(~a)             # -203  ← 무한 비트 정수\nprint(~a & 0xFF)      # 0b00110101 = 53',
+   ex:'<p><code>~a</code>는 모든 비트를 뒤집습니다. 그런데 Python 정수는 비트 폭 제한이 없어서 앞쪽의 무한한 0들도 전부 1로 바뀌고, 그 결과가 음수 <code>-(a+1)</code>로 표시됩니다.</p><p>MCU 레지스터처럼 8비트만 보고 싶다면 <b class="red">&amp; 0xFF</b>로 자릅니다. 이 시뮬레이터는 8비트 창 안의 결과를 보여줍니다.</p>'},
+  {name:'왼쪽 시프트',a:0b00001011,m:0,op:'SHL',shift:2,code:'a = 0b00001011        # 11\nprint(a << 2)         # 0b00101100 = 44  (×4)',
+   ex:'<p><code>&lt;&lt; n</code>은 비트를 왼쪽으로 n칸 밀고 오른쪽을 0으로 채웁니다. 값은 <b class="purple">2<sup>n</sup>배</b>가 됩니다. 8비트 창을 넘어간 비트는 <code>&amp; 0xFF</code>로 잘리면 사라집니다.</p>'},
+  {name:'오른쪽 시프트',a:0b10110000,m:0,op:'SHR',shift:4,code:'a = 0b10110000        # 176\nprint(a >> 4)         # 0b00001011 = 11  (÷16)',
+   ex:'<p><code>&gt;&gt; n</code>은 오른쪽으로 n칸 밀며, 밀려난 비트는 버려집니다. 값은 2<sup>n</sup>으로 나눈 몫이 됩니다. 16비트 값에서 상위 바이트를 꺼낼 때 <code>&gt;&gt; 8</code>을 씁니다.</p>'},
+  {name:'16비트 분리·결합',mode:16,code:'value = 0x12A5\nhigh = (value >> 8) & 0xFF   # 0x12\nlow  = value & 0xFF          # 0xA5\nvalue2 = (high << 8) | low   # 0x12A5 복원',
+   ex:'<p>I2C 센서는 16비트 측정값을 <b class="blue">상위 바이트</b>와 <b class="teal">하위 바이트</b> 두 개로 나눠 보냅니다. <code>&gt;&gt; 8</code>로 상위를 꺼내고 <code>&amp; 0xFF</code>로 하위를 꺼내며, 받은 뒤에는 <code>(hi &lt;&lt; 8) | lo</code>로 다시 합칩니다.</p>'},
+];
+let active=0;
+function bits(v,n=8){return [...Array(n)].map((_,i)=>(v>>(n-1-i))&1);}
+function fmt(v){return `0b${v.toString(2).padStart(8,'0')}  ${String(v).padStart(3)}  0x${v.toString(16).toUpperCase().padStart(2,'0')}`;}
+
+function renderPresets(){
+  $('#presets').innerHTML=PRESETS.map((p,i)=>`<button data-i="${i}" class="${i===active?'active':''}">${p.name}</button>`).join('');
+  $('#presets').querySelectorAll('button').forEach(b=>b.onclick=()=>loadPreset(+b.dataset.i));
+}
+function renderOps(){
+  $('#ops').innerHTML=OPS.map(o=>`<button data-op="${o.id}" class="${state.op===o.id?'active':''}" title="${o.rule}">${o.sym}</button>`).join('');
+  $('#ops').querySelectorAll('button').forEach(b=>b.onclick=()=>{state.op=b.dataset.op;state.res=null;render();});
+}
+function opInfo(){return OPS.find(o=>o.id===state.op);}
+function compute(){
+  const n=+$('#shiftN').value||1;
+  switch(state.op){
+    case 'AND':return state.a&state.m;
+    case 'OR':return state.a|state.m;
+    case 'XOR':return state.a^state.m;
+    case 'NOT':return (~state.a)&0xFF;
+    case 'SHL':return (state.a<<n)&0xFF;
+    case 'SHR':return state.a>>n;
+  }
+}
+function bitResult(i){ // i = bit index 0..7 (LSB=0)
+  const a=(state.a>>i)&1,m=(state.m>>i)&1,n=+$('#shiftN').value||1;
+  switch(state.op){
+    case 'AND':return a&m; case 'OR':return a|m; case 'XOR':return a^m; case 'NOT':return a^1;
+    case 'SHL':return i-n>=0?(state.a>>(i-n))&1:0;
+    case 'SHR':return i+n<=7?(state.a>>(i+n))&1:0;
+  }
+}
+function renderTable(hl=-1,partial=null){
+  const o=opInfo(); const showM=['AND','OR','XOR'].includes(state.op);
+  const A=bits(state.a),M=bits(state.m);
+  const R=partial||(state.res===null?null:bits(state.res));
+  let h=`<div class="lbl">비트 번호</div>${[7,6,5,4,3,2,1,0].map(i=>`<div class="idx">${i}</div>`).join('')}<div></div>`;
+  h+=`<div class="lbl">A</div>${A.map((b,i)=>`<div class="cell click ${b?'one':'zero'} ${hl===7-i?'hl':''}" data-row="a" data-bit="${7-i}">${b}</div>`).join('')}<div class="val">${state.a}</div>`;
+  if(showM){
+    h+=`<div class="lbl opcell" style="text-align:left">${o.sym}</div>${[...Array(8)].map((_,i)=>`<div class="opcell ${hl===7-i?'':''}">${hl===7-i?o.sym:''}</div>`).join('')}<div></div>`;
+    h+=`<div class="lbl">마스크</div>${M.map((b,i)=>`<div class="cell click ${b?'one':'zero'} ${hl===7-i?'hl':''}" data-row="m" data-bit="${7-i}">${b}</div>`).join('')}<div class="val">${state.m}</div>`;
+  } else {
+    const label=state.op==='NOT'?'~ (뒤집기)':(state.op==='SHL'?`<< ${$('#shiftN').value}`:`>> ${$('#shiftN').value}`);
+    h+=`<div class="lbl opcell" style="text-align:left">${label}</div>${[...Array(8)].map(()=>`<div></div>`).join('')}<div></div>`;
+  }
+  h+=`<div class="lbl">결과</div>${[...Array(8)].map((_,i)=>{const b=R?R[i]:null;return `<div class="cell res ${b===null?'empty':(b?'one':'zero')} ${hl===7-i?'hl':''}">${b===null?'·':b}</div>`}).join('')}<div class="val">${R&&!R.includes(null)?parseInt(R.join(''),2):''}</div>`;
+  $('#bitTable').innerHTML=h;
+  $('#bitTable').querySelectorAll('.cell.click').forEach(c=>c.onclick=()=>{
+    if(state.busy)return; const bit=+c.dataset.bit;
+    if(c.dataset.row==='a')state.a^=(1<<bit); else state.m^=(1<<bit);
+    state.res=null; render();
+  });
+}
+function renderLeds(){
+  const A=bits(state.a),R=state.res===null?null:bits(state.res);
+  $('#ledsA').innerHTML=A.map((b,i)=>`<div class="led ${b?'on':''}">${7-i}</div>`).join('');
+  $('#ledsR').innerHTML=[...Array(8)].map((_,i)=>`<div class="led res ${R&&R[i]?'on':''}">${7-i}</div>`).join('');
+  $('#mA').textContent=fmt(state.a);
+  $('#mM').textContent=['AND','OR','XOR'].includes(state.op)?fmt(state.m):'—';
+  $('#mR').textContent=state.res===null?'—':fmt(state.res);
+}
+function setStatus(cls,msg){const s=$('#status');s.className='status '+cls;s.innerHTML=msg;}
+function render(hl,partial){renderOps();renderTable(hl,partial);renderLeds();}
+
+function loadPreset(i){
+  if(state.busy)return; active=i; const p=PRESETS[i];
+  state.mode=p.mode||8;
+  $('#mode8').classList.toggle('hidden',state.mode===16);
+  $('#mode16').classList.toggle('hidden',state.mode!==16);
+  $('#code').innerHTML=hlCode(p.code); $('#explain').innerHTML=p.ex;
+  if(state.mode===16){render16(); setStatus('info','분리 또는 결합 버튼을 누르세요.');}
+  else{
+    state.a=p.a;state.m=p.m;state.op=p.op;state.res=null; if(p.shift)$('#shiftN').value=p.shift;
+    render(); setStatus('info',`${opInfo().name}: ${opInfo().rule}. 실행 버튼을 누르세요.`);
+  }
+  renderPresets();
+}
+function hlCode(c){return c.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  .replace(/(#.*)$/gm,'<span class="c">$1</span>')
+  .replace(/\b(if|print|elif|else)\b/g,'<span class="k">$1</span>')
+  .replace(/\b(0b[01]+|0x[0-9A-Fa-f]+|\d+)\b/g,'<span class="n">$1</span>');}
+
+async function run(){
+  if(state.busy)return; state.busy=true; const o=opInfo(); const partial=Array(8).fill(null);
+  const sp=800-+$('#speed').value;
+  for(let i=7;i>=0;i--){
+    const r=bitResult(i); partial[7-i]=r;
+    render(i,partial);
+    const a=(state.a>>i)&1,m=(state.m>>i)&1;
+    let msg;
+    if(['AND','OR','XOR'].includes(state.op))msg=`비트 ${i}: ${a} ${o.sym} ${m} = <b>${r}</b> &nbsp;(${o.rule})`;
+    else if(state.op==='NOT')msg=`비트 ${i}: ~${a} = <b>${r}</b>`;
+    else msg=`비트 ${i}: ${state.op==='SHL'?`비트 ${i-(+$('#shiftN').value)}에서 옴`:`비트 ${i+(+$('#shiftN').value)}에서 옴`} → <b>${r}</b>`;
+    setStatus('info',msg);
+    await new Promise(r=>setTimeout(r,sp));
+  }
+  state.res=compute(); state.busy=false; render(); finishMsg();
+}
+function finishMsg(){
+  const r=state.res;
+  if(state.op==='AND'&&PRESETS[active].name==='버튼 읽기')setStatus(r?'ok':'warn',r?`결과 ${r} ≠ 0 → 조건 참 → "BTN pressed"`:`결과 0 → 조건 거짓 → 눌리지 않음`);
+  else setStatus('ok',`결과 = ${fmt(r)}`);
+}
+$('#runBtn').onclick=run;
+$('#instantBtn').onclick=()=>{if(state.busy)return;state.res=compute();render();finishMsg();};
+$('#speed').oninput=()=>{}; $('#shiftN').onchange=()=>{state.res=null;render();};
+
+/* 16-bit mode */
+let v16=0x12A5, hi=null, lo=null;
+function render16(hlHi=false,hlLo=false){
+  const B=bits(v16,16);
+  let h=`<div class="lbl">비트</div>${[...Array(16)].map((_,i)=>`<div class="idx">${15-i}</div>`).join('')}`;
+  h+=`<div class="lbl">value</div>${B.map((b,i)=>`<div class="cell ${b?'one':'zero'} ${(hlHi&&i<8)||(hlLo&&i>=8)?'hl':''}">${b}</div>`).join('')}`;
+  const H=hi===null?Array(8).fill(null):bits(hi), L=lo===null?Array(8).fill(null):bits(lo);
+  h+=`<div class="lbl">high</div><div class="hi" style="display:contents">${H.map(b=>`<div class="cell ${b===null?'empty':(b?'one':'zero')}">${b===null?'·':b}</div>`).join('')}</div>${[...Array(8)].map(()=>'<div></div>').join('')}`;
+  h+=`<div class="lbl">low</div>${[...Array(8)].map(()=>'<div></div>').join('')}<div class="lo" style="display:contents">${L.map(b=>`<div class="cell ${b===null?'empty':(b?'one':'zero')}">${b===null?'·':b}</div>`).join('')}</div>`;
+  $('#bits16').innerHTML=h;
+  $('#mA').textContent=`0x${v16.toString(16).toUpperCase().padStart(4,'0')}  (${v16})`;
+  $('#mM').textContent=hi===null?'high —':`high 0x${hi.toString(16).toUpperCase().padStart(2,'0')}`;
+  $('#mR').textContent=lo===null?'low —':`low 0x${lo.toString(16).toUpperCase().padStart(2,'0')}`;
+  $('#ledsA').innerHTML=bits(hi||0).map((b,i)=>`<div class="led ${hi!==null&&b?'on':''}">${7-i}</div>`).join('');
+  $('#ledsR').innerHTML=bits(lo||0).map((b,i)=>`<div class="led res ${lo!==null&&b?'on':''}">${7-i}</div>`).join('');
+}
+$('#val16').onchange=()=>{const v=parseInt($('#val16').value);if(!isNaN(v)){v16=v&0xFFFF;hi=lo=null;render16();}};
+$('#split16').onclick=async()=>{
+  if(state.busy)return;state.busy=true;hi=lo=null;
+  render16(true,false); setStatus('info','value &gt;&gt; 8 : 위 8비트가 아래로 내려옵니다.'); await new Promise(r=>setTimeout(r,700));
+  hi=(v16>>8)&0xFF; render16(false,false); await new Promise(r=>setTimeout(r,500));
+  render16(false,true); setStatus('info','value &amp; 0xFF : 아래 8비트만 남깁니다.'); await new Promise(r=>setTimeout(r,700));
+  lo=v16&0xFF; render16(); state.busy=false;
+  setStatus('ok',`high = 0x${hi.toString(16).toUpperCase().padStart(2,'0')}, low = 0x${lo.toString(16).toUpperCase().padStart(2,'0')}`);
+};
+$('#join16').onclick=()=>{
+  if(hi===null||lo===null){setStatus('warn','먼저 분리하거나 high/low 값이 필요합니다.');return;}
+  const j=(hi<<8)|lo; setStatus(j===v16?'ok':'warn',`(high &lt;&lt; 8) | low = 0x${j.toString(16).toUpperCase().padStart(4,'0')} ${j===v16?'→ 원래 값과 같습니다':''}`);
+};
+
+loadPreset(0);
+</script>
+</body>
+</html>

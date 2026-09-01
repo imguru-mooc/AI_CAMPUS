@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python Day 1 개념 워크시트</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:900px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  input[type=text]{background:#0a0f1c;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:14px}
+  .tabs{display:flex;flex-wrap:wrap;gap:6px}
+  .tabs button .s{font-family:var(--mono);font-size:11px;color:var(--dim);margin-left:6px}
+  .tabs button.done .s{color:var(--green)}
+  .head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .head .t{color:var(--amber);font-size:17px}
+  .head .a{font-size:13px;color:var(--teal);font-family:var(--mono)}
+  .q{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#0e1628}
+  .q .n{font-family:var(--mono);color:var(--dim);font-size:12px}
+  .q .p{margin:4px 0 10px;font-size:15px}
+  .q .p code,.opt code,.fb code{font-family:var(--mono);color:var(--blue);background:#0a0f1c;padding:1px 5px;border-radius:4px}
+  .q pre{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin:6px 0 10px;font-size:14px;white-space:pre;overflow-x:auto}
+  .opts{display:grid;gap:6px}
+  .opt{text-align:left;padding:8px 12px;font-size:14px;font-family:inherit}
+  .opt.sel{border-color:var(--amber)}
+  .opt.ok{border-color:var(--green);color:var(--green);background:#0d2216}
+  .opt.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .opt:disabled{cursor:default;opacity:.9}
+  .fb{margin-top:8px;font-size:13px;color:var(--dim);border-left:3px solid var(--line);padding-left:10px}
+  .fb.ok{border-left-color:var(--green)}.fb.bad{border-left-color:var(--red)}
+  .fb .anim{color:var(--teal);font-family:var(--mono);font-size:12px;display:block;margin-top:3px}
+  .result{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .code{font-family:var(--mono);font-size:22px;color:var(--amber);letter-spacing:1px}
+  .score{font-family:var(--mono);color:var(--green);font-size:16px}
+  .hint{color:var(--dim);font-size:13px}
+  details{color:var(--dim);font-size:13px}
+  details summary{cursor:pointer;color:var(--dim)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Python Day 1 개념 워크시트</h1>
+  <p class="sub">교시마다 5문항. <b style="color:var(--amber)">먼저 예측</b>하고 답을 고른 뒤, 표시된 애니메이션 프리셋에서 확인하고, 마지막으로 Colab에서 코드로 검증하세요. 5문항을 모두 풀면 결과 코드가 나옵니다. 그 코드를 Colab 워크시트 마지막 "제출 요약" 셀에 입력하세요.</p>
+
+  <div class="panel">
+    <div class="row"><label style="color:var(--dim);font-size:13px">이름 <input type="text" id="name" placeholder="홍길동"></label><span class="hint">이름은 결과 코드 계산에만 쓰이며 저장되지 않습니다.</span></div>
+  </div>
+  <div class="panel"><h2>교시</h2><div class="tabs" id="tabs"></div></div>
+  <div class="panel" id="sheet"></div>
+  <div class="panel">
+    <h2>결과 코드</h2>
+    <div class="result"><span class="code" id="rcode">—</span><span class="score" id="rscore"></span><span class="hint" id="rhint">5문항을 모두 풀면 생성됩니다. 한 번 고른 답은 바꿀 수 없습니다.</span></div>
+    <details style="margin-top:10px"><summary>강사 검증</summary>
+      <div class="row" style="margin-top:6px"><input type="text" id="vname" placeholder="이름"><input type="text" id="vtab" placeholder="교시(1~7)" style="width:90px"><input type="text" id="vscore" placeholder="점수(0~5)" style="width:90px"><button id="vbtn">코드 계산</button><span class="code" id="vout" style="font-size:16px"></span></div>
+    </details>
+  </div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const Q=[
+ {t:'1교시 · Colab 시작하기',anim:'07 Colab 셀 실행 순서',qs:[
+  {p:'셀 1에 <code>x = 5</code>, 셀 2에 <code>print(x)</code>가 있습니다. 런타임을 새로 시작한 뒤 <b>셀 2만</b> 실행하면?',o:['5가 출력된다','NameError가 난다','0이 출력된다','아무것도 출력되지 않는다'],a:1,w:'실행하지 않은 셀의 변수는 커널에 없습니다.',an:'07 · "2번 셀부터 실행"'},
+  {p:'노트북 셀 왼쪽 실행 번호가 위에서부터 <code>[3] [1] [2]</code>로 보입니다. 실제로 실행된 순서는?',o:['셀1 → 셀2 → 셀3','셀2 → 셀3 → 셀1','셀3 → 셀1 → 셀2','알 수 없다'],a:1,w:'번호 [1]이 붙은 두 번째 셀이 가장 먼저 실행됐습니다. 번호는 셀 위치가 아니라 실행 순서입니다.',an:'07 · 아무 순서로 ▶ 클릭'},
+  {p:'"런타임 다시 시작"을 하면 <b>남아 있는</b> 것은?',o:['커널 변수','실행 번호 [n]','화면의 코드와 이전 출력','!pip로 설치한 패키지'],a:2,w:'코드와 옛 출력은 화면에 남지만 변수·실행 번호·설치 패키지는 모두 사라집니다.',an:'07 · "런타임 재시작 후 3 실행"'},
+  {p:'<code>!ls</code>와 <code>%timeit</code>의 차이로 맞는 것은?',o:['<code>!</code>는 셸 명령, <code>%</code>는 노트북 매직 명령','<code>!</code>는 Python, <code>%</code>는 셸','둘 다 셸 명령','둘 다 Python 문법'],a:0,w:'<code>!</code>는 리눅스 셸에 그대로 전달되고, <code>%</code>/<code>%%</code>는 Colab(IPython)이 처리하는 명령입니다.',an:'1교시 따라하기 셀'},
+  {p:'<code>/content/</code>에 저장한 파일은 세션이 끝나면?',o:['그대로 유지된다','Drive로 자동 이동한다','사라진다','휴지통으로 간다'],a:2,w:'<code>/content</code>는 임시 디스크입니다. 남겨야 할 파일은 <code>/content/drive/MyDrive</code>에 저장하세요.',an:'1교시 Drive 마운트 실습'},
+ ]},
+ {t:'2교시 · 변수와 자료형',anim:'02 변수·참조 모델 / 06 형변환 흐름도',qs:[
+  {p:'<code>int("3.5")</code>의 결과는?',o:['3','4','3.5','ValueError'],a:3,w:'int()는 문자열 안의 소수점을 읽지 못합니다. <code>int(float("3.5"))</code>로 두 단계로 바꿉니다.',an:'06 · "int("3.5") ✕"'},
+  {p:'<code>bool("0")</code>의 결과는?',o:['True','False','0','ValueError'],a:0,w:'문자열은 비어 있는지만 봅니다. "0", "False"도 비어 있지 않으므로 True.',an:'06 · "bool("0") → True!"'},
+  {p:'<code>7 // 2</code>의 결과와 자료형은?',o:['3.5, float','3, int','3.0, float','4, int'],a:1,w:'//는 내림 나눗셈. int끼리면 int. /는 항상 float.',an:'06 · 나눗셈 표'},
+  {p:'<code>0.1 + 0.2 == 0.3</code>의 결과는?',o:['True','False','오류','실행할 때마다 다르다'],a:1,w:'0.1과 0.2는 2진수로 정확히 표현되지 않아 합이 0.30000000000000004가 됩니다. <code>math.isclose</code>를 쓰세요.',an:'IEEE 754 · 0.1 프리셋'},
+  {p:'<pre>a = 10\nb = a\na = 20\nprint(b)</pre>출력은?',o:['10','20','None','오류'],a:0,w:'<code>b = a</code>는 같은 객체 10에 이름표를 하나 더 붙인 것. <code>a = 20</code>은 a만 새 객체로 옮깁니다.',an:'02 · "두 이름, 하나의 값"'},
+ ]},
+ {t:'3교시 · 연산자와 비트 연산',anim:'01 비트 마스크 시뮬레이터',qs:[
+  {p:'<code>~0b1010 & 0xFF</code>의 값은?',o:['5','245','-11','250'],a:1,w:'~0b00001010 = 0b11110101 = 245. <code>& 0xFF</code>가 없으면 -11(무한 비트 정수).',an:'01 · "NOT과 8비트 자르기"'},
+  {p:'<code>(1 << 3) | (1 << 5)</code>의 값은?',o:['8','32','40','15'],a:2,w:'8 | 32 = 0b00101000 = 40. 두 핀을 한 번에 켜는 마스크입니다.',an:'01 · A 셀 클릭으로 직접 만들기'},
+  {p:'8비트 값 <code>x</code>에서 <b>5번 비트만 끄는</b> 식은?',o:['<code>x | (1 << 5)</code>','<code>x ^ (1 << 5)</code>','<code>x & ~(1 << 5)</code>','<code>x >> 5</code>'],a:2,w:'해제는 뒤집은 마스크와 AND. |는 설정, ^는 토글입니다.',an:'01 · "핀 끄기"'},
+  {p:'<code>0x12A5 >> 8</code>의 값은?',o:['0xA5 (165)','0x12 (18)','0x12A (298)','0x2A5 (677)'],a:1,w:'오른쪽으로 8칸 밀면 하위 바이트가 버려지고 상위 바이트 0x12만 남습니다.',an:'01 · "16비트 분리·결합"'},
+  {p:'<code>0b1100 ^ 0b1010</code>의 값은?',o:['0b1110 (14)','0b1000 (8)','0b0110 (6)','0b0010 (2)'],a:2,w:'XOR는 서로 다른 자리만 1. 1100 ^ 1010 = 0110.',an:'01 · XOR 버튼'},
+ ]},
+ {t:'4교시 · 조건문',anim:'03 제어 흐름 추적기',qs:[
+  {p:'<pre>if temp &lt; 0:    status = "FREEZE"\nelif temp &lt; 20: status = "COLD"\nelif temp &lt; 30: status = "NORMAL"\nelif temp &lt; 40: status = "WARM"\nelse:           status = "ALERT"</pre><code>temp = 30</code>이면 status는?',o:['NORMAL','WARM','ALERT','COLD'],a:1,w:'<code>temp &lt; 30</code>은 30을 포함하지 않아 거짓, 다음 조건 <code>&lt; 40</code>이 참. 경계값은 항상 확인하세요.',an:'03 · "if-elif-else 온도 판정", temp=30'},
+  {p:'<code>if x:</code>에서 <b>거짓</b>으로 평가되는 값은?',o:['<code>0</code>만','<code>""</code>만','<code>[]</code>만','<code>0</code>, <code>""</code>, <code>[]</code>, <code>None</code> 모두'],a:3,w:'숫자 0, 빈 문자열, 빈 리스트, None은 모두 거짓입니다. 단 "0" 같은 비어 있지 않은 문자열은 참.',an:'06 · bool() 프리셋'},
+  {p:'위 코드의 <code>elif temp &lt; 20:</code>에 <code>temp &gt;= 0</code> 조건을 쓰지 않아도 되는 이유는?',o:['Python이 자동으로 추가해서','위 <code>if temp &lt; 0</code>에서 이미 걸러졌기 때문','음수 온도는 없기 때문','elif는 범위를 무시하기 때문'],a:1,w:'if-elif-else는 처음 참이 되는 블록 하나만 실행합니다.',an:'03 · temp를 -5, 15로 바꿔 경로 비교'},
+  {p:'<code>n &gt; 0</code>일 때 <code>n & (n - 1) == 0</code>이 참이면 n은?',o:['홀수','짝수','2의 거듭제곱','소수'],a:2,w:'2의 거듭제곱은 비트가 하나만 켜져 있어 1을 빼면 겹치는 비트가 없습니다.',an:'01 · A에 64, 마스크에 63 입력 후 AND'},
+  {p:'<code>led = "ON" if temp &gt; 30 else "OFF"</code>에서 <code>temp = 30</code>이면 led는?',o:['"ON"','"OFF"','None','오류'],a:1,w:'30 &gt; 30은 거짓이므로 else 쪽 값 "OFF".',an:'3교시 비교 연산자'},
+ ]},
+ {t:'5교시 · 반복문',anim:'03 제어 흐름 추적기',qs:[
+  {p:'<code>range(0, 256, 64)</code>가 내는 마지막 값은?',o:['256','192','255','64'],a:1,w:'stop은 포함되지 않습니다. 0, 64, 128, 192.',an:'03 · "for + range(0, 256, 64)"'},
+  {p:'반복문의 <code>else</code> 블록이 실행되는 조건은?',o:['조건이 한 번이라도 거짓이면','break 없이 반복이 끝났을 때','break로 빠져나왔을 때','반복이 한 번도 실행되지 않았을 때만'],a:1,w:'break로 나가면 else는 건너뜁니다.',an:'03 · "while + break + else" 임계값 30 vs 35'},
+  {p:'<code>for i, (t, h) in enumerate(zip([1, 2], [3, 4]), start=1):</code> 첫 회전에서 <code>i, t, h</code>는?',o:['0, 1, 3','1, 1, 3','1, 3, 1','1, 2, 4'],a:1,w:'zip이 (1, 3)을 묶고 enumerate가 번호 1을 붙여 (1, (1, 3))이 언패킹됩니다.',an:'03 · "enumerate + zip"'},
+  {p:'<code>zip(a, b)</code>에서 a와 b의 길이가 다르면?',o:['오류가 난다','긴 쪽 길이만큼 돌고 빈 값은 None','짧은 쪽이 끝나면 멈춘다','같은 길이가 될 때까지 반복한다'],a:2,w:'짧은 쪽에서 멈춥니다. 긴 쪽까지 쓰려면 <code>itertools.zip_longest</code>.',an:'03 · "enumerate + zip" 마지막 단계'},
+  {p:'<pre>i = 0\nwhile i &lt; 3:\n    print(i)</pre>실행 결과는?',o:['0 1 2 출력 후 종료','0만 출력 후 종료','0이 끝없이 출력된다','오류'],a:2,w:'i를 바꾸는 줄이 없어 조건이 영원히 참. Colab에서는 셀 왼쪽 ■로 중지.',an:'03 · "무한 루프 (i += 1 누락)"'},
+ ]},
+ {t:'6교시 · 문자열 처리',anim:'05 인덱싱·슬라이싱 / 04 파싱 파이프라인',qs:[
+  {p:'<code>"$ABC*"[1:-1]</code>의 결과는?',o:['"ABC"','"$ABC"','"ABC*"','"BC"'],a:0,w:'1번부터 마지막 직전까지. 프레임 껍질을 벗기는 식.',an:'05 · "[1:-1]", 값에 $ABC* 입력'},
+  {p:'<code>"abc"[10:20]</code>의 결과는?',o:['IndexError','"" (빈 문자열)','None','"abc"'],a:1,w:'슬라이스는 범위를 벗어나도 오류 없이 빈 결과.',an:'05 · "[10:20] 범위 초과"'},
+  {p:'<code>"abc"[10]</code>의 결과는?',o:['IndexError','"" (빈 문자열)','None','"c"'],a:0,w:'인덱스는 엄격합니다. 슬라이스와의 차이를 기억하세요.',an:'05 · "[10] 범위 초과"'},
+  {p:'<code>"  H=60 ".strip().split("=")</code>의 결과는?',o:['<code>["H", "60"]</code>','<code>[" H", "60 "]</code>','<code>["H", 60]</code>','<code>["  H", "60 "]</code>'],a:0,w:'strip()이 먼저 양 끝 공백을 지웁니다. strip() 없이 split하면 [" H", "60 "]. 값은 여전히 문자열입니다.',an:'04 · "앞뒤 공백"'},
+  {p:'<code>"T=25.3".split("=")[1]</code>의 자료형은?',o:['float','int','str','list'],a:2,w:'split 결과는 항상 문자열 조각입니다. 숫자로 쓰려면 float()로 바꿔야 합니다.',an:'04 · "정상 프레임" 4단계'},
+ ]},
+ {t:'7교시 · 종합',anim:'01 / 04 / 2진·16진 변환기',qs:[
+  {p:'<code>f"{4773:016b}"</code>의 길이는?',o:['13','16','18','4773'],a:1,w:'016b는 16자리 2진수, 부족한 앞자리는 0으로 채웁니다.',an:'2진/16진 변환기 · 비트폭 16'},
+  {p:'4773 = 0x12A5의 <b>하위 바이트</b>는?',o:['0x12','0xA5','0x2A','0x47'],a:1,w:'하위 바이트는 <code>& 0xFF</code> → 0xA5. 상위는 <code>&gt;&gt; 8</code> → 0x12.',an:'01 · "16비트 분리·결합"'},
+  {p:'로그 줄 <code>T=99.9,H=00,D=000</code>은 파싱 파이프라인의 어느 단계에서 걸러야 하는가?',o:['strip()','프레임 검증 (startswith / endswith)','split(",")','형변환'],a:1,w:'$와 *가 없으므로 검증 단계에서 버립니다. 검증 없이 split하면 잘못된 값이 정상값처럼 들어갑니다.',an:'04 · "손상 프레임"'},
+  {p:'<code>int("")</code>의 결과는?',o:['0','None','ValueError','""'],a:2,w:'빈 문자열은 정수 모양이 아닙니다. 필드 누락(H=) 시 이 오류가 납니다.',an:'04 · "필드 누락 (H=)"'},
+  {p:'로그 10줄 중 손상 2줄을 건너뛰었을 때, 평균 온도는 몇 줄로 계산해야 하는가?',o:['10줄','8줄','2줄','9줄'],a:1,w:'손상 줄은 온도가 없으므로 정상 줄 8개의 평균입니다. 분모를 총 줄 수로 두면 틀립니다.',an:'과제 B 자동 채점 "avg_temp"'},
+ ]},
+];
+let tab=0;const ans=Q.map(s=>s.qs.map(()=>null));
+function hash(s){let h=5381;for(const c of s)h=((h<<5)+h+c.charCodeAt(0))>>>0;return h.toString(16).padStart(8,'0').slice(-4);}
+function codeFor(name,t,score){return `${t}${'ABCDEF'[score]||'F'}-${hash(`${name.trim()}|${t}|${score}|day1`)}`;}
+function renderTabs(){$('#tabs').innerHTML=Q.map((s,i)=>{const done=ans[i].every(a=>a!==null);const sc=ans[i].filter((a,k)=>a===Q[i].qs[k].a).length;return `<button class="${i===tab?'active':''} ${done?'done':''}" data-i="${i}">${i+1}교시<span class="s">${done?sc+'/5':ans[i].filter(a=>a!==null).length+'/5'}</span></button>`;}).join('');$('#tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{tab=+b.dataset.i;render();});}
+function render(){renderTabs();const s=Q[tab];
+  $('#sheet').innerHTML=`<div class="head"><span class="t">${s.t}</span><span class="a">🎬 ${s.anim}</span></div>`+s.qs.map((q,k)=>{const a=ans[tab][k];const done=a!==null;
+    return `<div class="q"><div class="n">문항 ${k+1}</div><div class="p">${q.p}</div><div class="opts">${q.o.map((o,j)=>`<button class="opt ${done?(j===q.a?'ok':(j===a?'bad':'')):''}" data-k="${k}" data-j="${j}" ${done?'disabled':''}>${'①②③④'[j]} ${o}</button>`).join('')}</div>${done?`<div class="fb ${a===q.a?'ok':'bad'}">${a===q.a?'정답. ':'오답. '}${q.w}<span class="anim">확인: ${q.an}</span></div>`:''}</div>`;}).join('');
+  $('#sheet').querySelectorAll('.opt').forEach(b=>b.onclick=()=>{ans[tab][+b.dataset.k]=+b.dataset.j;render();});
+  const done=ans[tab].every(a=>a!==null);const sc=ans[tab].filter((a,k)=>a===s.qs[k].a).length;
+  if(done){const nm=$('#name').value;if(!nm.trim()){$('#rcode').textContent='—';$('#rscore').textContent=`${sc}/5`;$('#rhint').textContent='위에 이름을 입력하면 결과 코드가 나옵니다.';}
+    else{$('#rcode').textContent=codeFor(nm,tab+1,sc);$('#rscore').textContent=`${sc}/5`;$('#rhint').textContent='이 코드를 Colab 워크시트 "제출 요약" 셀에 입력하세요.';}}
+  else{$('#rcode').textContent='—';$('#rscore').textContent='';$('#rhint').textContent=`${tab+1}교시: ${ans[tab].filter(a=>a!==null).length}/5 풀었습니다. 한 번 고른 답은 바꿀 수 없습니다.`;}
+}
+$('#name').addEventListener('input',render);
+$('#vbtn').onclick=()=>{const t=+$('#vtab').value,sc=+$('#vscore').value;$('#vout').textContent=(t>=1&&t<=7&&sc>=0&&sc<=5)?codeFor($('#vname').value,t,sc):'입력 확인';};
+render();
+</script>
+</body>
+</html>

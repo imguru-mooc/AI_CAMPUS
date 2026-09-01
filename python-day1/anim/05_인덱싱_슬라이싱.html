@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>인덱싱 · 슬라이싱 — Python Day 1</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono)}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.green{color:var(--green);border-color:var(--green)}.pill.red{color:var(--red);border-color:var(--red)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .row label{color:var(--dim);font-size:13px;display:flex;gap:6px;align-items:center}
+  input[type=range]{accent-color:var(--amber);width:140px}
+  input[type=text]{background:#0a0f1c;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:14px;width:260px}
+  .seg{display:inline-flex;border:1px solid #2a3a5c;border-radius:8px;overflow:hidden}
+  .seg button{border:0;border-radius:0;padding:6px 12px}
+  .seg button.active{background:#3a2e12}
+  /* cells */
+  .track{overflow-x:auto;padding:6px 0}
+  .cells{display:grid;gap:6px;justify-content:start;min-width:max-content}
+  .cells>div{text-align:center;font-family:var(--mono)}
+  .pos{color:var(--blue);font-size:12px}.neg{color:var(--purple);font-size:12px}
+  .cell{width:52px;height:52px;border:1px solid var(--line);border-radius:8px;background:#0e1628;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--text);position:relative;transition:all .25s}
+  .cell.sel{background:#1f1a0c;border-color:var(--amber);color:var(--amber);box-shadow:0 0 0 2px #f5b94233}
+  .cell.one{background:#0d2216;border-color:var(--green);color:var(--green)}
+  .cell .ord{position:absolute;top:-8px;right:-6px;background:var(--amber);color:#3a2e12;font-size:10px;border-radius:999px;padding:0 5px;font-weight:700}
+  .cell.ghost{border-style:dashed;color:#3f5070;background:transparent}
+  .brace{height:6px;border-left:2px solid var(--amber);border-right:2px solid var(--amber);border-bottom:2px solid var(--amber);border-radius:0 0 4px 4px;margin-top:2px}
+  .expr{font-family:var(--mono);font-size:22px;color:var(--amber);margin:8px 0}
+  .expr .o{color:var(--text)}.expr .v{color:var(--teal)}
+  .out{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:17px;min-height:48px}
+  .out.err{color:var(--red)}.out.ok{color:var(--green)}
+  .out .ty{font-size:12px;color:var(--dim);margin-left:10px}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}.explain b.purple{color:var(--purple)}
+  .explain code{font-family:var(--mono);color:var(--blue)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:820px){.grid{grid-template-columns:1fr}}
+  .dis{opacity:.4}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>인덱싱 · 슬라이싱</h1>
+  <p class="sub">문자열·리스트·튜플은 모두 같은 규칙으로 잘라냅니다. 위쪽은 양수 인덱스, 아래쪽은 음수 인덱스입니다. 슬라이더를 움직여 <code style="font-family:var(--mono);color:var(--blue)">[start:stop:step]</code>이 어떤 칸을 고르는지 확인하세요.</p>
+  <div class="pills">
+    <span class="pill blue">양수 인덱스 0부터</span><span class="pill teal">음수 인덱스 -1은 마지막</span><span class="pill amber">stop은 포함 안 됨</span><span class="pill green">step 음수 = 거꾸로</span><span class="pill red">인덱스 초과 → IndexError / 슬라이스 초과 → 빈 결과</span>
+  </div>
+
+  <div class="panel">
+    <div class="row" style="margin-bottom:10px">
+      <div class="seg" id="typeSeg"><button data-t="str" class="active">문자열</button><button data-t="list">리스트</button><button data-t="tuple">튜플</button></div>
+      <label>값 <input type="text" id="valIn" spellcheck="false"></label>
+      <div class="seg" id="modeSeg"><button data-m="slice" class="active">슬라이스 [a:b:c]</button><button data-m="index">인덱스 [i]</button></div>
+    </div>
+    <h2>프리셋</h2>
+    <div class="presets" id="presets"></div>
+  </div>
+
+  <div class="panel">
+    <h2>시퀀스</h2>
+    <div class="track"><div class="cells" id="cells"></div></div>
+    <div class="expr" id="expr"></div>
+    <div class="row" id="sliceCtl">
+      <label><input type="checkbox" id="useStart" checked> start <input type="range" id="start" min="-10" max="10" value="2"><b id="startV" style="color:var(--amber);font-family:var(--mono)">2</b></label>
+      <label><input type="checkbox" id="useStop" checked> stop <input type="range" id="stop" min="-10" max="10" value="6"><b id="stopV" style="color:var(--amber);font-family:var(--mono)">6</b></label>
+      <label><input type="checkbox" id="useStep"> step <input type="range" id="step" min="-3" max="3" value="1"><b id="stepV" style="color:var(--amber);font-family:var(--mono)">1</b></label>
+    </div>
+    <div class="row" id="indexCtl" style="display:none">
+      <label>index <input type="range" id="idx" min="-12" max="12" value="0"><b id="idxV" style="color:var(--amber);font-family:var(--mono)">0</b></label>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="panel"><h2>결과</h2><div class="out" id="out"></div></div>
+    <div class="panel"><h2>상태</h2><div class="status info" id="status"></div></div>
+  </div>
+  <div class="panel explain" id="explain"></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const DEFAULTS={str:'ESP32-CAM',list:'22.1, 23.4, 24.9, 31.2, 28.0, 35.5',tuple:'3, 3, 1, 4, 2'};
+let type='str',mode='slice';
+const PRESETS=[
+ {name:'[2:6]',m:'slice',s:2,e:6,st:null,ex:'<p><b class="blue">start</b>는 포함, <b class="amber">stop</b>은 포함되지 않습니다. <code>[2:6]</code>은 2, 3, 4, 5번 칸, 즉 <code>6 - 2 = 4</code>개입니다. "stop − start = 개수"로 기억하면 편합니다.</p>'},
+ {name:'[:3]',m:'slice',s:null,e:3,st:null,ex:'<p>start를 생략하면 <b>처음부터</b>입니다. <code>[:3]</code>은 앞 3개.</p>'},
+ {name:'[-3:]',m:'slice',s:-3,e:null,st:null,ex:'<p>stop을 생략하면 <b>끝까지</b>입니다. 음수 start는 뒤에서 세므로 <code>[-3:]</code>은 <b class="purple">마지막 3개</b>. 시리얼 프레임에서 체크섬처럼 뒤에 붙은 부분을 꺼낼 때 씁니다.</p>'},
+ {name:'[::2]',m:'slice',s:null,e:null,st:2,ex:'<p>step은 <b>건너뛰는 간격</b>입니다. <code>[::2]</code>는 0, 2, 4, … 짝수 번째 칸만 고릅니다. 샘플을 절반으로 줄이는 다운샘플링에 쓸 수 있습니다.</p>'},
+ {name:'[::-1]',m:'slice',s:null,e:null,st:-1,ex:'<p>step이 음수이면 <b class="green">거꾸로</b> 갑니다. start·stop을 모두 생략한 <code>[::-1]</code>은 전체를 뒤집은 새 시퀀스입니다. 원본은 바뀌지 않습니다.</p>'},
+ {name:'[1:-1]',m:'slice',s:1,e:-1,st:null,ex:'<p>양쪽 끝 한 글자씩 벗겨냅니다. 파싱 파이프라인에서 <code>$ ... *</code> 프레임 껍질을 벗길 때 쓴 바로 그 식입니다.</p>'},
+ {name:'[10:20] 범위 초과',m:'slice',s:10,e:20,st:null,ex:'<p>슬라이스는 범위를 벗어나도 <b class="red">오류를 내지 않고</b> 조용히 빈 결과를 돌려줍니다. 편리하지만, 결과가 비어 있는 것을 눈치채지 못하면 버그가 됩니다.</p>'},
+ {name:'[0]',m:'index',i:0,ex:'<p>인덱스 하나를 쓰면 <b>요소 하나</b>가 나옵니다. 문자열이면 길이 1인 문자열, 리스트면 그 안의 값(여기서는 float)입니다. 슬라이스와 달리 결과의 자료형이 달라질 수 있다는 점에 주의하세요.</p>'},
+ {name:'[-1]',m:'index',i:-1,ex:'<p><code>-1</code>은 마지막 요소입니다. <code>x[len(x)-1]</code>과 같지만 훨씬 짧습니다.</p>'},
+ {name:'[10] 범위 초과',m:'index',i:10,ex:'<p>인덱스는 범위를 벗어나면 <b class="red">IndexError</b>로 프로그램이 멈춥니다. 슬라이스는 관대하고 인덱스는 엄격합니다. 이 차이가 자주 나오는 퀴즈 포인트입니다.</p>'},
+];
+function seq(){const raw=$('#valIn').value;if(type==='str')return [...raw];return raw.split(',').map(s=>s.trim()).filter(s=>s!=='').map(s=>isNaN(+s)?s:+s);}
+function show(v){return typeof v==='number'?String(v):(type==='str'?v:`'${v}'`);}
+function wrap(items){if(type==='str')return `'${items.join('')}'`;if(type==='list')return `[${items.map(show).join(', ')}]`;return `(${items.map(show).join(', ')}${items.length===1?',':''})`;}
+function norm(i,n){return i<0?i+n:i;}
+/* Python slice semantics */
+function pySlice(n,start,stop,step){
+  step=step===null?1:step;if(step===0)return null;
+  let s,e;
+  if(step>0){s=start===null?0:Math.min(Math.max(norm(start,n),0),n);e=stop===null?n:Math.min(Math.max(norm(stop,n),0),n);}
+  else{s=start===null?n-1:Math.min(Math.max(norm(start,n),-1),n-1);e=stop===null?-1:Math.min(Math.max(norm(stop,n),-1),n-1);}
+  const idx=[];if(step>0)for(let i=s;i<e;i+=step)idx.push(i);else for(let i=s;i>e;i+=step)idx.push(i);return idx;
+}
+function setStatus(c,m){const s=$('#status');s.className='status '+c;s.innerHTML=m;}
+function render(){
+  const S=seq(),n=S.length;
+  let sel=[],err=null,expr='',res=null;
+  if(mode==='slice'){
+    const a=$('#useStart').checked?+$('#start').value:null,b=$('#useStop').checked?+$('#stop').value:null,c=$('#useStep').checked?+$('#step').value:null;
+    ['start','stop','step'].forEach(k=>{$('#'+k).classList.toggle('dis',!$('#use'+k[0].toUpperCase()+k.slice(1)).checked);});
+    $('#startV').textContent=a===null?'생략':a;$('#stopV').textContent=b===null?'생략':b;$('#stepV').textContent=c===null?'생략':c;
+    if(c===0){err='ValueError: slice step cannot be zero';}
+    else{sel=pySlice(n,a,b,c);res=wrap(sel.map(i=>S[i]));}
+    expr=`x[${a===null?'':a}:${b===null?'':b}${c!==null?':'+c:''}]`;
+  } else {
+    const i=+$('#idx').value;$('#idxV').textContent=i;expr=`x[${i}]`;
+    const k=norm(i,n);if(k<0||k>=n)err=`IndexError: ${type==='str'?'string':type} index out of range`;else{sel=[k];res=show(S[k]);}
+  }
+  // cells
+  const cols=n;let h=`<div style="display:contents">`;
+  const cell=(cls,txt)=>`<div class="cell ${cls}">${txt}</div>`;
+  const g=$('#cells');g.style.gridTemplateColumns=`repeat(${cols},52px)`;
+  let rows='';
+  rows+=S.map((_,i)=>`<div class="pos">${i}</div>`).join('');
+  rows+=S.map((v,i)=>{const o=sel.indexOf(i);const cls=o>=0?(mode==='index'?'one':'sel'):'';return `<div class="cell ${cls}">${type==='str'?(v===' '?'␣':v):v}${o>=0&&mode==='slice'&&sel.length>1?`<span class="ord">${o+1}</span>`:''}</div>`;}).join('');
+  rows+=S.map((_,i)=>`<div class="neg">${i-n}</div>`).join('');
+  g.innerHTML=rows;
+  $('#expr').innerHTML=`<span class="v">x</span> = ${wrap(S)}<br><span class="o">${expr}</span> → ?`;
+  const o=$('#out');
+  if(err){o.className='out err';o.innerHTML=err;setStatus('warn',mode==='index'?`길이 ${n}인 시퀀스의 유효 인덱스는 0~${n-1} 또는 -1~-${n} 입니다.`:'step은 0이 될 수 없습니다.');}
+  else{o.className='out ok';const ty=mode==='slice'?type:(typeof S[sel[0]]==='number'?(Number.isInteger(S[sel[0]])?'int':'float'):'str');o.innerHTML=`${res}<span class="ty">${ty}${mode==='slice'?`, len ${sel.length}`:''}</span>`;
+    if(mode==='slice'){if(sel.length===0)setStatus('warn','선택된 칸이 없습니다. 범위를 벗어난 슬라이스는 오류 대신 빈 결과를 돌려줍니다.');else setStatus('ok',`선택된 인덱스: [${sel.join(', ')}] — ${sel.length}개. 번호는 결과에 들어가는 순서입니다.`);}
+    else setStatus('ok',`인덱스 ${$('#idx').value}는 ${norm(+$('#idx').value,n)}번 칸입니다.`);}
+}
+function applyPreset(p,i){$('#presets').querySelectorAll('button').forEach((b,k)=>b.classList.toggle('active',k===i));setMode(p.m);
+  if(p.m==='slice'){$('#useStart').checked=p.s!==null;$('#useStop').checked=p.e!==null;$('#useStep').checked=p.st!==null;if(p.s!==null)$('#start').value=p.s;if(p.e!==null)$('#stop').value=p.e;$('#step').value=p.st===null?1:p.st;}
+  else $('#idx').value=p.i;
+  $('#explain').innerHTML=p.ex;render();}
+function setMode(m){mode=m;$('#modeSeg').querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.m===m));$('#sliceCtl').style.display=m==='slice'?'flex':'none';$('#indexCtl').style.display=m==='index'?'flex':'none';}
+$('#presets').innerHTML=PRESETS.map((p,i)=>`<button>${p.name}</button>`).join('');
+$('#presets').querySelectorAll('button').forEach((b,i)=>b.onclick=()=>applyPreset(PRESETS[i],i));
+$('#typeSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{type=b.dataset.t;$('#typeSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));$('#valIn').value=DEFAULTS[type];render();});
+$('#modeSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{setMode(b.dataset.m);render();});
+document.querySelectorAll('#sliceCtl input,#indexCtl input,#valIn').forEach(el=>el.addEventListener('input',render));
+$('#valIn').value=DEFAULTS.str;applyPreset(PRESETS[0],0);
+</script>
+</body>
+</html>
