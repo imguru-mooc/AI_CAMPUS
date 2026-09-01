@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python Day 1 애니메이션</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:760px;margin:0 auto;padding:32px 20px 40px}
+  h1{color:var(--amber);font-size:26px;margin:0 0 4px}
+  .sub{color:var(--dim);margin:0 0 22px}
+  a.item{display:grid;grid-template-columns:70px 44px 1fr;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:8px;text-decoration:none;color:inherit}
+  a.item:hover{border-color:var(--amber)}
+  a.item:focus-visible{outline:2px solid var(--amber)}
+  .p{font-family:var(--mono);color:var(--teal);font-size:13px}
+  .no{font-family:var(--mono);color:var(--dim);font-size:13px}
+  .t{font-size:17px;color:var(--amber)}
+  .d{color:var(--dim);font-size:13px;margin-top:2px}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Python Day 1 애니메이션</h1>
+  <p class="sub">HYUNDAI AI Insight Campus 온디바이스 AI · Colab 환경과 Python 기초 · 9/2(수) · 교시 순서</p>
+
+  <a class="item" href="07_Colab_셀_실행순서.html"><span class="p">1교시</span><span class="no">07</span><span><div class="t">Colab 셀 실행 순서</div><div class="d">셀 위치가 아니라 실행 순서가 변수를 만든다 · NameError 재현 · 런타임 재시작</div></span></a>
+  <a class="item" href="02_변수_참조_모델.html"><span class="p">2교시</span><span class="no">02</span><span><div class="t">변수 · 참조 모델</div><div class="d">변수는 이름표 · 재대입 · 두 이름 하나의 값 · 문자열 불변</div></span></a>
+  <a class="item" href="06_형변환_자료형_흐름도.html"><span class="p">2교시</span><span class="no">06</span><span><div class="t">형변환 · 자료형 흐름도</div><div class="d">int/float/str/bool 변환 성공·실패 · bool("0")은 True · / 와 //</div></span></a>
+  <a class="item" href="01_비트마스크_시뮬레이터.html"><span class="p">3·7교시</span><span class="no">01</span><span><div class="t">비트 마스크 시뮬레이터</div><div class="d">8비트 LED · 읽기/설정/해제/토글 · 시프트 · ~ 와 &amp; 0xFF · 16비트 분리·결합</div></span></a>
+  <a class="item" href="03_제어흐름_추적기.html"><span class="p">4·5교시</span><span class="no">03</span><span><div class="t">제어 흐름 추적기</div><div class="d">한 줄씩 실행 · if-elif-else · for-range · while-break-else · enumerate/zip · 무한 루프</div></span></a>
+  <a class="item" href="05_인덱싱_슬라이싱.html"><span class="p">6교시</span><span class="no">05</span><span><div class="t">인덱싱 · 슬라이싱</div><div class="d">양·음수 인덱스 · [start:stop:step] 슬라이더 · IndexError vs 빈 결과</div></span></a>
+  <a class="item" href="04_문자열_파싱_파이프라인.html"><span class="p">6·7교시</span><span class="no">04</span><span><div class="t">문자열 파싱 파이프라인</div><div class="d">strip → 프레임 검증 → split → 형변환 · 손상 프레임 · 필드 누락</div></span></a>
+</div>
+</body>
+</html>
