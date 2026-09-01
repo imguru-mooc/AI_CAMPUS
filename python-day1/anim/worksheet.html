@@ -15,41 +15,61 @@
   .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
   button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
   button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.primary{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700;padding:9px 18px;font-size:14px}
+  button.submit{background:#3a2e12;border-color:var(--amber);color:var(--amber);font-weight:700;padding:9px 18px;font-size:14px}
+  button:disabled{opacity:.45;cursor:default}
   button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
   input[type=text]{background:#0a0f1c;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:14px}
   .tabs{display:flex;flex-wrap:wrap;gap:6px}
   .tabs button .s{font-family:var(--mono);font-size:11px;color:var(--dim);margin-left:6px}
-  .tabs button.done .s{color:var(--green)}
+  .tabs button.graded .s{color:var(--green)}
   .head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
   .head .t{color:var(--amber);font-size:17px}
   .head .a{font-size:13px;color:var(--teal);font-family:var(--mono)}
   .q{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#0e1628}
+  .q.unans{border-color:#5a3a1a}
   .q .n{font-family:var(--mono);color:var(--dim);font-size:12px}
   .q .p{margin:4px 0 10px;font-size:15px}
-  .q .p code,.opt code,.fb code{font-family:var(--mono);color:var(--blue);background:#0a0f1c;padding:1px 5px;border-radius:4px}
+  .q .p code,.opt code,.fb code,td code{font-family:var(--mono);color:var(--blue);background:#0a0f1c;padding:1px 5px;border-radius:4px}
   .q pre{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin:6px 0 10px;font-size:14px;white-space:pre;overflow-x:auto}
   .opts{display:grid;gap:6px}
   .opt{text-align:left;padding:8px 12px;font-size:14px;font-family:inherit}
-  .opt.sel{border-color:var(--amber)}
+  .opt.sel{border-color:var(--amber);background:#1f1a0c}
   .opt.ok{border-color:var(--green);color:var(--green);background:#0d2216}
   .opt.bad{border-color:var(--red);color:var(--red);background:#2a1212}
   .opt:disabled{cursor:default;opacity:.9}
   .fb{margin-top:8px;font-size:13px;color:var(--dim);border-left:3px solid var(--line);padding-left:10px}
   .fb.ok{border-left-color:var(--green)}.fb.bad{border-left-color:var(--red)}
   .fb .anim{color:var(--teal);font-family:var(--mono);font-size:12px;display:block;margin-top:3px}
-  .result{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
-  .code{font-family:var(--mono);font-size:22px;color:var(--amber);letter-spacing:1px}
+  .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  .code{font-family:var(--mono);font-size:20px;color:var(--amber);letter-spacing:1px}
   .score{font-family:var(--mono);color:var(--green);font-size:16px}
   .hint{color:var(--dim);font-size:13px}
   details{color:var(--dim);font-size:13px}
   details summary{cursor:pointer;color:var(--dim)}
   .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  /* dialog */
+  dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:0;max-width:820px;width:92vw;max-height:88vh}
+  dialog::backdrop{background:#000a}
+  .dg{padding:18px 20px}
+  .dg h3{color:var(--amber);margin:0 0 4px;font-size:20px}
+  .dg .meta{color:var(--dim);font-size:13px;margin-bottom:12px;font-family:var(--mono)}
+  .dg .sec{margin:14px 0 6px;color:var(--teal);font-weight:700;font-size:14px}
+  .dg table{width:100%;border-collapse:collapse;font-size:13px}
+  .dg th{text-align:left;color:var(--dim);font-weight:600;padding:5px 8px;border-bottom:1px solid var(--line);font-size:12px}
+  .dg td{padding:5px 8px;border-bottom:1px solid #16203a;vertical-align:top}
+  .dg td.r{font-family:var(--mono)}
+  .dg .ok{color:var(--green)}.dg .bad{color:var(--red)}.dg .none{color:var(--dim)}
+  .dg .sum{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0;font-family:var(--mono)}
+  .dgbar{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:10px 20px;display:flex;gap:8px;justify-content:flex-end;align-items:center}
+  .toast{color:var(--green);font-size:13px;margin-right:auto}
+  .body{overflow:auto;max-height:calc(88vh - 60px)}
 </style>
 </head>
 <body>
 <div class="app">
   <h1>Python Day 1 개념 워크시트</h1>
-  <p class="sub">교시마다 5문항. <b style="color:var(--amber)">먼저 예측</b>하고 답을 고른 뒤, 표시된 애니메이션 프리셋에서 확인하고, 마지막으로 Colab에서 코드로 검증하세요. 5문항을 모두 풀면 결과 코드가 나옵니다. 그 코드를 Colab 워크시트 마지막 "제출 요약" 셀에 입력하세요.</p>
+  <p class="sub">교시마다 10문항. 답을 고른 뒤 아래 <b style="color:var(--teal)">채점하기</b>를 누르면 정오·해설과 결과 코드가 나타납니다. 채점 전에는 답을 바꿀 수 있고, 채점 후에는 잠깁니다. 모든 교시를 마치면 <b style="color:var(--amber)">제출</b>로 오답 정리를 열고, <b>캡처</b>로 복사해 노션에 붙여 넣으세요.</p>
 
   <div class="panel">
     <div class="row"><label style="color:var(--dim);font-size:13px">이름 <input type="text" id="name" placeholder="홍길동"></label><span class="hint">이름은 결과 코드 계산에만 쓰이며 저장되지 않습니다.</span></div>
@@ -57,17 +77,22 @@
   <div class="panel"><h2>교시</h2><div class="tabs" id="tabs"></div></div>
   <div class="panel" id="sheet"></div>
   <div class="panel">
-    <h2>결과 코드</h2>
-    <div class="result"><span class="code" id="rcode">—</span><span class="score" id="rscore"></span><span class="hint" id="rhint">5문항을 모두 풀면 생성됩니다. 한 번 고른 답은 바꿀 수 없습니다.</span></div>
-    <details style="margin-top:10px"><summary>강사 검증</summary>
-      <div class="row" style="margin-top:6px"><input type="text" id="vname" placeholder="이름"><input type="text" id="vtab" placeholder="교시(1~7)" style="width:90px"><input type="text" id="vscore" placeholder="점수(0~5)" style="width:90px"><button id="vbtn">코드 계산</button><span class="code" id="vout" style="font-size:16px"></span></div>
-    </details>
+    <div class="actions">
+      <button class="primary" id="gradeBtn">채점하기</button>
+      <span class="code" id="rcode">—</span><span class="score" id="rscore"></span><span class="hint" id="rhint"></span>
+      <button class="submit" id="submitBtn" style="margin-left:auto">제출</button>
+    </div>
   </div>
 </div>
 
+<dialog id="dlg">
+  <div class="body"><div class="dg" id="dgBody"></div></div>
+  <div class="dgbar"><span class="toast" id="toast"></span><button id="captureBtn" class="primary">📋 캡처 (노션용 복사)</button><button id="closeBtn">닫기</button></div>
+</dialog>
+
 <script>
 const $=s=>document.querySelector(s);
-const Q=[
+const BASE=[
  {t:'1교시 · Colab 시작하기',anim:'07 Colab 셀 실행 순서',qs:[
   {p:'셀 1에 <code>x = 5</code>, 셀 2에 <code>print(x)</code>가 있습니다. 런타임을 새로 시작한 뒤 <b>셀 2만</b> 실행하면?',o:['5가 출력된다','NameError가 난다','0이 출력된다','아무것도 출력되지 않는다'],a:1,w:'실행하지 않은 셀의 변수는 커널에 없습니다.',an:'07 · "2번 셀부터 실행"'},
   {p:'노트북 셀 왼쪽 실행 번호가 위에서부터 <code>[3] [1] [2]</code>로 보입니다. 실제로 실행된 순서는?',o:['셀1 → 셀2 → 셀3','셀2 → 셀3 → 셀1','셀3 → 셀1 → 셀2','알 수 없다'],a:1,w:'번호 [1]이 붙은 두 번째 셀이 가장 먼저 실행됐습니다. 번호는 셀 위치가 아니라 실행 순서입니다.',an:'07 · 아무 순서로 ▶ 클릭'},
@@ -118,21 +143,130 @@ const Q=[
   {p:'로그 10줄 중 손상 2줄을 건너뛰었을 때, 평균 온도는 몇 줄로 계산해야 하는가?',o:['10줄','8줄','2줄','9줄'],a:1,w:'손상 줄은 온도가 없으므로 정상 줄 8개의 평균입니다. 분모를 총 줄 수로 두면 틀립니다.',an:'과제 B 자동 채점 "avg_temp"'},
  ]},
 ];
-let tab=0;const ans=Q.map(s=>s.qs.map(()=>null));
+const EXTRA=[
+ [ // 1교시
+  {p:'<code>%%writefile hello.py</code> 셀을 실행한 뒤, 그 파일을 실행하는 명령은?',o:['<code>run hello.py</code>','<code>!python hello.py</code>','<code>%hello.py</code>','<code>import hello.py</code>'],a:1,w:'파일 실행은 셸 명령이므로 <code>!python</code>. <code>import hello</code>도 되지만 확장자는 붙이지 않습니다.',an:'1교시 예제 1-5'},
+  {p:'Colab에서 <code>input()</code> 대신 입력 폼을 만드는 주석 문법은?',o:['<code>#@param</code>','<code>#@input</code>','<code>#@form</code>','<code>#@title</code>'],a:0,w:'<code>x = 3 #@param {type:"slider", min:0, max:7}</code> 처럼 씁니다. <code>#@title</code>은 셀 제목입니다.',an:'4교시 온도 판정기 폼'},
+  {p:'셀이 무한 루프로 끝나지 않을 때 멈추는 방법은?',o:['브라우저 새로고침','셀 왼쪽 ■ 버튼 또는 런타임 › 실행 중단','Ctrl + C 키','다른 셀을 실행한다'],a:1,w:'■를 누르면 KeyboardInterrupt로 중단됩니다. 새로고침은 세션이 끊길 수 있습니다.',an:'03 · "무한 루프 (i += 1 누락)"'},
+  {p:'Colab 노트북을 90분 동안 조작하지 않으면?',o:['아무 일도 없다','세션이 끊겨 변수와 /content 파일이 사라진다','Drive 파일까지 삭제된다','노트북 파일이 삭제된다'],a:1,w:'무활동 세션은 종료됩니다. 코드와 Drive 파일은 남지만 커널 변수와 /content는 사라지므로 Drive 저장 습관이 필요합니다.',an:'07 · "런타임 재시작 후 3 실행"'},
+  {p:'<code>drive.mount(\'/content/drive\')</code> 뒤 내 Google Drive 최상위 폴더 경로는?',o:['<code>/content/drive</code>','<code>/content/MyDrive</code>','<code>/content/drive/MyDrive</code>','<code>/drive/MyDrive</code>'],a:2,w:'마운트 지점 <code>/content/drive</code> 아래에 <code>MyDrive</code>가 내 드라이브입니다.',an:'1교시 예제 1-6'},
+ ],
+ [ // 2교시
+  {p:'Python에서 <code>2 ** 31</code>을 계산하면?',o:['오버플로 오류','음수로 뒤집힌다','2147483648 (정상 계산)','float로 바뀐다'],a:2,w:'Python int는 자릿수 제한이 없습니다. C의 int32와 다른 점입니다.',an:'2교시 예제 2-3'},
+  {p:'<code>f"{4773:08d}"</code>의 결과는?',o:['"4773    "','"00004773"','"    4773"','"4,773"'],a:1,w:'08d는 8자리 정수, 빈자리는 0으로 채웁니다. 공백 채움은 <code>8d</code>, 천 단위는 <code>,</code>.',an:'2교시 예제 2-6'},
+  {p:'<code>int(3.99)</code>와 <code>round(3.99)</code>의 결과는?',o:['4, 4','3, 4','3, 3','4, 3'],a:1,w:'int()는 소수점 아래를 버리고, round()는 반올림합니다.',an:'06 · "int(3.99)"'},
+  {p:'<code>str(3.0)</code>의 결과는?',o:['"3"','"3.0"','3','3.0'],a:1,w:'float 3.0은 문자열로도 "3.0"입니다. 송신 문자열을 만들 때 자릿수 형식은 f-string으로 지정하세요.',an:'06 · "str(3.0)"'},
+  {p:'<code>1_000_000 == 1000000</code>의 결과는?',o:['True','False','SyntaxError','TypeError'],a:0,w:'밑줄은 읽기 편하게 자릿수를 구분하는 표기일 뿐, 값은 같습니다.',an:'2교시 예제 2-3'},
+ ],
+ [ // 3교시
+  {p:'<code>0x0F</code>를 8비트 2진수로 쓰면?',o:['0b11110000','0b00001111','0b00010101','0b11111111'],a:1,w:'0x0F = 15 = 0b00001111. 하위 4비트만 통과시키는 마스크로 자주 씁니다.',an:'01 · "하위 4비트만"'},
+  {p:'<code>6 and 3</code>과 <code>6 & 3</code>의 결과는?',o:['True, True','3, 2','6, 2','3, 3'],a:1,w:'<code>and</code>는 마지막에 평가한 값(3)을, <code>&</code>는 비트 AND(0b110 & 0b011 = 0b010 = 2)를 돌려줍니다.',an:'3교시 예제 3-7'},
+  {p:'<code>2 ** 3 ** 2</code>의 값은?',o:['64','512','36','12'],a:1,w:'거듭제곱은 오른쪽부터 묶입니다: 2 ** (3 ** 2) = 2 ** 9 = 512.',an:'3교시 예제 3-1'},
+  {p:'<code>divmod(17, 5)</code>의 결과는?',o:['(3, 2)','(2, 3)','3.4','(3.4, 0)'],a:0,w:'몫과 나머지를 한 번에 돌려줍니다. 17 // 5 = 3, 17 % 5 = 2.',an:'3교시 예제 3-1'},
+  {p:'<code>(0xA5 & 0xF0) >> 4</code>의 값은?',o:['0x5 (5)','0xA (10)','0xA0 (160)','0xF (15)'],a:1,w:'0xF0 마스크로 상위 4비트만 남기고(0xA0), 4칸 내리면 0xA. 바이트를 니블로 나누는 패턴입니다.',an:'01 · 마스크 0xF0 + >> 4'},
+ ],
+ [ // 4교시
+  {p:'<code>if x = 5:</code>를 실행하면?',o:['x가 5이면 참','항상 참','SyntaxError','항상 거짓'],a:2,w:'조건문에서 대입 <code>=</code>은 문법 오류입니다. 비교는 <code>==</code>.',an:'4교시 예제 4-6'},
+  {p:'<code>20 <= temp < 30</code>과 같은 식은?',o:['<code>temp >= 20 or temp < 30</code>','<code>temp >= 20 and temp < 30</code>','<code>20 <= temp and 30</code>','<code>temp in (20, 30)</code>'],a:1,w:'연쇄 비교는 and로 이어진 두 비교와 같습니다.',an:'4교시 예제 4-3'},
+  {p:'<code>samples = []</code>일 때 <code>len(samples) > 0 and samples[0] > 30</code>은?',o:['IndexError','False (오류 없음)','True','None'],a:1,w:'앞이 거짓이면 뒤는 실행되지 않는 단축 평가 덕분에 <code>samples[0]</code>이 실행되지 않습니다.',an:'3교시 예제 3-2'},
+  {p:'윤년 판정 <code>(y % 4 == 0 and y % 100 != 0) or y % 400 == 0</code>에서 1900년은?',o:['윤년','평년','오류','판정 불가'],a:1,w:'1900은 4의 배수지만 100의 배수이고 400의 배수가 아니므로 평년입니다. 2000년은 윤년.',an:'빈칸 4-2'},
+  {p:'<code>"CAM" in "ESP32-CAM"</code>의 결과는?',o:['True','False','2','오류'],a:0,w:'<code>in</code>은 부분 문자열 포함 여부를 검사합니다. 리스트에도 같은 문법을 씁니다.',an:'4교시 예제 4-3'},
+ ],
+ [ // 5교시
+  {p:'<code>list(range(10, 0, -3))</code>의 결과는?',o:['[10, 7, 4, 1]','[10, 7, 4, 1, 0]','[0, 3, 6, 9]','[]'],a:0,w:'음수 step은 거꾸로 셉니다. stop(0)은 포함되지 않습니다.',an:'5교시 예제 5-1'},
+  {p:'<code>continue</code>의 동작은?',o:['반복을 즉시 끝낸다','이번 회전의 나머지를 건너뛰고 다음 회전으로','반복을 처음부터 다시 시작','else 블록을 실행'],a:1,w:'break는 반복 종료, continue는 다음 회전으로 점프입니다.',an:'5교시 예제 5-3'},
+  {p:'<code>for ch in "ESP32":</code>는 몇 번 반복되는가?',o:['1','4','5','6'],a:2,w:'문자열은 문자 하나하나가 요소입니다. 길이 5 → 5회.',an:'5교시 예제 5-3'},
+  {p:'<code>list(zip([1, 2, 3], ["a", "b"]))</code>의 결과는?',o:['[(1, "a"), (2, "b"), (3, None)]','[(1, "a"), (2, "b")]','오류','[(1, "a"), (2, "b"), (3, "")]'],a:1,w:'짧은 쪽에서 멈춥니다. 긴 쪽까지 쓰려면 <code>itertools.zip_longest</code>.',an:'03 · "enumerate + zip"'},
+  {p:'<code>for i in range(3): pass</code>가 끝난 뒤 <code>i</code>의 값은?',o:['0','2','3','정의되지 않음'],a:1,w:'반복 변수는 반복이 끝난 뒤에도 마지막 값(2)을 유지합니다.',an:'03 · "for + range" 변수 표'},
+ ],
+ [ // 6교시
+  {p:'<code>"ESP32-CAM"[::2]</code>의 결과는?',o:['"EP2CM"','"S3-A"','"ESP32"','"MAC-23PSE"'],a:0,w:'0, 2, 4, 6, 8번 칸: E, P, 2, C, M.',an:'05 · "[::2]"'},
+  {p:'<code>",".join(["a", "b", "c"])</code>의 결과는?',o:['["a,b,c"]','"a,b,c"','"a, b, c"','"abc"'],a:1,w:'join은 구분자를 사이에 넣어 하나의 문자열로 합칩니다. split의 반대입니다.',an:'6교시 예제 6-3'},
+  {p:'<code>"T=25.3,H=60".count("=")</code>의 결과는?',o:['1','2','3','True'],a:1,w:'count는 부분 문자열이 나타난 횟수를 셉니다.',an:'6교시 예제 6-3'},
+  {p:'<code>s = "abc"; s[0] = "A"</code>를 실행하면?',o:['s가 "Abc"가 된다','TypeError','IndexError','아무 일도 없다'],a:1,w:'문자열은 불변입니다. 바꾸려면 새 문자열을 만들어 다시 대입하세요: <code>s = "A" + s[1:]</code>.',an:'6교시 예제 6-2'},
+  {p:'<code>"  a b  ".strip()</code>의 결과는?',o:['"ab"','"a b"','" a b "','"a  b"'],a:1,w:'strip은 양 끝 공백만 지웁니다. 안쪽 공백은 그대로입니다.',an:'04 · "앞뒤 공백"'},
+ ],
+ [ // 7교시
+  {p:'<code>f"{4773:#x}"</code>의 결과는?',o:['"0x12A5"','"0x12a5"','"12a5"','"0X12A5"'],a:1,w:'#은 접두어 0x, 소문자 x는 소문자 출력. 대문자는 <code>#X</code>.',an:'과제 A hex_str'},
+  {p:'과제 A에서 <code>(n >> i) & 1</code>이 1이면 무엇을 뜻하는가?',o:['n이 i보다 크다','i번 비트가 켜져 있다','n이 홀수다','i가 켜진 비트 개수다'],a:1,w:'i칸 내린 뒤 최하위 비트만 보면 원래 i번 비트입니다. 이 i를 set_bits에 모읍니다.',an:'01 · "버튼 읽기"'},
+  {p:'과제 B에서 <code>#corrupted line</code>은 어느 조건에서 걸러지는가?',o:['<code>line.strip()</code>','<code>line.startswith("$")</code>이 거짓','<code>float()</code> 실패','<code>split(",")</code> 실패'],a:1,w:'$로 시작하지 않으므로 프레임 검증에서 바로 n_corrupt로 갑니다.',an:'04 · "손상 프레임"'},
+  {p:'과제 B에서 <code>enumerate(lines, start=1)</code>을 쓰는 이유는?',o:['속도가 빠르다','원본 줄 번호를 1부터 붙이기 위해','손상 줄을 자동으로 건너뛴다','온도만 추출한다'],a:1,w:'max_line에 원본 줄 번호(#03)를 기록하려면 번호가 필요합니다.',an:'03 · "enumerate + zip"'},
+  {p:'최고 온도 갱신 조건 <code>max_temp is None or t > max_temp</code>에서 <code>is None</code>이 필요한 이유는?',o:['None은 0보다 작아서','첫 정상 줄에서는 비교할 값이 없기 때문','문법상 필수라서','속도를 위해'],a:1,w:'초기값 None과 float를 비교하면 TypeError. 단축 평가로 첫 줄은 무조건 갱신됩니다.',an:'3교시 예제 3-2 (단축 평가)'},
+ ],
+];
+
+const Q=BASE.map((s,i)=>({...s,qs:s.qs.concat(EXTRA[i])}));
+let tab=0;const ans=Q.map(s=>s.qs.map(()=>null));const graded=Q.map(()=>false);
 function hash(s){let h=5381;for(const c of s)h=((h<<5)+h+c.charCodeAt(0))>>>0;return h.toString(16).padStart(8,'0').slice(-4);}
-function codeFor(name,t,score){return `${t}${'ABCDEF'[score]||'F'}-${hash(`${name.trim()}|${t}|${score}|day1`)}`;}
-function renderTabs(){$('#tabs').innerHTML=Q.map((s,i)=>{const done=ans[i].every(a=>a!==null);const sc=ans[i].filter((a,k)=>a===Q[i].qs[k].a).length;return `<button class="${i===tab?'active':''} ${done?'done':''}" data-i="${i}">${i+1}교시<span class="s">${done?sc+'/5':ans[i].filter(a=>a!==null).length+'/5'}</span></button>`;}).join('');$('#tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{tab=+b.dataset.i;render();});}
-function render(){renderTabs();const s=Q[tab];
-  $('#sheet').innerHTML=`<div class="head"><span class="t">${s.t}</span><span class="a">🎬 ${s.anim}</span></div>`+s.qs.map((q,k)=>{const a=ans[tab][k];const done=a!==null;
-    return `<div class="q"><div class="n">문항 ${k+1}</div><div class="p">${q.p}</div><div class="opts">${q.o.map((o,j)=>`<button class="opt ${done?(j===q.a?'ok':(j===a?'bad':'')):''}" data-k="${k}" data-j="${j}" ${done?'disabled':''}>${'①②③④'[j]} ${o}</button>`).join('')}</div>${done?`<div class="fb ${a===q.a?'ok':'bad'}">${a===q.a?'정답. ':'오답. '}${q.w}<span class="anim">확인: ${q.an}</span></div>`:''}</div>`;}).join('');
-  $('#sheet').querySelectorAll('.opt').forEach(b=>b.onclick=()=>{ans[tab][+b.dataset.k]=+b.dataset.j;render();});
-  const done=ans[tab].every(a=>a!==null);const sc=ans[tab].filter((a,k)=>a===s.qs[k].a).length;
-  if(done){const nm=$('#name').value;if(!nm.trim()){$('#rcode').textContent='—';$('#rscore').textContent=`${sc}/5`;$('#rhint').textContent='위에 이름을 입력하면 결과 코드가 나옵니다.';}
-    else{$('#rcode').textContent=codeFor(nm,tab+1,sc);$('#rscore').textContent=`${sc}/5`;$('#rhint').textContent='이 코드를 Colab 워크시트 "제출 요약" 셀에 입력하세요.';}}
-  else{$('#rcode').textContent='—';$('#rscore').textContent='';$('#rhint').textContent=`${tab+1}교시: ${ans[tab].filter(a=>a!==null).length}/5 풀었습니다. 한 번 고른 답은 바꿀 수 없습니다.`;}
+function codeFor(name,t,score){return `${t}${'ABCDEFGHIJK'[10-score]||'K'}-${hash(`${name.trim()}|${t}|${score}|day1`)}`;}
+function scoreOf(i){return ans[i].filter((a,k)=>a===Q[i].qs[k].a).length;}
+function strip(h){const d=document.createElement('div');d.innerHTML=h;return d.textContent;}
+function renderTabs(){$('#tabs').innerHTML=Q.map((s,i)=>{const n=ans[i].filter(a=>a!==null).length;return `<button class="${i===tab?'active':''} ${graded[i]?'graded':''}" data-i="${i}">${i+1}교시<span class="s">${graded[i]?scoreOf(i)+'/10':n+'/10'}</span></button>`;}).join('');$('#tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{tab=+b.dataset.i;render();window.scrollTo({top:0});});}
+function render(){renderTabs();const s=Q[tab];const g=graded[tab];
+  $('#sheet').innerHTML=`<div class="head"><span class="t">${s.t}</span><span class="a">🎬 ${s.anim}</span></div>`+s.qs.map((q,k)=>{const a=ans[tab][k];
+    return `<div class="q ${g&&a===null?'unans':''}"><div class="n">문항 ${k+1}</div><div class="p">${q.p}</div><div class="opts">${q.o.map((o,j)=>{let cls='';if(g){if(j===q.a)cls='ok';else if(j===a)cls='bad';}else if(j===a)cls='sel';return `<button class="opt ${cls}" data-k="${k}" data-j="${j}" ${g?'disabled':''}>${'①②③④'[j]} ${o}</button>`;}).join('')}</div>${g?`<div class="fb ${a===q.a?'ok':'bad'}">${a===null?'미응답. ':(a===q.a?'정답. ':'오답. ')}${q.w}<span class="anim">확인: ${q.an}</span></div>`:''}</div>`;}).join('');
+  $('#sheet').querySelectorAll('.opt').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,j=+b.dataset.j;ans[tab][k]=(ans[tab][k]===j?null:j);render();});
+  $('#gradeBtn').disabled=g;$('#gradeBtn').textContent=g?'채점 완료':'채점하기';
+  const nm=$('#name').value;
+  if(g){const sc=scoreOf(tab);$('#rscore').textContent=`${sc}/10`;if(nm.trim()){$('#rcode').textContent=codeFor(nm,tab+1,sc);$('#rhint').textContent='결과 코드';}else{$('#rcode').textContent='—';$('#rhint').textContent='이름을 입력하면 결과 코드가 나옵니다.';}}
+  else{$('#rcode').textContent='—';$('#rscore').textContent='';const n=ans[tab].filter(a=>a!==null).length;$('#rhint').textContent=`${tab+1}교시: ${n}/10 골랐습니다. 채점하기를 누르면 잠깁니다.`;}
 }
+$('#gradeBtn').onclick=()=>{const n=ans[tab].filter(a=>a!==null).length;if(n<10&&!confirm(`아직 ${10-n}문항을 고르지 않았습니다. 그래도 채점할까요? (미응답은 오답 처리)`))return;graded[tab]=true;render();};
 $('#name').addEventListener('input',render);
-$('#vbtn').onclick=()=>{const t=+$('#vtab').value,sc=+$('#vscore').value;$('#vout').textContent=(t>=1&&t<=7&&sc>=0&&sc<=5)?codeFor($('#vname').value,t,sc):'입력 확인';};
+
+/* ── 제출 대화상자 ── */
+let lastHtml='',lastText='';
+function buildReport(){
+  const nm=$('#name').value.trim()||'(이름 없음)';const ds=new Date().toLocaleString('ko-KR');
+  let h=`<h3>Python Day 1 개념 워크시트 — 오답 정리</h3><div class="meta">${nm} · ${ds}</div>`;
+  let t=`Python Day 1 개념 워크시트 — 오답 정리\n이름: ${nm}\n일시: ${ds}\n\n`;
+  let any=false;
+  Q.forEach((s,i)=>{if(!graded[i])return;
+    const wrong=s.qs.map((q,k)=>({q,k,a:ans[i][k]})).filter(x=>x.a!==x.q.a);
+    h+=`<div class="sec">${s.t}</div>`;t+=`### ${s.t}\n`;
+    if(!wrong.length){h+=`<div class="ok" style="margin:4px 0 8px">오답 없음</div>`;t+=`오답 없음\n\n`;return;}
+    any=true;
+    h+=`<table><tr><th>#</th><th>문항</th><th>내 답</th><th>정답</th></tr>`;t+=`| # | 문항 | 내 답 | 정답 |\n|---|---|---|---|\n`;
+    wrong.forEach(({q,k,a})=>{const my=a===null?'미응답':'①②③④'[a]+' '+strip(q.o[a]);const co='①②③④'[q.a]+' '+strip(q.o[q.a]);const qt=strip(q.p).replace(/\s+/g,' ').slice(0,70);
+      h+=`<tr><td class="r">${k+1}</td><td>${qt}</td><td class="bad">${my}</td><td class="ok">${co}</td></tr>`;
+      t+=`| ${k+1} | ${qt.replace(/\|/g,'/')} | ${my.replace(/\|/g,'/')} | ${co.replace(/\|/g,'/')} |\n`;});
+    h+=`</table>`;t+=`\n`;});
+  const notGraded=Q.map((s,i)=>graded[i]?null:i+1).filter(x=>x);
+  if(notGraded.length){h+=`<div class="meta" style="margin-top:10px">미채점: ${notGraded.join(', ')}교시</div>`;t+=`미채점: ${notGraded.join(', ')}교시\n`;}
+  lastHtml=h;lastText=t;return h;
+}
+$('#submitBtn').onclick=()=>{if(!graded.some(x=>x)){alert('먼저 한 교시 이상 채점하기를 눌러 주세요.');return;}$('#dgBody').innerHTML=buildReport();$('#toast').textContent='';$('#dlg').showModal();};
+$('#closeBtn').onclick=()=>$('#dlg').close();
+function copyRich(html,text){
+  // 1) copy 이벤트에 두 형식을 직접 실어 보내기 (사용자 클릭 안에서 동기 실행 — file:// 에서도 동작)
+  let done=false;
+  const onCopy=e=>{e.clipboardData.setData('text/html',html);e.clipboardData.setData('text/plain',text);e.preventDefault();done=true;};
+  document.addEventListener('copy',onCopy);
+  try{
+    const body=$('#dgBody');const sel=window.getSelection();const range=document.createRange();range.selectNodeContents(body);sel.removeAllRanges();sel.addRange(range);
+    document.execCommand('copy');
+    sel.removeAllRanges();
+  }catch(e){}
+  document.removeEventListener('copy',onCopy);
+  return done;
+}
+$('#captureBtn').onclick=async()=>{
+  const htmlDoc=`<meta charset="utf-8">`+lastHtml.replace(/ class="[^"]*"/g,'').replace(/<table>/g,'<table border="1" style="border-collapse:collapse">');
+  if(copyRich(htmlDoc,lastText)){$('#toast').textContent='복사됨 — 노션 페이지에서 Ctrl+V 로 붙여 넣으세요.';return;}
+  // 2) 비동기 Clipboard API
+  try{
+    if(navigator.clipboard&&window.ClipboardItem){
+      await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([htmlDoc],{type:'text/html'}),'text/plain':new Blob([lastText],{type:'text/plain'})})]);
+    }else{await navigator.clipboard.writeText(lastText);}
+    $('#toast').textContent='복사됨 — 노션 페이지에서 Ctrl+V 로 붙여 넣으세요.';return;
+  }catch(e){}
+  // 3) 최종: 텍스트 영역 선택 복사
+  try{
+    const ta=document.createElement('textarea');ta.value=lastText;ta.style.position='fixed';ta.style.opacity='0';$('#dlg').appendChild(ta);ta.focus();ta.select();
+    const ok=document.execCommand('copy');ta.remove();
+    $('#toast').textContent=ok?'텍스트(마크다운 표)로 복사됨 — 노션에서 Ctrl+V.':'복사 실패 — 대화상자 내용을 드래그해 Ctrl+C 로 복사하세요.';
+  }catch(e){$('#toast').textContent='복사 실패 — 대화상자 내용을 드래그해 Ctrl+C 로 복사하세요.';}
+};
 render();
 </script>
 </body>
