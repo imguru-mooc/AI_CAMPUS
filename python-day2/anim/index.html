@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python Day 2 애니메이션</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:760px;margin:0 auto;padding:32px 20px 40px}
+  h1{color:var(--amber);font-size:26px;margin:0 0 4px}
+  .sub{color:var(--dim);margin:0 0 22px}
+  h2{color:var(--dim);font-size:13px;font-weight:600;margin:22px 4px 8px;letter-spacing:.5px}
+  a.item{display:grid;grid-template-columns:70px 52px 1fr;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:8px;text-decoration:none;color:inherit}
+  a.item:hover{border-color:var(--amber)}
+  a.item:focus-visible{outline:2px solid var(--amber)}
+  .p{font-family:var(--mono);color:var(--teal);font-size:13px}
+  .no{font-family:var(--mono);color:var(--dim);font-size:13px}
+  .t{font-size:17px;color:var(--amber)}
+  .d{color:var(--dim);font-size:13px;margin-top:2px}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Python Day 2 애니메이션</h1>
+  <p class="sub">HYUNDAI AI Insight Campus 온디바이스 AI · 자료구조와 함수 · 9/3(목) · 교시 순서</p>
+
+  <h2>신규 (day2)</h2>
+  <a class="item" href="D2-3_리스트_메서드_비교.html"><span class="p">1교시</span><span class="no">D2-3</span><span><div class="t">리스트 메서드 동작 비교</div><div class="d">append/extend/insert · pop/remove/del · sort() None 함정 vs sorted()</div></span></a>
+  <a class="item" href="D2-1_딕셔너리_해시조회.html"><span class="p">2교시</span><span class="no">D2-1</span><span><div class="t">딕셔너리 해시 조회</div><div class="d">key → hash → 버킷 직행 · 리스트 순차 탐색과 비교 · KeyError vs .get()</div></span></a>
+  <a class="item" href="D2-2_집합_벤다이어그램.html"><span class="p">2교시</span><span class="no">D2-2</span><span><div class="t">집합 연산 벤 다이어그램</div><div class="d">| &amp; - ^ · 중복 제거 · 두 노드 감지 ID 비교</div></span></a>
+  <a class="item" href="D2-5_중첩자료구조_트리뷰어.html"><span class="p">2·7교시</span><span class="no">D2-5</span><span><div class="t">중첩 자료구조 트리 뷰어</div><div class="d">nodes.json 트리 · 접근식 대괄호 = 한 층 하강 · KeyError/IndexError/TypeError</div></span></a>
+  <a class="item" href="D2-6_자료구조_결정트리.html"><span class="p">2·7교시</span><span class="no">D2-6</span><span><div class="t">자료구조 선택 결정 트리</div><div class="d">키로 찾나 · 순서 · 변경 · 중복 4가지 질문 → list/tuple/dict/set</div></span></a>
+  <a class="item" href="D2-4_컴프리헨션_변환기.html"><span class="p">4교시</span><span class="no">D2-4</span><span><div class="t">컴프리헨션 변환기</div><div class="d">for 문 ↔ 한 줄 동시 하이라이트 · 조건 필터 · ADC→전압</div></span></a>
+
+  <h2>재사용·확장 (day1 폴더 — 새 프리셋 추가됨)</h2>
+  <a class="item" href="../../python-day1/anim/02_변수_참조_모델.html"><span class="p">1교시</span><span class="no">02</span><span><div class="t">변수 · 참조 모델</div><div class="d">리스트 참조 공유/복사 + [Day 2] 중첩 얕은 복사 · deepcopy</div></span></a>
+  <a class="item" href="../../python-day1/anim/05_인덱싱_슬라이싱.html"><span class="p">1교시</span><span class="no">05</span><span><div class="t">인덱싱 · 슬라이싱</div><div class="d">리스트/튜플 모드 + [Day 2] 슬라이스 대입</div></span></a>
+  <a class="item" href="../../python-day1/anim/03_제어흐름_추적기.html"><span class="p">3·6교시</span><span class="no">03</span><span><div class="t">제어 흐름 추적기</div><div class="d">[Day 2] 함수 호출과 스택 · 예외 전파와 try</div></span></a>
+  <a class="item" href="../../python-day1/anim/04_문자열_파싱_파이프라인.html"><span class="p">6교시</span><span class="no">04</span><span><div class="t">문자열 파싱 파이프라인</div><div class="d">필드 누락 · 잘못된 숫자 — try/except 도입 동기</div></span></a>
+</div>
+</body>
+</html>

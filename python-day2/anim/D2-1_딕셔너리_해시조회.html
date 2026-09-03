@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>딕셔너리 해시 조회 — Python Day 2</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono)}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.red{color:var(--red);border-color:var(--red)}.pill.green{color:var(--green);border-color:var(--green)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.run{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .grid{display:grid;grid-template-columns:1.15fr 1fr;gap:14px}
+  @media(max-width:820px){.grid{grid-template-columns:1fr}}
+  .flow{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  .keytok{font-family:var(--mono);background:#1a2540;border:1px solid var(--blue);color:var(--blue);border-radius:8px;padding:6px 12px;font-size:15px;transition:all .3s}
+  .hashbox{border:1px dashed var(--purple);color:var(--purple);border-radius:8px;padding:6px 12px;font-family:var(--mono);font-size:13px;transition:box-shadow .3s}
+  .hashbox.hl{box-shadow:0 0 0 3px #c084fc44}
+  .arrow{color:var(--dim);font-size:18px}
+  .buckets{display:grid;gap:6px}
+  .bucket{display:grid;grid-template-columns:44px 1fr;gap:8px;align-items:center}
+  .bno{font-family:var(--mono);color:var(--dim);font-size:12px;text-align:right}
+  .slot{min-height:40px;border:1px solid var(--line);border-radius:8px;background:#0e1628;display:flex;align-items:center;gap:8px;padding:4px 10px;font-family:var(--mono);font-size:14px;transition:all .3s}
+  .slot.hl{border-color:var(--teal);box-shadow:0 0 0 3px #2dd4bf33}
+  .slot.hit{border-color:var(--green);background:#0d2216}
+  .slot.miss{border-color:var(--red);background:#2a1212}
+  .slot .k{color:var(--purple)}.slot .v{color:var(--amber)}.slot .sep{color:var(--dim)}
+  .slot .new{animation:pop .4s}
+  @keyframes pop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+  /* list race */
+  .lrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .lcell{font-family:var(--mono);font-size:13px;border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:#0e1628;transition:all .2s}
+  .lcell.scan{border-color:var(--amber);background:#1f1a0c}
+  .lcell.hit{border-color:var(--green);background:#0d2216;color:var(--green)}
+  .cmp{font-family:var(--mono);color:var(--dim);font-size:12px;margin-top:8px}
+  .cmp b{color:var(--amber)}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:14px;white-space:pre-wrap;min-height:56px}
+  .code .g{color:var(--green)}.code .e{color:var(--red)}.code .c{color:#5d7292}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}.explain b.purple{color:var(--purple)}
+  .explain code{font-family:var(--mono);color:var(--blue)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  input[type=text]{background:#0a0f1c;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:14px;width:130px}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>딕셔너리 해시 조회</h1>
+  <p class="sub">딕셔너리는 키를 <b style="color:var(--purple)">hash()</b> 에 넣어 나온 번호의 칸(버킷)으로 <b style="color:var(--teal)">바로 갑니다</b>. 리스트처럼 앞에서부터 뒤지지 않습니다.</p>
+  <div class="pills"><span class="pill purple" style="color:var(--purple);border-color:var(--purple)">key → hash() → 버킷</span><span class="pill teal">조회 O(1)</span><span class="pill blue">리스트 탐색 O(n)</span><span class="pill red">없는 키 → KeyError</span><span class="pill green">.get() → 기본값</span></div>
+
+  <div class="panel">
+    <h2>프리셋</h2>
+    <div class="presets" id="presets"></div>
+    <div class="row" style="margin-top:10px">
+      <label style="color:var(--dim);font-size:13px">키 <input type="text" id="keyIn" value="LED"></label>
+      <button class="run" id="getBtn">d[key] 조회</button>
+      <button id="getD">d.get(key, -1)</button>
+      <button id="setBtn">d[key] = 값 대입</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <h2>딕셔너리 pins — 해시 테이블 (버킷 8개)</h2>
+      <div class="flow"><span class="keytok" id="tok">"LED"</span><span class="arrow">→</span><span class="hashbox" id="hashbox">hash(key) % 8 = ?</span><span class="arrow">→</span><span style="color:var(--dim);font-size:13px">버킷으로 직행</span></div>
+      <div class="buckets" id="buckets"></div>
+    </div>
+    <div>
+      <div class="panel">
+        <h2>비교: 리스트에서 같은 키 찾기 (순차 탐색)</h2>
+        <div class="lrow" id="lrow"></div>
+        <div class="cmp" id="cmp">—</div>
+      </div>
+      <div class="panel"><h2>Python</h2><div class="code" id="code"></div></div>
+      <div class="panel"><h2>상태</h2><div class="status info" id="status">프리셋을 고르거나 키를 입력해 조회하세요.</div></div>
+    </div>
+  </div>
+  <div class="panel explain" id="explain"></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const NB=8;
+let dict={}; // key -> value
+function h(key){let x=0;for(const c of key)x=(x*31+c.charCodeAt(0))>>>0;return x;}
+function bucketOf(key){return h(key)%NB;}
+const INIT=[["LED",3],["BTN",5],["BUZZ",6],["SERVO",9],["ToF",2]];
+function resetDict(){dict={};INIT.forEach(([k,v])=>dict[k]=v);}
+function renderBuckets(hl=-1,mark){
+  let html='';
+  for(let b=0;b<NB;b++){
+    const items=Object.entries(dict).filter(([k])=>bucketOf(k)===b);
+    html+=`<div class="bucket"><div class="bno">버킷 ${b}</div><div class="slot ${hl===b?(mark||'hl'):''}" id="bk${b}">${items.length?items.map(([k,v])=>`<span><span class="k">"${k}"</span><span class="sep"> : </span><span class="v">${v}</span></span>`).join('<span class="sep">, </span>'):'<span style="color:#3f5070">비어 있음</span>'}</div></div>`;
+  }
+  $('#buckets').innerHTML=html;
+}
+function renderList(scan=-1,hit=-1){
+  $('#lrow').innerHTML=INIT.map(([k,v],i)=>`<div class="lcell ${i===hit?'hit':(i===scan?'scan':'')}">("${k}", ${v})</div>`).join('');
+}
+function setStatus(c,m){const s=$('#status');s.className='status '+c;s.innerHTML=m;}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+let busy=false;
+async function lookup(useGet=false){
+  if(busy)return;busy=true;const key=$('#keyIn').value.trim();
+  $('#tok').textContent=`"${key}"`;
+  $('#code').innerHTML=useGet?`pins.get("${key}", -1)`:`pins["${key}"]`;
+  // hash step
+  $('#hashbox').classList.add('hl');const b=bucketOf(key);
+  $('#hashbox').textContent=`hash("${key}") % 8 = ${b}`;
+  setStatus('info',`hash() 가 버킷 번호 <b>${b}</b> 를 계산합니다 — 다른 칸은 쳐다보지 않습니다.`);
+  await sleep(700);$('#hashbox').classList.remove('hl');
+  const exists=key in dict;
+  renderBuckets(b, exists?'hit':'miss');
+  // list race in parallel
+  let idx=INIT.findIndex(([k])=>k===key);
+  for(let i=0;i<INIT.length;i++){renderList(i, i===idx?i:-1);await sleep(220);if(i===idx)break;}
+  if(idx<0)renderList(-1,-1);
+  const cmps=idx<0?INIT.length:idx+1;
+  $('#cmp').innerHTML=`딕셔너리: <b>1번</b> 만에 도착 · 리스트: <b>${cmps}번</b> 비교${idx<0?' 후 실패':''} — 항목이 1만 개면 이 차이가 1 대 수천이 됩니다`;
+  if(exists){$('#code').innerHTML+=`\n<span class="g">→ ${dict[key]}</span>`;setStatus('ok',`버킷 ${b} 에서 <b>"${key}" : ${dict[key]}</b> 발견.`);}
+  else if(useGet){$('#code').innerHTML+=`\n<span class="g">→ -1</span>  <span class="c"># 기본값</span>`;setStatus('ok',`버킷 ${b} 에 "${key}" 없음 → <b>.get()</b> 은 멈추지 않고 기본값 -1 을 돌려줍니다.`);}
+  else{$('#code').innerHTML+=`\n<span class="e">KeyError: '${key}'</span>`;setStatus('warn',`버킷 ${b} 에 "${key}" 없음 → <b>KeyError</b> 로 프로그램 중단. 방어하려면 .get() 또는 in 검사.`);}
+  busy=false;
+}
+async function setKey(){
+  if(busy)return;busy=true;const key=$('#keyIn').value.trim();const val=Math.floor(Math.random()*9)+1;
+  const existed=key in dict;const b=bucketOf(key);
+  $('#tok').textContent=`"${key}"`;$('#hashbox').textContent=`hash("${key}") % 8 = ${b}`;$('#hashbox').classList.add('hl');
+  $('#code').innerHTML=`pins["${key}"] = ${val}`;
+  await sleep(600);$('#hashbox').classList.remove('hl');
+  dict[key]=val;renderBuckets(b,'hit');
+  setStatus('ok', existed?`이미 있던 키 → 값을 <b>덮어씁니다</b> (키는 중복될 수 없습니다).`:`버킷 ${b} 에 새 항목 <b>"${key}" : ${val}</b> 추가.`);
+  busy=false;
+}
+$('#getBtn').onclick=()=>lookup(false);
+$('#getD').onclick=()=>lookup(true);
+$('#setBtn').onclick=setKey;
+const PRESETS=[
+ {n:'조회 성공 d["LED"]',run:()=>{resetDict();renderBuckets();$('#keyIn').value='LED';lookup(false);},ex:'<p>키를 해시해 나온 번호의 버킷으로 <b class="teal">바로</b> 갑니다. 데이터가 아무리 많아도 조회 횟수는 거의 일정합니다(평균 O(1)). 오른쪽 리스트는 같은 것을 찾으려고 앞에서부터 하나씩 비교합니다(O(n)).</p>'},
+ {n:'없는 키 d["MOTOR"] ✕',run:()=>{resetDict();renderBuckets();$('#keyIn').value='MOTOR';lookup(false);},ex:'<p>버킷에 도착했는데 키가 없으면 <b class="red">KeyError</b> 입니다. None 이 나오는 게 아니라 프로그램이 멈춥니다.</p>'},
+ {n:'.get("MOTOR", -1)',run:()=>{resetDict();renderBuckets();$('#keyIn').value='MOTOR';lookup(true);},ex:'<p>같은 실패 상황에서 <code>.get(key, 기본값)</code> 은 멈추지 않고 <b class="green">기본값</b>을 돌려줍니다. 센서 설정처럼 "없으면 기본값" 이 자연스러운 곳에 씁니다. <code>if key in pins:</code> 검사도 같은 목적입니다.</p>'},
+ {n:'키 추가 pins["CAM"] = 7',run:()=>{resetDict();renderBuckets();$('#keyIn').value='CAM';setKey();},ex:'<p>대입도 같은 경로입니다: 해시 → 버킷 → 저장. 그래서 추가도 빠릅니다.</p>'},
+ {n:'키 덮어쓰기 pins["LED"] = ...',run:()=>{resetDict();renderBuckets();$('#keyIn').value='LED';setKey();},ex:'<p>이미 있는 키에 대입하면 <b class="amber">값이 교체</b>됩니다. 딕셔너리에 같은 키는 하나만 존재합니다 — 로그를 키로 모으면 자동으로 "마지막 값"만 남는 이유입니다.</p>'},
+ {n:'리스트 키 ✕ (unhashable)',run:()=>{resetDict();renderBuckets(-1);renderList();$('#code').innerHTML=`pins[[1, 2]] = "err"\n<span class="e">TypeError: unhashable type: 'list'</span>`;setStatus('warn','리스트는 내용이 바뀔 수 있어 해시값을 정할 수 없습니다 → 키가 될 수 없습니다.');},ex:'<p>해시는 "변하지 않는 값"에만 매길 수 있습니다. <b class="red">가변인 리스트</b>는 키가 될 수 없고, <b class="green">불변인 튜플</b>은 됩니다 — 좌표 <code>(x, y)</code> 를 키로 쓰는 이유입니다. Day 1 의 가변/불변 구분이 여기서 다시 등장합니다.</p>'},
+];
+$('#presets').innerHTML=PRESETS.map(p=>`<button>${p.n}</button>`).join('');
+$('#presets').querySelectorAll('button').forEach((b,i)=>b.onclick=()=>{if(busy)return;$('#presets').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));$('#explain').innerHTML=PRESETS[i].ex;PRESETS[i].run();});
+resetDict();renderBuckets();renderList();
+$('#presets').querySelector('button').click();
+</script>
+</body>
+</html>
