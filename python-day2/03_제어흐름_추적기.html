@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>제어 흐름 추적기 — Python Day 1</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono)}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.green{color:var(--green);border-color:var(--green)}.pill.red{color:var(--red);border-color:var(--red)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.run{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700}
+  button:disabled{opacity:.4;cursor:default}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .grid{display:grid;grid-template-columns:1.25fr 1fr;gap:14px}
+  @media(max-width:820px){.grid{grid-template-columns:1fr}}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:8px 0;font-size:15px;overflow-x:auto}
+  .ln{padding:3px 12px;display:flex;gap:12px;border-left:3px solid transparent;white-space:pre;transition:background .15s}
+  .ln .no{color:#3f5070;width:16px;text-align:right;flex-shrink:0}
+  .ln.cur{background:#1f1a0c;border-left-color:var(--amber)}
+  .ln.cur.t{background:#0d2216;border-left-color:var(--green)}
+  .ln.cur.f{background:#2a1212;border-left-color:var(--red)}
+  .ln .k{color:var(--purple)}.ln .s{color:var(--teal)}.ln .n{color:var(--amber)}.ln .c{color:#5d7292}
+  table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:14px}
+  th{color:var(--dim);font-weight:600;text-align:left;padding:4px 8px;border-bottom:1px solid var(--line);font-size:12px}
+  td{padding:5px 8px;border-bottom:1px solid #16203a}
+  td.name{color:var(--blue)} td.val{color:var(--amber)}
+  tr.chg td.val{color:var(--green);animation:flash .5s}
+  @keyframes flash{from{background:#1f3a2a}to{background:transparent}}
+  .out{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-height:90px;max-height:200px;overflow:auto;font-size:14px;white-space:pre-wrap;color:var(--green)}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}.status.amber{border-color:var(--amber);color:var(--amber);background:#1f1a0c}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .row label{color:var(--dim);font-size:13px}
+  input[type=range]{accent-color:var(--amber)}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}
+  .explain code{font-family:var(--mono);color:var(--blue)}
+  .counter{font-family:var(--mono);color:var(--dim);font-size:13px;margin-left:auto}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>제어 흐름 추적기</h1>
+  <p class="sub">코드를 한 줄씩 실행하며 지금 어느 줄에 있는지, 변수가 어떻게 바뀌는지, 무엇이 출력되는지 함께 봅니다. 조건이 참이면 초록, 거짓이면 빨강으로 표시됩니다.</p>
+  <div class="pills">
+    <span class="pill amber">실행 중인 줄</span><span class="pill green">조건 참</span><span class="pill red">조건 거짓</span><span class="pill blue">변수</span><span class="pill teal">출력</span>
+  </div>
+  <div class="panel"><h2>프리셋</h2><div class="presets" id="presets"></div></div>
+  <div class="grid">
+    <div>
+      <div class="panel">
+        <h2>코드</h2>
+        <div class="code" id="code"></div>
+        <div class="row" style="margin-top:10px">
+          <button class="run" id="stepBtn">한 단계</button>
+          <button id="playBtn">재생</button>
+          <button id="resetBtn">처음부터</button>
+          <label>속도 <input type="range" id="speed" min="100" max="1500" value="700"></label>
+          <span class="counter" id="counter"></span>
+        </div>
+        <div class="row" id="params" style="margin-top:10px"></div>
+      </div>
+      <div class="panel"><h2>출력</h2><div class="out" id="out"></div></div>
+    </div>
+    <div>
+      <div class="panel"><h2>변수</h2><table><thead><tr><th>이름</th><th>값</th></tr></thead><tbody id="vars"><tr><td colspan="2" style="color:var(--dim)">아직 변수가 없습니다</td></tr></tbody></table></div>
+      <div class="panel"><h2>상태</h2><div class="status info" id="status"></div></div>
+    </div>
+  </div>
+  <div class="panel explain" id="explain"></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const fmt=v=>typeof v==='string'?`'${v}'`:(Array.isArray(v)?'['+v.map(fmt).join(', ')+']':(typeof v==='number'&&!Number.isInteger(v)?v.toFixed(1):String(v)));
+/* 각 프리셋: lines, params(선택), trace(params) → [{line, vars, out, cls, msg}] */
+const PRESETS=[
+ {name:'if-elif-else 온도 판정',
+  params:[{id:'temp',label:'temp',min:-10,max:60,step:0.5,val:27.5}],
+  lines:['temp = {temp}','if temp < 0:','    status = "FREEZE"','elif temp < 20:','    status = "COLD"','elif temp < 30:','    status = "NORMAL"','elif temp < 40:','    status = "WARM"','else:','    status = "ALERT"','print(f"{temp} °C → {status}")'],
+  trace:p=>{const t=p.temp,v={};const s=[];s.push({line:0,vars:{...(v.temp=t,v)},msg:`temp에 ${t} 대입`});
+    const conds=[[1,t<0,'FREEZE',2],[3,t<20,'COLD',4],[5,t<30,'NORMAL',6],[7,t<40,'WARM',8]];let done=false;
+    for(const [ln,ok,name,body] of conds){s.push({line:ln,vars:{...v},cls:ok?'t':'f',msg:`조건 ${ok?'참':'거짓'} → ${ok?'이 블록 실행':'다음 조건으로'}`});if(ok){v.status=name;s.push({line:body,vars:{...v},msg:`status = "${name}"`});done=true;break;}}
+    if(!done){s.push({line:9,vars:{...v},cls:'t',msg:'모든 조건이 거짓 → else'});v.status='ALERT';s.push({line:10,vars:{...v},msg:'status = "ALERT"'});}
+    s.push({line:11,vars:{...v},out:`${t} °C → ${v.status}`,msg:'출력'});return s;},
+  ex:'<p><code>if-elif-else</code>는 위에서부터 조건을 검사해 <b class="green">처음 참이 되는 블록 하나만</b> 실행하고 나머지는 건너뜁니다. 그래서 <code>elif temp &lt; 20</code>에 "0 이상"이라는 조건을 따로 쓰지 않아도 됩니다 — 위에서 이미 걸러졌기 때문입니다.</p><p>슬라이더로 temp를 바꿔 어느 조건에서 멈추는지 확인하세요.</p>'},
+ {name:'for + range(0, 256, 64)',
+  lines:['for i in range(0, 256, 64):','    print(f"{i:3d} {i:08b}")','print("done")'],
+  trace:()=>{const s=[];const v={};for(let i=0;i<256;i+=64){v.i=i;s.push({line:0,vars:{...v},cls:'t',msg:`range에서 다음 값 ${i}을 꺼내 i에 대입`});s.push({line:1,vars:{...v},out:`${String(i).padStart(3)} ${i.toString(2).padStart(8,'0')}`,msg:'본문 실행'});}
+    s.push({line:0,vars:{...v},cls:'f',msg:'range에 더 이상 값이 없음 → 반복 종료'});s.push({line:2,vars:{...v},out:'done',msg:'반복문 다음 줄'});return s;},
+  ex:'<p><code>range(start, stop, step)</code>은 start부터 <b class="red">stop 직전까지</b> step 간격으로 값을 냅니다. 256은 포함되지 않습니다. 매 회전마다 <code>i</code>에 다음 값이 대입되고 본문이 실행된 뒤 다시 첫 줄로 돌아옵니다.</p>'},
+ {name:'while + break + else',
+  lines:['samples = [22.1, 23.4, 24.9, 31.2, 28.0]','i = 0','while i < len(samples):','    if samples[i] > 30:','        print(f"index {i}: 초과")','        break','    i += 1','else:','    print("초과 샘플 없음")','print("end")'],
+  params:[{id:'th',label:'임계값',min:20,max:40,step:1,val:30}],
+  trace:p=>{const th=p.th;const S=[22.1,23.4,24.9,31.2,28.0];const s=[];const v={};v.samples=S;s.push({line:0,vars:{...v},msg:'리스트 생성'});v.i=0;s.push({line:1,vars:{...v},msg:'i = 0'});
+    let broke=false;while(true){const c=v.i<S.length;s.push({line:2,vars:{...v},cls:c?'t':'f',msg:`${v.i} < ${S.length} → ${c?'참, 본문 실행':'거짓, 반복 종료'}`});if(!c)break;
+      const o=S[v.i]>th;s.push({line:3,vars:{...v},cls:o?'t':'f',msg:`samples[${v.i}] = ${S[v.i]} > ${th} → ${o?'참':'거짓'}`});
+      if(o){s.push({line:4,vars:{...v},out:`index ${v.i}: 초과`});s.push({line:5,vars:{...v},cls:'t',msg:'break: while을 즉시 빠져나감. else 블록은 건너뜀'});broke=true;break;}
+      v.i++;s.push({line:6,vars:{...v},msg:`i를 ${v.i}로 증가`});}
+    if(!broke){s.push({line:7,vars:{...v},cls:'t',msg:'break 없이 조건이 거짓이 되어 끝남 → else 실행'});s.push({line:8,vars:{...v},out:'초과 샘플 없음'});}
+    s.push({line:9,vars:{...v},out:'end'});return s;},
+  ex:'<p><code>while</code>은 조건이 참인 동안 반복합니다. <code>break</code>는 반복을 <b class="red">즉시</b> 끝내고 반복문 다음 줄로 갑니다.</p><p>반복문의 <code>else</code>는 헷갈리기 쉬운 문법입니다: <b class="green">break 없이 정상 종료됐을 때만</b> 실행됩니다. 임계값을 35 이상으로 올려 else가 실행되는 경로를 보세요.</p><p><code>i += 1</code>을 빠뜨리면 조건이 영원히 참 → 무한 루프 (마지막 프리셋).</p>'},
+ {name:'enumerate + zip',
+  lines:['temps  = [22.1, 23.4, 31.2]','humids = [55, 60, 82]','for idx, (t, h) in enumerate(zip(temps, humids), start=1):','    print(f"#{idx}: {t}°C / {h}%")'],
+  trace:()=>{const T=[22.1,23.4,31.2],H=[55,60,82];const s=[];const v={temps:T};s.push({line:0,vars:{...v}});v.humids=H;s.push({line:1,vars:{...v}});
+    for(let k=0;k<3;k++){v.idx=k+1;v.t=T[k];v.h=H[k];s.push({line:2,vars:{...v},cls:'t',msg:`zip이 (${T[k]}, ${H[k]})를 묶고, enumerate가 번호 ${k+1}을 붙임 → idx, t, h에 한 번에 언패킹`});s.push({line:3,vars:{...v},out:`#${k+1}: ${T[k]}°C / ${H[k]}%`});}
+    s.push({line:2,vars:{...v},cls:'f',msg:'더 짧은 쪽이 끝나면 zip도 끝남'});return s;},
+  ex:'<p><code>zip(a, b)</code>은 두 시퀀스를 같은 위치끼리 <b class="teal">튜플로 묶어</b> 줍니다. <code>enumerate(x, start=1)</code>은 앞에 번호를 붙입니다. 결과 <code>(idx, (t, h))</code>를 <code>idx, (t, h)</code>로 받는 것이 <b class="blue">언패킹</b>입니다.</p><p><code>for i in range(len(temps))</code> 뒤에 <code>temps[i]</code>, <code>humids[i]</code>를 쓰는 것보다 읽기 쉽고 실수가 적습니다.</p>'},
+ {name:'무한 루프 (i += 1 누락)',
+  lines:['i = 0','while i < 3:','    print(i)','    # i += 1  ← 빠졌다!','print("여기 도달 못 함")'],
+  trace:()=>{const s=[];const v={i:0};s.push({line:0,vars:{...v}});for(let k=0;k<6;k++){s.push({line:1,vars:{...v},cls:'t',msg:'0 < 3 → 참. 언제나 참.'});s.push({line:2,vars:{...v},out:'0'});s.push({line:3,vars:{...v},cls:'f',msg:'i가 바뀌지 않으니 조건이 영원히 참'});}
+    s.push({line:1,vars:{...v},cls:'t',msg:'⚠ 무한 루프. Colab에서는 셀 왼쪽 ■ 버튼으로 중지하세요. (추적기는 여기서 멈춥니다)',stop:true});return s;},
+  ex:'<p><code>while</code> 반복문은 <b class="red">조건을 거짓으로 만드는 코드</b>가 본문 안에 반드시 있어야 합니다. 그 한 줄이 빠지면 프로그램은 끝나지 않고, 출력창은 같은 값으로 가득 찹니다.</p><p>Colab에서 셀이 끝나지 않으면 셀 왼쪽의 ■ 을 누르거나 런타임 &gt; 실행 중단을 사용합니다.</p>'},
+ {name:'[Day 2] 함수 호출과 스택',
+  lines:['def judge(temp):','    if temp > 35:','        return "ALERT"','    return "NORMAL"','','t = 36.9','status = judge(t)','print(status)'],
+  trace:()=>{const s=[];
+    s.push({line:0,vars:{},msg:'def 는 함수를 실행하지 않고 이름 judge 에 함수를 붙여 둘 뿐입니다.'});
+    s.push({line:5,vars:{t:36.9},msg:'t 에 36.9 대입'});
+    s.push({line:6,vars:{t:36.9,'judge▸temp':36.9},cls:'t',msg:'호출: judge 의 새 스택 프레임이 생기고, 인자 t 의 값이 지역 변수 temp 로 전달됩니다.'});
+    s.push({line:1,vars:{t:36.9,'judge▸temp':36.9},cls:'t',msg:'36.9 > 35 → 참'});
+    s.push({line:2,vars:{t:36.9,'judge▸temp':36.9},msg:'return "ALERT" — 값을 들고 프레임이 사라집니다. temp 도 함께 소멸.'});
+    s.push({line:6,vars:{t:36.9,status:'"ALERT"'},msg:'반환값이 호출한 자리에 놓여 status 에 대입됩니다. judge▸ 변수들이 사라진 것을 보세요.'});
+    s.push({line:7,vars:{t:36.9,status:'"ALERT"'},out:'ALERT',msg:'출력'});
+    return s;},
+  ex:'<p>함수를 호출하면 <b class="blue">스택 프레임</b>(그 호출만의 변수 공간)이 생기고, <code>return</code> 하면 값만 남기고 프레임째 사라집니다. 변수 표에서 <b class="amber">judge▸temp</b> 가 생겼다 사라지는 순간이 바로 지역 변수의 수명입니다.</p><p>return 이 없으면 함수는 <b class="red">None</b> 을 돌려줍니다.</p>'},
+ {name:'[Day 2] 예외 전파와 try',
+  lines:['def parse(v):','    return float(v)','','def read(v):','    return parse(v) * 2','','try:','    x = read("2S.3")','except ValueError as e:','    print("잡음:", e)','print("계속 진행")'],
+  trace:()=>{const s=[];
+    s.push({line:6,vars:{},msg:'try 블록 진입 — 이 안에서 나는 예외는 아래 except 가 받습니다.'});
+    s.push({line:7,vars:{'read▸v':'"2S.3"'},msg:'read 호출 — 프레임 생성'});
+    s.push({line:4,vars:{'read▸v':'"2S.3"','parse▸v':'"2S.3"'},msg:'read 가 parse 를 호출 — 프레임이 하나 더 쌓입니다'});
+    s.push({line:1,vars:{'read▸v':'"2S.3"','parse▸v':'"2S.3"'},cls:'f',msg:'float("2S.3") → ValueError 발생!'});
+    s.push({line:4,vars:{'read▸v':'"2S.3"'},cls:'f',msg:'parse 안에 except 가 없으므로 예외가 호출자 read 로 올라옵니다. parse 프레임 소멸.'});
+    s.push({line:7,vars:{},cls:'f',msg:'read 에도 없음 → 더 위로. try 안에서 부른 호출이므로 여기서 잡힙니다. x 는 만들어지지 않습니다.'});
+    s.push({line:8,vars:{e:'ValueError(...)'},cls:'t',msg:'except ValueError 가 받습니다. 예외 객체가 e 에 담깁니다.'});
+    s.push({line:9,vars:{e:'ValueError(...)'},out:"잡음: could not convert string to float: '2S.3'",msg:'복구 코드 실행'});
+    s.push({line:10,vars:{},out:'계속 진행',msg:'프로그램은 죽지 않고 다음 줄로 — "깨진 데이터는 건너뛰고 계속" 패턴의 원리입니다.'});
+    return s;},
+  ex:'<p>잡히지 않은 예외는 <b class="amber">스택을 거슬러 위로</b> 올라갑니다: parse → read → 호출한 곳. 경로 어딘가의 <code>try/except</code> 가 받으면 프로그램은 계속됩니다.</p><p>그래서 예외 처리는 오류가 나는 곳이 아니라 <b class="green">대처할 수 있는 곳</b>에 씁니다. 아무도 안 받으면 트레이스백을 출력하며 종료됩니다.</p>'},
+];
+let active=0,trace=[],pos=-1,timer=null,prevVars={};
+function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function hl(t){return esc(t).replace(/(#.*)$/,'<span class="c">$1</span>').replace(/("[^"]*")/g,'<span class="s">$1</span>').replace(/\b(if|elif|else|for|while|in|break|print|range|enumerate|zip|len|start)\b/g,'<span class="k">$1</span>').replace(/\b(\d+\.?\d*)\b(?![^<]*<\/span>)/g,'<span class="n">$1</span>');}
+function params(){const o={};(PRESETS[active].params||[]).forEach(p=>o[p.id]=+document.getElementById('p_'+p.id).value);return o;}
+function renderPresets(){$('#presets').innerHTML=PRESETS.map((p,i)=>`<button data-i="${i}" class="${i===active?'active':''}">${p.name}</button>`).join('');$('#presets').querySelectorAll('button').forEach(b=>b.onclick=()=>load(+b.dataset.i));}
+function renderParams(){const ps=PRESETS[active].params||[];$('#params').innerHTML=ps.map(p=>`<label>${p.label} = <b id="pv_${p.id}" style="color:var(--amber);font-family:var(--mono)">${p.val}</b> <input type="range" id="p_${p.id}" min="${p.min}" max="${p.max}" step="${p.step}" value="${p.val}"></label>`).join('');
+  ps.forEach(p=>{document.getElementById('p_'+p.id).oninput=e=>{document.getElementById('pv_'+p.id).textContent=e.target.value;reset();};});}
+function renderCode(){const p=PRESETS[active];const cur=trace[pos];const pr=params();$('#code').innerHTML=p.lines.map((l,i)=>{let t=l;for(const k in pr)t=t.replace(`{${k}}`,pr[k]);return `<div class="ln ${cur&&cur.line===i?'cur '+(cur.cls||''):''}"><span class="no">${i+1}</span>${hl(t)}</div>`;}).join('');}
+function renderVars(){const cur=trace[pos];const v=cur?cur.vars:{};const keys=Object.keys(v);$('#vars').innerHTML=keys.length?keys.map(k=>`<tr class="${fmt(prevVars[k])!==fmt(v[k])?'chg':''}"><td class="name">${k}</td><td class="val">${fmt(v[k])}</td></tr>`).join(''):'<tr><td colspan="2" style="color:var(--dim)">아직 변수가 없습니다</td></tr>';prevVars={...v};}
+function setStatus(c,m){const s=$('#status');s.className='status '+c;s.innerHTML=m;}
+function reset(){stop();trace=PRESETS[active].trace(params());pos=-1;prevVars={};$('#out').textContent='';renderCode();renderVars();$('#stepBtn').disabled=false;$('#counter').textContent=`0 / ${trace.length}`;setStatus('info','"한 단계"를 누르거나 재생하세요.');}
+function load(i){active=i;renderPresets();renderParams();$('#explain').innerHTML=PRESETS[i].ex;reset();}
+function step(){if(pos>=trace.length-1)return;pos++;const t=trace[pos];renderCode();renderVars();if(t.out!==undefined)$('#out').textContent+=t.out+'\n';$('#out').scrollTop=1e6;
+  const cls=t.stop?'warn':(t.cls==='t'?'ok':(t.cls==='f'?'warn':'amber'));setStatus(cls,t.msg||`${PRESETS[active].lines[t.line].trim()} 실행`);
+  $('#counter').textContent=`${pos+1} / ${trace.length}`;if(pos>=trace.length-1){$('#stepBtn').disabled=true;stop();}}
+function stop(){clearInterval(timer);timer=null;$('#playBtn').textContent='재생';}
+$('#stepBtn').onclick=step;$('#resetBtn').onclick=reset;
+$('#playBtn').onclick=()=>{if(timer){stop();return;}if(pos>=trace.length-1)reset();$('#playBtn').textContent='일시정지';step();timer=setInterval(()=>{if(pos>=trace.length-1)stop();else step();},1600-+$('#speed').value);};
+$('#speed').oninput=()=>{if(timer){stop();$('#playBtn').click();}};
+load(0);
+</script>
+</body>
+</html>

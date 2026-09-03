@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>집합 연산 벤 다이어그램 — Python Day 2</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono)}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.green{color:var(--green);border-color:var(--green)}.pill.red{color:var(--red);border-color:var(--red)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .ops button{font-family:var(--mono);font-size:16px;padding:7px 16px}
+  .grid{display:grid;grid-template-columns:1.3fr 1fr;gap:14px}
+  @media(max-width:820px){.grid{grid-template-columns:1fr}}
+  svg{width:100%;height:auto;display:block}
+  .venn-el{font-family:var(--mono);font-size:15px;fill:var(--text);text-anchor:middle;transition:fill .3s}
+  .venn-el.on{fill:var(--amber);font-weight:700}
+  .zone{fill:transparent;transition:fill .3s}
+  .zone.on{fill:#f5b94222}
+  .circ{fill:none;stroke-width:2}
+  .lblA{fill:var(--blue);font-family:var(--mono);font-size:14px}
+  .lblB{fill:var(--teal);font-family:var(--mono);font-size:14px}
+  .out{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:16px;min-height:48px;color:var(--green)}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:14px;white-space:pre-wrap;min-height:40px}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.blue{color:var(--blue)}.explain b.red{color:var(--red)}.explain b.green{color:var(--green)}
+  .explain code{font-family:var(--mono);color:var(--blue)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  input[type=text]{background:#0a0f1c;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:13px;width:230px}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>집합 연산 벤 다이어그램</h1>
+  <p class="sub">두 센서 노드가 감지한 객체 ID 목록을 <code style="font-family:var(--mono);color:var(--blue)">set</code> 으로 만들면 중복이 사라지고, 공통·차이를 연산 하나로 구합니다.</p>
+  <div class="pills"><span class="pill blue">A = 노드1 감지 ID</span><span class="pill teal">B = 노드2 감지 ID</span><span class="pill amber">| 합집합 · &amp; 교집합 · - 차집합 · ^ 대칭차</span><span class="pill red">중복 없음 · 순서 없음</span></div>
+
+  <div class="panel">
+    <h2>프리셋</h2>
+    <div class="presets" id="presets"></div>
+    <div class="row" style="margin-top:10px">
+      <label style="color:var(--dim);font-size:13px">A <input type="text" id="inA" value="101, 102, 103, 104"></label>
+      <label style="color:var(--dim);font-size:13px">B <input type="text" id="inB" value="103, 104, 105, 105"></label>
+      <span class="ops row" id="ops"></span>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <h2>벤 다이어그램 (강조된 영역 = 결과)</h2>
+      <svg viewBox="0 0 560 320" id="venn"></svg>
+    </div>
+    <div>
+      <div class="panel"><h2>Python</h2><div class="code" id="code"></div></div>
+      <div class="panel"><h2>결과</h2><div class="out" id="out">—</div></div>
+      <div class="panel"><h2>상태</h2><div class="status info" id="status">연산 버튼을 누르세요.</div></div>
+    </div>
+  </div>
+  <div class="panel explain" id="explain"></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const OPS=[['|','합집합','A 또는 B 에 있는 모든 원소'],['&','교집합','둘 다에 있는 원소'],['-','차집합 A-B','A 에만 있는 원소'],['^','대칭차','한쪽에만 있는 원소']];
+let op='&';
+function parse(t){return [...new Set(t.split(',').map(s=>s.trim()).filter(s=>s!==''))];}
+function calc(A,B){
+  const a=new Set(A),b=new Set(B);
+  switch(op){case '|':return [...new Set([...A,...B])];
+    case '&':return A.filter(x=>b.has(x));
+    case '-':return A.filter(x=>!b.has(x));
+    case '^':return [...A.filter(x=>!b.has(x)),...B.filter(x=>!a.has(x))];}
+}
+function zones(){return op==='|'?['l','m','r']:op==='&'?['m']:op==='-'?['l']:['l','r'];}
+function render(){
+  const rawA=$('#inA').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const A=parse($('#inA').value),B=parse($('#inB').value);
+  const bset=new Set(B),aset=new Set(A);
+  const left=A.filter(x=>!bset.has(x)),mid=A.filter(x=>bset.has(x)),right=B.filter(x=>!aset.has(x));
+  const res=calc(A,B); const zs=zones();
+  const pos=(arr,cx)=>arr.map((v,i)=>({v,x:cx+((i%2)?38:-8)*( (i%4>1)?1: (arr.length>2?1:0) )+(i%2?30:-30)*0, y:120+Math.floor(i/1)*0}));
+  // simple vertical stacking positions
+  function stack(arr,cx){return arr.map((v,i)=>({v,x:cx,y:105+i*34}));}
+  const els=[...stack(left,150).map(o=>({...o,z:'l'})),...stack(mid,280).map(o=>({...o,z:'m'})),...stack(right,410).map(o=>({...o,z:'r'}))];
+  let svg=`
+   <clipPath id="cA"><circle cx="215" cy="165" r="130"/></clipPath>
+   <clipPath id="cB"><circle cx="345" cy="165" r="130"/></clipPath>
+   <rect class="zone ${zs.includes('l')?'on':''}" x="60" y="20" width="190" height="290" clip-path="url(#cA)"/>
+   <rect class="zone ${zs.includes('r')?'on':''}" x="310" y="20" width="190" height="290" clip-path="url(#cB)"/>
+   <g clip-path="url(#cA)"><rect class="zone ${zs.includes('m')?'on':''}" x="215" y="20" width="130" height="290" clip-path="url(#cB)"/></g>
+   <circle class="circ" cx="215" cy="165" r="130" stroke="var(--blue)"/>
+   <circle class="circ" cx="345" cy="165" r="130" stroke="var(--teal)"/>
+   <text class="lblA" x="120" y="45">A (노드1)</text>
+   <text class="lblB" x="395" y="45">B (노드2)</text>`;
+  svg+=els.map(o=>`<text class="venn-el ${res.includes(o.v)?'on':''}" x="${o.x}" y="${o.y}">${o.v}</text>`).join('');
+  $('#venn').innerHTML=svg;
+  const dup=rawA.length!==A.length;
+  $('#code').textContent=`a = set([${rawA.join(', ')}])${dup?'   # 중복은 하나로 합쳐짐':''}\nb = set([${$('#inB').value}])\na ${op} b`;
+  $('#out').textContent=res.length?`{${res.join(', ')}}`:'set()  (공집합)';
+  const o=OPS.find(x=>x[0]===op);
+  setStatus('ok',`<b>${o[0]}</b> ${o[1]} — ${o[2]}. 결과 ${res.length}개. 집합에는 순서가 없으므로 출력 순서는 보장되지 않습니다.`);
+  $('#ops').querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.op===op));
+}
+function setStatus(c,m){const s=$('#status');s.className='status '+c;s.innerHTML=m;}
+$('#ops').innerHTML=OPS.map(o=>`<button data-op="${o[0]}" title="${o[1]}">${o[0]}</button>`).join('');
+$('#ops').querySelectorAll('button').forEach(b=>b.onclick=()=>{op=b.dataset.op;render();});
+['inA','inB'].forEach(id=>$('#'+id).addEventListener('input',render));
+const PRESETS=[
+ {n:'교집합 & (공통 감지)',a:'101, 102, 103, 104',b:'103, 104, 105',o:'&',ex:'<p><code>&amp;</code> 는 <b class="amber">두 노드가 모두 본</b> 객체입니다. 리스트로 하려면 이중 for 문이 필요하지만 집합은 연산자 하나입니다.</p>'},
+ {n:'차집합 - (한쪽만)',a:'101, 102, 103, 104',b:'103, 104, 105',o:'-',ex:'<p><code>A - B</code> 는 A 만 본 객체 — 노드2 의 사각지대에 있었던 대상입니다. 순서를 바꾸면(<code>B - A</code>) 결과가 다릅니다.</p>'},
+ {n:'합집합 |',a:'101, 102, 103, 104',b:'103, 104, 105',o:'|',ex:'<p><code>|</code> 는 <b class="amber">전체 감지 목록</b>입니다. 겹치는 103, 104 는 한 번만 들어갑니다 — 집합의 본질은 "중복 없음"입니다.</p>'},
+ {n:'대칭차 ^ (불일치)',a:'101, 102, 103, 104',b:'103, 104, 105',o:'^',ex:'<p><code>^</code> 는 <b class="amber">한쪽에만</b> 있는 원소 — 두 노드의 감지 결과가 어긋난 부분만 뽑을 때 씁니다. Day 1 의 비트 XOR 과 정확히 같은 발상입니다.</p>'},
+ {n:'중복 제거 (list → set)',a:'7, 7, 7, 3, 3, 9',b:'',o:'|',ex:'<p>A 입력에 7 이 세 번 있지만 집합에는 <b class="red">한 번만</b> 들어갑니다. <code>len(set(ids))</code> 로 "서로 다른 객체 수"를 세는 것이 대표 활용입니다. 대신 <b>순서는 사라집니다</b> — 순서가 중요하면 리스트를 유지하세요.</p>'},
+];
+$('#presets').innerHTML=PRESETS.map(p=>`<button>${p.n}</button>`).join('');
+$('#presets').querySelectorAll('button').forEach((b,i)=>b.onclick=()=>{$('#presets').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));const p=PRESETS[i];$('#inA').value=p.a;$('#inB').value=p.b;op=p.o;$('#explain').innerHTML=p.ex;render();});
+$('#presets').querySelector('button').click();
+</script>
+</body>
+</html>

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python Day 2 개념 워크시트</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:900px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.primary{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700;padding:9px 18px;font-size:14px}
+  button.submit{background:#3a2e12;border-color:var(--amber);color:var(--amber);font-weight:700;padding:9px 18px;font-size:14px}
+  button:disabled{opacity:.45;cursor:default}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  input[type=text]{background:#0a0f1c;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:14px}
+  .tabs{display:flex;flex-wrap:wrap;gap:6px}
+  .tabs button .s{font-family:var(--mono);font-size:11px;color:var(--dim);margin-left:6px}
+  .tabs button.graded .s{color:var(--green)}
+  .head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .head .t{color:var(--amber);font-size:17px}
+  .head .a{font-size:13px;color:var(--teal);font-family:var(--mono)}
+  .q{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#0e1628}
+  .q.unans{border-color:#5a3a1a}
+  .q .n{font-family:var(--mono);color:var(--dim);font-size:12px}
+  .q .p{margin:4px 0 10px;font-size:15px}
+  .q .p code,.opt code,.fb code,td code{font-family:var(--mono);color:var(--blue);background:#0a0f1c;padding:1px 5px;border-radius:4px}
+  .q pre{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin:6px 0 10px;font-size:14px;white-space:pre;overflow-x:auto}
+  .opts{display:grid;gap:6px}
+  .opt{text-align:left;padding:8px 12px;font-size:14px;font-family:inherit}
+  .opt.sel{border-color:var(--amber);background:#1f1a0c}
+  .opt.ok{border-color:var(--green);color:var(--green);background:#0d2216}
+  .opt.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .opt:disabled{cursor:default;opacity:.9}
+  .fb{margin-top:8px;font-size:13px;color:var(--dim);border-left:3px solid var(--line);padding-left:10px}
+  .fb.ok{border-left-color:var(--green)}.fb.bad{border-left-color:var(--red)}
+  .fb .anim{color:var(--teal);font-family:var(--mono);font-size:12px;display:block;margin-top:3px}
+  .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  .code{font-family:var(--mono);font-size:20px;color:var(--amber);letter-spacing:1px}
+  .score{font-family:var(--mono);color:var(--green);font-size:16px}
+  .hint{color:var(--dim);font-size:13px}
+  details{color:var(--dim);font-size:13px}
+  details summary{cursor:pointer;color:var(--dim)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  /* dialog */
+  dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:0;max-width:820px;width:92vw;max-height:88vh}
+  dialog::backdrop{background:#000a}
+  .dg{padding:18px 20px}
+  .dg h3{color:var(--amber);margin:0 0 4px;font-size:20px}
+  .dg .meta{color:var(--dim);font-size:13px;margin-bottom:12px;font-family:var(--mono)}
+  .dg .sec{margin:14px 0 6px;color:var(--teal);font-weight:700;font-size:14px}
+  .dg table{width:100%;border-collapse:collapse;font-size:13px}
+  .dg th{text-align:left;color:var(--dim);font-weight:600;padding:5px 8px;border-bottom:1px solid var(--line);font-size:12px}
+  .dg td{padding:5px 8px;border-bottom:1px solid #16203a;vertical-align:top}
+  .dg td.r{font-family:var(--mono)}
+  .dg .ok{color:var(--green)}.dg .bad{color:var(--red)}.dg .none{color:var(--dim)}
+  .dg .sum{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0;font-family:var(--mono)}
+  .dgbar{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:10px 20px;display:flex;gap:8px;justify-content:flex-end;align-items:center}
+  .toast{color:var(--green);font-size:13px;margin-right:auto}
+  .body{overflow:auto;max-height:calc(88vh - 60px)}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Python Day 2 개념 워크시트</h1>
+  <p class="sub">교시마다 10문항. 답을 고른 뒤 아래 <b style="color:var(--teal)">채점하기</b>를 누르면 정오·해설과 결과 코드가 나타납니다. 채점 전에는 답을 바꿀 수 있고, 채점 후에는 잠깁니다. 모든 교시를 마치면 <b style="color:var(--amber)">제출</b>로 오답 정리를 열고, <b>캡처</b>로 복사해 노션에 붙여 넣으세요.</p>
+
+  <div class="panel">
+    <div class="row"><label style="color:var(--dim);font-size:13px">이름 <input type="text" id="name" placeholder="홍길동"></label><span class="hint">이름은 결과 코드 계산에만 쓰이며 저장되지 않습니다.</span></div>
+  </div>
+  <div class="panel"><h2>교시</h2><div class="tabs" id="tabs"></div></div>
+  <div class="panel" id="sheet"></div>
+  <div class="panel">
+    <div class="actions">
+      <button class="primary" id="gradeBtn">채점하기</button>
+      <span class="code" id="rcode">—</span><span class="score" id="rscore"></span><span class="hint" id="rhint"></span>
+      <button class="submit" id="submitBtn" style="margin-left:auto">제출</button>
+    </div>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <div class="body"><div class="dg" id="dgBody"></div></div>
+  <div class="dgbar"><span class="toast" id="toast"></span><button id="captureBtn" class="primary">📋 캡처 (노션용 복사)</button><button id="closeBtn">닫기</button></div>
+</dialog>
+
+<script>
+const $=s=>document.querySelector(s);
+const Q=[
+ {t:'1교시 · 리스트와 튜플',anim:'02 참조 모델 [Day 2] / D2-3 리스트 메서드 / 05 슬라이스 대입',qs:[
+  {p:'<code>a = [1, 2]; b = a; b.append(3)</code> 후 <code>a</code> 는?',o:['[1, 2]','[1, 2, 3]','오류','[3]'],a:1,w:'b = a 는 복사가 아니라 같은 객체에 이름표 하나 더 붙이는 것입니다.',an:'02 · "리스트 참조 공유"'},
+  {p:'<code>b = a.copy(); b.append(3)</code> 후 <code>a</code> 는?',o:['함께 바뀐다','그대로','None','오류'],a:1,w:'copy() 는 겉 리스트를 새로 만듭니다. a[:], list(a) 도 같습니다.',an:'02 · "리스트 복사"'},
+  {p:'<code>nums.sort()</code> 의 반환값은?',o:['정렬된 새 리스트','None','정렬된 원본','True'],a:1,w:'sort() 는 제자리 정렬이며 None 을 돌려줍니다. a = a.sort() 는 리스트를 잃는 사고.',an:'D2-3 · "⚠ a = a.sort() 함정"'},
+  {p:'<code>sorted(nums)</code> 는?',o:['원본을 정렬한다','새 정렬 리스트를 반환, 원본 유지','None 반환','튜플 반환'],a:1,w:'원본 보존이 필요하면 sorted, 원본을 바꿔도 되면 sort.',an:'D2-3 · "sorted(a)"'},
+  {p:'<code>a = [[0]*3]*2; a[0][0] = 1</code> 후 <code>a</code> 는?',o:['[[1,0,0],[0,0,0]]','[[1,0,0],[1,0,0]]','[[1,1,1],[0,0,0]]','오류'],a:1,w:'*2 는 같은 안쪽 리스트를 두 번 참조합니다. 올바른 생성은 [[0]*3 for _ in range(2)].',an:'02 · "[Day 2] 중첩 얕은 복사"'},
+  {p:'<code>t = (1, 2); t.append(3)</code> 의 결과는?',o:['(1, 2, 3)','AttributeError','TypeError 없음, 무시됨','[1, 2, 3]'],a:1,w:'튜플은 불변이라 append 메서드 자체가 없습니다.',an:'1교시 튜플'},
+  {p:'<code>a, b = b, a</code> 는?',o:['오류','두 값을 스왑','a만 바뀜','튜플 생성 후 버림'],a:1,w:'오른쪽이 튜플로 패킹된 뒤 왼쪽으로 언패킹됩니다. 임시 변수가 필요 없습니다.',an:'1교시 언패킹'},
+  {p:'<code>record = ("id", [1, 2]); record[1].append(3)</code> 은?',o:['TypeError','가능 — 안쪽 리스트는 가변','튜플이 리스트로 바뀜','append 가 무시됨'],a:1,w:'튜플의 불변은 "참조가 불변"이라는 뜻. 참조가 가리키는 리스트의 내용은 바뀔 수 있습니다.',an:'02 · 참조 모델'},
+  {p:'<code>a = [1, 2, 3, 4]; a[1:3] = [9]</code> 후 <code>a</code> 는?',o:['[1, 9, 4]','[1, 9, 3, 4]','[1, 9, 9, 4]','오류'],a:0,w:'슬라이스 대입은 구간을 통째로 교체하며 길이가 달라질 수 있습니다.',an:'05 · "[Day 2] 슬라이스 대입"'},
+  {p:'<code>mn, *rest = sorted([3, 1, 2])</code> 에서 <code>mn, rest</code> 는?',o:['1, [2, 3]','1, (2, 3)','3, [1, 2]','[1], [2, 3]'],a:0,w:'별표 언패킹은 나머지를 리스트로 모읍니다.',an:'1교시 별표 언패킹'},
+ ]},
+ {t:'2교시 · 딕셔너리와 집합',anim:'D2-1 해시 조회 / D2-2 벤 다이어그램 / D2-5 트리 뷰어',qs:[
+  {p:'<code>d = {"a": 1}; d["b"]</code> 의 결과는?',o:['None','0','KeyError','-1'],a:2,w:'대괄호 조회는 없는 키에서 예외를 냅니다.',an:'D2-1 · "없는 키 ✕"'},
+  {p:'<code>d.get("b")</code> 의 결과는?',o:['KeyError','None','0','"b"'],a:1,w:'get 은 기본값(지정 없으면 None)을 돌려주며 멈추지 않습니다.',an:'D2-1 · ".get(-1)"'},
+  {p:'<code>d.get("b", -1)</code> 의 결과는?',o:['None','KeyError','-1','b'],a:2,w:'두 번째 인자가 기본값입니다. 센서 설정 조회의 표준 방어 패턴.',an:'D2-1 · ".get(-1)"'},
+  {p:'<code>d["LED"] = 3; d["LED"] = 4</code> 후 d["LED"] 는?',o:['3','4','[3, 4]','오류'],a:1,w:'같은 키 재대입은 덮어쓰기 — 키는 중복될 수 없습니다.',an:'D2-1 · "키 덮어쓰기"'},
+  {p:'<code>d[[1, 2]] = "x"</code> 의 결과는?',o:['정상 등록','KeyError','TypeError: unhashable','None'],a:2,w:'가변인 리스트는 해시할 수 없어 키가 될 수 없습니다.',an:'D2-1 · "리스트 키 ✕"'},
+  {p:'딕셔너리 키로 쓸 수 <b>있는</b> 것은?',o:['리스트','집합','튜플','딕셔너리'],a:2,w:'불변인 튜플만 가능 — 좌표 (x, y) 키가 대표 예입니다.',an:'D2-1'},
+  {p:'<code>{1, 2, 2, 3, 3, 3}</code> 은?',o:['{1, 2, 2, 3, 3, 3}','{1, 2, 3}','오류','[1, 2, 3]'],a:1,w:'집합은 중복을 허용하지 않습니다. len(set(x)) 로 고유 개수를 셉니다.',an:'D2-2 · "중복 제거"'},
+  {p:'<code>{1, 2, 3} & {2, 3, 4}</code> 는?',o:['{1, 4}','{2, 3}','{1, 2, 3, 4}','{}'],a:1,w:'& 는 교집합 — 둘 다에 있는 원소.',an:'D2-2 · "교집합"'},
+  {p:'딕셔너리 조회가 리스트 탐색보다 빠른 이유는?',o:['메모리가 커서','키를 해시해 버킷으로 바로 가서','정렬돼 있어서','C로 짜여 있어서'],a:1,w:'hash(key) 로 위치를 계산해 직행합니다(평균 O(1)). 리스트는 앞에서부터 비교(O(n)).',an:'D2-1 · 순차 탐색 비교'},
+  {p:'<code>nodes["A"]["readings"][0]["T"]</code> 에서 <code>[0]</code> 이 적용되는 층의 자료형은?',o:['dict','list','tuple','str'],a:1,w:'readings 는 list 이므로 숫자 인덱스. 문자열 키를 쓰면 TypeError.',an:'D2-5 · "✕ 층 착각"'},
+ ]},
+ {t:'3교시 · 함수 기초',anim:'03 [Day 2] 함수 호출과 스택',qs:[
+  {p:'return 이 없는 함수의 반환값은?',o:['0','마지막 계산 값','None','오류'],a:2,w:'return 이 없거나 값 없이 return 하면 None.',an:'03 · 함수 호출 프리셋'},
+  {p:'<code>def f(raw, vref=3.3)</code> 에서 <code>f(512, 5.0)</code> 은?',o:['오류','vref=5.0 으로 호출','vref=3.3 유지','raw=5.0'],a:1,w:'위치 인자가 순서대로 대응됩니다. 기본값은 인자를 생략했을 때만 쓰입니다.',an:'3교시 따라하기'},
+  {p:'<code>def f(*args):</code> 에서 args 의 자료형은?',o:['리스트','튜플','딕셔너리','집합'],a:1,w:'위치 인자들이 튜플로 묶입니다.',an:'3교시 stats'},
+  {p:'<code>def f(**kwargs):</code> 에서 kwargs 의 자료형은?',o:['튜플','리스트','딕셔너리','문자열'],a:2,w:'키워드 인자들이 {이름: 값} 딕셔너리로 묶입니다.',an:'3교시'},
+  {p:'함수 안에서 <code>x = 5</code> 를 쓰면 (전역에 x 가 있어도)?',o:['전역 x 가 바뀐다','새 지역 변수 x 가 생긴다','오류','둘 다 바뀐다'],a:1,w:'대입은 지역 변수를 만듭니다. 전역을 바꾸려면 global (지양) 또는 반환값 사용.',an:'3교시 스코프'},
+  {p:'<code>def f(v, acc=[])</code> 가 위험한 이유는?',o:['문법 오류라서','기본 리스트가 호출 간에 공유·누적되어서','느려서','acc 를 못 바꿔서'],a:1,w:'기본값 객체는 함수 정의 때 한 번만 만들어집니다. 관용 해법: acc=None.',an:'02 참조 모델 + TODO 3-4'},
+  {p:'<code>lo, hi, avg = stats(1, 2, 3)</code> 이 동작하려면 stats 는?',o:['리스트 3개 반환','값 3개의 튜플 반환','딕셔너리 반환','print 만 하면 됨'],a:1,w:'return a, b, c 는 튜플 하나를 반환하고, 왼쪽에서 언패킹됩니다.',an:'3교시'},
+  {p:'함수를 호출할 때 만들어지는 것은?',o:['새 파일','스택 프레임(지역 변수 공간)','전역 변수','스레드'],a:1,w:'호출마다 프레임이 생기고 return 과 함께 사라집니다 — 지역 변수의 수명.',an:'03 · 함수 호출 프리셋'},
+  {p:'<code>f(vref=5.0, 512)</code> 는?',o:['정상 호출','SyntaxError: 키워드 인자 뒤에 위치 인자 불가','vref 무시','raw=512 로 동작'],a:1,w:'위치 인자가 먼저, 키워드 인자가 뒤입니다.',an:'3교시'},
+  {p:'함수 설명 문자열(docstring)의 위치는?',o:['def 윗줄 주석','def 바로 다음 줄의 문자열','return 옆','파일 맨 위만'],a:1,w:'def 다음 첫 문장으로 쓰면 help() 가 보여줍니다.',an:'3교시 따라하기'},
+ ]},
+ {t:'4교시 · 람다·컴프리헨션',anim:'D2-4 컴프리헨션 변환기',qs:[
+  {p:'<code>lambda r: r["T"]</code> 는?',o:['T 라는 변수','r 의 T 값을 반환하는 이름 없는 함수','문자열','오류'],a:1,w:'key= 자리에 넣을 작은 함수를 한 줄로 만든 것입니다.',an:'4교시 따라하기'},
+  {p:'<code>sorted(rs, key=lambda r: r["T"], reverse=True)</code> 는?',o:['rs 를 제자리 정렬','T 내림차순의 새 리스트','T 오름차순','오류'],a:1,w:'sorted 는 항상 새 리스트, reverse=True 는 내림차순.',an:'D2-3 · sorted'},
+  {p:'<code>[x * 2 for x in [1, 2, 3] if x > 1]</code> 의 결과는?',o:['[2, 4, 6]','[4, 6]','[2, 3]','[6]'],a:1,w:'if 를 통과한 2, 3 만 식을 계산합니다.',an:'D2-4 · "조건"'},
+  {p:'<code>map(f, xs)</code> 의 반환값은?',o:['리스트','이터레이터 (list() 로 변환 필요)','튜플','None'],a:1,w:'게으른 이터레이터입니다. print 하려면 list(map(...)).',an:'4교시'},
+  {p:'<code>{r["id"]: r["T"] for r in rs}</code> 는?',o:['집합','dict 컴프리헨션','문법 오류','리스트'],a:1,w:'중괄호 + 콜론이면 딕셔너리 컴프리헨션입니다.',an:'D2-4'},
+  {p:'컴프리헨션을 읽는 순서는?',o:['식 → for → if','for → if → 식','if → for → 식','아무 순서'],a:1,w:'실행 순서는 for 가 먼저, if, 마지막에 맨 앞의 식입니다.',an:'D2-4 · 동시 하이라이트'},
+  {p:'<code>max(rs, key=lambda r: r["T"])</code> 의 반환값은?',o:['최고 T 값','T 가 최고인 레코드(dict) 자체','인덱스','True'],a:1,w:'key 는 비교 기준일 뿐, 반환은 원소 자체입니다. 값이 필요하면 [\"T\"] 를 붙입니다.',an:'4교시'},
+  {p:'<code>[t for t in temps if t > 35]</code> 와 같은 것은?',o:['list(map(...))','list(filter(lambda t: t > 35, temps))','sorted(temps)','set(temps)'],a:1,w:'식이 변수 그대로면 필터입니다.',an:'D2-4 · "경고만 필터"'},
+  {p:'<code>[x for row in grid for x in row]</code> 에서 먼저 도는 for 는?',o:['안쪽 for x','바깥 for row','동시에','임의'],a:1,w:'왼쪽에 쓴 for 가 바깥 반복입니다 — for 문으로 펼친 순서 그대로.',an:'D2-4'},
+  {p:'<code>volts = [r/1023*3.3 for r in raws]</code> 실행 후 raws 는?',o:['바뀐다','그대로','비워진다','오류'],a:1,w:'컴프리헨션은 새 리스트를 만들 뿐 원본을 건드리지 않습니다.',an:'D2-4 · "ADC → 전압"'},
+ ]},
+ {t:'5교시 · 모듈·표준 라이브러리',anim:'라이브 시연 (Colab)',qs:[
+  {p:'<code>%%writefile sensors.py</code> 의 역할은?',o:['셀을 실행','셀 내용을 파일로 저장','파일을 읽기','모듈 삭제'],a:1,w:'셀 코드가 실행되지 않고 sensors.py 로 저장됩니다.',an:'5교시 TODO 5-1'},
+  {p:'<code>import sensors</code> 후 judge 호출 방법은?',o:['judge(25)','sensors.judge(25)','import judge','sensors->judge(25)'],a:1,w:'모듈 이름을 앞에 붙입니다. from sensors import judge 면 바로 judge(25).',an:'5교시'},
+  {p:'sensors.py 수정 후 <code>import sensors</code> 를 다시 실행하면?',o:['반영된다','반영 안 됨 — 캐시 재사용','오류','파일이 초기화'],a:1,w:'importlib.reload(sensors) 또는 런타임 재시작이 필요합니다.',an:'5교시 자기 점검'},
+  {p:'<code>if __name__ == "__main__":</code> 블록이 실행되는 때는?',o:['import 될 때','파일을 직접 실행할 때','항상','절대 실행 안 됨'],a:1,w:'!python sensors.py 처럼 직접 실행하면 __name__ 이 "__main__" 이 됩니다.',an:'5교시'},
+  {p:'<code>import sensors</code> 할 때 __main__ 블록은?',o:['실행된다','실행되지 않는다','오류','두 번 실행'],a:1,w:'import 시 __name__ 은 "sensors" 이므로 조건이 거짓 — 모듈 겸 스크립트 패턴의 핵심.',an:'5교시'},
+  {p:'<code>Counter(["a", "a", "b"])</code> 의 결과는?',o:["{'a': 2, 'b': 1}","['a', 'b']","{'a', 'b'}","2"],a:0,w:'collections.Counter 는 원소별 개수를 딕셔너리처럼 담습니다.',an:'TODO 5-2'},
+  {p:'현재 시각 문자열을 만드는 조합은?',o:['time.strftime 만','datetime.now().strftime("...")','os.time()','random.time()'],a:1,w:'datetime 모듈의 now() 와 strftime 형식 지정.',an:'TODO 5-3'},
+  {p:'<code>import math as m</code> 에서 as 의 역할은?',o:['조건부 import','별칭 부여','일부만 import','재로드'],a:1,w:'긴 모듈 이름에 짧은 별칭을 붙입니다 (numpy as np 가 대표).',an:'5교시'},
+  {p:'표준 라이브러리란?',o:['pip 로 설치하는 패키지','Python 에 기본 포함된 모듈들','구글 제공 모듈','C 라이브러리'],a:1,w:'math, random, json, datetime, collections 등 — 설치 없이 import 만 하면 됩니다.',an:'5교시'},
+  {p:'모듈로 분리하는 가장 큰 이유는?',o:['실행 속도','여러 노트북·프로그램에서 재사용','메모리 절약','채점 때문'],a:1,w:'한 번 만든 judge/parse 를 Day 3, 프로젝트에서 다시 씁니다.',an:'5교시'},
+ ]},
+ {t:'6교시 · 예외 처리',anim:'03 [Day 2] 예외 전파 / 04 실패 프리셋',qs:[
+  {p:'try 블록에서 예외가 없으면 except 는?',o:['그래도 실행','건너뛴다','오류','finally 대신 실행'],a:1,w:'예외가 났을 때만 except 로 갑니다. 성공 시에만 실행할 코드는 else 에.',an:'6교시'},
+  {p:'<code>int("")</code> 를 잡는 가장 구체적인 except 는?',o:['except:','except Exception:','except ValueError:','except KeyError:'],a:2,w:'빈 문자열 → 숫자 변환 실패는 ValueError 입니다.',an:'04 · "필드 누락"'},
+  {p:'<code>except:</code> (모든 예외) 를 지양하는 이유는?',o:['느려서','오타·버그까지 삼켜 원인을 숨겨서','문법 오류라서','두 번 실행돼서'],a:1,w:'구체적인 예외만 잡아야 예상 못 한 버그가 드러납니다.',an:'6교시'},
+  {p:'finally 블록은 언제 실행되는가?',o:['예외 없을 때만','예외 있을 때만','항상','한 번도'],a:2,w:'성공·실패와 무관하게 항상 — 파일 닫기 같은 정리에 씁니다.',an:'6교시'},
+  {p:'<code>raise FrameError("손상")</code> 은?',o:['예외를 잡는다','예외를 발생시켜 알린다','예외를 무시','로그 출력'],a:1,w:'raise 는 "오류 상황을 알리는" 문입니다. 받는 쪽은 except.',an:'TODO 6-1'},
+  {p:'사용자 정의 예외를 만드는 방법은?',o:['def FrameError()','class FrameError(Exception): pass','raise "FrameError"','import FrameError'],a:1,w:'Exception 을 상속한 클래스로 만듭니다.',an:'TODO 6-1'},
+  {p:'<code>except (ValueError, KeyError) as e:</code> 의 의미는?',o:['둘 다 동시에 나야 잡음','둘 중 하나면 잡고 예외 객체를 e 에','문법 오류','e 는 문자열'],a:1,w:'튜플로 여러 예외를 한 번에, as 로 객체를 받습니다.',an:'6교시'},
+  {p:'함수 안 예외를 그 함수가 잡지 않으면?',o:['무시된다','호출한 곳으로 전파된다','None 반환','항상 즉시 종료'],a:1,w:'스택을 거슬러 올라가며 try 를 찾습니다. 끝까지 없으면 트레이스백 출력 후 종료.',an:'03 · "[Day 2] 예외 전파와 try"'},
+  {p:'"깨진 줄은 건너뛰고 계속" 패턴의 핵심 조합은?',o:['try + break','except 안에서 카운트 + continue','finally + return','raise + pass'],a:1,w:'실패를 세고 continue 로 다음 데이터로 — Day 1 과제 B의 예외 버전입니다.',an:'TODO 6-3'},
+  {p:'try 의 else 블록이 실행되는 조건은?',o:['예외가 났을 때','예외가 없었을 때','항상','finally 다음'],a:1,w:'성공 시에만. 성공 코드를 try 밖으로 빼서 잘못 잡히는 것을 막습니다.',an:'6교시'},
+ ]},
+ {t:'7교시 · 종합',anim:'D2-5 트리 뷰어 / D2-6 결정 트리',qs:[
+  {p:'<code>make_reading()</code> 이 반환하기에 알맞은 자료구조는?',o:['리스트','튜플','딕셔너리','집합'],a:2,w:'"T 는 얼마, H 는 얼마" — 이름으로 찾는 값 묶음은 dict 입니다.',an:'D2-6 · "노드별 측정 기록"'},
+  {p:'<code>random.seed(42)</code> 는 어디서 몇 번 호출해야 하는가?',o:['make_reading 안에서 매번','수집 시작 전 1회','호출 안 함','노드마다 1회'],a:1,w:'함수 안에서 매번 seed 하면 같은 값만 반복됩니다.',an:'과제 A 순회 포인트'},
+  {p:'<code>stats_by_node</code> 반환값 <code>{id: {"avg_T": ...}}</code> 의 구조는?',o:['dict 안의 dict','list 안의 dict','dict 안의 list','튜플'],a:0,w:'노드 id 로 찾고, 그 값이 다시 통계 dict 인 2층 구조입니다.',an:'D2-5'},
+  {p:'ALERT 기준이 "T > 35" 일 때 T = 35.0 은?',o:['ALERT','ALERT 아님','오류','반올림에 따라 다름'],a:1,w:'> 는 35 를 포함하지 않습니다. 경계값은 항상 확인 (Day 1 의 temp=30 과 같은 함정).',an:'과제 A'},
+  {p:'readings (30개 측정 전체) 에 알맞은 구조는?',o:['dict 하나','리스트 안에 dict 30개','집합','문자열'],a:1,w:'순서대로 쌓이는 레코드 목록 — list of dict 가 표준입니다.',an:'D2-6'},
+  {p:'<code>f"{v:7.1f}"</code> 의 의미는?',o:['7자리 정수','폭 7, 소수 1자리 실수','7번 반복','오류'],a:1,w:'report 의 표 정렬이 이 형식 지정으로 만들어집니다 (Day 1 f-string).',an:'과제 A report'},
+  {p:'simulator.py 로 분리하는 이유로 가장 알맞은 것은?',o:['채점 때문','재사용과 자체 테스트(__main__)','실행 속도','Colab 규칙'],a:1,w:'Day 3 이후 프로젝트에서 import 해 다시 씁니다.',an:'과제 A 요구 5'},
+  {p:'필드 순서가 뒤바뀐 로그(<code>$H=60,T=25.3,...$</code>)에 강한 파싱 방법은?',o:['위치로 자르기','split 후 딕셔너리에 담아 키로 접근','정규식만 가능','불가능'],a:1,w:'d[k] = v 로 담으면 순서가 무의미해집니다 — 과제 B의 핵심.',an:'과제 B'},
+  {p:'과제 B에서 <code>Counter</code> 의 용도는?',o:['온도 평균','예외 유형별 발생 횟수 집계','정렬','시간 측정'],a:1,w:'err_counts[type(e).__name__] += 1 패턴.',an:'과제 B'},
+  {p:'<code>json.dump(stats, f)</code> 의 역할은?',o:['파일을 dict 로 읽기','dict 를 JSON 파일로 저장','문자열로 출력','압축'],a:1,w:'읽기는 json.load. 결과 리포트 저장(심화 과제)에 씁니다.',an:'7교시 심화'},
+ ]},
+];
+
+let tab=0;const ans=Q.map(s=>s.qs.map(()=>null));const graded=Q.map(()=>false);
+function hash(s){let h=5381;for(const c of s)h=((h<<5)+h+c.charCodeAt(0))>>>0;return h.toString(16).padStart(8,'0').slice(-4);}
+function codeFor(name,t,score){return `${t}${'ABCDEFGHIJK'[10-score]||'K'}-${hash(`${name.trim()}|${t}|${score}|day2`)}`;}
+function scoreOf(i){return ans[i].filter((a,k)=>a===Q[i].qs[k].a).length;}
+function strip(h){const d=document.createElement('div');d.innerHTML=h;return d.textContent;}
+function renderTabs(){$('#tabs').innerHTML=Q.map((s,i)=>{const n=ans[i].filter(a=>a!==null).length;return `<button class="${i===tab?'active':''} ${graded[i]?'graded':''}" data-i="${i}">${i+1}교시<span class="s">${graded[i]?scoreOf(i)+'/10':n+'/10'}</span></button>`;}).join('');$('#tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{tab=+b.dataset.i;render();window.scrollTo({top:0});});}
+function render(){renderTabs();const s=Q[tab];const g=graded[tab];
+  $('#sheet').innerHTML=`<div class="head"><span class="t">${s.t}</span><span class="a">🎬 ${s.anim}</span></div>`+s.qs.map((q,k)=>{const a=ans[tab][k];
+    return `<div class="q ${g&&a===null?'unans':''}"><div class="n">문항 ${k+1}</div><div class="p">${q.p}</div><div class="opts">${q.o.map((o,j)=>{let cls='';if(g){if(j===q.a)cls='ok';else if(j===a)cls='bad';}else if(j===a)cls='sel';return `<button class="opt ${cls}" data-k="${k}" data-j="${j}" ${g?'disabled':''}>${'①②③④'[j]} ${o}</button>`;}).join('')}</div>${g?`<div class="fb ${a===q.a?'ok':'bad'}">${a===null?'미응답. ':(a===q.a?'정답. ':'오답. ')}${q.w}<span class="anim">확인: ${q.an}</span></div>`:''}</div>`;}).join('');
+  $('#sheet').querySelectorAll('.opt').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,j=+b.dataset.j;ans[tab][k]=(ans[tab][k]===j?null:j);render();});
+  $('#gradeBtn').disabled=g;$('#gradeBtn').textContent=g?'채점 완료':'채점하기';
+  const nm=$('#name').value;
+  if(g){const sc=scoreOf(tab);$('#rscore').textContent=`${sc}/10`;if(nm.trim()){$('#rcode').textContent=codeFor(nm,tab+1,sc);$('#rhint').textContent='결과 코드';}else{$('#rcode').textContent='—';$('#rhint').textContent='이름을 입력하면 결과 코드가 나옵니다.';}}
+  else{$('#rcode').textContent='—';$('#rscore').textContent='';const n=ans[tab].filter(a=>a!==null).length;$('#rhint').textContent=`${tab+1}교시: ${n}/10 골랐습니다. 채점하기를 누르면 잠깁니다.`;}
+}
+$('#gradeBtn').onclick=()=>{const n=ans[tab].filter(a=>a!==null).length;if(n<10&&!confirm(`아직 ${10-n}문항을 고르지 않았습니다. 그래도 채점할까요? (미응답은 오답 처리)`))return;graded[tab]=true;render();};
+$('#name').addEventListener('input',render);
+
+/* ── 제출 대화상자 ── */
+let lastHtml='',lastText='';
+function buildReport(){
+  const nm=$('#name').value.trim()||'(이름 없음)';const ds=new Date().toLocaleString('ko-KR');
+  let h=`<h3>Python Day 2 개념 워크시트 — 오답 정리</h3><div class="meta">${nm} · ${ds}</div>`;
+  let t=`Python Day 2 개념 워크시트 — 오답 정리\n이름: ${nm}\n일시: ${ds}\n\n`;
+  let any=false;
+  Q.forEach((s,i)=>{if(!graded[i])return;
+    const wrong=s.qs.map((q,k)=>({q,k,a:ans[i][k]})).filter(x=>x.a!==x.q.a);
+    h+=`<div class="sec">${s.t}</div>`;t+=`### ${s.t}\n`;
+    if(!wrong.length){h+=`<div class="ok" style="margin:4px 0 8px">오답 없음</div>`;t+=`오답 없음\n\n`;return;}
+    any=true;
+    h+=`<table><tr><th>#</th><th>문항</th><th>내 답</th><th>정답</th></tr>`;t+=`| # | 문항 | 내 답 | 정답 |\n|---|---|---|---|\n`;
+    wrong.forEach(({q,k,a})=>{const my=a===null?'미응답':'①②③④'[a]+' '+strip(q.o[a]);const co='①②③④'[q.a]+' '+strip(q.o[q.a]);const qt=strip(q.p).replace(/\s+/g,' ').slice(0,70);
+      h+=`<tr><td class="r">${k+1}</td><td>${qt}</td><td class="bad">${my}</td><td class="ok">${co}</td></tr>`;
+      t+=`| ${k+1} | ${qt.replace(/\|/g,'/')} | ${my.replace(/\|/g,'/')} | ${co.replace(/\|/g,'/')} |\n`;});
+    h+=`</table>`;t+=`\n`;});
+  const notGraded=Q.map((s,i)=>graded[i]?null:i+1).filter(x=>x);
+  if(notGraded.length){h+=`<div class="meta" style="margin-top:10px">미채점: ${notGraded.join(', ')}교시</div>`;t+=`미채점: ${notGraded.join(', ')}교시\n`;}
+  lastHtml=h;lastText=t;return h;
+}
+$('#submitBtn').onclick=()=>{if(!graded.some(x=>x)){alert('먼저 한 교시 이상 채점하기를 눌러 주세요.');return;}$('#dgBody').innerHTML=buildReport();$('#toast').textContent='';$('#dlg').showModal();};
+$('#closeBtn').onclick=()=>$('#dlg').close();
+function copyRich(html,text){
+  // 1) copy 이벤트에 두 형식을 직접 실어 보내기 (사용자 클릭 안에서 동기 실행 — file:// 에서도 동작)
+  let done=false;
+  const onCopy=e=>{e.clipboardData.setData('text/html',html);e.clipboardData.setData('text/plain',text);e.preventDefault();done=true;};
+  document.addEventListener('copy',onCopy);
+  try{
+    const body=$('#dgBody');const sel=window.getSelection();const range=document.createRange();range.selectNodeContents(body);sel.removeAllRanges();sel.addRange(range);
+    document.execCommand('copy');
+    sel.removeAllRanges();
+  }catch(e){}
+  document.removeEventListener('copy',onCopy);
+  return done;
+}
+$('#captureBtn').onclick=async()=>{
+  const htmlDoc=`<meta charset="utf-8">`+lastHtml.replace(/ class="[^"]*"/g,'').replace(/<table>/g,'<table border="1" style="border-collapse:collapse">');
+  if(copyRich(htmlDoc,lastText)){$('#toast').textContent='복사됨 — 노션 페이지에서 Ctrl+V 로 붙여 넣으세요.';return;}
+  // 2) 비동기 Clipboard API
+  try{
+    if(navigator.clipboard&&window.ClipboardItem){
+      await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([htmlDoc],{type:'text/html'}),'text/plain':new Blob([lastText],{type:'text/plain'})})]);
+    }else{await navigator.clipboard.writeText(lastText);}
+    $('#toast').textContent='복사됨 — 노션 페이지에서 Ctrl+V 로 붙여 넣으세요.';return;
+  }catch(e){}
+  // 3) 최종: 텍스트 영역 선택 복사
+  try{
+    const ta=document.createElement('textarea');ta.value=lastText;ta.style.position='fixed';ta.style.opacity='0';$('#dlg').appendChild(ta);ta.focus();ta.select();
+    const ok=document.execCommand('copy');ta.remove();
+    $('#toast').textContent=ok?'텍스트(마크다운 표)로 복사됨 — 노션에서 Ctrl+V.':'복사 실패 — 대화상자 내용을 드래그해 Ctrl+C 로 복사하세요.';
+  }catch(e){$('#toast').textContent='복사 실패 — 대화상자 내용을 드래그해 Ctrl+C 로 복사하세요.';}
+};
+render();
+</script>
+</body>
+</html>
