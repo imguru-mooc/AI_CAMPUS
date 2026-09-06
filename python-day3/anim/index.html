@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python Day 3 애니메이션</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:760px;margin:0 auto;padding:32px 20px 40px}
+  h1{color:var(--amber);font-size:26px;margin:0 0 4px}
+  .sub{color:var(--dim);margin:0 0 22px}
+  h2{color:var(--dim);font-size:13px;font-weight:600;margin:22px 4px 8px;letter-spacing:.5px}
+  a.item{display:grid;grid-template-columns:70px 52px 1fr;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:8px;text-decoration:none;color:inherit}
+  a.item:hover{border-color:var(--amber)}
+  a.item:focus-visible{outline:2px solid var(--amber)}
+  .p{font-family:var(--mono);color:var(--teal);font-size:13px}
+  .no{font-family:var(--mono);color:var(--dim);font-size:13px}
+  .t{font-size:17px;color:var(--amber)}
+  .d{color:var(--dim);font-size:13px;margin-top:2px}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Python Day 3 애니메이션</h1>
+  <p class="sub">HYUNDAI AI Insight Campus 온디바이스 AI · 클래스·파일·시스템 연동 · 9/4(금) · 교시 순서</p>
+
+  <h2>신규 (day3)</h2>
+  <a class="item" href="D3-1_클래스_인스턴스_모델.html"><span class="p">1·2교시</span><span class="no">D3-1</span><span><div class="t">클래스·인스턴스 메모리 모델</div><div class="d">설계도 vs 인스턴스 · self 화살표 · 조회 경로(인스턴스→클래스) · dict 오타와 비교</div></span></a>
+  <a class="item" href="D3-2_상속_메서드탐색.html"><span class="p">2교시</span><span class="no">D3-2</span><span><div class="t">상속과 메서드 탐색</div><div class="d">자식→부모 탐색 · 오버라이드는 자식에서 멈춤 · super() · super 누락 사고</div></span></a>
+  <a class="item" href="D3-3_파일_입출력_흐름.html"><span class="p">3·6교시</span><span class="no">D3-3</span><span><div class="t">with open 파일 흐름</div><div class="d">프로그램→버퍼→디스크 · "w"가 지우는 순간 · with 자동 close · FileNotFoundError</div></span></a>
+  <a class="item" href="D3-4_JSON_직렬화_왕복.html"><span class="p">4·7교시</span><span class="no">D3-4</span><span><div class="t">JSON 직렬화 왕복</div><div class="d">dict↔문자열↔파일 · 타입 복원 · dump/dumps/load/loads · 인스턴스 ✕ → to_dict</div></span></a>
+  <a class="item" href="D3-5_시리얼_스트림.html"><span class="p">5교시</span><span class="no">D3-5</span><span><div class="t">시리얼 스트림 시뮬레이터</div><div class="d">readline 절단 · 손상·조각·빈 줄 처리 · Day 1 파서가 스트림에 붙는 구조</div></span></a>
+
+  <h2>재사용 (day1 · day2 폴더)</h2>
+  <a class="item" href="../../python-day1/anim/03_제어흐름_추적기.html"><span class="p">6교시</span><span class="no">03</span><span><div class="t">제어 흐름 추적기</div><div class="d">[Day 2] 함수 호출과 스택 — 메서드 호출도 같은 프레임, self 가 첫 인자</div></span></a>
+  <a class="item" href="../../python-day2/anim/D2-5_중첩자료구조_트리뷰어.html"><span class="p">7교시</span><span class="no">D2-5</span><span><div class="t">중첩 자료구조 트리 뷰어</div><div class="d">저장할 JSON 구조 설계 확인</div></span></a>
+  <a class="item" href="../../python-day1/anim/04_문자열_파싱_파이프라인.html"><span class="p">5교시</span><span class="no">04</span><span><div class="t">문자열 파싱 파이프라인</div><div class="d">스트림에서 잘라낸 한 줄이 들어가는 곳</div></span></a>
+  <a class="item" href="../../python-day2/anim/D2-6_자료구조_결정트리.html"><span class="p">1교시</span><span class="no">D2-6</span><span><div class="t">자료구조 선택 결정 트리</div><div class="d">도입 — "dict 로 부족해지는 순간" 토론</div></span></a>
+</div>
+</body>
+</html>

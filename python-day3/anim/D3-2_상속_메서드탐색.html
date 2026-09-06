@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>상속과 메서드 탐색 — Python Day 3</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono)}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.purple{color:var(--purple);border-color:var(--purple)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .grid{display:grid;grid-template-columns:1.1fr 1fr;gap:14px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .tree{display:flex;flex-direction:column;align-items:center;gap:26px;padding:8px 0;position:relative}
+  .cls{border:2px solid var(--purple);border-radius:12px;background:#151030;padding:10px 16px;width:300px;transition:box-shadow .3s;position:relative;z-index:1}
+  .cls.child{border-color:var(--blue);background:#0e1a30}
+  .cls h3{margin:0 0 6px;font-family:var(--mono);font-size:14px;color:var(--purple)}
+  .cls.child h3{color:var(--blue)}
+  .cls .m{font-family:var(--mono);font-size:12.5px;padding:2px 6px;border-radius:5px;border:1px solid transparent;color:var(--teal)}
+  .cls .m.miss{color:#3f5070}
+  .cls .m.hl{border-color:var(--amber);background:#1f1a0c;color:var(--amber)}
+  .cls .m.found{border-color:var(--green);background:#0d2216;color:var(--green)}
+  .cls .m.nf{border-color:var(--red);background:#2a1212;color:var(--red)}
+  .up{color:var(--dim);font-size:13px;font-family:var(--mono)}
+  .up b{color:var(--amber)}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13.5px;white-space:pre-wrap;min-height:64px}
+  .code .g{color:var(--green)}.code .e{color:var(--red)}.code .c{color:#5d7292}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}.explain b.purple{color:var(--purple)}
+  .explain code{font-family:var(--mono);color:var(--blue)}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>상속과 메서드 탐색</h1>
+  <p class="sub">공통 코드는 <b style="color:var(--purple)">부모</b>에, 다른 것만 <b style="color:var(--blue)">자식</b>에. 메서드는 <b style="color:var(--amber)">자식 → 부모</b> 순서로 찾아 올라갑니다.</p>
+  <div class="pills"><span class="pill blue">class Child(Parent)</span><span class="pill amber">탐색: 자식 먼저</span><span class="pill teal">오버라이드 = 자식에서 멈춤</span><span class="pill purple">super() = 부모의 것 실행</span></div>
+
+  <div class="panel"><h2>프리셋 (누르면 재생)</h2><div class="presets" id="presets"></div></div>
+
+  <div class="grid">
+    <div class="panel"><h2>클래스 계층</h2><div class="tree" id="tree"></div></div>
+    <div>
+      <div class="panel"><h2>Python</h2><div class="code" id="code"></div></div>
+      <div class="panel"><h2>상태</h2><div class="status info" id="status">프리셋을 누르세요.</div></div>
+    </div>
+  </div>
+  <div class="panel explain" id="explain"></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+/* parent methods, child methods, per-method state: ''|hl|found|nf|miss */
+let state={p:{'__init__':'','is_alert':'','__repr__':''},c:{'__init__ (super 호출)':'','is_alert (오버라이드)':''},cshow:{'__init__ (super 호출)':true,'is_alert (오버라이드)':true}};
+function render(){
+  $('#tree').innerHTML=`
+   <div class="cls"><h3>class SensorReading <span style="color:#3f5070;font-size:10px">부모</span></h3>
+     ${Object.entries(state.p).map(([m,s])=>`<div class="m ${s}">${m}(self, ...)</div>`).join('')}
+   </div>
+   <div class="up">▲ 없으면 부모로 올라가 찾는다</div>
+   <div class="cls child"><h3>class CalibratedReading(SensorReading) <span style="color:#3f5070;font-size:10px">자식</span></h3>
+     ${Object.entries(state.c).map(([m,s])=>state.cshow[m]?`<div class="m ${s}">${m}</div>`:`<div class="m miss">(${m.split(' ')[0]} 없음)</div>`).join('')}
+   </div>`;
+}
+function clearHl(){for(const k in state.p)state.p[k]='';for(const k in state.c)state.c[k]='';}
+function setStatus(c,m){const s=$('#status');s.className='status '+c;s.innerHTML=m;}
+let busy=false;
+const P=[
+ {n:'① 상속 선언',ex:'<p>괄호 안에 부모를 쓰면 자식은 부모의 <b class="purple">모든 메서드를 물려받습니다</b>. 아직 자식에 아무것도 안 써도 부모 기능이 전부 동작합니다.</p>',
+  run:async()=>{clearHl();state.cshow={'__init__ (super 호출)':false,'is_alert (오버라이드)':false};render();
+   $('#code').textContent='class CalibratedReading(SensorReading):\n    pass\n\nc = CalibratedReading("ESP32-01", 25.3)\nc.is_alert()   # 부모 것이 그대로 동작';
+   setStatus('info','자식이 비어 있어도 생성·판정 모두 가능 — 전부 부모에서 찾습니다.');}},
+ {n:'② 메서드 탐색 — 자식에 없을 때',ex:'<p><code>c.__repr__()</code> 처럼 자식에 없는 메서드는 <b class="amber">자식에서 먼저 찾아보고 → 없으면 부모로</b> 올라가 실행합니다. 이 순서가 상속의 전부입니다.</p>',
+  run:async()=>{clearHl();state.cshow={'__init__ (super 호출)':true,'is_alert (오버라이드)':true};render();
+   $('#code').textContent='print(c)   # __repr__ 탐색';
+   // 자식에서 __repr__ 찾기 (없음 표시)
+   setStatus('info','1단계: 자식 CalibratedReading 에서 __repr__ 찾기…');await sleep(900);
+   setStatus('warn','자식에 없음 → 부모로 올라갑니다.');await sleep(800);
+   state.p['__repr__']='found';render();$('#code').textContent='print(c)\n→ Reading(ESP32-01, T=25.3)   # 부모의 __repr__ 실행';
+   setStatus('ok','부모에서 발견·실행. 자식은 필요한 것만 쓰면 됩니다.');}},
+ {n:'③ 오버라이드 — 자식에서 멈춤',ex:'<p>자식이 <b class="teal">같은 이름</b>의 메서드를 정의하면 탐색이 자식에서 멈추고 부모 것은 가려집니다. "보정값을 더해 판정" 처럼 <b class="blue">다른 동작이 필요한 것만</b> 다시 씁니다.</p>',
+  run:async()=>{clearHl();render();
+   $('#code').textContent='c.is_alert()   # 탐색 시작';setStatus('info','1단계: 자식에서 is_alert 찾기…');await sleep(900);
+   state.c['is_alert (오버라이드)']='found';render();
+   $('#code').textContent='c.is_alert()\n→ (self.t + self.offset) > ALERT_T   # 자식 버전 실행';
+   setStatus('ok','자식에 있으므로 여기서 멈춤 — 부모의 is_alert 는 실행되지 않습니다.');}},
+ {n:'④ super().__init__ — 부모 것 재사용',ex:'<p>자식 <code>__init__</code> 은 <b class="purple">super().__init__(...)</b> 로 부모의 초기화를 먼저 실행하고, 자기만의 속성(offset)을 추가합니다. 공통 초기화 코드를 복사하지 않는 방법입니다.</p>',
+  run:async()=>{clearHl();render();
+   $('#code').textContent='class CalibratedReading(SensorReading):\n    def __init__(self, node_id, t, offset):\n        super().__init__(node_id, t)   # ← 부모 먼저\n        self.offset = offset';
+   state.c['__init__ (super 호출)']='hl';render();setStatus('info','자식 __init__ 시작 → super() 호출');await sleep(1000);
+   state.p['__init__']='found';render();setStatus('ok','부모 __init__ 이 node_id, t 를 채우고 돌아온 뒤, 자식이 offset 을 추가합니다.');}},
+ {n:'⑤ ⚠ super 누락 사고',ex:'<p>자식이 <code>__init__</code> 을 정의하면 부모 것은 <b class="red">자동으로 불리지 않습니다</b>. super() 를 빼먹으면 node_id, t 가 아예 만들어지지 않아, 나중에 <code>c.t</code> 를 읽는 순간 AttributeError 가 납니다.</p>',
+  run:async()=>{clearHl();render();
+   $('#code').textContent='class CalibratedReading(SensorReading):\n    def __init__(self, node_id, t, offset):\n        self.offset = offset   # super() 누락!\n\nc = CalibratedReading("ESP32-01", 25.3, 0.5)';
+   state.c['__init__ (super 호출)']='hl';render();setStatus('info','자식 __init__ 만 실행…');await sleep(1000);
+   state.p['__init__']='nf';render();
+   $('#code').innerHTML+='\nc.t\n<span class="e">AttributeError: \'CalibratedReading\' object has no attribute \'t\'</span>';
+   setStatus('warn','부모 초기화가 건너뛰어져 t 가 없습니다. 자식 __init__ 첫 줄은 super().__init__(...) 습관.');}},
+];
+$('#presets').innerHTML=P.map(p=>`<button>${p.n}</button>`).join('');
+$('#presets').querySelectorAll('button').forEach((b,i)=>b.onclick=async()=>{if(busy)return;busy=true;$('#presets').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));$('#explain').innerHTML=P[i].ex;await P[i].run();busy=false;});
+render();$('#presets').querySelector('button').click();
+</script>
+</body>
+</html>

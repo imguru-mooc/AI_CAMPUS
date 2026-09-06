@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>with open 파일 흐름 — Python Day 3</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono)}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.red{color:var(--red);border-color:var(--red)}.pill.green{color:var(--green);border-color:var(--green)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .flow{display:grid;grid-template-columns:1fr 46px 1fr 46px 1fr;gap:0;align-items:stretch}
+  .box{border:2px solid var(--line);border-radius:12px;background:#0e1628;padding:10px 12px;min-height:170px;transition:all .3s}
+  .box h3{margin:0 0 8px;font-size:13px;color:var(--dim);font-family:var(--mono)}
+  .box.hl{border-color:var(--amber);box-shadow:0 0 0 3px #f5b94233}
+  .box.closed{opacity:.55}
+  .lineitem{font-family:var(--mono);font-size:13px;padding:2px 6px;border-radius:5px;margin-bottom:3px;border:1px solid transparent}
+  .lineitem.new{color:var(--green);border-color:var(--green);background:#0d2216;animation:pop .3s}
+  .lineitem.gone{color:var(--red);text-decoration:line-through;opacity:.5}
+  .lineitem.read{color:var(--amber);border-color:var(--amber);background:#1f1a0c}
+  @keyframes pop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+  .arr{display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:22px}
+  .arr.on{color:var(--teal)}
+  .modebar{display:flex;gap:8px;margin-bottom:10px;font-family:var(--mono);font-size:13px}
+  .mode{border:1px solid var(--line);border-radius:8px;padding:4px 12px;color:var(--dim)}
+  .mode.on{border-color:var(--teal);color:var(--teal);background:#0f2a27}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13.5px;white-space:pre-wrap;min-height:64px}
+  .code .g{color:var(--green)}.code .e{color:var(--red)}.code .c{color:#5d7292}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}
+  .explain code{font-family:var(--mono);color:var(--blue)}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>with open — 파일 입출력 흐름</h1>
+  <p class="sub">파일 쓰기는 <b style="color:var(--teal)">프로그램 → 버퍼 → 디스크</b> 3단계입니다. <code style="font-family:var(--mono);color:var(--green)">with</code> 블록이 끝나면 자동으로 close 되어 버퍼가 디스크로 내려갑니다.</p>
+  <div class="pills"><span class="pill red">"w" 는 기존 내용을 지운다</span><span class="pill green">"a" 는 이어쓴다</span><span class="pill amber">"r" 없으면 FileNotFoundError</span><span class="pill teal">with = 자동 close</span></div>
+
+  <div class="panel"><h2>프리셋 (누르면 재생)</h2><div class="presets" id="presets"></div></div>
+
+  <div class="panel">
+    <div class="modebar">모드: <span class="mode" id="mW">"w" 새로 쓰기</span><span class="mode" id="mA">"a" 이어쓰기</span><span class="mode" id="mR">"r" 읽기</span></div>
+    <div class="flow">
+      <div class="box" id="bProg"><h3>프로그램 (f.write / f.read)</h3><div id="prog"></div></div>
+      <div class="arr" id="a1">→</div>
+      <div class="box" id="bBuf"><h3>버퍼 (메모리)</h3><div id="buf"></div></div>
+      <div class="arr" id="a2">→</div>
+      <div class="box" id="bDisk"><h3>디스크 sensor_log.txt</h3><div id="disk"></div></div>
+    </div>
+  </div>
+
+  <div class="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div class="panel"><h2>Python</h2><div class="code" id="code"></div></div>
+    <div class="panel"><h2>상태</h2><div class="status info" id="status">프리셋을 누르세요.</div></div>
+  </div>
+  <div class="panel explain" id="explain"></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+let disk=[],buf=[],prog=[];
+function li(t,cls=''){return `<div class="lineitem ${cls}">${t}</div>`;}
+function render(marks={}){
+  $('#prog').innerHTML=prog.map(p=>li(p.t,p.c)).join('')||'<span style="color:#3f5070;font-size:12px">—</span>';
+  $('#buf').innerHTML=buf.map(p=>li(p.t,p.c)).join('')||'<span style="color:#3f5070;font-size:12px">비어 있음</span>';
+  $('#disk').innerHTML=disk.map(p=>li(p.t,p.c)).join('')||'<span style="color:#3f5070;font-size:12px">(파일 없음 또는 빈 파일)</span>';
+}
+function mode(m){['mW','mA','mR'].forEach(id=>$('#'+id).classList.remove('on'));if(m)$('#m'+m).classList.add('on');}
+function hl(box,on=true){['bProg','bBuf','bDisk'].forEach(id=>$('#'+id).classList.remove('hl'));if(box)$('#b'+box).classList.add('hl');}
+function arrows(a1,a2){$('#a1').classList.toggle('on',a1);$('#a2').classList.toggle('on',a2);}
+function setStatus(c,m){const s=$('#status');s.className='status '+c;s.innerHTML=m;}
+let busy=false;
+const L1='T=25.3,H=60', L2='T=26.1,H=58', L0='(예전 로그 2줄)';
+const P=[
+ {n:'① "w" 새로 쓰기 — 지우는 순간',ex:'<p><code>open(path, "w")</code> 는 열리는 <b class="red">그 순간</b> 기존 내용을 비웁니다. write 를 한 번도 안 해도 파일은 이미 빈 상태 — 소중한 로그를 "w" 로 열지 마세요.</p>',
+  run:async()=>{disk=[{t:L0,c:''}];buf=[];prog=[];render();mode('W');hl(null);arrows(false,false);
+   $('#code').textContent='with open("sensor_log.txt", "w", encoding="utf-8") as f:';
+   setStatus('info','디스크에 예전 로그가 있는 상태에서 "w" 로 엽니다…');await sleep(1100);
+   disk=[{t:L0,c:'gone'}];render();hl('Disk');setStatus('warn','열리는 순간 기존 내용이 지워졌습니다!');await sleep(1000);
+   disk=[];prog=[{t:`f.write("${L1}\\n")`,c:''}];render();hl('Prog');arrows(true,false);await sleep(700);
+   buf=[{t:L1,c:'new'}];render();hl('Buf');setStatus('info','write 는 우선 버퍼(메모리)에 쌓입니다.');await sleep(900);
+   arrows(false,true);hl('Disk');disk=[{t:L1,c:'new'}];buf=[];render();
+   $('#code').textContent='with open("sensor_log.txt", "w", encoding="utf-8") as f:\n    f.write("T=25.3,H=60\\n")\n# with 블록 끝 → 자동 close → 버퍼가 디스크로';
+   setStatus('ok','with 블록이 끝나며 close → 버퍼가 디스크에 내려갔습니다.');arrows(false,false);hl(null);}},
+ {n:'② "a" 이어쓰기',ex:'<p><code>"a"</code>(append) 는 기존 내용 <b class="green">뒤에</b> 붙입니다. 계속 쌓이는 로그 파일의 표준 모드입니다.</p>',
+  run:async()=>{disk=[{t:L1,c:''}];buf=[];prog=[{t:`f.write("${L2}\\n")`,c:''}];render();mode('A');hl('Prog');arrows(true,false);
+   $('#code').textContent='with open("sensor_log.txt", "a", encoding="utf-8") as f:\n    f.write("T=26.1,H=58\\n")';
+   setStatus('info','"a" 는 기존 내용을 건드리지 않습니다.');await sleep(900);
+   buf=[{t:L2,c:'new'}];render();hl('Buf');await sleep(800);
+   disk=[{t:L1,c:''},{t:L2,c:'new'}];buf=[];render();hl('Disk');arrows(false,true);
+   setStatus('ok','기존 줄 뒤에 새 줄이 붙었습니다. append_log 함수가 이 패턴입니다.');await sleep(600);arrows(false,false);hl(null);}},
+ {n:'③ "r" 읽기 — for line in f',ex:'<p>읽기는 흐름이 반대입니다: 디스크 → 프로그램. <code>for line in f:</code> 는 <b class="teal">한 줄씩</b> 가져와 큰 파일도 메모리를 아낍니다. 각 줄 끝에는 \\n 이 붙어 있으니 <b class="amber">strip()</b> 습관 (Day 1).</p>',
+  run:async()=>{disk=[{t:L1,c:''},{t:L2,c:''}];buf=[];prog=[];render();mode('R');hl('Disk');arrows(false,false);
+   $('#code').textContent='with open("sensor_log.txt", encoding="utf-8") as f:\n    for line in f:\n        print(line.strip())';
+   setStatus('info','"r" 은 생략 가능한 기본 모드입니다.');await sleep(800);
+   disk=[{t:L1,c:'read'},{t:L2,c:''}];prog=[{t:`line = "${L1}\\n" → strip()`,c:'new'}];render();hl('Prog');
+   setStatus('info','1번째 줄이 프로그램으로. 개행이 붙어 있어 strip 이 필요합니다.');await sleep(1000);
+   disk=[{t:L1,c:''},{t:L2,c:'read'}];prog=[{t:`line = "${L1}\\n" → strip()`,c:''},{t:`line = "${L2}\\n" → strip()`,c:'new'}];render();
+   setStatus('ok','2번째 줄. 이 한 줄 한 줄이 Day 2 parse_line 으로 들어갑니다.');hl(null);}},
+ {n:'④ ⚠ close 없이 끝나면',ex:'<p><code>with</code> 없이 열고 close 를 잊으면, 버퍼의 내용이 <b class="red">디스크에 내려가지 않은 채</b> 남을 수 있습니다. 프로그램이 갑자기 종료되면 그 데이터는 사라집니다.</p>',
+  run:async()=>{disk=[];buf=[];prog=[{t:'f = open(..., "w")',c:''},{t:'f.write("T=25.3,H=60\\n")',c:''}];render();mode('W');hl('Prog');arrows(true,false);
+   $('#code').textContent='f = open("sensor_log.txt", "w")\nf.write("T=25.3,H=60\\n")\n# close() 를 잊음…';await sleep(800);
+   buf=[{t:L1,c:'new'}];render();hl('Buf');setStatus('info','버퍼에는 있습니다. 디스크에는?');await sleep(1100);
+   buf=[{t:L1,c:'gone'}];render();arrows(false,false);
+   $('#code').innerHTML+='\n<span class="e"># 프로그램 비정상 종료 → 버퍼 유실</span>';
+   setStatus('warn','디스크는 여전히 비어 있습니다. with 를 쓰면 블록 끝에서 항상 close 됩니다.');}},
+ {n:'⑤ "r" 인데 파일이 없으면',ex:'<p>없는 파일을 읽기 모드로 열면 <b class="red">FileNotFoundError</b>. 6교시 SensorLogger.load 가 이 예외를 잡아 "빈 로거로 시작"하는 이유입니다. 쓰기 모드(w/a)는 파일을 새로 만듭니다.</p>',
+  run:async()=>{disk=[];buf=[];prog=[];render();mode('R');hl('Disk');arrows(false,false);
+   $('#code').innerHTML='with open("no_such_file.txt") as f:\n<span class="e">FileNotFoundError: [Errno 2] No such file or directory</span>\n\n<span class="c"># 방어 (Day 2 예외 처리):</span>\ntry:\n    with open(path) as f: ...\nexcept FileNotFoundError:\n    readings = []   <span class="c"># 빈 채로 시작</span>';
+   setStatus('warn','읽기는 파일이 있어야 합니다. try/except 로 첫 실행을 방어하세요.');}},
+];
+$('#presets').innerHTML=P.map(p=>`<button>${p.n}</button>`).join('');
+$('#presets').querySelectorAll('button').forEach((b,i)=>b.onclick=async()=>{if(busy)return;busy=true;$('#presets').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));$('#explain').innerHTML=P[i].ex;await P[i].run();busy=false;});
+render();$('#presets').querySelector('button').click();
+</script>
+</body>
+</html>

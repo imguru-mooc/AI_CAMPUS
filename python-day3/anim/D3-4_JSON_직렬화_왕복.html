@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JSON 직렬화 왕복 — Python Day 3</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono)}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.red{color:var(--red);border-color:var(--red)}.pill.green{color:var(--green);border-color:var(--green)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .flow{display:grid;grid-template-columns:1fr 60px 1fr 60px 1fr;align-items:stretch}
+  .box{border:2px solid var(--line);border-radius:12px;background:#0e1628;padding:10px 12px;min-height:190px;transition:all .3s}
+  .box h3{margin:0 0 8px;font-size:13px;font-family:var(--mono)}
+  .box.mem h3{color:var(--blue)} .box.str h3{color:var(--amber)} .box.file h3{color:var(--teal)}
+  .box.hl{border-color:var(--amber);box-shadow:0 0 0 3px #f5b94233}
+  .content{font-family:var(--mono);font-size:12.5px;white-space:pre-wrap;color:var(--text)}
+  .content .ty{color:var(--purple)} .content .num{color:var(--amber)} .content .strv{color:var(--green)}
+  .arrbox{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+  .arrbox .fn{font-family:var(--mono);font-size:11px;color:var(--dim);transition:color .3s}
+  .arrbox .fn.on{color:var(--teal);font-weight:700}
+  .arrbox .ar{font-size:20px;color:var(--dim)} .arrbox .ar.on{color:var(--teal)}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13.5px;white-space:pre-wrap;min-height:64px}
+  .code .g{color:var(--green)}.code .e{color:var(--red)}.code .c{color:#5d7292}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}
+  .explain code{font-family:var(--mono);color:var(--blue)}
+  table.mini{border-collapse:collapse;font-size:13px;font-family:var(--mono);margin-top:4px}
+  table.mini td{border:1px solid var(--line);padding:3px 10px}
+  table.mini .h{color:var(--dim)}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>JSON 직렬화 왕복</h1>
+  <p class="sub">메모리의 dict ↔ JSON 문자열 ↔ 디스크 파일. <b style="color:var(--amber)">s 가 붙으면 문자열(dumps/loads), 없으면 파일(dump/load)</b>.</p>
+  <div class="pills"><span class="pill blue">메모리 dict</span><span class="pill amber">JSON 문자열</span><span class="pill teal">파일 .json</span><span class="pill green">복원하면 타입이 돌아온다</span><span class="pill red">인스턴스는 그대로 저장 불가</span></div>
+
+  <div class="panel"><h2>프리셋 (누르면 재생)</h2><div class="presets" id="presets"></div></div>
+
+  <div class="panel">
+    <div class="flow">
+      <div class="box mem" id="bM"><h3>메모리 (Python 객체)</h3><div class="content" id="cM"></div></div>
+      <div class="arrbox"><span class="fn" id="f1t">dumps →</span><span class="ar" id="a1">⇄</span><span class="fn" id="f1b">← loads</span></div>
+      <div class="box str" id="bS"><h3>JSON 문자열</h3><div class="content" id="cS"></div></div>
+      <div class="arrbox"><span class="fn" id="f2t">파일에 write →</span><span class="ar" id="a2">⇄</span><span class="fn" id="f2b">← read</span></div>
+      <div class="box file" id="bF"><h3>stats.json (디스크)</h3><div class="content" id="cF"></div></div>
+    </div>
+    <div style="color:var(--dim);font-size:12px;margin-top:8px;font-family:var(--mono)">지름길: json.dump(obj, f) = dumps + write · json.load(f) = read + loads</div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div class="panel"><h2>Python</h2><div class="code" id="code"></div></div>
+    <div class="panel"><h2>상태</h2><div class="status info" id="status">프리셋을 누르세요.</div></div>
+  </div>
+  <div class="panel explain" id="explain"></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const DICT=`<span class="ty">dict</span> {
+  "node": <span class="strv">"ESP32-01"</span>,
+  "avg_T": <span class="num">26.4</span>,   <span class="ty">← float</span>
+  "alerts": <span class="num">0</span>      <span class="ty">← int</span>
+}`;
+const JSTR=`'{"node": "ESP32-01", "avg_T": 26.4, "alerts": 0}'
+<span class="ty">← str 한 덩어리</span>`;
+const JFILE=`{"node": "ESP32-01",
+ "avg_T": 26.4,
+ "alerts": 0}`;
+function setBoxes(m,s,f){$('#cM').innerHTML=m||'<span style="color:#3f5070">—</span>';$('#cS').innerHTML=s||'<span style="color:#3f5070">—</span>';$('#cF').innerHTML=f||'<span style="color:#3f5070">(파일 없음)</span>';}
+function hl(id){['bM','bS','bF'].forEach(b=>$('#'+b).classList.remove('hl'));if(id)$('#'+id).classList.add('hl');}
+function fn(id){['f1t','f1b','f2t','f2b'].forEach(f=>$('#'+f).classList.remove('on'));(id||[]).forEach(f=>$('#'+f).classList.add('on'));}
+function setStatus(c,m){const s=$('#status');s.className='status '+c;s.innerHTML=m;}
+let busy=false;
+const P=[
+ {n:'① dumps — dict → 문자열',ex:'<p><code>json.dumps(stats)</code> 는 dict 를 <b class="amber">JSON 규격의 문자열 한 덩어리</b>로 바꿉니다. 파일은 아직 관여하지 않습니다. 네트워크 전송·디버그 출력에 씁니다.</p>',
+  run:async()=>{setBoxes(DICT,null,null);hl('bM');fn([]);$('#code').textContent='s = json.dumps(stats)';setStatus('info','메모리의 dict 에서 출발.');await sleep(900);
+   setBoxes(DICT,JSTR,null);hl('bS');fn(['f1t']);$('#code').textContent='s = json.dumps(stats)\nprint(type(s))   # <class \'str\'>';setStatus('ok','결과는 str. 따옴표 규칙(쌍따옴표)이 JSON 표준입니다.');}},
+ {n:'② dump — dict → 파일 (지름길)',ex:'<p><code>json.dump(stats, f)</code> 는 <b class="teal">dumps + write 를 한 번에</b> 합니다. with open("w") 안에서 호출하는 것이 표준 저장 패턴입니다.</p>',
+  run:async()=>{setBoxes(DICT,null,null);hl('bM');fn([]);$('#code').textContent='with open("stats.json", "w", encoding="utf-8") as f:\n    json.dump(stats, f, indent=2, ensure_ascii=False)';setStatus('info','dump 는 문자열 변환과 파일 쓰기를 함께.');await sleep(900);
+   setBoxes(DICT,JSTR,null);fn(['f1t']);hl('bS');await sleep(700);
+   setBoxes(DICT,JSTR,JFILE);fn(['f1t','f2t']);hl('bF');setStatus('ok','디스크에 저장 완료 — 세션이 끝나도 남습니다(단, Drive 경로일 때).');}},
+ {n:'③ load — 파일 → dict, 타입 복원',ex:'<p><code>json.load(f)</code> 로 복원하면 <b class="green">타입이 그대로 돌아옵니다</b>: 26.4 는 float, 0 은 int. 문자열 파싱(split 후 전부 str)과 결정적으로 다른 점입니다.</p>',
+  run:async()=>{setBoxes(null,null,JFILE);hl('bF');fn([]);$('#code').textContent='with open("stats.json", encoding="utf-8") as f:\n    restored = json.load(f)';setStatus('info','런타임을 재시작했다고 상상하세요. 메모리는 비어 있습니다.');await sleep(900);
+   setBoxes(null,JSTR,JFILE);fn(['f2b']);hl('bS');await sleep(700);
+   setBoxes(DICT,JSTR,JFILE);fn(['f2b','f1b']);hl('bM');
+   $('#code').textContent='restored["avg_T"] + 1        # 27.4 — float 그대로\ntype(restored["alerts"])     # <class \'int\'>\nrestored == stats            # True';
+   setStatus('ok','dict 가 타입까지 살아 돌아왔습니다. 저장 → 복원 왕복 성공.');}},
+ {n:'④ indent · ensure_ascii',ex:'<p><code>indent=2</code> 는 사람이 읽을 수 있게 줄바꿈·들여쓰기를, <code>ensure_ascii=False</code> 는 한글을 <b class="green">그대로</b> 저장합니다. 빼면 "\\uc815\\uc0c1" 같은 이스케이프가 됩니다.</p>',
+  run:async()=>{setBoxes(`<span class="ty">dict</span> {"loc": <span class="strv">"정문"</span>}`,null,null);hl('bM');fn([]);
+   $('#code').innerHTML='json.dumps({"loc": "정문"})\n<span class="g">\'{"loc": "\\\\uc815\\\\ubb38"}\'</span>   <span class="c"># 기본값: 이스케이프</span>\n\njson.dumps({"loc": "정문"}, ensure_ascii=False)\n<span class="g">\'{"loc": "정문"}\'</span>          <span class="c"># 한글 그대로</span>';
+   setBoxes(`<span class="ty">dict</span> {"loc": <span class="strv">"정문"</span>}`,`ensure_ascii=False + indent=2\n{\n  "loc": "정문"\n}`,null);fn(['f1t']);hl('bS');
+   setStatus('ok','저장 옵션 두 개는 습관처럼: indent=2, ensure_ascii=False.');}},
+ {n:'⑤ ⚠ 인스턴스는 저장 불가 → to_dict',ex:'<p>클래스 인스턴스를 그대로 dump 하면 <b class="red">TypeError</b>. JSON 이 아는 타입은 dict/list/str/숫자/bool/None 뿐입니다. 해법은 <b class="teal">to_dict()</b> 로 dict 로 바꿔 저장하고, 복원 시 <b class="teal">from_dict()</b> 로 인스턴스를 다시 만드는 패턴 — 6교시 SensorLogger 의 핵심입니다.</p>',
+  run:async()=>{setBoxes(`<span class="ty">SensorReading 인스턴스</span>\nReading(ESP32-01, T=25.3)`,null,null);hl('bM');fn([]);
+   $('#code').innerHTML='json.dump(r1, f)\n<span class="e">TypeError: Object of type SensorReading is not JSON serializable</span>';
+   setStatus('warn','인스턴스는 JSON 세계의 주민이 아닙니다.');await sleep(1400);
+   setBoxes(`r1.to_dict() →\n<span class="ty">dict</span> {"node_id": <span class="strv">"ESP32-01"</span>, "t": <span class="num">25.3</span>}`,JSTR,JFILE);fn(['f1t','f2t']);hl('bF');
+   $('#code').innerHTML='json.dump(r1.to_dict(), f)              <span class="c"># 저장</span>\nr = SensorReading.from_dict(json.load(f))  <span class="c"># 복원</span>';
+   setStatus('ok','인스턴스 → dict → JSON → dict → 인스턴스. 왕복의 완성형입니다.');}},
+ {n:'⑥ loads vs load 구분',ex:'<p>혼동 1위. <b class="amber">s = string</b>: <code>dumps/loads</code> 는 문자열과, <code>dump/load</code> 는 파일 객체와 왕복합니다. 인자를 보면 압니다 — 문자열을 받으면 loads, 파일 f 를 받으면 load.</p>',
+  run:async()=>{setBoxes(DICT,JSTR,JFILE);hl(null);fn([]);
+   $('#code').innerHTML='json.loads(\'{"T": 25.3}\')   <span class="c"># 문자열 → dict</span>\njson.load(f)               <span class="c"># 파일 → dict</span>\njson.dumps(d)              <span class="c"># dict → 문자열</span>\njson.dump(d, f)            <span class="c"># dict → 파일</span>';
+   $('#status').className='status ok';$('#status').innerHTML='<table class="mini"><tr><td class="h"></td><td class="h">문자열</td><td class="h">파일</td></tr><tr><td class="h">저장</td><td>dumps</td><td>dump</td></tr><tr><td class="h">복원</td><td>loads</td><td>load</td></tr></table>';}},
+];
+$('#presets').innerHTML=P.map(p=>`<button>${p.n}</button>`).join('');
+$('#presets').querySelectorAll('button').forEach((b,i)=>b.onclick=async()=>{if(busy)return;busy=true;$('#presets').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));$('#explain').innerHTML=P[i].ex;await P[i].run();busy=false;});
+$('#presets').querySelector('button').click();
+</script>
+</body>
+</html>

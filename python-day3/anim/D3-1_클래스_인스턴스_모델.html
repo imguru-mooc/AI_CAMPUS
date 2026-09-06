@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>클래스·인스턴스 메모리 모델 — Python Day 3</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono)}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.purple{color:var(--purple);border-color:var(--purple)}.pill.red{color:var(--red);border-color:var(--red)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .grid{display:grid;grid-template-columns:1.25fr 1fr;gap:14px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .stage{position:relative;min-height:340px}
+  .clsbox{border:2px solid var(--purple);border-radius:12px;background:#151030;padding:10px 14px;width:250px;position:absolute;left:8px;top:8px}
+  .clsbox h3{margin:0 0 6px;color:var(--purple);font-family:var(--mono);font-size:14px}
+  .clsbox .tag{font-size:10px;color:var(--dim)}
+  .mem{font-family:var(--mono);font-size:12.5px;padding:2px 6px;border-radius:5px;border:1px solid transparent}
+  .mem.cv{color:var(--amber)} .mem.mt{color:var(--teal)}
+  .mem.hl{border-color:var(--amber);background:#1f1a0c}
+  .inst{border:2px solid var(--blue);border-radius:12px;background:#0e1a30;padding:8px 12px;width:210px;position:absolute;transition:all .3s}
+  .inst h4{margin:0 0 4px;color:var(--blue);font-family:var(--mono);font-size:13px}
+  .inst .a{font-family:var(--mono);font-size:12.5px;padding:1px 6px;border-radius:5px;border:1px solid transparent}
+  .inst .a .k{color:var(--purple)}.inst .a .v{color:var(--amber)}
+  .inst .a.hl{border-color:var(--green);background:#0d2216}
+  .inst.hl{box-shadow:0 0 0 3px #60a5fa44}
+  .inst.new{animation:pop .4s}
+  @keyframes pop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+  svg.wire{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:14px;white-space:pre-wrap;min-height:64px}
+  .code .g{color:var(--green)}.code .e{color:var(--red)}.code .c{color:#5d7292}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}.explain b.purple{color:var(--purple)}
+  .explain code{font-family:var(--mono);color:var(--blue)}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>클래스·인스턴스 메모리 모델</h1>
+  <p class="sub"><b style="color:var(--purple)">클래스는 설계도</b>, <b style="color:var(--blue)">인스턴스는 그 설계도로 찍어낸 실제 데이터</b>입니다. <code style="font-family:var(--mono);color:var(--teal)">self</code> 는 "지금 이 인스턴스"를 가리키는 이름일 뿐입니다.</p>
+  <div class="pills"><span class="pill purple">class = 설계도 (메서드·클래스 변수)</span><span class="pill blue">인스턴스 = 각자의 속성</span><span class="pill teal">self → 호출한 인스턴스</span><span class="pill amber">조회: 인스턴스 → 클래스 순서</span></div>
+
+  <div class="panel"><h2>프리셋 (누르면 재생)</h2><div class="presets" id="presets"></div></div>
+
+  <div class="grid">
+    <div class="panel"><h2>메모리</h2><div class="stage" id="stage"><svg class="wire" id="wire"></svg></div></div>
+    <div>
+      <div class="panel"><h2>Python</h2><div class="code" id="code"></div></div>
+      <div class="panel"><h2>상태</h2><div class="status info" id="status">프리셋을 누르세요.</div></div>
+    </div>
+  </div>
+  <div class="panel explain" id="explain"></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+let insts=[]; // {name, attrs:{}, x,y, hlAttr, hl}
+let clsHl=null, selfTo=null, lookupWire=null;
+function render(){
+  const st=$('#stage');
+  let h=`<svg class="wire" id="wire"></svg>
+  <div class="clsbox" id="clsbox"><h3>class SensorReading <span class="tag">설계도</span></h3>
+    <div class="mem cv ${clsHl==='ALERT_T'?'hl':''}" id="cv_ALERT_T">ALERT_T = ${CLS.ALERT_T} <span class="tag">클래스 변수</span></div>
+    <div class="mem mt ${clsHl==='__init__'?'hl':''}">__init__(self, node_id, t)</div>
+    <div class="mem mt ${clsHl==='is_alert'?'hl':''}" id="mt_is_alert">is_alert(self)</div>
+  </div>`;
+  insts.forEach((it,i)=>{
+    h+=`<div class="inst ${it.hl?'hl':''} ${it.isNew?'new':''}" id="in_${it.name}" style="left:${it.x}px;top:${it.y}px"><h4>${it.name} <span class="tag" style="color:#3f5070">인스턴스</span></h4>${Object.entries(it.attrs).map(([k,v])=>`<div class="a ${it.hlAttr===k?'hl':''}"><span class="k">${k}</span> = <span class="v">${v}</span></div>`).join('')}</div>`;
+  });
+  st.innerHTML=h;
+  // wires
+  const svg=document.getElementById('wire');const stR=st.getBoundingClientRect();
+  let w='<defs><marker id="ah" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#2dd4bf"/></marker><marker id="ahA" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#f5b942"/></marker></defs>';
+  function edge(aEl,bEl,color,marker,label){
+    const ra=aEl.getBoundingClientRect(),rb=bEl.getBoundingClientRect();
+    const x1=ra.left+ra.width/2-stR.left,y1=ra.bottom-stR.top,x2=rb.left+rb.width/2-stR.left,y2=rb.top-stR.top;
+    w+=`<path d="M${x1},${y1} C${x1},${y1+30} ${x2},${y2-30} ${x2},${y2}" fill="none" stroke="${color}" stroke-width="2" marker-end="url(#${marker})"/>`;
+    if(label)w+=`<text x="${(x1+x2)/2+6}" y="${(y1+y2)/2}" fill="${color}" font-size="12" font-family="Consolas">${label}</text>`;
+  }
+  if(selfTo){const a=document.getElementById('mt_is_alert'),b=document.getElementById('in_'+selfTo);if(a&&b)edge(a,b,'#2dd4bf','ah','self');}
+  if(lookupWire){const a=document.getElementById('in_'+lookupWire),b=document.getElementById('cv_ALERT_T');if(a&&b){
+    const ra=a.getBoundingClientRect(),rb=b.getBoundingClientRect();
+    const x1=ra.left-stR.left,y1=ra.top+20-stR.top,x2=rb.right-stR.left,y2=rb.top+rb.height/2-stR.top;
+    w+=`<path d="M${x1},${y1} C${x1-40},${y1} ${x2+40},${y2} ${x2},${y2}" fill="none" stroke="#f5b942" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ahA)"/>`;}}
+  svg.innerHTML=w;
+}
+const CLS={ALERT_T:35};
+function reset(){insts=[];clsHl=null;selfTo=null;lookupWire=null;CLS.ALERT_T=35;}
+function setStatus(c,m){const s=$('#status');s.className='status '+c;s.innerHTML=m;}
+let busy=false;
+const P=[
+ {n:'① 클래스 정의 — 설계도만',ex:'<p><code>class</code> 블록을 실행하면 <b class="purple">설계도 하나</b>가 만들어질 뿐, 측정값은 아직 없습니다. 메서드와 클래스 변수는 설계도에 한 부만 존재합니다.</p>',
+  run:async()=>{reset();render();$('#code').textContent='class SensorReading:\n    ALERT_T = 35\n    def __init__(self, node_id, t): ...\n    def is_alert(self): ...';setStatus('info','설계도 생성. 데이터(인스턴스)는 0개.');}},
+ {n:'② 인스턴스 생성 r1',ex:'<p><code>SensorReading("ESP32-01", 25.3)</code> 호출 순간 <b class="blue">새 인스턴스</b>가 만들어지고 <code>__init__</code> 이 자동 실행되어 속성이 채워집니다. 데이터는 설계도가 아니라 <b class="blue">인스턴스</b>에 삽니다.</p>',
+  run:async()=>{reset();render();$('#code').textContent='r1 = SensorReading("ESP32-01", 25.3)';await sleep(400);
+   insts=[{name:'r1',attrs:{node_id:'"ESP32-01"',t:'25.3'},x:300,y:30,isNew:true}];render();setStatus('ok','__init__ 실행 → self.node_id, self.t 저장. 설계도는 그대로.');}},
+ {n:'③ 두 번째 인스턴스 r2 — 독립',ex:'<p>같은 설계도에서 찍어도 인스턴스의 속성은 <b class="green">서로 완전히 독립</b>입니다. r2 의 t 를 바꿔도 r1 은 모릅니다. (Day 2 의 참조 공유와 대비되는 지점)</p>',
+  run:async()=>{reset();insts=[{name:'r1',attrs:{node_id:'"ESP32-01"',t:'25.3'},x:300,y:30}];render();
+   $('#code').textContent='r2 = SensorReading("ESP32-02", 36.9)\nr2.t = 37.5   # r1 은 영향 없음';await sleep(400);
+   insts.push({name:'r2',attrs:{node_id:'"ESP32-02"',t:'36.9'},x:300,y:180,isNew:true});render();await sleep(700);
+   insts[1].attrs.t='37.5';insts[1].hlAttr='t';render();setStatus('ok','r2.t 만 바뀌었습니다. 각 인스턴스는 자기 속성 상자를 따로 가집니다.');}},
+ {n:'④ self 의 정체',ex:'<p><code>r1.is_alert()</code> 는 사실 <code>SensorReading.is_alert(r1)</code> 의 줄임입니다. 호출한 인스턴스가 <b class="teal">self 로 자동 전달</b>됩니다. self 는 키워드가 아니라 첫 인자의 관례적 이름입니다.</p>',
+  run:async()=>{reset();insts=[{name:'r1',attrs:{node_id:'"ESP32-01"',t:'25.3'},x:300,y:30},{name:'r2',attrs:{node_id:'"ESP32-02"',t:'36.9'},x:300,y:180}];render();
+   $('#code').textContent='r1.is_alert()   # = SensorReading.is_alert(r1)';clsHl='is_alert';selfTo='r1';insts[0].hl=true;render();
+   setStatus('info','self → r1. 메서드는 설계도에 하나뿐, self 가 어느 인스턴스인지 정합니다.');await sleep(1400);
+   $('#code').textContent='r2.is_alert()   # 이번엔 self = r2\n→ True (36.9 > 35)';selfTo='r2';insts[0].hl=false;insts[1].hl=true;render();
+   setStatus('ok','같은 메서드, 다른 self. r2 로 호출하면 self.t 는 36.9 입니다.');}},
+ {n:'⑤ 속성 조회 경로 (인스턴스 → 클래스)',ex:'<p><code>r1.ALERT_T</code> 를 읽으면 먼저 <b class="blue">인스턴스</b>에서 찾고, 없으면 <b class="purple">클래스</b>로 올라갑니다. 그래서 클래스 변수는 모든 인스턴스가 공유합니다.</p>',
+  run:async()=>{reset();insts=[{name:'r1',attrs:{node_id:'"ESP32-01"',t:'25.3'},x:300,y:30}];render();
+   $('#code').textContent='r1.ALERT_T';insts[0].hl=true;render();setStatus('info','1단계: 인스턴스 r1 의 속성에서 찾기 → 없음');await sleep(900);
+   lookupWire='r1';clsHl='ALERT_T';render();$('#code').textContent='r1.ALERT_T\n→ 35   # 클래스에서 찾음';
+   setStatus('ok','2단계: 클래스로 올라가 ALERT_T = 35 발견. 점선 = 조회 경로.');}},
+ {n:'⑥ 클래스 변수 변경 — 전체 전파',ex:'<p><code>SensorReading.ALERT_T = 30</code> 은 설계도의 값을 바꾸므로 <b class="amber">모든 인스턴스</b>의 판정이 함께 달라집니다. 반대로 <code>r1.ALERT_T = 30</code> 은 r1 에만 <b class="red">인스턴스 변수를 새로 만들어</b> 클래스 값을 가립니다 — 의도가 아니면 피하세요.</p>',
+  run:async()=>{reset();insts=[{name:'r1',attrs:{node_id:'"ESP32-01"',t:'32.0'},x:300,y:30},{name:'r2',attrs:{node_id:'"ESP32-02"',t:'33.0'},x:300,y:180}];render();
+   $('#code').textContent='r1.is_alert(), r2.is_alert()\n→ (False, False)   # 기준 35';setStatus('info','기준 35 에서는 둘 다 False.');await sleep(1100);
+   CLS.ALERT_T=30;clsHl='ALERT_T';render();$('#code').textContent='SensorReading.ALERT_T = 30\nr1.is_alert(), r2.is_alert()\n→ (True, True)';
+   setStatus('ok','설계도 한 곳을 고치자 모든 인스턴스의 판정이 바뀌었습니다.');}},
+ {n:'⑦ dict 레코드와 비교 — 오타의 운명',ex:'<p>dict 는 <code>r["Temp"]</code> 오타가 <b class="red">실행돼야 KeyError</b> 로 터지고, 어떤 키가 정당한지 아무도 모릅니다. 클래스는 속성 이름이 <b class="green">설계도에 문서화</b>되고, <code>r.tmp</code> 오타는 그 자리에서 명확한 AttributeError 를 냅니다. 이것이 어제의 dict 를 오늘 졸업하는 이유입니다.</p>',
+  run:async()=>{reset();insts=[{name:'r1',attrs:{node_id:'"ESP32-01"',t:'25.3'},x:300,y:30}];render();
+   $('#code').innerHTML='d = {"id": "ESP32-01", "t": 25.3}\nd["Temp"]\n<span class="e">KeyError: \'Temp\'</span>  <span class="c"># 어떤 키가 맞는지 힌트 없음</span>\n\nr1.tmp\n<span class="e">AttributeError: \'SensorReading\' object has no attribute \'tmp\'</span>';
+   setStatus('warn','클래스는 이름의 집합이 설계도에 고정되어 있어 오류 메시지도, 자동완성도 명확합니다.');}},
+];
+$('#presets').innerHTML=P.map(p=>`<button>${p.n}</button>`).join('');
+$('#presets').querySelectorAll('button').forEach((b,i)=>b.onclick=async()=>{if(busy)return;busy=true;$('#presets').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));$('#explain').innerHTML=P[i].ex;await P[i].run();busy=false;});
+window.addEventListener('resize',render);
+$('#presets').querySelector('button').click();
+</script>
+</body>
+</html>

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>시리얼 스트림 시뮬레이터 — Python Day 3</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono)}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.red{color:var(--red);border-color:var(--red)}.pill.green{color:var(--green);border-color:var(--green)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.run{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .device{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .chip{border:2px solid var(--blue);border-radius:10px;padding:8px 14px;font-family:var(--mono);color:var(--blue);font-size:13px;background:#0e1a30}
+  .wirebar{flex:1;height:34px;border:1px dashed var(--line);border-radius:8px;position:relative;overflow:hidden;background:#0a0f1c}
+  .stream{position:absolute;white-space:nowrap;font-family:var(--mono);font-size:14px;top:6px;transition:left .5s linear}
+  .stream .fr{color:var(--green)} .stream .bad{color:var(--red)} .stream .nl{color:#3f5070} .stream .part{color:var(--amber)}
+  .pc{border:2px solid var(--teal);border-radius:10px;padding:8px 14px;font-family:var(--mono);color:var(--teal);font-size:13px;background:#0f2a27}
+  .rows{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:860px){.rows{grid-template-columns:1fr}}
+  .linebox{min-height:120px}
+  .rl{font-family:var(--mono);font-size:13.5px;padding:4px 8px;border-radius:6px;border:1px solid var(--line);margin-bottom:5px;background:#0e1628}
+  .rl.ok{border-color:var(--green);color:var(--green)}
+  .rl.bad{border-color:var(--red);color:var(--red)}
+  .rl.part{border-color:var(--amber);color:var(--amber)}
+  .rl .tag{font-size:10px;color:var(--dim);margin-left:8px}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;white-space:pre-wrap;min-height:100px}
+  .code .c{color:#5d7292}.code .k{color:var(--purple)}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .cnt{font-family:var(--mono);font-size:13px;color:var(--dim);margin-top:6px}
+  .cnt b{color:var(--amber)}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}
+  .explain code{font-family:var(--mono);color:var(--blue)}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>시리얼 스트림 시뮬레이터</h1>
+  <p class="sub">ESP32 는 문자를 <b style="color:var(--blue)">끊임없는 물줄기(스트림)</b>로 보냅니다. <code style="font-family:var(--mono);color:var(--teal)">readline()</code> 이 개행(\n)에서 잘라 준 <b>한 줄</b>이 Day 1 파서로 들어갑니다.</p>
+  <div class="pills"><span class="pill blue">ESP32 → 문자 스트림</span><span class="pill teal">readline() = \n 에서 절단</span><span class="pill green">$…* 검증 통과 → 파싱</span><span class="pill red">경계가 어긋난 프레임 → 검증이 걸러냄</span></div>
+
+  <div class="panel"><h2>프리셋 (누르면 자동 재생)</h2><div class="presets" id="presets"></div></div>
+
+  <div class="panel">
+    <div class="device">
+      <div class="chip">ESP32<br><span style="color:#3f5070;font-size:11px">1초마다 전송</span></div>
+      <div class="wirebar"><div class="stream" id="stream"></div></div>
+      <div class="pc">PC (Python)<br><span style="color:#3f5070;font-size:11px">ser.readline()</span></div>
+    </div>
+    <div class="rows">
+      <div><h2 style="font-size:13px;color:var(--dim);margin:0 0 8px">readline() 이 잘라낸 줄 → 검증 → 파싱</h2><div class="linebox" id="lines"></div><div class="cnt" id="cnt"></div></div>
+      <div><h2 style="font-size:13px;color:var(--dim);margin:0 0 8px">수신 루프 (구조)</h2><div class="code" id="code"><span class="k">import</span> serial
+ser = serial.Serial(<span class="c">"/dev/ttyUSB0"</span>, 9600, timeout=1)
+<span class="k">while</span> True:
+    line = ser.readline().decode().strip()
+    <span class="k">if</span> <span class="k">not</span> line: <span class="k">continue</span>          <span class="c"># timeout 빈 줄</span>
+    <span class="k">try</span>:
+        t, h, d = parse_line(line)   <span class="c"># Day 1~2 파서</span>
+    <span class="k">except</span> (FrameError, ValueError):
+        bad += 1; <span class="k">continue</span>
+    logger.add(...)                  <span class="c"># Day 3 로거</span></div></div>
+    </div>
+  </div>
+  <div class="panel"><h2>상태</h2><div class="status info" id="status">프리셋을 누르세요.</div></div>
+  <div class="panel explain" id="explain"></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+let good=0,bad=0,skip=0,busy=false;
+function cnt(){$('#cnt').innerHTML=`정상 <b>${good}</b> · 손상 <b>${bad}</b> · 빈 줄 건너뜀 <b>${skip}</b>`;}
+function addLine(text,cls,tag){const d=document.createElement('div');d.className='rl '+cls;d.innerHTML=text+(tag?`<span class="tag">${tag}</span>`:'');$('#lines').appendChild(d);}
+function resetAll(){good=bad=skip=0;$('#lines').innerHTML='';cnt();}
+async function flowFrames(frames){
+  // frames: [{txt, cls}] — 스트림 애니메이션 후 한 줄씩 처리
+  const st=$('#stream');
+  st.style.transition='none';st.style.left='100%';
+  st.innerHTML=frames.map(f=>`<span class="${f.cls}">${f.txt}</span><span class="nl">\\n </span>`).join('');
+  await sleep(60);
+  st.style.transition='left 2.2s linear';st.style.left='-120%';
+  await sleep(1200);
+  for(const f of frames){
+    if(f.skip){skip++;addLine('""','part','timeout — if not line: continue');}
+    else if(f.cls==='bad'||f.cls==='part'){bad++;addLine(f.txt,'bad',f.reason||'FrameError → except → continue');}
+    else{good++;addLine(f.txt,'ok','검증 통과 → parse_line → (T, H, D)');}
+    cnt();await sleep(550);
+  }
+}
+const P=[
+ {n:'① 정상 스트림',ex:'<p>프레임 3개가 개행으로 구분되어 흘러옵니다. <code>readline()</code> 은 \\n 을 만날 때마다 한 줄을 잘라 반환하고, 그 줄이 검증 → 파싱 → 로거로 이어집니다. <b class="teal">스트림의 한 줄 = 어제까지 다루던 line</b> — 새로 배울 파싱은 없습니다.</p>',
+  run:async()=>{resetAll();setStatus('info','ESP32 가 1초 간격으로 프레임을 보냅니다…');
+   await flowFrames([{txt:'$T=25.3,H=60,D=120*',cls:'fr'},{txt:'$T=26.1,H=58,D=118*',cls:'fr'},{txt:'$T=25.8,H=59,D=121*',cls:'fr'}]);
+   setStatus('ok','3줄 모두 정상. while 루프는 계속 다음 줄을 기다립니다.');}},
+ {n:'② 손상 프레임 혼입',ex:'<p>전기적 노이즈·리셋으로 프레임이 깨져 옵니다. <b class="red">검증(</b><code>$…*</code><b class="red">)</b> 이 없으면 쓰레기가 정상값처럼 들어갑니다(Day 1 04 애니메이션의 교훈). try/except 가 세고 넘어갑니다.</p>',
+  run:async()=>{resetAll();setStatus('info','중간에 깨진 프레임이 섞여 있습니다…');
+   await flowFrames([{txt:'$T=25.3,H=60,D=120*',cls:'fr'},{txt:'T=99.9,H=0',cls:'bad'},{txt:'$T=26.1,H=58,D=118*',cls:'fr'}]);
+   setStatus('warn','손상 1건 집계 후 계속 진행 — 프로그램은 죽지 않습니다.');}},
+ {n:'③ 경계가 어긋난 프레임',ex:'<p>장치가 전송 도중 리셋되면 프레임이 <b class="amber">두 줄에 걸쳐 잘립니다</b>. readline 은 개행 기준으로 자를 뿐 프레임을 모르므로, 앞 조각(<code>$T=25.</code>)과 뒷 조각(<code>3,H=60,D=120*</code>) 둘 다 검증에서 탈락합니다. <b>readline 이 항상 완전한 프레임을 주는 것은 아닙니다</b> — 그래서 검증이 필수입니다.</p>',
+  run:async()=>{resetAll();setStatus('info','전송 도중 개행이 끼어들어 프레임이 쪼개졌습니다…');
+   await flowFrames([{txt:'$T=24.9,H=57,D=119*',cls:'fr'},{txt:'$T=25.',cls:'part',reason:'끝이 * 아님 → FrameError'},{txt:'3,H=60,D=120*',cls:'part',reason:'시작이 $ 아님 → FrameError'},{txt:'$T=26.0,H=58,D=118*',cls:'fr'}]);
+   setStatus('warn','조각 2개는 버리고 다음 완전한 프레임부터 재개 — 스트림 처리의 표준 전략입니다.');}},
+ {n:'④ timeout 빈 줄',ex:'<p>장치가 잠시 조용하면 <code>readline(timeout=1)</code> 은 <b class="amber">빈 문자열</b>을 돌려줍니다. 빈 줄은 오류가 아니므로 <code>if not line: continue</code> 로 조용히 건너뜁니다 (Day 2 과제 B와 같은 규칙).</p>',
+  run:async()=>{resetAll();setStatus('info','2번째 초에 아무 데이터도 오지 않았습니다…');
+   await flowFrames([{txt:'$T=25.3,H=60,D=120*',cls:'fr'},{txt:'',cls:'part',skip:true},{txt:'$T=26.1,H=58,D=118*',cls:'fr'}]);
+   setStatus('ok','빈 줄은 예외도 손상도 아닙니다 — 검사 후 continue.');}},
+ {n:'⑤ 전체 리허설 (Day 4 프로젝트 형태)',ex:'<p>정상·손상·조각·빈 줄이 모두 섞인 현실적인 스트림입니다. Colab 에는 시리얼 포트가 없으므로 오늘은 <b class="teal">파일을 한 줄씩 읽는 리플레이</b>로 이 루프를 그대로 연습하고, 장비 실습 주간에 <code>open(...)</code> 을 <code>serial.Serial(...)</code> 로 바꾸기만 하면 됩니다.</p>',
+  run:async()=>{resetAll();setStatus('info','현실 스트림 재생…');
+   await flowFrames([{txt:'$T=25.3,H=60,D=120*',cls:'fr'},{txt:'T=99.9,H=0',cls:'bad'},{txt:'',cls:'part',skip:true},{txt:'$T=36.9,H=70,D=150*',cls:'fr'},{txt:'$T=2',cls:'part',reason:'조각 → FrameError'},{txt:'$T=26.1,H=58,D=118*',cls:'fr'}]);
+   setStatus('ok','정상 3 · 손상 2 · 빈 줄 1 — 루프는 한 번도 죽지 않았습니다. 이것이 견고한 수집기입니다.');}},
+];
+function setStatus(c,m){const s=$('#status');s.className='status '+c;s.innerHTML=m;}
+$('#presets').innerHTML=P.map(p=>`<button>${p.n}</button>`).join('');
+$('#presets').querySelectorAll('button').forEach((b,i)=>b.onclick=async()=>{if(busy)return;busy=true;$('#presets').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));$('#explain').innerHTML=P[i].ex;await P[i].run();busy=false;});
+cnt();$('#presets').querySelector('button').click();
+</script>
+</body>
+</html>
