@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python Day 4 개념 워크시트</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:900px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.primary{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700;padding:9px 18px;font-size:14px}
+  button.submit{background:#3a2e12;border-color:var(--amber);color:var(--amber);font-weight:700;padding:9px 18px;font-size:14px}
+  button:disabled{opacity:.45;cursor:default}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  input[type=text]{background:#0a0f1c;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:14px}
+  .tabs{display:flex;flex-wrap:wrap;gap:6px}
+  .tabs button .s{font-family:var(--mono);font-size:11px;color:var(--dim);margin-left:6px}
+  .tabs button.graded .s{color:var(--green)}
+  .head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .head .t{color:var(--amber);font-size:17px}
+  .head .a{font-size:13px;color:var(--teal);font-family:var(--mono)}
+  .q{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#0e1628}
+  .q.unans{border-color:#5a3a1a}
+  .q .n{font-family:var(--mono);color:var(--dim);font-size:12px}
+  .q .p{margin:4px 0 10px;font-size:15px}
+  .q .p code,.opt code,.fb code,td code{font-family:var(--mono);color:var(--blue);background:#0a0f1c;padding:1px 5px;border-radius:4px}
+  .q pre{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin:6px 0 10px;font-size:14px;white-space:pre;overflow-x:auto}
+  .opts{display:grid;gap:6px}
+  .opt{text-align:left;padding:8px 12px;font-size:14px;font-family:inherit}
+  .opt.sel{border-color:var(--amber);background:#1f1a0c}
+  .opt.ok{border-color:var(--green);color:var(--green);background:#0d2216}
+  .opt.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .opt:disabled{cursor:default;opacity:.9}
+  .fb{margin-top:8px;font-size:13px;color:var(--dim);border-left:3px solid var(--line);padding-left:10px}
+  .fb.ok{border-left-color:var(--green)}.fb.bad{border-left-color:var(--red)}
+  .fb .anim{color:var(--teal);font-family:var(--mono);font-size:12px;display:block;margin-top:3px}
+  .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  .code{font-family:var(--mono);font-size:20px;color:var(--amber);letter-spacing:1px}
+  .score{font-family:var(--mono);color:var(--green);font-size:16px}
+  .hint{color:var(--dim);font-size:13px}
+  details{color:var(--dim);font-size:13px}
+  details summary{cursor:pointer;color:var(--dim)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  /* dialog */
+  dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:0;max-width:820px;width:92vw;max-height:88vh}
+  dialog::backdrop{background:#000a}
+  .dg{padding:18px 20px}
+  .dg h3{color:var(--amber);margin:0 0 4px;font-size:20px}
+  .dg .meta{color:var(--dim);font-size:13px;margin-bottom:12px;font-family:var(--mono)}
+  .dg .sec{margin:14px 0 6px;color:var(--teal);font-weight:700;font-size:14px}
+  .dg table{width:100%;border-collapse:collapse;font-size:13px}
+  .dg th{text-align:left;color:var(--dim);font-weight:600;padding:5px 8px;border-bottom:1px solid var(--line);font-size:12px}
+  .dg td{padding:5px 8px;border-bottom:1px solid #16203a;vertical-align:top}
+  .dg td.r{font-family:var(--mono)}
+  .dg .ok{color:var(--green)}.dg .bad{color:var(--red)}.dg .none{color:var(--dim)}
+  .dg .sum{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0;font-family:var(--mono)}
+  .dgbar{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:10px 20px;display:flex;gap:8px;justify-content:flex-end;align-items:center}
+  .toast{color:var(--green);font-size:13px;margin-right:auto}
+  .body{overflow:auto;max-height:calc(88vh - 60px)}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Python Day 4 개념 워크시트</h1>
+  <p class="sub">교시마다 10문항. 답을 고른 뒤 아래 <b style="color:var(--teal)">채점하기</b>를 누르면 정오·해설과 결과 코드가 나타납니다. 채점 전에는 답을 바꿀 수 있고, 채점 후에는 잠깁니다. 모든 교시를 마치면 <b style="color:var(--amber)">제출</b>로 오답 정리를 열고, <b>캡처</b>로 복사해 노션에 붙여 넣으세요.</p>
+
+  <div class="panel">
+    <div class="row"><label style="color:var(--dim);font-size:13px">이름 <input type="text" id="name" placeholder="홍길동"></label><span class="hint">이름은 결과 코드 계산에만 쓰이며 저장되지 않습니다.</span></div>
+  </div>
+  <div class="panel"><h2>교시</h2><div class="tabs" id="tabs"></div></div>
+  <div class="panel" id="sheet"></div>
+  <div class="panel">
+    <div class="actions">
+      <button class="primary" id="gradeBtn">채점하기</button>
+      <span class="code" id="rcode">—</span><span class="score" id="rscore"></span><span class="hint" id="rhint"></span>
+      <button class="submit" id="submitBtn" style="margin-left:auto">제출</button>
+    </div>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <div class="body"><div class="dg" id="dgBody"></div></div>
+  <div class="dgbar"><span class="toast" id="toast"></span><button id="captureBtn" class="primary">📋 캡처 (노션용 복사)</button><button id="closeBtn">닫기</button></div>
+</dialog>
+
+<script>
+const $=s=>document.querySelector(s);
+const Q=[
+ {t:'1교시 · NumPy 기초',anim:'D4-1 브로드캐스팅·마스크',qs:[
+  {p:'<code>[1, 2] * 2</code> 와 <code>np.array([1, 2]) * 2</code> 의 결과는 차례로?',o:['[2,4] / [2,4]','[1,2,1,2] / [2,4]','[1,2,1,2] / [1,2,1,2]','오류 / [2,4]'],a:1,w:'리스트의 * 는 이어 붙이기, 배열의 * 는 원소별 곱입니다.',an:'D4-1 · "①"'},
+  {p:'<code>np.array([512, 723]).dtype</code> 으로 알 수 있는 것은?',o:['배열 길이','원소들의 공통 자료형','메모리 주소','차원 수'],a:1,w:'ndarray 는 모든 원소가 같은 dtype 을 공유합니다. 길이는 shape, 차원은 ndim.',an:'1교시'},
+  {p:'<code>raws / 1023 * 3.3</code> 이 반복문 없이 전체에 적용되는 이유는?',o:['파이썬이 자동 for 문을 만들어서','벡터 연산 — 내부 C 루프가 원소별로 계산해서','우연히 되는 것','리스트에서도 된다'],a:1,w:'반복문이 C 내부로 들어간 것 — 그래서 크고 빠릅니다.',an:'D4-1 · "②"'},
+  {p:'<code>np.arange(12).reshape(3, 4)</code> 의 shape 은?',o:['(12,)','(4, 3)','(3, 4)','(3, 4, 1)'],a:2,w:'0~11 열두 개를 3행 4열로 재배열합니다.',an:'1교시 심화'},
+  {p:'<code>temps > 35</code> (temps 는 배열) 의 결과는?',o:['True 또는 False 하나','원소별 True/False 배열','35 초과 원소들','오류'],a:1,w:'비교 연산도 배열 전체에 적용되어 불리언 배열(마스크)이 됩니다.',an:'D4-1 · "⑤"'},
+  {p:'브로드캐스팅에서 (2,3) + (3,) 이 가능한 이유는?',o:['크기가 같아서','(3,) 이 두 행으로 늘어나 모양을 맞춰서','파이썬이 오류를 무시해서','불가능하다'],a:1,w:'작은 쪽이 늘어나 결합됩니다 — 뒤 축부터 크기가 같거나 1 이면 OK.',an:'D4-1 · "③"'},
+  {p:'<code>np.array([1,2,3]) + np.array([1,2,3,4])</code> 의 결과는?',o:['[2,4,6,4]','[2,4,6]','ValueError (shapes (3,) (4,))','자동으로 0 이 채워진다'],a:2,w:'3 vs 4 — 어느 쪽도 1 이 아니라 늘릴 수 없어 ValueError 입니다.',an:'D4-1 · "④"'},
+  {p:'섭씨 배열 c 를 화씨로 바꾸는 한 줄은?',o:['for t in c: ...','c * 9/5 + 32','map(f, c)','c.to_f()'],a:1,w:'벡터 연산 — 배열 전체에 수식이 한 번에 적용됩니다.',an:'1교시 실습 3'},
+  {p:'배열을 받으면 가장 먼저 확인할 것은?',o:['첫 원소','shape 과 dtype','합계','이름'],a:1,w:'NumPy 오류의 대부분은 모양 문제 — shape 부터 출력하는 습관.',an:'D4-1 · "④"'},
+  {p:'<code>(temps > 35).sum()</code> 이 개수가 되는 이유는?',o:['sum 이 특별해서','True 가 1, False 가 0 으로 계산되어서','우연','len 과 같아서'],a:1,w:'불리언은 산술에서 1/0 — 마스크의 합이 곧 건수입니다.',an:'D4-1 · "⑦"'},
+ ]},
+ {t:'2교시 · NumPy 활용',anim:'D4-1 마스크 / 2교시 이미지=배열',qs:[
+  {p:'NumPy 슬라이스 <code>b = a[2:5]</code> 를 수정하면?',o:['a 는 안전하다','a 도 바뀐다 — 슬라이스는 뷰(참조)','오류','b 가 리스트가 된다'],a:1,w:'리스트 슬라이스(복사)와 달리 NumPy 슬라이스는 뷰입니다. 독립 사본은 .copy().',an:'2교시 · 02 참조 모델'},
+  {p:'<code>temps[temps > 35]</code> 의 결과는?',o:['True/False 배열','35 초과 원소만 모은 새 배열','인덱스 배열','오류'],a:1,w:'마스크 인덱싱 — True 자리의 원소만 골라냅니다.',an:'D4-1 · "⑥"'},
+  {p:'<code>temps[nodes == "E2"].mean()</code> 이 구하는 것은?',o:['전체 평균','E2 노드 측정값들의 평균','E2 의 개수','최댓값'],a:1,w:'노드 마스크로 고른 뒤 평균 — 노드별 통계의 기본 패턴입니다.',an:'2교시 실습 1'},
+  {p:'<code>temps.argmax()</code> 가 돌려주는 것은?',o:['최댓값','최댓값의 위치(인덱스)','최솟값','정렬된 배열'],a:1,w:'max 는 값, argmax 는 "언제/어디서" — 시점을 찾을 때 씁니다.',an:'D4-1 · "⑦"'},
+  {p:'2차원 배열에서 <code>axis=0</code> 평균의 의미는?',o:['행 방향이 사라짐 — 열별 평균','열 방향이 사라짐 — 행별 평균','전체 평균','오류'],a:0,w:'axis 는 "사라지는 방향" — axis=0 이면 행들이 합쳐져 열별 통계가 남습니다.',an:'2교시'},
+  {p:'컬러 이미지 배열의 shape (H, W, 3) 에서 3 은?',o:['3장의 사진','RGB 세 채널','3차원 좌표','밝기 단계'],a:1,w:'마지막 축이 R/G/B 채널 — 이미지는 그냥 숫자 배열입니다.',an:'2교시 이미지'},
+  {p:'<code>img[::-1]</code> 의 효과는?',o:['좌우 반전','상하 반전','밝기 반전','회전'],a:1,w:'첫 축(행)을 역순으로 — 상하가 뒤집힙니다. 좌우는 img[:, ::-1].',an:'2교시 실습 3'},
+  {p:'<code>img * 0.5</code> 의 효과는?',o:['크기 절반','밝기 절반(어두워짐)','채널 제거','오류'],a:1,w:'모든 픽셀 값이 절반 — 밝기가 줄어듭니다. 이미지도 벡터 연산 대상입니다.',an:'2교시'},
+  {p:'이미지의 일부를 잘라내는 방법은?',o:['crop() 함수만 가능','img[50:150, 100:300] 슬라이싱','불가능','반복문 필수'],a:1,w:'자르기 = 2차원 슬라이싱. Day 1 슬라이스 문법이 그대로 적용됩니다.',an:'2교시'},
+  {p:'다음 주 카메라 프레임과 오늘 배운 것의 관계는?',o:['무관하다','카메라 프레임 = H×W×C 숫자 배열 — 오늘 조작이 그대로 적용','카메라는 리스트','카메라는 문자열'],a:1,w:'OpenCV 가 주는 프레임이 정확히 이 배열입니다 — 장비 주간의 다리.',an:'2교시'},
+ ]},
+ {t:'3교시 · Matplotlib',anim:'3교시 실습',qs:[
+  {p:'읽히는 그래프의 최소 4요소는?',o:['색·굵기·점·선','title / xlabel / ylabel / grid','범례·배경·테두리·글꼴','제목만'],a:1,w:'제목과 축 라벨이 없으면 그래프는 주장 없는 그림입니다.',an:'3교시'},
+  {p:'ALERT 기준선을 긋는 함수는?',o:['plt.line(35)','plt.axhline(35, ...)','plt.hline(35)','plt.threshold(35)'],a:1,w:'axhline 이 수평 기준선 — 임계값을 눈으로 보여줍니다.',an:'3교시'},
+  {p:'ALERT 점만 빨갛게 찍으려면?',o:['전체를 빨갛게','마스크로 고른 좌표에 scatter','두 번 그린다 전체','불가능'],a:1,w:'plt.scatter(np.where(mask)[0], temps[mask], color="red") — 마스크 재활용.',an:'3교시'},
+  {p:'분포를 보는 그래프는?',o:['plot','bar','hist','pie'],a:2,w:'히스토그램 — "분포를 보면 이상이 보인다".',an:'3교시'},
+  {p:'<code>plt.hist(temps, bins=15)</code> 의 bins 는?',o:['막대 색','구간(칸) 개수','최댓값','반복 횟수'],a:1,w:'값의 범위를 몇 칸으로 나눌지 — 너무 적으면 뭉개지고 많으면 갈라집니다.',an:'3교시'},
+  {p:'png 파일이 0바이트가 되는 흔한 원인은?',o:['dpi 부족','show() 후에 savefig() 호출','제목 누락','색 지정 안 함'],a:1,w:'show 가 그림을 비운 뒤 저장하면 빈 파일 — savefig 를 먼저.',an:'부록 B'},
+  {p:'두 노드의 분포를 한 그림에 겹칠 때 쓰는 옵션은?',o:['bold=True','alpha (투명도)','grid','marker'],a:1,w:'hist 를 두 번 그리며 alpha 로 겹침을 보이게 합니다.',an:'3교시'},
+  {p:'<code>plt.legend()</code> 가 표시하는 것은?',o:['제목','각 선의 label 범례','축 이름','격자'],a:1,w:'plot(label=...) 으로 붙인 이름들이 범례로 나타납니다 — 3노드 구분.',an:'3교시'},
+  {p:'그래프 제목에 "3 nodes, 264 readings" 처럼 쓰는 이유는?',o:['멋있어서','그래프는 주장, 제목은 근거 — 데이터 규모를 함께','필수 문법','자동 생성'],a:1,w:'근거 없는 그래프는 신뢰받지 못합니다.',an:'3교시'},
+  {p:'해상도를 높여 저장하는 방법은?',o:['크게 그린다','savefig(..., dpi=150)','zoom=2','불가능'],a:1,w:'dpi 옵션이 저장 해상도를 정합니다.',an:'3교시'},
+ ]},
+ {t:'4교시 · pandas',anim:'D4-2 DataFrame·groupby',qs:[
+  {p:'DataFrame 에서 행과 열의 의미는?',o:['행=필드, 열=레코드','행=레코드, 열=필드','둘 다 레코드','정해져 있지 않다'],a:1,w:'Day 2 list of dict 의 dict 하나가 행 하나가 됩니다.',an:'D4-2 · "①"'},
+  {p:'데이터를 받으면 먼저 실행할 3종 세트는?',o:['sum/min/max','head / info / describe','plot/save/close','sort/filter/group'],a:1,w:'모양·자료형·기초 통계를 먼저 — df.info() 가 dtype 문제를 잡아줍니다.',an:'4교시'},
+  {p:'<code>df["T"]</code> 의 결과 타입은?',o:['DataFrame','Series (열 하나)','리스트','배열 불가'],a:1,w:'열 하나는 Series — NumPy 배열처럼 벡터 연산이 됩니다.',an:'D4-2 · "②"'},
+  {p:'<code>df[df["T"] > 35]</code> 의 문법은 무엇과 같은가?',o:['SQL 전용','NumPy 불리언 마스크','정규식','람다 필수'],a:1,w:'같은 마스크 문법 — 조건이 True 인 행만 남습니다.',an:'D4-2 · "③"'},
+  {p:'<code>df["alert"] = df["T"] > 35</code> 의 효과는?',o:['오류','불리언 새 열이 추가된다','T 열이 바뀐다','행이 걸러진다'],a:1,w:'판정이 표의 열이 되어 이후 어디서든 재사용됩니다.',an:'D4-2 · "④"'},
+  {p:'groupby 의 3단계는?',o:['정렬→필터→저장','분할→집계→결합','읽기→쓰기→닫기','복사→수정→삭제'],a:1,w:'노드별로 갈라서, 그룹마다 집계하고, 한 표로 합칩니다.',an:'D4-2 · "⑤"'},
+  {p:'<code>df.groupby("node")["T"].agg(["mean","max","count"])</code> 는 Day 2~3 의 무엇과 같은가?',o:['parse_line','stats_by_node (for 문/메서드 버전)','judge','append_log'],a:1,w:'3일의 진화 — for 문 → 메서드 → 한 줄.',an:'D4-2 · "⑤"'},
+  {p:'<code>df.to_csv(path, index=False)</code> 에서 index=False 를 빼면?',o:['저장 실패','복원 시 유령 열(Unnamed: 0) 이 생긴다','더 빨라진다','아무 차이 없다'],a:1,w:'인덱스가 열로 저장되어 왕복 시 표가 달라집니다.',an:'D4-2 · "⑥"'},
+  {p:'결측치 개수를 확인하는 코드는?',o:['df.count(0)','df["T"].isna().sum()','len(df)','df.empty'],a:1,w:'isna() 마스크의 합 — NumPy 의 (mask).sum() 과 같은 발상입니다.',an:'4교시 심화'},
+  {p:'<code>df["T"] > 35</code> 가 전부 False 로 나오는 흔한 원인은?',o:['pandas 버그','T 가 문자열(object) — 파싱 때 float 변환 누락','35 가 너무 커서','정렬 안 해서'],a:1,w:'df.info() 로 dtype 을 확인 — "25.3" > 35 는 성립하지 않습니다.',an:'부록 B'},
+ ]},
+ {t:'5교시 · 제너레이터·문법',anim:'D3-5 (스트림=제너레이터)',qs:[
+  {p:'<code>for i, line in enumerate(f, 1)</code> 에서 1 의 의미는?',o:['한 줄만 읽기','번호를 1부터 시작','속도 옵션','필수 인자'],a:1,w:'enumerate 의 시작값 — 줄 번호를 사람 기준(1부터)으로 셉니다.',an:'5교시'},
+  {p:'<code>zip(nodes, temps)</code> 가 만드는 것은?',o:['합친 리스트','(노드, 온도) 쌍들','딕셔너리','정렬 결과'],a:1,w:'같은 위치끼리 쌍 — dict(zip(...)) 으로 바로 딕셔너리도 됩니다.',an:'5교시'},
+  {p:'<code>m = map(str, [1,2]); list(m); list(m)</code> 두 번째 list 의 결과는?',o:["['1','2']","[] — 이미 소모됨","[1,2]","오류"],a:1,w:'이터레이터는 한 번 흘러가면 끝 — 스트림과 같은 성질입니다.',an:'5교시 · Day 2 map'},
+  {p:'함수를 제너레이터로 만드는 키워드는?',o:['return','async','yield','gen'],a:2,w:'yield 가 있으면 호출 시 제너레이터 객체가 만들어집니다.',an:'5교시'},
+  {p:'yield 와 return 의 차이는?',o:['같다','yield 는 값을 내놓고 멈췄다가 이어서 실행된다','yield 가 더 빠른 return','yield 는 오류 처리용'],a:1,w:'멈췄다-이어서 — 다음 요청에 그 지점부터 계속됩니다.',an:'5교시'},
+  {p:'제너레이터의 가장 큰 이점은?',o:['문법이 짧다','리스트를 만들지 않아 100만 줄도 메모리 걱정 없이','자동 정렬','오류가 안 난다'],a:1,w:'필요할 때 한 건씩 — 대용량 스트림 처리의 표준입니다.',an:'5교시'},
+  {p:'제너레이터를 한 번 소모한 뒤 다시 for 를 돌리면?',o:['처음부터 다시','아무것도 나오지 않는다','오류','절반만 나온다'],a:1,w:'소모 완료 — 다시 쓰려면 read_frames(path) 를 새로 호출합니다.',an:'5교시 실습 2'},
+  {p:'<code>sum(t for _, t, _, _ in read_frames(p))</code> 에서 대괄호가 없는 이유는?',o:['오타','제너레이터 표현식 — 리스트를 만들지 않는 집계','sum 전용 문법','속도 무관'],a:1,w:'중간 리스트 없이 하나씩 흘려보내며 더합니다.',an:'5교시'},
+  {p:'<code>f"{avg:8.2f}"</code> 의 의미는?',o:['8번 반복','폭 8, 소수 2자리 실수','8진수','2의 8승'],a:1,w:'폭·정렬·소수점 — Day 1 의 :08b 와 같은 문법 가족, report 표를 반듯하게.',an:'5교시'},
+  {p:'"스트림은 본질적으로 제너레이터" 의 의미는?',o:['비유일 뿐','readline 이 필요할 때 한 줄씩 내놓는 것 = yield 와 같은 구조','스트림은 리스트','무관'],a:1,w:'D3-5 의 그림이 곧 read_frames — 장비의 Serial 도 같은 인터페이스입니다.',an:'D3-5 재사용'},
+ ]},
+ {t:'6교시 · 프로젝트 종합',anim:'D3-5 · D4-2 · D2-5',qs:[
+  {p:'프로젝트 데이터 흐름의 올바른 순서는?',o:['그래프→수신→CSV','수신(read_frames)→처리(NumPy/pandas)→그래프→CSV 저장','CSV→수신→그래프','저장→처리→수신'],a:1,w:'수집 → 처리 → 시각화 → 산출물 — 하루의 그림 그대로입니다.',an:'6교시 명세'},
+  {p:'Day 4 프레임 $N=ESP32-01,T=25.3,...* 에서 N 필드를 순서 무관으로 파싱하는 방법은?',o:['위치 고정 split','필드를 dict 에 담아 키로 접근','정규식만 가능','불가능'],a:1,w:'Day 2 과제 B 의 dict 파싱 — 필드 순서가 바뀌어도 안전합니다.',an:'프레임 확장 공지'},
+  {p:'good 집계가 정답보다 많다면 흔한 원인은?',o:['운','빈 줄을 good 으로 셈 — skip 분기 누락','파일이 김','NumPy 버그'],a:1,w:'if not line.strip(): skip 후 continue 가 먼저 와야 합니다.',an:'D3-5 ④'},
+  {p:'준실시간 그래프에서 그림이 겹겹이 쌓일 때 해결책은?',o:['dpi 낮추기','clear_output(wait=True) 로 이전 출력 지우고 다시 그림','show 제거','불가능'],a:1,w:'매 갱신마다 출력 영역을 비우고 최신 상태를 다시 그립니다.',an:'6교시 필수 2'},
+  {p:'groupby 요약에서 노드가 1개만 나오는 원인은?',o:['정상','N 필드 파싱 실패로 node 열이 전부 같은 값','pandas 한계','정렬 문제'],a:1,w:'parse_frame 이 N 을 제대로 꺼내는지 첫 레코드를 출력해 확인하세요.',an:'부록 B'},
+  {p:'readings.csv 저장 후 read_csv 로 다시 읽어 비교하는 이유는?',o:['시간 끌기','왕복 검증 — 저장이 실제로 재사용 가능한지 확인','필수 문법','채점 회피'],a:1,w:'Day 3 JSON 왕복과 같은 습관 — 산출물은 복원돼야 산출물입니다.',an:'D4-2 ⑥'},
+  {p:'최신 200건만 그래프에 그리는 파이썬 문법은?',o:['records.last(200)','records[-200:]','records[:200]','불가능'],a:1,w:'음수 슬라이스 — Day 1 문법이 준실시간 창(window)이 됩니다.',an:'6교시'},
+  {p:'temps 리스트가 커질 때 NumPy 로 통계 내려면?',o:['불가','np.array(temps) 후 mean/max/마스크','반복문 필수','pandas 만 가능'],a:1,w:'리스트 → 배열 변환 한 번이면 이후 전부 벡터 연산입니다.',an:'D4-1'},
+  {p:'timeline.png 에 반드시 들어가야 하는 요소는?',o:['배경색','3노드 범례 + 임계선 + 제목·축 라벨','애니메이션','서명'],a:1,w:'명세 필수 5 — 읽히는 그래프의 요건입니다.',an:'6교시 필수 5'},
+  {p:'수집 루프의 finally 에 save 를 두는 이유는?',o:['속도','중단(Ctrl-C)돼도 지금까지 데이터가 남도록','문법 규칙','재시작용'],a:1,w:'"끊겨도 데이터는 남는다" — Day 3 안전 종료의 완성형입니다.',an:'Day 3 회수'},
+ ]},
+ {t:'7교시 · 총복습 (Day 1~4)',anim:'전체',qs:[
+  {p:'NumPy 벡터 연산이 빠른 근본 이유는?',o:['최신 문법','내부가 C 로 구현되어 반복이 C 에서 돌아서','메모리를 안 써서','병렬 GPU'],a:1,w:'C/C++ 과목으로 가는 다리 — "그 안쪽으로 내려갑니다".',an:'8교시 연결'},
+  {p:'Day 2 컴프리헨션 → Day 4 의 무엇으로 진화했나?',o:['for 문','NumPy 벡터 연산 / 제너레이터 표현식','조건문','클래스'],a:1,w:'[f(x) for x in xs] → arr 연산 한 줄, 집계는 제너레이터 표현식.',an:'부록 C'},
+  {p:'Day 2 참조 모델(02)이 Day 4 에서 다시 나타난 곳은?',o:['groupby','NumPy 슬라이스 = 뷰','f-string','enumerate'],a:1,w:'b = a[2:5] 수정이 원본을 바꾸는 이유 — 같은 그림입니다.',an:'2교시'},
+  {p:'stats_by_node 의 3일 진화 순서는?',o:['메서드→for→한 줄','for 문(D2)→메서드(D3)→groupby 한 줄(D4)','한 줄→for→메서드','변화 없음'],a:1,w:'같은 문제, 점점 짧고 강한 도구.',an:'부록 C'},
+  {p:'list of dict 레코드가 Day 4 에서 표가 되는 한 줄은?',o:['json.dump','pd.DataFrame(records)','np.array','csv.writer'],a:1,w:'Day 2 자료구조가 pandas 의 입력 형식 그 자체였습니다.',an:'D4-2 ①'},
+  {p:'read_frames 의 open() 을 무엇으로 바꾸면 실제 장비 수신기가 되나?',o:['requests.get','serial.Serial(...) + readline','socket 필수','바꿀 수 없다'],a:1,w:'한 줄 치환 — 장비 주간 첫 시간에 라이브로 시연합니다.',an:'부록 D'},
+  {p:'D 필드를 비트 플래그(문/창/모션)로 해석할 때 쓰는 Day 1 도구는?',o:['f-string','비트 연산 & 와 마스크 (1<<n)','슬라이싱','set'],a:1,w:'확장 E6 — d & (1<<0) 이 문 센서 비트입니다.',an:'01 재사용'},
+  {p:'예외 처리 원칙 "대처할 수 있는 곳에서" 가 프로젝트에서 적용된 곳은?',o:['모든 줄에 try','read_frames 안에서 손상 프레임을 걸러 계속 진행','main 에서만','안 쓴다'],a:1,w:'Day 2 원칙 → Day 3 load → Day 4 수신부로 이어진 한 가닥입니다.',an:'Day 2~4'},
+  {p:'팀 시연에서 요구되는 것은?',o:['긴 발표 자료','준실시간 데모 + 코드 하이라이트 + 배운 점, 3분','슬라이드 20장','암기 발표'],a:1,w:'코드와 산출물이 곧 발표 자료 — 리허설 1회 필수.',an:'7~8교시'},
+  {p:'4일 과정의 전체 흐름으로 옳은 것은?',o:['시각화→변수→클래스→자료구조','변수·비트(D1)→자료구조·함수(D2)→클래스·파일(D3)→NumPy·pandas·프로젝트(D4)','클래스부터 시작','순서 무관'],a:1,w:'값 하나 → 담기 → 묶고 남기기 → 크게 다루고 보여주기.',an:'8교시 총정리'},
+ ]},
+];
+
+let tab=0;const ans=Q.map(s=>s.qs.map(()=>null));const graded=Q.map(()=>false);
+function hash(s){let h=5381;for(const c of s)h=((h<<5)+h+c.charCodeAt(0))>>>0;return h.toString(16).padStart(8,'0').slice(-4);}
+function codeFor(name,t,score){return `${t}${'ABCDEFGHIJK'[10-score]||'K'}-${hash(`${name.trim()}|${t}|${score}|day4`)}`;}
+function scoreOf(i){return ans[i].filter((a,k)=>a===Q[i].qs[k].a).length;}
+function strip(h){const d=document.createElement('div');d.innerHTML=h;return d.textContent;}
+function renderTabs(){$('#tabs').innerHTML=Q.map((s,i)=>{const n=ans[i].filter(a=>a!==null).length;return `<button class="${i===tab?'active':''} ${graded[i]?'graded':''}" data-i="${i}">${i+1}교시<span class="s">${graded[i]?scoreOf(i)+'/10':n+'/10'}</span></button>`;}).join('');$('#tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{tab=+b.dataset.i;render();window.scrollTo({top:0});});}
+function render(){renderTabs();const s=Q[tab];const g=graded[tab];
+  $('#sheet').innerHTML=`<div class="head"><span class="t">${s.t}</span><span class="a">🎬 ${s.anim}</span></div>`+s.qs.map((q,k)=>{const a=ans[tab][k];
+    return `<div class="q ${g&&a===null?'unans':''}"><div class="n">문항 ${k+1}</div><div class="p">${q.p}</div><div class="opts">${q.o.map((o,j)=>{let cls='';if(g){if(j===q.a)cls='ok';else if(j===a)cls='bad';}else if(j===a)cls='sel';return `<button class="opt ${cls}" data-k="${k}" data-j="${j}" ${g?'disabled':''}>${'①②③④'[j]} ${o}</button>`;}).join('')}</div>${g?`<div class="fb ${a===q.a?'ok':'bad'}">${a===null?'미응답. ':(a===q.a?'정답. ':'오답. ')}${q.w}<span class="anim">확인: ${q.an}</span></div>`:''}</div>`;}).join('');
+  $('#sheet').querySelectorAll('.opt').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,j=+b.dataset.j;ans[tab][k]=(ans[tab][k]===j?null:j);render();});
+  $('#gradeBtn').disabled=g;$('#gradeBtn').textContent=g?'채점 완료':'채점하기';
+  const nm=$('#name').value;
+  if(g){const sc=scoreOf(tab);$('#rscore').textContent=`${sc}/10`;if(nm.trim()){$('#rcode').textContent=codeFor(nm,tab+1,sc);$('#rhint').textContent='결과 코드';}else{$('#rcode').textContent='—';$('#rhint').textContent='이름을 입력하면 결과 코드가 나옵니다.';}}
+  else{$('#rcode').textContent='—';$('#rscore').textContent='';const n=ans[tab].filter(a=>a!==null).length;$('#rhint').textContent=`${tab+1}교시: ${n}/10 골랐습니다. 채점하기를 누르면 잠깁니다.`;}
+}
+$('#gradeBtn').onclick=()=>{const n=ans[tab].filter(a=>a!==null).length;if(n<10&&!confirm(`아직 ${10-n}문항을 고르지 않았습니다. 그래도 채점할까요? (미응답은 오답 처리)`))return;graded[tab]=true;render();};
+$('#name').addEventListener('input',render);
+
+/* ── 제출 대화상자 ── */
+let lastHtml='',lastText='';
+function buildReport(){
+  const nm=$('#name').value.trim()||'(이름 없음)';const ds=new Date().toLocaleString('ko-KR');
+  let h=`<h3>Python Day 4 개념 워크시트 — 오답 정리</h3><div class="meta">${nm} · ${ds}</div>`;
+  let t=`Python Day 4 개념 워크시트 — 오답 정리\n이름: ${nm}\n일시: ${ds}\n\n`;
+  let any=false;
+  Q.forEach((s,i)=>{if(!graded[i])return;
+    const wrong=s.qs.map((q,k)=>({q,k,a:ans[i][k]})).filter(x=>x.a!==x.q.a);
+    h+=`<div class="sec">${s.t}</div>`;t+=`### ${s.t}\n`;
+    if(!wrong.length){h+=`<div class="ok" style="margin:4px 0 8px">오답 없음</div>`;t+=`오답 없음\n\n`;return;}
+    any=true;
+    h+=`<table><tr><th>#</th><th>문항</th><th>내 답</th><th>정답</th></tr>`;t+=`| # | 문항 | 내 답 | 정답 |\n|---|---|---|---|\n`;
+    wrong.forEach(({q,k,a})=>{const my=a===null?'미응답':'①②③④'[a]+' '+strip(q.o[a]);const co='①②③④'[q.a]+' '+strip(q.o[q.a]);const qt=strip(q.p).replace(/\s+/g,' ').slice(0,70);
+      h+=`<tr><td class="r">${k+1}</td><td>${qt}</td><td class="bad">${my}</td><td class="ok">${co}</td></tr>`;
+      t+=`| ${k+1} | ${qt.replace(/\|/g,'/')} | ${my.replace(/\|/g,'/')} | ${co.replace(/\|/g,'/')} |\n`;});
+    h+=`</table>`;t+=`\n`;});
+  const notGraded=Q.map((s,i)=>graded[i]?null:i+1).filter(x=>x);
+  if(notGraded.length){h+=`<div class="meta" style="margin-top:10px">미채점: ${notGraded.join(', ')}교시</div>`;t+=`미채점: ${notGraded.join(', ')}교시\n`;}
+  lastHtml=h;lastText=t;return h;
+}
+$('#submitBtn').onclick=()=>{if(!graded.some(x=>x)){alert('먼저 한 교시 이상 채점하기를 눌러 주세요.');return;}$('#dgBody').innerHTML=buildReport();$('#toast').textContent='';$('#dlg').showModal();};
+$('#closeBtn').onclick=()=>$('#dlg').close();
+function copyRich(html,text){
+  // 1) copy 이벤트에 두 형식을 직접 실어 보내기 (사용자 클릭 안에서 동기 실행 — file:// 에서도 동작)
+  let done=false;
+  const onCopy=e=>{e.clipboardData.setData('text/html',html);e.clipboardData.setData('text/plain',text);e.preventDefault();done=true;};
+  document.addEventListener('copy',onCopy);
+  try{
+    const body=$('#dgBody');const sel=window.getSelection();const range=document.createRange();range.selectNodeContents(body);sel.removeAllRanges();sel.addRange(range);
+    document.execCommand('copy');
+    sel.removeAllRanges();
+  }catch(e){}
+  document.removeEventListener('copy',onCopy);
+  return done;
+}
+$('#captureBtn').onclick=async()=>{
+  const htmlDoc=`<meta charset="utf-8">`+lastHtml.replace(/ class="[^"]*"/g,'').replace(/<table>/g,'<table border="1" style="border-collapse:collapse">');
+  if(copyRich(htmlDoc,lastText)){$('#toast').textContent='복사됨 — 노션 페이지에서 Ctrl+V 로 붙여 넣으세요.';return;}
+  // 2) 비동기 Clipboard API
+  try{
+    if(navigator.clipboard&&window.ClipboardItem){
+      await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([htmlDoc],{type:'text/html'}),'text/plain':new Blob([lastText],{type:'text/plain'})})]);
+    }else{await navigator.clipboard.writeText(lastText);}
+    $('#toast').textContent='복사됨 — 노션 페이지에서 Ctrl+V 로 붙여 넣으세요.';return;
+  }catch(e){}
+  // 3) 최종: 텍스트 영역 선택 복사
+  try{
+    const ta=document.createElement('textarea');ta.value=lastText;ta.style.position='fixed';ta.style.opacity='0';$('#dlg').appendChild(ta);ta.focus();ta.select();
+    const ok=document.execCommand('copy');ta.remove();
+    $('#toast').textContent=ok?'텍스트(마크다운 표)로 복사됨 — 노션에서 Ctrl+V.':'복사 실패 — 대화상자 내용을 드래그해 Ctrl+C 로 복사하세요.';
+  }catch(e){$('#toast').textContent='복사 실패 — 대화상자 내용을 드래그해 Ctrl+C 로 복사하세요.';}
+};
+render();
+</script>
+</body>
+</html>

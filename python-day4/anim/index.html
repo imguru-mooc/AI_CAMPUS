@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python Day 4 애니메이션</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:760px;margin:0 auto;padding:32px 20px 40px}
+  h1{color:var(--amber);font-size:26px;margin:0 0 4px}
+  .sub{color:var(--dim);margin:0 0 22px}
+  h2{color:var(--dim);font-size:13px;font-weight:600;margin:22px 4px 8px;letter-spacing:.5px}
+  a.item{display:grid;grid-template-columns:70px 52px 1fr;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:8px;text-decoration:none;color:inherit}
+  a.item:hover{border-color:var(--amber)}
+  a.item:focus-visible{outline:2px solid var(--amber)}
+  .p{font-family:var(--mono);color:var(--teal);font-size:13px}
+  .no{font-family:var(--mono);color:var(--dim);font-size:13px}
+  .t{font-size:17px;color:var(--amber)}
+  .d{color:var(--dim);font-size:13px;margin-top:2px}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Python Day 4 애니메이션</h1>
+  <p class="sub">HYUNDAI AI Insight Campus 온디바이스 AI · NumPy·pandas 입문 및 미니 프로젝트 · 9/7(월)</p>
+
+  <h2>신규 (day4)</h2>
+  <a class="item" href="D4-1_NumPy_브로드캐스팅_마스크.html"><span class="p">1·2교시</span><span class="no">D4-1</span><span><div class="t">NumPy 브로드캐스팅·마스크</div><div class="d">리스트 vs 배열 · 스칼라가 퍼지는 그림 · (2,3)+(3,) · 모양 불일치 · 마스크 골라내기·집계</div></span></a>
+  <a class="item" href="D4-2_DataFrame_groupby_흐름.html"><span class="p">4교시</span><span class="no">D4-2</span><span><div class="t">DataFrame·groupby 흐름</div><div class="d">레코드 목록→표 · 열 선택 · 불리언 필터 · alert 열 · 분할→집계→결합 · CSV 왕복</div></span></a>
+
+  <h2>재사용 (day1 · day2 · day3 폴더)</h2>
+  <a class="item" href="../../python-day3/anim/D3-5_시리얼_스트림.html"><span class="p">5·6교시</span><span class="no">D3-5</span><span><div class="t">시리얼 스트림 시뮬레이터</div><div class="d">"스트림은 본질적으로 제너레이터" — 수신부 read_frames 의 명세</div></span></a>
+  <a class="item" href="../../python-day3/anim/D3-4_JSON_직렬화_왕복.html"><span class="p">4교시</span><span class="no">D3-4</span><span><div class="t">JSON 직렬화 왕복</div><div class="d">(선택) readings.json 을 DataFrame 으로 읽는 다리</div></span></a>
+  <a class="item" href="../../python-day2/anim/D2-5_중첩자료구조_트리뷰어.html"><span class="p">6교시</span><span class="no">D2-5</span><span><div class="t">중첩 자료구조 트리 뷰어</div><div class="d">프로젝트 데이터 구조 확인</div></span></a>
+  <a class="item" href="../../python-day1/anim/04_문자열_파싱_파이프라인.html"><span class="p">5교시</span><span class="no">04</span><span><div class="t">문자열 파싱 파이프라인</div><div class="d">read_frames 가 내놓는 한 줄의 처리 경로</div></span></a>
+  <a class="item" href="../../python-day1/anim/01_비트마스크_시뮬레이터.html"><span class="p">7교시</span><span class="no">01</span><span><div class="t">비트마스크 시뮬레이터</div><div class="d">확장 E6 — D 필드 플래그 해석</div></span></a>
+</div>
+</body>
+</html>

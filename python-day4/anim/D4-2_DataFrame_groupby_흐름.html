@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DataFrame·groupby 흐름 — Python Day 4</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono)}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.purple{color:var(--purple);border-color:var(--purple)}.pill.green{color:var(--green);border-color:var(--green)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .grid{display:grid;grid-template-columns:1.2fr 1fr;gap:14px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .stage{min-height:320px;display:flex;flex-direction:column;gap:12px;justify-content:center}
+  table.df{border-collapse:collapse;font-family:var(--mono);font-size:13px}
+  table.df th{color:var(--dim);font-weight:600;border:1px solid var(--line);padding:4px 10px;background:#0d1526}
+  table.df td{border:1px solid var(--line);padding:4px 10px;background:#0e1628;transition:all .3s}
+  table.df tr.hl td{background:#0d2216;border-color:var(--green);color:var(--green)}
+  table.df tr.out td{opacity:.25;text-decoration:line-through}
+  table.df td.colhl{background:#1f1a0c;border-color:var(--amber);color:var(--amber)}
+  table.df td.newcol{background:#151030;border-color:var(--purple);color:var(--purple)}
+  table.df tr.g1 td{border-left-color:var(--blue)} 
+  .glabel{font-family:var(--mono);font-size:12px;margin:2px 0}
+  .glabel.b{color:var(--blue)}.glabel.p{color:var(--purple)}.glabel.t{color:var(--teal)}
+  .flowarrow{color:var(--dim);font-size:18px;font-family:var(--mono);margin:0 0 0 8px}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13.5px;white-space:pre-wrap;min-height:64px}
+  .code .g{color:var(--green)}.code .c{color:#5d7292}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.blue{color:var(--blue)}.explain b.purple{color:var(--purple)}
+  .explain code{font-family:var(--mono);color:var(--blue)}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>DataFrame · groupby 흐름</h1>
+  <p class="sub">DataFrame 은 <b style="color:var(--blue)">dict 레코드 목록의 완성형</b>(행=레코드, 열=필드)입니다. <b style="color:var(--purple)">groupby</b> 는 갈라서 → 집계하고 → 합칩니다.</p>
+  <div class="pills"><span class="pill blue">행 = 레코드, 열 = 필드</span><span class="pill green">df[조건] = NumPy 마스크와 같은 문법</span><span class="pill purple">groupby: 분할→집계→결합</span><span class="pill teal">to_csv ↔ read_csv 왕복</span></div>
+
+  <div class="panel"><h2>프리셋 (누르면 재생)</h2><div class="presets" id="presets"></div></div>
+
+  <div class="grid">
+    <div class="panel"><h2>표</h2><div class="stage" id="stage"></div></div>
+    <div>
+      <div class="panel"><h2>Python</h2><div class="code" id="code"></div></div>
+      <div class="panel"><h2>상태</h2><div class="status info" id="status">프리셋을 누르세요.</div></div>
+    </div>
+  </div>
+  <div class="panel explain" id="explain"></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const R=[["E1",24.1,50],["E2",36.9,70],["E2",31.0,66],["E1",28.3,58],["E3",22.8,45],["E2",35.4,72]];
+function tbl(rows,opts={}){
+  const {colT=false,alert=false,rowCls=()=>''}=opts;
+  let h='<table class="df"><tr><th></th><th>node</th><th class="'+(colT?'colhl':'')+'">T</th><th>H</th>'+(alert?'<th>alert</th>':'')+'</tr>';
+  rows.forEach((r,i)=>{h+=`<tr class="${rowCls(r,i)}"><th>${i}</th><td>${r[0]}</td><td class="${colT?'colhl':''}">${r[1]}</td><td>${r[2]}</td>`+(alert?`<td class="newcol">${r[1]>35?'True':'False'}</td>`:'')+'</tr>';});
+  return h+'</table>';
+}
+function setStage(h){$('#stage').innerHTML=h;}
+function setStatus(c,m){const s=$('#status');s.className='status '+c;s.innerHTML=m;}
+let busy=false;
+const P=[
+ {n:'① 레코드 목록 → DataFrame',ex:'<p>Day 2 의 <code>list of dict</code> 가 <code>pd.DataFrame(records)</code> 한 줄로 표가 됩니다. <b class="blue">행 하나 = 레코드 하나, 열 하나 = 필드 하나</b>. 받자마자 head / info / describe 3종 세트.</p>',
+  run:async()=>{setStage('<div class="glabel">records = [{"node": "E1", "T": 24.1, ...}, ...]</div>');
+   $('#code').textContent='df = pd.DataFrame(records)\ndf.head()';setStatus('info','dict 목록이 표로…');await sleep(700);
+   setStage(tbl(R));setStatus('ok','6행 × 3열. 왼쪽 숫자는 인덱스 — 행의 이름표입니다.');}},
+ {n:'② 열 선택 df["T"]',ex:'<p>대괄호에 열 이름을 넣으면 그 <b class="amber">열 하나(Series)</b>가 나옵니다. <code>df["T"].mean()</code> 처럼 열 단위 통계가 바로 이어집니다.</p>',
+  run:async()=>{setStage(tbl(R,{colT:true}));
+   $('#code').textContent='df["T"]           # Series (열 하나)\ndf["T"].mean()    # 29.75';
+   setStatus('ok','열 선택 → 열 통계. NumPy 배열처럼 벡터 연산이 됩니다.');}},
+ {n:'③ 불리언 필터 — 행 걸러내기',ex:'<p><code>df[df["T"] > 35]</code> — <b class="green">NumPy 마스크와 완전히 같은 문법</b>입니다. 조건이 True 인 행만 남습니다. 인덱스가 원래 번호를 유지하는 것도 확인하세요.</p>',
+  run:async()=>{setStage(tbl(R));$('#code').textContent='df[df["T"] > 35]';setStatus('info','각 행을 조건과 비교…');await sleep(800);
+   setStage(tbl(R,{rowCls:r=>r[1]>35?'hl':'out'}));
+   setStatus('ok','1번·5번 행만 통과 — ALERT 레코드 필터가 이 한 줄입니다.');}},
+ {n:'④ 새 열 추가 — alert',ex:'<p>조건의 결과(불리언 Series)를 <b class="purple">새 열로 저장</b>하면 표 자체에 판정이 붙습니다. 이후 필터·집계·CSV 어디서든 재사용됩니다.</p>',
+  run:async()=>{setStage(tbl(R));$('#code').textContent='df["alert"] = df["T"] > 35';await sleep(700);
+   setStage(tbl(R,{alert:true}));
+   setStatus('ok','열이 하나 늘었습니다 — Day 3 의 is_alert() 가 표의 열이 된 셈입니다.');}},
+ {n:'⑤ groupby — 분할 → 집계 → 결합',ex:'<p><code>groupby("node")</code> 는 표를 노드별로 <b class="blue">갈라서</b>, 각 그룹에 mean/max/count 를 <b class="amber">집계하고</b>, 결과를 <b class="green">한 표로 합칩니다</b>. Day 2 의 for 문 → Day 3 의 메서드 → 오늘 한 줄, 3일의 진화입니다.</p>',
+  run:async()=>{setStage(tbl(R));$('#code').textContent='df.groupby("node")["T"].agg(["mean", "max", "count"])';
+   setStatus('info','1단계 — 노드별로 갈라집니다…');await sleep(900);
+   setStage('<div class="glabel b">E1 그룹</div>'+tbl(R.filter(r=>r[0]==="E1"))+
+    '<div class="glabel p">E2 그룹</div>'+tbl(R.filter(r=>r[0]==="E2"))+
+    '<div class="glabel t">E3 그룹</div>'+tbl(R.filter(r=>r[0]==="E3")));
+   setStatus('info','2단계 — 그룹마다 mean/max/count 집계…');await sleep(1300);
+   setStage(`<table class="df"><tr><th>node</th><th>mean</th><th>max</th><th>count</th></tr>
+     <tr class="hl"><td>E1</td><td>26.20</td><td>28.3</td><td>2</td></tr>
+     <tr class="hl"><td>E2</td><td>34.43</td><td>36.9</td><td>3</td></tr>
+     <tr class="hl"><td>E3</td><td>22.80</td><td>22.8</td><td>1</td></tr></table>`);
+   setStatus('ok','3단계 — 한 표로 결합. stats_by_node 30줄이 한 줄이 되었습니다.');}},
+ {n:'⑥ to_csv ↔ read_csv 왕복',ex:'<p>요약표를 <code>to_csv</code> 로 내보내면 엑셀에서 열리는 산출물이 됩니다. <code>index=False</code> 를 잊으면 복원 시 <b class="amber">유령 열(Unnamed: 0)</b>이 생깁니다 — 왕복 검증 습관은 Day 3 JSON 과 동일.</p>',
+  run:async()=>{setStage(`<table class="df"><tr><th>node</th><th>mean</th><th>max</th><th>count</th></tr>
+     <tr><td>E1</td><td>26.20</td><td>28.3</td><td>2</td></tr>
+     <tr><td>E2</td><td>34.43</td><td>36.9</td><td>3</td></tr>
+     <tr><td>E3</td><td>22.80</td><td>22.8</td><td>1</td></tr></table>
+     <div class="glabel">↓ to_csv("sensor_summary.csv") · ↑ read_csv(...)</div>
+     <div class="code" style="min-height:0">node,mean,max,count\nE1,26.2,28.3,2\nE2,34.43,36.9,3\nE3,22.8,22.8,1</div>`);
+   $('#code').innerHTML='summary.to_csv("sensor_summary.csv")\nback = pd.read_csv("sensor_summary.csv")\n<span class="c"># DataFrame 을 저장할 땐 to_csv(index=False) — 유령 열 방지</span>';
+   setStatus('ok','표 ↔ 파일 왕복 완성 — 프로젝트 산출물 sensor_summary.csv 가 이것입니다.');}},
+];
+$('#presets').innerHTML=P.map(p=>`<button>${p.n}</button>`).join('');
+$('#presets').querySelectorAll('button').forEach((b,i)=>b.onclick=async()=>{if(busy)return;busy=true;$('#presets').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));$('#explain').innerHTML=P[i].ex;await P[i].run();busy=false;});
+$('#presets').querySelector('button').click();
+</script>
+</body>
+</html>

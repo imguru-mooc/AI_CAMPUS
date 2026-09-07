@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NumPy 브로드캐스팅·마스크 — Python Day 4</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono)}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.red{color:var(--red);border-color:var(--red)}.pill.green{color:var(--green);border-color:var(--green)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .grid{display:grid;grid-template-columns:1.2fr 1fr;gap:14px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .stage{min-height:300px;display:flex;flex-direction:column;gap:14px;justify-content:center}
+  .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .rowlabel{font-family:var(--mono);font-size:12px;color:var(--dim);width:110px;text-align:right}
+  .cells{display:flex;gap:4px}
+  .cell{min-width:52px;height:40px;border:2px solid var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:14px;background:#0e1628;transition:all .3s}
+  .cell.b{border-color:var(--blue);color:var(--blue)}
+  .cell.a{border-color:var(--amber);color:var(--amber)}
+  .cell.g{border-color:var(--green);color:var(--green);background:#0d2216}
+  .cell.r{border-color:var(--red);color:var(--red);background:#2a1212}
+  .cell.ghost{opacity:.45;border-style:dashed}
+  .cell.dim{opacity:.28}
+  .op{font-size:22px;color:var(--dim);font-family:var(--mono);width:26px;text-align:center}
+  .note{font-family:var(--mono);font-size:12px;color:var(--dim)}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13.5px;white-space:pre-wrap;min-height:64px}
+  .code .g{color:var(--green)}.code .e{color:var(--red)}.code .c{color:#5d7292}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}
+  .explain code{font-family:var(--mono);color:var(--blue)}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>NumPy 브로드캐스팅 · 마스크</h1>
+  <p class="sub">배열 연산은 <b style="color:var(--teal)">반복문이 C 내부로 들어간 것</b>입니다. 작은 쪽이 <b style="color:var(--amber)">늘어나 모양을 맞추고(브로드캐스팅)</b>, 조건은 <b style="color:var(--green)">불리언 마스크</b>가 되어 원소를 골라냅니다.</p>
+  <div class="pills"><span class="pill blue">배열 = 같은 dtype 의 격자</span><span class="pill amber">브로드캐스팅 = 작은 쪽이 늘어남</span><span class="pill green">마스크 = 조건으로 고르기</span><span class="pill red">모양이 안 맞으면 ValueError</span></div>
+
+  <div class="panel"><h2>프리셋 (누르면 재생)</h2><div class="presets" id="presets"></div></div>
+
+  <div class="grid">
+    <div class="panel"><h2>배열</h2><div class="stage" id="stage"></div></div>
+    <div>
+      <div class="panel"><h2>Python</h2><div class="code" id="code"></div></div>
+      <div class="panel"><h2>상태</h2><div class="status info" id="status">프리셋을 누르세요.</div></div>
+    </div>
+  </div>
+  <div class="panel explain" id="explain"></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function row(label, cells, op){
+  return `<div class="row"><span class="rowlabel">${label}</span>${op?`<span class="op">${op}</span>`:''}<span class="cells">${cells.map(c=>`<span class="cell ${c.k||''}">${c.v}</span>`).join('')}</span></div>`;
+}
+function setStage(html){$('#stage').innerHTML=html;}
+function setStatus(c,m){const s=$('#status');s.className='status '+c;s.innerHTML=m;}
+let busy=false;
+const T=[24.1,36.9,28.3,35.4];
+const P=[
+ {n:'① 리스트 vs 배열 — * 2 의 두 얼굴',ex:'<p>리스트의 <code>* 2</code> 는 <b class="red">반복(이어 붙이기)</b>, 배열의 <code>* 2</code> 는 <b class="green">원소별 곱</b>입니다. Day 2 컴프리헨션으로 쓰던 변환이 연산자 하나가 됩니다.</p>',
+  run:async()=>{setStage(row('리스트 [1,2] * 2',[{v:1,k:'b'},{v:2,k:'b'},{v:1,k:'r'},{v:2,k:'r'}])+
+   row('배열 [1,2] * 2',[{v:2,k:'g'},{v:4,k:'g'}]));
+   $('#code').innerHTML='[1, 2] * 2          <span class="c"># [1, 2, 1, 2] — 이어 붙이기</span>\nnp.array([1, 2]) * 2  <span class="c"># [2, 4] — 원소별 곱</span>';
+   setStatus('info','같은 기호, 완전히 다른 의미 — 자료형을 먼저 확인하세요.');}},
+ {n:'② 배열 × 스칼라 — 퍼지는 2',ex:'<p>스칼라 2 가 <b class="amber">배열 크기만큼 복제된 것처럼</b> 모든 원소에 적용됩니다. 실제 복제 없이 내부 C 루프가 돕니다 — 이것이 브로드캐스팅의 가장 단순한 형태입니다.</p>',
+  run:async()=>{setStage(row('a (4,)',[{v:1,k:'b'},{v:2,k:'b'},{v:3,k:'b'},{v:4,k:'b'}])+
+    row('2 →',[{v:2,k:'a'}],'×'));
+   $('#code').textContent='a = np.array([1, 2, 3, 4])\na * 2';setStatus('info','스칼라가 늘어나 모양을 맞춥니다…');await sleep(900);
+   setStage(row('a (4,)',[{v:1,k:'b'},{v:2,k:'b'},{v:3,k:'b'},{v:4,k:'b'}])+
+    row('2 (늘어남)',[{v:2,k:'a ghost'},{v:2,k:'a ghost'},{v:2,k:'a ghost'},{v:2,k:'a ghost'}],'×')+
+    row('결과',[{v:2,k:'g'},{v:4,k:'g'},{v:6,k:'g'},{v:8,k:'g'}],'='));
+   setStatus('ok','반복문 없이 전체 변환 — raws / 1023 * 3.3 이 이 원리입니다.');}},
+ {n:'③ (2,3) + (3,) — 행마다 늘어남',ex:'<p>모양이 다른 배열도 <b class="amber">뒤 축부터</b> 맞으면 결합됩니다. (3,) 이 두 행으로 복제되어 (2,3) 과 더해집니다 — 노드×시간 표에 보정값을 한 번에 더하는 패턴.</p>',
+  run:async()=>{setStage(row('M (2,3) 1행',[{v:10,k:'b'},{v:20,k:'b'},{v:30,k:'b'}])+
+    row('M (2,3) 2행',[{v:40,k:'b'},{v:50,k:'b'},{v:60,k:'b'}])+
+    row('v (3,)',[{v:1,k:'a'},{v:2,k:'a'},{v:3,k:'a'}],'+'));
+   $('#code').textContent='M = np.array([[10,20,30],[40,50,60]])\nv = np.array([1, 2, 3])\nM + v';setStatus('info','v 가 행 방향으로 늘어납니다…');await sleep(900);
+   setStage(row('M 1행 + v',[{v:11,k:'g'},{v:22,k:'g'},{v:33,k:'g'}])+
+    row('M 2행 + v',[{v:41,k:'g'},{v:52,k:'g'},{v:63,k:'g'}])+
+    row('v (복제됨)',[{v:1,k:'a ghost'},{v:2,k:'a ghost'},{v:3,k:'a ghost'}]));
+   setStatus('ok','(2,3) + (3,) → (2,3). 규칙: 뒤 축부터 크기가 같거나 1 이면 결합.');}},
+ {n:'④ ⚠ (3,) + (4,) — 모양 불일치',ex:'<p>뒤 축 크기가 3 vs 4 — 늘려도 맞출 수 없으니 <b class="red">ValueError</b>. 오류 메시지의 <code>shapes (3,) (4,)</code> 를 읽는 습관이 NumPy 디버깅의 절반입니다.</p>',
+  run:async()=>{setStage(row('a (3,)',[{v:1,k:'b'},{v:2,k:'b'},{v:3,k:'b'}])+
+    row('b (4,)',[{v:1,k:'a'},{v:2,k:'a'},{v:3,k:'a'},{v:4,k:'a'}],'+')+
+    `<div class="note">3 ≠ 4 — 어느 쪽도 1 이 아니라 늘릴 수 없음</div>`);
+   $('#code').innerHTML='np.array([1,2,3]) + np.array([1,2,3,4])\n<span class="e">ValueError: operands could not be broadcast together\nwith shapes (3,) (4,)</span>';
+   setStatus('warn','shape 을 먼저 출력하는 습관 — 오류의 90% 는 모양 문제입니다.');}},
+ {n:'⑤ 조건 → 불리언 마스크',ex:'<p>비교 연산도 배열 전체에 적용되어 <b class="green">True/False 배열(마스크)</b>이 됩니다. Day 1 의 조건문이 배열 세계에서는 마스크가 됩니다.</p>',
+  run:async()=>{setStage(row('temps',T.map(v=>({v,k:'b'})))+row('> 35',[{v:35,k:'a'}],'?'));
+   $('#code').textContent='temps = np.array([24.1, 36.9, 28.3, 35.4])\nmask = temps > 35';setStatus('info','원소마다 비교…');await sleep(900);
+   setStage(row('temps',T.map(v=>({v,k:'b'})))+
+    row('mask',T.map(v=>({v:v>35?'True':'False',k:v>35?'g':'dim'}))));
+   setStatus('ok','[False, True, False, True] — 조건이 데이터가 되었습니다.');}},
+ {n:'⑥ 마스크 인덱싱 — 골라내기',ex:'<p><code>temps[mask]</code> 는 <b class="green">True 자리의 원소만</b> 모아 새 배열을 만듭니다. "35도 초과만 골라라" 가 for 문 없이 한 줄 — 프로젝트의 ALERT 필터가 이것입니다.</p>',
+  run:async()=>{setStage(row('temps',T.map(v=>({v,k:v>35?'b':'dim'})))+
+    row('mask',T.map(v=>({v:v>35?'T':'F',k:v>35?'g':'dim'}))));
+   $('#code').textContent='temps[temps > 35]';setStatus('info','True 자리만 통과…');await sleep(900);
+   setStage(row('temps',T.map(v=>({v,k:v>35?'b':'dim'})))+
+    row('결과 (2,)',T.filter(v=>v>35).map(v=>({v,k:'g'}))));
+   setStatus('ok','[36.9, 35.4] — pandas 의 df[df["T"] > 35] 도 같은 문법입니다.');}},
+ {n:'⑦ 마스크 집계 — 세고, 어디인지 찾기',ex:'<p>True 는 1 로 계산되므로 <code>mask.sum()</code> 이 곧 <b class="amber">개수</b>입니다. <code>argmax</code> 는 최댓값의 <b class="teal">위치</b> — "몇 건이, 언제" 를 각각 한 줄로.</p>',
+  run:async()=>{setStage(row('mask',T.map(v=>({v:v>35?1:0,k:v>35?'g':'dim'})))+
+    row('temps',T.map((v,i)=>({v,k:i===1?'a':'dim'}))));
+   $('#code').textContent='(temps > 35).sum()   # 2 — ALERT 건수\ntemps.argmax()       # 1 — 최고 온도의 위치\ntemps.max()          # 36.9';
+   setStatus('ok','sum 은 건수, argmax 는 시점 — 프로젝트 통계의 두 기둥입니다.');}},
+];
+$('#presets').innerHTML=P.map(p=>`<button>${p.n}</button>`).join('');
+$('#presets').querySelectorAll('button').forEach((b,i)=>b.onclick=async()=>{if(busy)return;busy=true;$('#presets').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));$('#explain').innerHTML=P[i].ex;await P[i].run();busy=false;});
+$('#presets').querySelector('button').click();
+</script>
+</body>
+</html>
