@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C 언어 1일차 — 눈으로 보는 8가지 개념</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EEF1F5;
+    --panel:#FFFFFF;
+    --ink:#1B2A41;
+    --ink-soft:#5B6B80;
+    --line:#C9D1DC;
+    --blue:#2457C5;
+    --blue-soft:#DCE6FA;
+    --red:#D6452E;
+    --red-soft:#FBE3DF;
+    --green:#178A67;
+    --green-soft:#DDF2EA;
+    --amber:#C98A12;
+    --amber-soft:#FBF0D3;
+    --mono:'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    --sans:'IBM Plex Sans KR', 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    --t:.35s;
+  }
+  @media (prefers-reduced-motion: reduce){ :root{ --t:0s; } *{ animation:none !important; transition:none !important; } }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; }
+  body{
+    font-family:var(--sans); color:var(--ink); background:var(--paper);
+    background-image:
+      linear-gradient(rgba(27,42,65,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(27,42,65,.045) 1px, transparent 1px);
+    background-size:24px 24px;
+    font-size:16px; line-height:1.55;
+  }
+  code, .mono{ font-family:var(--mono); }
+
+  .app{ display:grid; grid-template-columns:260px 1fr; min-height:100vh; }
+  nav{
+    background:var(--ink); color:#fff; padding:28px 20px;
+    position:sticky; top:0; height:100vh; overflow:auto;
+  }
+  nav h1{ font-size:15px; font-weight:500; margin:0 0 4px; letter-spacing:.01em; color:#AEBBD1; }
+  nav .day{ font-size:26px; font-weight:600; margin:0 0 26px; line-height:1.2; }
+  nav ol{ list-style:none; margin:0; padding:0; counter-reset:lesson; }
+  nav li{ margin:0; }
+  nav button{
+    all:unset; display:grid; grid-template-columns:32px 1fr; gap:10px; align-items:baseline;
+    width:100%; padding:9px 10px; border-radius:6px; cursor:pointer; font-size:14.5px; line-height:1.35;
+    color:#D9E1EC;
+  }
+  nav button::before{ counter-increment:lesson; content:counter(lesson) "교시"; font-family:var(--mono); font-size:11px; color:#8A9BB5; }
+  nav button:hover{ background:rgba(255,255,255,.07); }
+  nav button[aria-current="true"]{ background:var(--blue); color:#fff; }
+  nav button[aria-current="true"]::before{ color:#C9D8F7; }
+  nav button:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
+  nav .hint{ margin-top:28px; font-size:12.5px; color:#8A9BB5; line-height:1.5; }
+  nav .hint kbd{ font-family:var(--mono); background:rgba(255,255,255,.12); padding:1px 5px; border-radius:3px; }
+
+  main{ padding:36px 44px 80px; max-width:1100px; }
+  section.lesson{ display:none; }
+  section.lesson.active{ display:block; }
+  .lesson header{ margin-bottom:22px; }
+  .lesson h2{ font-size:30px; font-weight:600; margin:0 0 6px; line-height:1.25; }
+  .lesson header p{ margin:0; color:var(--ink-soft); font-size:16px; max-width:64ch; }
+
+  .stage{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:26px;
+    box-shadow:0 1px 0 rgba(27,42,65,.06);
+  }
+  .controls{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:20px; }
+  .controls label{ font-size:14px; color:var(--ink-soft); display:flex; align-items:center; gap:6px; }
+  button.btn{
+    font:inherit; font-size:14px; font-weight:500; padding:8px 14px; border-radius:6px; cursor:pointer;
+    border:1px solid var(--ink); background:var(--ink); color:#fff;
+  }
+  button.btn.secondary{ background:#fff; color:var(--ink); border-color:var(--line); }
+  button.btn:disabled{ opacity:.4; cursor:default; }
+  button.btn:focus-visible, select:focus-visible, input:focus-visible{ outline:2px solid var(--blue); outline-offset:2px; }
+  select, input[type=number], input[type=text]{
+    font:inherit; font-size:14px; padding:7px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink);
+  }
+  input[type=number], input[type=text]{ font-family:var(--mono); }
+  .toggle{ display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+  .toggle input{ position:absolute; opacity:0; width:0; height:0; }
+  .toggle .sw{ width:38px; height:22px; border-radius:11px; background:var(--line); position:relative; transition:background var(--t); }
+  .toggle .sw::after{ content:""; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition:transform var(--t); }
+  .toggle input:checked + .sw{ background:var(--blue); }
+  .toggle input:checked + .sw::after{ transform:translateX(16px); }
+  .toggle input:focus-visible + .sw{ outline:2px solid var(--blue); outline-offset:2px; }
+
+  .note{ margin-top:18px; padding:14px 16px; border-left:3px solid var(--blue); background:var(--blue-soft); border-radius:0 6px 6px 0; font-size:14.5px; }
+  .note.warn{ border-color:var(--red); background:var(--red-soft); }
+  .note.ok{ border-color:var(--green); background:var(--green-soft); }
+  .note code{ background:rgba(255,255,255,.7); padding:1px 5px; border-radius:3px; }
+
+  pre.code{
+    font-family:var(--mono); font-size:13.5px; background:#F6F8FB; border:1px solid var(--line); border-radius:6px;
+    padding:14px 16px; margin:0; overflow:auto; line-height:1.55; white-space:pre;
+  }
+  pre.code .dim{ color:#9AA7B8; }
+  pre.code .hi{ background:var(--amber-soft); }
+  pre.code .err{ background:var(--red-soft); color:var(--red); }
+
+  /* ---------- 1. pipeline ---------- */
+  .pipe{ position:relative; display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin-top:64px; }
+  .pipe .stagebox{
+    border:2px solid var(--line); border-radius:8px; padding:16px 12px 14px; text-align:center; cursor:pointer; background:#fff;
+    transition:border-color var(--t), background var(--t);
+  }
+  .pipe .stagebox strong{ display:block; font-size:16px; }
+  .pipe .stagebox span{ display:block; font-size:12.5px; color:var(--ink-soft); margin-top:4px; }
+  .pipe .stagebox.on{ border-color:var(--blue); background:var(--blue-soft); }
+  .pipe .stagebox.done{ border-color:var(--green); }
+  .pipe .rail{ position:absolute; top:-30px; left:0; right:0; height:2px; background:var(--line); }
+  .pipe .chip{
+    position:absolute; top:-50px; left:0; transform:translateX(-50%);
+    font-family:var(--mono); font-size:13px; font-weight:600; padding:6px 12px; border-radius:6px;
+    background:var(--ink); color:#fff; transition:left .9s cubic-bezier(.4,0,.2,1), background var(--t);
+    white-space:nowrap;
+  }
+  .pipe .libc{
+    position:absolute; right:0; top:-104px; font-family:var(--mono); font-size:12px; padding:6px 10px; border-radius:6px;
+    background:var(--amber-soft); border:1px dashed var(--amber); color:#7A5405; opacity:0; transform:translateY(-10px);
+    transition:opacity var(--t), transform .6s;
+  }
+  .pipe .libc.show{ opacity:1; transform:translateY(40px); }
+  .artifact{ margin-top:22px; }
+  .artifact h4{ margin:0 0 8px; font-size:14px; font-weight:500; color:var(--ink-soft); }
+
+  /* ---------- 2. header guard ---------- */
+  .guard{ display:grid; grid-template-columns:1fr 1.2fr; gap:26px; align-items:start; }
+  .guard svg{ width:100%; height:auto; }
+  .guard .file rect{ fill:#fff; stroke:var(--ink); stroke-width:1.5; }
+  .guard .file text{ font-family:var(--mono); font-size:13px; fill:var(--ink); }
+  .guard .edge{ stroke:var(--ink-soft); stroke-width:1.5; fill:none; marker-end:url(#arr); }
+  .guard .edge.dup{ stroke:var(--red); stroke-width:2.5; }
+  .guard .edge.blocked{ stroke:var(--line); stroke-dasharray:4 4; }
+  .guard .fileflag rect{ fill:var(--red-soft); stroke:var(--red); }
+  .guard .fileflag.ok rect{ fill:var(--green-soft); stroke:var(--green); }
+  .blink{ animation:blink 1s steps(2,start) infinite; }
+  @keyframes blink{ to{ visibility:hidden; } }
+  .fade-line{ transition:opacity var(--t); }
+
+  /* ---------- 3. memory ---------- */
+  .mem{ display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; min-height:120px; margin:16px 0 8px; }
+  .cell{
+    width:112px; border:2px solid var(--ink); border-radius:6px; overflow:hidden; background:#fff;
+    transition:opacity .5s, transform .5s, border-color var(--t);
+  }
+  .cell .addr{ font-family:var(--mono); font-size:11px; color:var(--ink-soft); background:#F6F8FB; padding:4px 8px; border-bottom:1px solid var(--line); }
+  .cell .hex{ font-family:var(--mono); font-size:22px; font-weight:600; padding:8px 8px 2px; text-align:center; }
+  .cell .bin{ font-family:var(--mono); font-size:11.5px; padding:0 8px 8px; text-align:center; color:var(--ink-soft); letter-spacing:.04em; }
+  .cell.drop{ opacity:0; transform:translateY(-26px) rotate(-6deg); border-color:var(--red); }
+  .cell.sign{ border-color:var(--red); }
+  .cell.sign .hex{ color:var(--red); }
+  .readout{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-top:16px; }
+  .readout div{ padding:12px 14px; border:1px solid var(--line); border-radius:6px; background:#F6F8FB; }
+  .readout b{ display:block; font-size:12.5px; font-weight:500; color:var(--ink-soft); margin-bottom:2px; }
+  .readout span{ font-family:var(--mono); font-size:19px; font-weight:600; }
+  .readout span.bad{ color:var(--red); }
+
+  /* ---------- 4. dial ---------- */
+  .dial{ display:grid; grid-template-columns:320px 1fr; gap:30px; align-items:center; }
+  .dial svg{ width:100%; height:auto; }
+  .dial .tick{ stroke:var(--line); stroke-width:1; }
+  .dial .needle{ stroke:var(--ink); stroke-width:3; stroke-linecap:round; transition:transform .25s; transform-origin:150px 150px; }
+  .dial .needle.neg{ stroke:var(--red); }
+  .bits{ display:flex; gap:6px; margin:14px 0; }
+  .bit{
+    width:38px; height:44px; border:2px solid var(--ink); border-radius:6px; display:grid; place-items:center;
+    font-family:var(--mono); font-size:18px; font-weight:600; background:#fff; transition:background var(--t), border-color var(--t);
+  }
+  .bit.on{ background:var(--blue-soft); }
+  .bit.msb.on{ background:var(--red); border-color:var(--red); color:#fff; }
+  .bit .lab{ display:none; }
+  .twin{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .twin div{ padding:14px; border-radius:6px; border:1px solid var(--line); }
+  .twin b{ display:block; font-size:12.5px; font-weight:500; color:var(--ink-soft); }
+  .twin span{ font-family:var(--mono); font-size:30px; font-weight:600; }
+  .twin .s span.neg{ color:var(--red); }
+  input[type=range]{ width:100%; accent-color:var(--blue); }
+  .jump{ animation:jump .5s; }
+  @keyframes jump{ 0%{ transform:scale(1);} 40%{ transform:scale(1.25);} 100%{ transform:scale(1);} }
+
+  /* ---------- 5. promotion ---------- */
+  .promo{ text-align:center; padding:24px 0 8px; }
+  .expr{ font-family:var(--mono); font-size:44px; font-weight:600; display:inline-flex; gap:18px; align-items:baseline; }
+  .expr .lhs{ display:inline-block; transition:transform .5s, color var(--t); position:relative; }
+  .expr .lhs.grow{ color:var(--red); }
+  .expr .lhs .ghost{ position:absolute; top:-26px; left:50%; transform:translateX(-50%); font-size:13px; font-weight:400; color:var(--ink-soft); white-space:nowrap; opacity:0; transition:opacity var(--t); }
+  .expr .lhs.grow .ghost{ opacity:1; }
+  .verdict{ margin-top:22px; font-family:var(--mono); font-size:26px; font-weight:600; min-height:40px; opacity:0; transition:opacity var(--t); }
+  .verdict.show{ opacity:1; }
+  .verdict.f{ color:var(--red); } .verdict.t{ color:var(--green); }
+  .steps{ text-align:left; max-width:560px; margin:22px auto 0; padding:0; list-style:none; }
+  .steps li{ padding:8px 12px; border-left:3px solid var(--line); color:var(--ink-soft); margin-bottom:6px; transition:border-color var(--t), color var(--t), background var(--t); }
+  .steps li.on{ border-color:var(--blue); color:var(--ink); background:var(--blue-soft); }
+
+  /* ---------- 6. switch ---------- */
+  .sw-wrap{ display:grid; grid-template-columns:1fr 1fr; gap:30px; }
+  .cases{ position:relative; }
+  .case{
+    display:grid; grid-template-columns:130px 1fr 92px; align-items:center; gap:12px;
+    padding:12px 14px; border:2px solid var(--line); border-radius:8px; margin-bottom:10px; background:#fff;
+    transition:border-color var(--t), background var(--t);
+  }
+  .case.run{ border-color:var(--blue); background:var(--blue-soft); }
+  .case .lbl{ font-family:var(--mono); font-weight:600; }
+  .case .body{ font-family:var(--mono); font-size:13.5px; color:var(--ink-soft); }
+  .case .wall{ height:12px; border-radius:3px; background:transparent; border:2px dashed var(--line); transition:all var(--t); }
+  .case.brk .wall{ background:var(--red); border-color:var(--red); }
+  .ball{
+    position:absolute; left:-30px; top:0; width:18px; height:18px; border-radius:50%; background:var(--blue);
+    box-shadow:0 2px 6px rgba(36,87,197,.5); transition:top .45s cubic-bezier(.4,0,.2,1), opacity var(--t); opacity:0;
+  }
+  .ball.show{ opacity:1; }
+  .outlog{ font-family:var(--mono); font-size:14px; background:var(--ink); color:#D9E1EC; padding:14px 16px; border-radius:6px; min-height:190px; white-space:pre; }
+  .outlog .c{ color:#8A9BB5; }
+
+  /* ---------- 7. stack ---------- */
+  .stk{ display:grid; grid-template-columns:1.1fr 1fr 220px; gap:24px; align-items:start; }
+  .frames{ min-height:280px; border:2px dashed var(--line); border-radius:8px; padding:12px; display:flex; flex-direction:column-reverse; gap:8px; justify-content:flex-start; }
+  .frames .cap{ font-size:12.5px; color:var(--ink-soft); text-align:center; order:99; }
+  .frame{
+    border:2px solid var(--ink); border-radius:6px; padding:10px 12px; background:#fff; font-family:var(--mono); font-size:14px;
+    animation:push .35s ease-out; display:flex; justify-content:space-between; align-items:center;
+  }
+  .frame.top{ background:var(--blue-soft); border-color:var(--blue); }
+  .frame.pop{ animation:pop .35s ease-in forwards; }
+  .frame .rv{ color:var(--green); font-weight:600; }
+  @keyframes push{ from{ transform:translateY(20px); opacity:0; } to{ transform:none; opacity:1; } }
+  @keyframes pop{ to{ transform:translateY(-14px); opacity:0; } }
+  .datazone{ border:2px solid var(--amber); background:var(--amber-soft); border-radius:8px; padding:12px; }
+  .datazone b{ display:block; font-size:12.5px; font-weight:500; color:#7A5405; margin-bottom:6px; }
+  .datazone .v{ font-family:var(--mono); font-size:15px; }
+  .datazone .v em{ font-style:normal; font-weight:600; font-size:20px; }
+  .srcline{ display:inline; padding:1px 4px; margin-left:-4px; transition:background var(--t); border-radius:3px; }
+  .srcline.on{ background:var(--amber-soft); }
+
+  /* ---------- 8. flow ---------- */
+  .flow svg{ width:100%; height:auto; }
+  .flow .node rect{ fill:#fff; stroke:var(--line); stroke-width:2; transition:stroke var(--t), fill var(--t); }
+  .flow .node.on rect{ stroke:var(--blue); fill:var(--blue-soft); }
+  .flow .node.done rect{ stroke:var(--green); }
+  .flow .node text{ font-family:var(--sans); font-size:14px; fill:var(--ink); text-anchor:middle; }
+  .flow .node .fn{ font-family:var(--mono); font-size:11.5px; fill:var(--ink-soft); }
+  .flow .link{ stroke:var(--ink-soft); stroke-width:1.5; fill:none; marker-end:url(#arr2); }
+  .flow .link.loop{ stroke:var(--amber); stroke-dasharray:5 4; }
+  .flowdesc{ margin-top:14px; min-height:64px; }
+
+  @media (max-width: 900px){
+    .app{ grid-template-columns:1fr; }
+    nav{ position:static; height:auto; padding:18px 16px; }
+    nav ol{ display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; }
+    nav li{ flex:0 0 auto; }
+    nav button{ grid-template-columns:1fr; gap:0; width:auto; white-space:nowrap; }
+    nav .hint{ display:none; }
+    main{ padding:22px 16px 60px; }
+    .lesson h2{ font-size:24px; }
+    .pipe{ grid-template-columns:repeat(2,1fr); margin-top:70px; }
+    .guard, .dial, .sw-wrap, .stk{ grid-template-columns:1fr; }
+    .expr{ font-size:32px; }
+    .cell{ width:88px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav aria-label="교시 선택">
+    <h1>C 언어 · 프로그래밍 언어 과목</h1>
+    <p class="day">1일차<br>눈으로 보는 8가지</p>
+    <ol id="navlist">
+      <li><button data-go="1" aria-current="true">빌드 파이프라인</button></li>
+      <li><button data-go="2">헤더 가드</button></li>
+      <li><button data-go="3">메모리 바이트 뷰어</button></li>
+      <li><button data-go="4">2의 보수 다이얼</button></li>
+      <li><button data-go="5">정수 승격 함정</button></li>
+      <li><button data-go="6">switch fall-through</button></li>
+      <li><button data-go="7">스택 프레임</button></li>
+      <li><button data-go="8">숫자 야구 흐름</button></li>
+    </ol>
+    <p class="hint">키보드 <kbd>←</kbd> <kbd>→</kbd> 로 교시 이동</p>
+  </nav>
+
+  <main>
+
+  <!-- ================= 1. 빌드 파이프라인 ================= -->
+  <section class="lesson active" id="l1">
+    <header>
+      <h2>hello.c는 어떻게 실행파일이 되는가</h2>
+      <p>gcc 한 줄 뒤에서 네 단계가 돌아갑니다. 상자를 눌러 각 단계의 산출물을 확인하세요.</p>
+    </header>
+    <div class="stage">
+      <div class="controls">
+        <button class="btn" id="p-play">한 단계 실행</button>
+        <button class="btn secondary" id="p-reset">처음으로</button>
+        <span class="mono" style="font-size:13px;color:var(--ink-soft)" id="p-cmd">$ gcc hello.c -o hello</span>
+      </div>
+      <div class="pipe" id="pipe">
+        <div class="rail"></div>
+        <div class="chip" id="chip">hello.c</div>
+        <div class="libc" id="libc">libc.a · printf 등</div>
+        <div class="stagebox" data-s="0"><strong>전처리기</strong><span>#include, #define 처리</span></div>
+        <div class="stagebox" data-s="1"><strong>컴파일러</strong><span>C → 어셈블리</span></div>
+        <div class="stagebox" data-s="2"><strong>어셈블러</strong><span>어셈블리 → 기계어</span></div>
+        <div class="stagebox" data-s="3"><strong>링커</strong><span>오브젝트 + 라이브러리</span></div>
+      </div>
+      <div class="artifact">
+        <h4 id="art-title">단계를 선택하면 산출물이 여기에 보입니다</h4>
+        <pre class="code" id="art-body">#include &lt;stdio.h&gt;
+
+int main(void) {
+    printf("Hello, C!\n");
+    return 0;
+}</pre>
+      </div>
+      <div class="note">각 단계는 옵션으로 멈출 수 있습니다. <code>-E</code> 전처리까지, <code>-S</code> 어셈블리까지, <code>-c</code> 오브젝트까지.</div>
+    </div>
+  </section>
+
+  <!-- ================= 2. 헤더 가드 ================= -->
+  <section class="lesson" id="l2">
+    <header>
+      <h2>같은 헤더가 두 번 들어오면</h2>
+      <p>a.h와 b.h가 둘 다 common.h를 include합니다. 가드 토글을 켜고 끄며 결과를 비교하세요.</p>
+    </header>
+    <div class="stage">
+      <div class="controls">
+        <label class="toggle"><input type="checkbox" id="g-toggle"><span class="sw"></span>#ifndef 헤더 가드 사용</label>
+      </div>
+      <div class="guard">
+        <svg viewBox="0 0 360 300" role="img" aria-label="include 관계도">
+          <defs>
+            <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5B6B80"/></marker>
+          </defs>
+          <g class="file"><rect x="130" y="20" width="100" height="40" rx="6"/><text x="180" y="45" text-anchor="middle">main.c</text></g>
+          <g class="file"><rect x="30" y="130" width="100" height="40" rx="6"/><text x="80" y="155" text-anchor="middle">a.h</text></g>
+          <g class="file"><rect x="230" y="130" width="100" height="40" rx="6"/><text x="280" y="155" text-anchor="middle">b.h</text></g>
+          <g class="file fileflag" id="g-common"><rect x="115" y="240" width="130" height="40" rx="6"/><text x="180" y="265" text-anchor="middle">common.h</text></g>
+          <path class="edge" d="M160,60 L90,130"/>
+          <path class="edge" d="M200,60 L270,130"/>
+          <path class="edge" d="M90,170 L155,240"/>
+          <path class="edge dup" id="g-edge2" d="M270,170 L205,240"/>
+        </svg>
+        <div>
+          <pre class="code" id="g-code"></pre>
+          <div class="note warn" id="g-msg"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 3. 메모리 바이트 뷰어 ================= -->
+  <section class="lesson" id="l3">
+    <header>
+      <h2>변수는 메모리에 어떻게 놓이는가</h2>
+      <p>값을 넣고 자료형을 바꿔보세요. 칸이 줄어들면 상위 바이트가 떨어져 나갑니다.</p>
+    </header>
+    <div class="stage">
+      <div class="controls">
+        <label>값 <input type="number" id="m-val" value="300" style="width:130px"></label>
+        <label>자료형
+          <select id="m-type">
+            <option value="int32">int (4바이트, signed)</option>
+            <option value="uint32">uint32_t (4바이트)</option>
+            <option value="int16">int16_t (2바이트)</option>
+            <option value="uint16">uint16_t (2바이트)</option>
+            <option value="int8">int8_t (1바이트)</option>
+            <option value="uint8">uint8_t (1바이트)</option>
+          </select>
+        </label>
+        <label class="toggle"><input type="checkbox" id="m-endian" checked><span class="sw"></span>리틀 엔디안 (x86, ARM 기본)</label>
+      </div>
+      <div class="mono" style="font-size:14px;color:var(--ink-soft)" id="m-decl"></div>
+      <div class="mem" id="mem"></div>
+      <div class="readout">
+        <div><b>저장된 비트를 이 타입으로 읽으면</b><span id="m-read"></span></div>
+        <div><b>16진수 전체</b><span id="m-hex"></span></div>
+        <div><b>차지하는 크기</b><span id="m-size"></span></div>
+      </div>
+      <div class="note" id="m-note"></div>
+    </div>
+  </section>
+
+  <!-- ================= 4. 2의 보수 다이얼 ================= -->
+  <section class="lesson" id="l4">
+    <header>
+      <h2>같은 비트, 다른 해석</h2>
+      <p>슬라이더를 오른쪽 끝까지 밀어보세요. 127 다음에 무슨 일이 일어나는지 보세요.</p>
+    </header>
+    <div class="stage">
+      <div class="dial">
+        <svg viewBox="0 0 300 300" id="dial-svg" aria-hidden="true">
+          <circle cx="150" cy="150" r="120" fill="#fff" stroke="#C9D1DC" stroke-width="2"/>
+          <g id="dial-ticks"></g>
+          <text x="150" y="26" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" fill="#5B6B80">0</text>
+          <text x="150" y="286" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" fill="#D6452E" id="dial-bottom">128 / -128</text>
+          <text x="276" y="154" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" fill="#5B6B80">64</text>
+          <text x="24" y="154" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" fill="#5B6B80">192 / -64</text>
+          <line class="needle" id="needle" x1="150" y1="150" x2="150" y2="42"/>
+          <circle cx="150" cy="150" r="6" fill="#1B2A41"/>
+        </svg>
+        <div>
+          <input type="range" id="d-range" min="0" max="255" value="0" aria-label="8비트 값">
+          <div class="bits" id="d-bits"></div>
+          <div class="twin">
+            <div class="u"><b>unsigned char 로 읽으면</b><span id="d-u">0</span></div>
+            <div class="s"><b>signed char (2의 보수) 로 읽으면</b><span id="d-s">0</span></div>
+          </div>
+          <div class="note" id="d-note">부호 비트(맨 왼쪽)가 0이면 두 해석이 같습니다.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 5. 정수 승격 ================= -->
+  <section class="lesson" id="l5">
+    <header>
+      <h2>-1은 1보다 작다. 정말?</h2>
+      <p>signed와 unsigned를 비교하면 C는 조용히 한쪽을 변환합니다. 재생을 눌러 무슨 일이 생기는지 보세요.</p>
+    </header>
+    <div class="stage">
+      <div class="controls">
+        <label>식
+          <select id="pr-sel">
+            <option value="u">-1 &lt; 1u</option>
+            <option value="s">-1 &lt; 1</option>
+            <option value="sz">-1 &lt; sizeof(int)</option>
+          </select>
+        </label>
+        <button class="btn" id="pr-play">재생</button>
+        <button class="btn secondary" id="pr-reset">되감기</button>
+      </div>
+      <div class="promo">
+        <div class="expr">
+          <span class="lhs" id="pr-lhs"><span class="ghost" id="pr-ghost"></span>-1</span>
+          <span>&lt;</span>
+          <span id="pr-rhs">1u</span>
+        </div>
+        <div class="verdict" id="pr-verdict"></div>
+        <ol class="steps" id="pr-steps"></ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 6. switch ================= -->
+  <section class="lesson" id="l6">
+    <header>
+      <h2>break가 없으면 공은 계속 굴러간다</h2>
+      <p>값을 고르고 실행하세요. 각 case의 벽(break)을 눌러 켜고 끌 수 있습니다.</p>
+    </header>
+    <div class="stage">
+      <div class="controls">
+        <label>switch (n) 의 n =
+          <select id="s-val"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>9</option></select>
+        </label>
+        <button class="btn" id="s-run">실행</button>
+        <button class="btn secondary" id="s-all">break 전부 켜기</button>
+        <button class="btn secondary" id="s-none">break 전부 끄기</button>
+      </div>
+      <div class="sw-wrap">
+        <div class="cases" id="cases">
+          <div class="ball" id="ball"></div>
+        </div>
+        <pre class="outlog" id="s-out"><span class="c">// 출력</span></pre>
+      </div>
+      <div class="note" id="s-note">벽을 클릭하면 그 case의 <code>break;</code> 를 넣거나 뺍니다.</div>
+    </div>
+  </section>
+
+  <!-- ================= 7. 스택 프레임 ================= -->
+  <section class="lesson" id="l7">
+    <header>
+      <h2>fact(3)이 호출될 때 스택에서 벌어지는 일</h2>
+      <p>한 단계씩 진행하며 프레임이 쌓이고 사라지는 것을 보세요. static 변수는 스택 밖에 삽니다.</p>
+    </header>
+    <div class="stage">
+      <div class="controls">
+        <button class="btn" id="f-next">다음 단계</button>
+        <button class="btn secondary" id="f-reset">처음으로</button>
+        <span style="font-size:14px;color:var(--ink-soft)" id="f-desc">시작하려면 다음 단계를 누르세요.</span>
+      </div>
+      <div class="stk">
+        <pre class="code" id="f-src"><span class="srcline" data-l="0">static int calls = 0;</span>
+<span class="srcline" data-l="1">int fact(int n) {</span>
+<span class="srcline" data-l="2">    calls++;</span>
+<span class="srcline" data-l="3">    if (n &lt;= 1) return 1;</span>
+<span class="srcline" data-l="4">    return n * fact(n - 1);</span>
+<span class="srcline" data-l="5">}</span>
+<span class="srcline" data-l="6">int main(void) {</span>
+<span class="srcline" data-l="7">    int r = fact(3);</span>
+<span class="srcline" data-l="8">}</span></pre>
+        <div class="frames" id="frames"><div class="cap">스택 (아래에서 위로 쌓임)</div></div>
+        <div class="datazone">
+          <b>데이터 영역 (static, 전역)</b>
+          <div class="v">calls = <em id="f-calls">0</em></div>
+          <div style="margin-top:10px;font-size:12.5px;color:#7A5405">함수가 반환되어도 값이 남습니다.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 8. 숫자 야구 흐름 ================= -->
+  <section class="lesson" id="l8">
+    <header>
+      <h2>숫자 야구, 함수로 쪼개기</h2>
+      <p>오늘의 과제 구조입니다. 재생을 누르면 한 턴의 흐름이 순서대로 켜집니다. 각 상자는 함수 하나입니다.</p>
+    </header>
+    <div class="stage">
+      <div class="controls">
+        <button class="btn" id="b-play">한 턴 재생</button>
+        <button class="btn secondary" id="b-reset">처음으로</button>
+      </div>
+      <div class="flow">
+        <svg viewBox="0 0 900 260" id="flow-svg" role="img" aria-label="숫자 야구 흐름도">
+          <defs><marker id="arr2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5B6B80"/></marker></defs>
+          <g class="node" data-i="0"><rect x="20" y="80" width="150" height="70" rx="8"/><text x="95" y="110">정답 만들기</text><text class="fn" x="95" y="132">gen_answer()</text></g>
+          <g class="node" data-i="1"><rect x="200" y="80" width="150" height="70" rx="8"/><text x="275" y="110">입력 받기</text><text class="fn" x="275" y="132">read_guess()</text></g>
+          <g class="node" data-i="2"><rect x="380" y="80" width="150" height="70" rx="8"/><text x="455" y="110">입력 검증</text><text class="fn" x="455" y="132">is_valid()</text></g>
+          <g class="node" data-i="3"><rect x="560" y="80" width="150" height="70" rx="8"/><text x="635" y="110">S / B 판정</text><text class="fn" x="635" y="132">judge()</text></g>
+          <g class="node" data-i="4"><rect x="740" y="80" width="140" height="70" rx="8"/><text x="810" y="110">결과 출력</text><text class="fn" x="810" y="132">print_result()</text></g>
+          <path class="link" d="M170,115 L200,115"/>
+          <path class="link" d="M350,115 L380,115"/>
+          <path class="link" d="M530,115 L560,115"/>
+          <path class="link" d="M710,115 L740,115"/>
+          <path class="link loop" d="M455,150 C455,215 275,215 275,150" id="b-retry"/>
+          <text x="365" y="222" font-family="IBM Plex Sans KR, sans-serif" font-size="12" fill="#7A5405" text-anchor="middle">잘못된 입력이면 다시</text>
+          <path class="link loop" d="M810,150 C810,245 275,245 275,150" id="b-again"/>
+          <text x="560" y="252" font-family="IBM Plex Sans KR, sans-serif" font-size="12" fill="#7A5405" text-anchor="middle">3S가 아니면 다음 턴</text>
+        </svg>
+      </div>
+      <div class="note flowdesc" id="b-desc">첫 번째 상자는 게임당 한 번만, 나머지는 턴마다 반복됩니다.</div>
+    </div>
+  </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  const $ = (s, r=document) => r.querySelector(s);
+  const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  /* ---------- navigation ---------- */
+  let cur = 1;
+  function go(n){
+    cur = Math.max(1, Math.min(8, n));
+    $$('.lesson').forEach(s => s.classList.toggle('active', s.id === 'l'+cur));
+    $$('#navlist button').forEach(b => b.setAttribute('aria-current', b.dataset.go == cur ? 'true' : 'false'));
+    location.hash = 'l'+cur;
+  }
+  $$('#navlist button').forEach(b => b.addEventListener('click', () => go(+b.dataset.go)));
+  document.addEventListener('keydown', e => {
+    if (['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)) return;
+    if (e.key === 'ArrowRight') go(cur+1);
+    if (e.key === 'ArrowLeft') go(cur-1);
+  });
+  if (/^#l[1-8]$/.test(location.hash)) go(+location.hash[2]);
+
+  /* ---------- 1. pipeline ---------- */
+  const artifacts = [
+    ['hello.i — 전처리 결과 (stdio.h가 통째로 펼쳐짐, 실제로는 수백 줄)',
+`<span class="dim"># 1 "hello.c"
+# 1 "/usr/include/stdio.h" 1
+typedef struct _IO_FILE FILE;
+extern int printf (const char *__restrict __format, ...);
+<span class="dim">... (약 800줄 생략)</span>
+# 2 "hello.c" 2</span>
+
+int main(void) {
+    printf("Hello, C!\\n");
+    return 0;
+}`],
+    ['hello.s — 어셈블리 (x86-64, -O0)',
+`        .section .rodata
+.LC0:   .string "Hello, C!"
+        .text
+        .globl  main
+main:
+        pushq   %rbp
+        movq    %rsp, %rbp
+        leaq    .LC0(%rip), %rdi
+        call    <span class="hi">puts@PLT</span>     <span class="dim"># printf가 puts로 바뀜</span>
+        movl    $0, %eax
+        popq    %rbp
+        ret`],
+    ['hello.o — 오브젝트 파일 (기계어, 아직 puts 주소를 모름)',
+`$ objdump -d hello.o
+0000000000000000 &lt;main&gt;:
+   0:  55                     push   %rbp
+   1:  48 89 e5               mov    %rsp,%rbp
+   4:  48 8d 3d 00 00 00 00   lea    0x0(%rip),%rdi
+   b:  e8 <span class="err">00 00 00 00</span>          call   10 &lt;main+0x10&gt;  <span class="dim"># ← 비어 있음</span>
+  10:  b8 00 00 00 00         mov    $0x0,%eax
+  15:  5d                     pop    %rbp
+  16:  c3                     ret
+
+$ nm hello.o
+0000000000000000 T main
+                 <span class="err">U puts</span>   <span class="dim"># U = undefined, 링커가 채워야 함</span>`],
+    ['hello — 실행파일 (libc의 puts와 연결 완료)',
+`$ nm hello | grep -E "main|puts"
+0000000000001139 T main
+                 U puts@GLIBC_2.2.5   <span class="dim"># 동적 링크: 실행 시 libc.so에서 찾음</span>
+
+$ ./hello
+Hello, C!`]
+  ];
+  const cmds = ['$ gcc hello.c -o hello', '$ gcc -E hello.c -o hello.i', '$ gcc -S hello.i -o hello.s', '$ gcc -c hello.s -o hello.o', '$ gcc hello.o -o hello'];
+  const chipNames = ['hello.c','hello.i','hello.s','hello.o','hello'];
+  const boxes = $$('#pipe .stagebox');
+  let pstep = 0; // 0..4
+  function chipPos(step){
+    // step 0: before first box; step k: after box k-1 (centered on gap or box)
+    const pipe = $('#pipe'), chip = $('#chip');
+    const w = pipe.clientWidth;
+    if (step === 0){ chip.style.left = '0px'; return; }
+    const b = boxes[step-1];
+    chip.style.left = (b.offsetLeft + b.offsetWidth/2) + 'px';
+    if (step === 4) chip.style.left = w + 'px';
+  }
+  function renderPipe(){
+    boxes.forEach((b,i) => { b.classList.toggle('done', i < pstep); b.classList.toggle('on', i === pstep-1); });
+    $('#chip').textContent = chipNames[pstep];
+    $('#chip').style.background = pstep === 4 ? 'var(--green)' : 'var(--ink)';
+    $('#p-cmd').textContent = cmds[pstep];
+    $('#libc').classList.toggle('show', pstep === 4);
+    chipPos(pstep);
+    $('#p-play').disabled = pstep === 4;
+    $('#p-play').textContent = pstep === 4 ? '완료' : '한 단계 실행';
+    if (pstep > 0) showArtifact(pstep-1);
+  }
+  function showArtifact(i){
+    $('#art-title').textContent = artifacts[i][0];
+    $('#art-body').innerHTML = artifacts[i][1];
+  }
+  $('#p-play').addEventListener('click', () => { if (pstep < 4){ pstep++; renderPipe(); } });
+  $('#p-reset').addEventListener('click', () => {
+    pstep = 0; renderPipe();
+    $('#art-title').textContent = '단계를 선택하면 산출물이 여기에 보입니다';
+    $('#art-body').innerHTML = esc('#include <stdio.h>\n\nint main(void) {\n    printf("Hello, C!\\n");\n    return 0;\n}');
+  });
+  boxes.forEach((b,i) => b.addEventListener('click', () => { pstep = i+1; renderPipe(); }));
+  window.addEventListener('resize', () => chipPos(pstep));
+  requestAnimationFrame(() => chipPos(0));
+
+  /* ---------- 2. header guard ---------- */
+  function renderGuard(){
+    const on = $('#g-toggle').checked;
+    const common = $('#g-common'), edge2 = $('#g-edge2');
+    common.classList.toggle('ok', on);
+    edge2.classList.toggle('dup', !on);
+    edge2.classList.toggle('blocked', on);
+    const body = on
+? `<span class="dim">// main.c 전처리 결과 (가드 있음)</span>
+<span class="dim">// ---- a.h ----</span>
+<span class="dim">// ---- common.h (1번째) ----</span>
+typedef struct { int x, y; } Point;
+int add(int a, int b);
+<span class="dim">// ---- b.h ----</span>
+<span class="dim">// ---- common.h (2번째): 이미 정의된 매크로 → </span><span class="dim fade-line" style="opacity:.35">본문 통째로 건너뜀</span>
+
+int main(void) { Point p = {1, 2}; return add(p.x, p.y); }`
+: `<span class="dim">// main.c 전처리 결과 (가드 없음)</span>
+<span class="dim">// ---- a.h ----</span>
+<span class="dim">// ---- common.h (1번째) ----</span>
+typedef struct { int x, y; } Point;
+int add(int a, int b);
+<span class="dim">// ---- b.h ----</span>
+<span class="dim">// ---- common.h (2번째) ----</span>
+<span class="err">typedef struct { int x, y; } Point;</span>   <span class="err">← 재정의!</span>
+int add(int a, int b);                <span class="dim">← 함수 선언은 중복 허용</span>
+
+int main(void) { Point p = {1, 2}; return add(p.x, p.y); }`;
+    $('#g-code').innerHTML = body;
+    const msg = $('#g-msg');
+    msg.className = on ? 'note ok' : 'note warn';
+    msg.innerHTML = on
+      ? '<code>#ifndef COMMON_H</code> / <code>#define COMMON_H</code> / <code>#endif</code> 덕분에 두 번째 include는 빈 내용이 됩니다. 컴파일 성공.'
+      : '<span class="blink">error:</span> redefinition of <code>struct Point</code> — 타입·구조체·인라인 정의는 두 번 나오면 에러입니다.';
+  }
+  $('#g-toggle').addEventListener('change', renderGuard);
+  renderGuard();
+
+  /* ---------- 3. memory viewer ---------- */
+  const typeInfo = {
+    int32:{size:4, signed:true, name:'int'}, uint32:{size:4, signed:false, name:'uint32_t'},
+    int16:{size:2, signed:true, name:'int16_t'}, uint16:{size:2, signed:false, name:'uint16_t'},
+    int8:{size:1, signed:true, name:'int8_t'}, uint8:{size:1, signed:false, name:'uint8_t'}
+  };
+  let prevSize = 4;
+  function renderMem(){
+    const t = typeInfo[$('#m-type').value];
+    const raw = Number($('#m-val').value) || 0;
+    const little = $('#m-endian').checked;
+    // store as 32-bit two's complement, then truncate
+    const full = BigInt.asUintN(32, BigInt(Math.trunc(raw)));
+    const bytesBE = [];
+    for (let i=3;i>=0;i--) bytesBE.push(Number((full >> BigInt(i*8)) & 0xFFn));
+    const kept = bytesBE.slice(4 - t.size);          // big-endian order of kept bytes
+    const dropped = bytesBE.slice(0, 4 - t.size);
+    const order = little ? kept.slice().reverse() : kept;
+    const mem = $('#mem'); mem.innerHTML = '';
+    // dropped cells (animate out) — only when size shrank
+    if (t.size < prevSize){
+      dropped.slice(4 - prevSize).forEach(b => {
+        const c = cell('—', b, false); c.classList.add('drop'); mem.appendChild(c);
+      });
+      // ensure they render, then remove after anim
+      setTimeout(() => $$('.cell.drop', mem).forEach(c => c.remove()), 700);
+    }
+    order.forEach((b, i) => {
+      const addr = '0x' + (0x7ffc1000 + i).toString(16);
+      const isSignByte = t.signed && ((little && i === order.length-1) || (!little && i === 0)) && (b & 0x80);
+      const c = cell(addr, b, isSignByte);
+      mem.appendChild(c);
+    });
+    prevSize = t.size;
+    // read back
+    const bits = BigInt.asUintN(t.size*8, full);
+    const readVal = t.signed ? BigInt.asIntN(t.size*8, bits) : bits;
+    const hex = '0x' + kept.map(b => b.toString(16).padStart(2,'0')).join('').toUpperCase();
+    $('#m-decl').textContent = `${t.name} x = ${raw};`;
+    const r = $('#m-read'); r.textContent = readVal.toString();
+    r.classList.toggle('bad', Number(readVal) !== Math.trunc(raw));
+    $('#m-hex').textContent = hex;
+    $('#m-size').textContent = `${t.size}바이트 = ${t.size*8}비트`;
+    const note = $('#m-note');
+    if (Number(readVal) !== Math.trunc(raw)){
+      note.className = 'note warn';
+      note.innerHTML = `${raw}은(는) ${t.size}바이트에 들어가지 않습니다. 상위 바이트가 잘려 <code>${readVal}</code>로 읽힙니다` +
+        (t.signed && (kept[0] & 0x80) ? ' — 게다가 최상위 비트가 1이라 음수로 해석됩니다.' : '.');
+    } else {
+      note.className = 'note';
+      note.innerHTML = little
+        ? '리틀 엔디안: 가장 낮은 주소에 가장 낮은 바이트(LSB)가 옵니다. 메모리를 덤프하면 숫자가 뒤집혀 보이는 이유입니다.'
+        : '빅 엔디안: 사람이 쓰는 순서 그대로 저장됩니다. 네트워크 바이트 순서가 이 방식입니다.';
+    }
+  }
+  function cell(addr, b, sign){
+    const d = document.createElement('div');
+    d.className = 'cell' + (sign ? ' sign' : '');
+    d.innerHTML = `<div class="addr">${addr}</div><div class="hex">${b.toString(16).padStart(2,'0').toUpperCase()}</div><div class="bin">${b.toString(2).padStart(8,'0')}</div>`;
+    return d;
+  }
+  ['#m-val','#m-type','#m-endian'].forEach(s => $(s).addEventListener('input', renderMem));
+  renderMem();
+
+  /* ---------- 4. two's complement dial ---------- */
+  const ticks = $('#dial-ticks');
+  for (let i=0;i<32;i++){
+    const a = i/32*2*Math.PI, big = i%8===0;
+    const r1 = big ? 104 : 112, r2 = 120;
+    const l = document.createElementNS('http://www.w3.org/2000/svg','line');
+    l.setAttribute('x1', 150 + r1*Math.sin(a)); l.setAttribute('y1', 150 - r1*Math.cos(a));
+    l.setAttribute('x2', 150 + r2*Math.sin(a)); l.setAttribute('y2', 150 - r2*Math.cos(a));
+    l.setAttribute('class','tick'); ticks.appendChild(l);
+  }
+  const bitsBox = $('#d-bits');
+  for (let i=7;i>=0;i--){ const b = document.createElement('div'); b.className = 'bit' + (i===7?' msb':''); b.dataset.i = i; b.textContent='0'; bitsBox.appendChild(b); }
+  let lastNeg = false;
+  function renderDial(){
+    const v = +$('#d-range').value;
+    const s = v > 127 ? v - 256 : v;
+    $('#needle').style.transform = `rotate(${v/256*360}deg)`;
+    $('#needle').classList.toggle('neg', v > 127);
+    $$('.bit').forEach(b => { const on = (v >> +b.dataset.i) & 1; b.textContent = on; b.classList.toggle('on', !!on); });
+    $('#d-u').textContent = v;
+    const se = $('#d-s'); se.textContent = s; se.classList.toggle('neg', s < 0);
+    const neg = s < 0;
+    if (neg !== lastNeg){ se.classList.remove('jump'); void se.offsetWidth; se.classList.add('jump'); }
+    lastNeg = neg;
+    const note = $('#d-note');
+    note.className = neg ? 'note warn' : 'note';
+    note.innerHTML = neg
+      ? `부호 비트가 1입니다. 같은 비트 <code>${v.toString(2).padStart(8,'0')}</code>를 unsigned는 ${v}, signed는 ${s}로 읽습니다. (${v} − 256 = ${s})`
+      : (v === 127 ? '127 = 01111111. 여기서 1을 더하면 부호 비트로 넘어갑니다.' : '부호 비트(맨 왼쪽)가 0이면 두 해석이 같습니다.');
+  }
+  $('#d-range').addEventListener('input', renderDial);
+  renderDial();
+
+  /* ---------- 5. promotion ---------- */
+  const promos = {
+    u:{ rhs:'1u', ghost:'unsigned로 변환 → 4294967295', big:'4294967295', result:false,
+        steps:['왼쪽은 int(-1), 오른쪽은 unsigned int(1u). 타입이 다릅니다.',
+               '규칙: int와 unsigned int를 비교하면 int 쪽이 unsigned로 변환됩니다.',
+               '-1의 비트 0xFFFFFFFF를 unsigned로 읽으면 4294967295.',
+               '4294967295 < 1 은 거짓. 그래서 -1 < 1u 는 false(0).'] },
+    s:{ rhs:'1', ghost:'변환 없음', big:'-1', result:true,
+        steps:['양쪽 모두 int. 변환이 필요 없습니다.','-1 < 1 은 참. 결과 true(1).'] },
+    sz:{ rhs:'sizeof(int)', ghost:'size_t(unsigned)로 변환 → 18446744073709551615', big:'18446744073709551615', result:false,
+        steps:['sizeof의 결과는 size_t, 즉 unsigned long입니다.',
+               '-1이 unsigned long으로 변환되어 18446744073709551615가 됩니다.',
+               '이 값은 4보다 크므로 -1 < sizeof(int) 는 false. 컴파일러 경고(-Wsign-compare)가 이 함정을 잡아줍니다.'] }
+  };
+  let prTimer = [];
+  function prReset(){
+    prTimer.forEach(clearTimeout); prTimer = [];
+    const p = promos[$('#pr-sel').value];
+    $('#pr-rhs').textContent = p.rhs;
+    const lhs = $('#pr-lhs');
+    lhs.classList.remove('grow'); lhs.style.transform = '';
+    lhs.childNodes[lhs.childNodes.length-1].textContent = '-1';
+    $('#pr-ghost').textContent = p.ghost;
+    $('#pr-verdict').className = 'verdict'; $('#pr-verdict').textContent = '';
+    $('#pr-steps').innerHTML = p.steps.map(s => `<li>${s}</li>`).join('');
+    $('#pr-play').disabled = false;
+  }
+  function prPlay(){
+    prReset();
+    $('#pr-play').disabled = true;
+    const p = promos[$('#pr-sel').value];
+    const lis = $$('#pr-steps li');
+    const lhs = $('#pr-lhs');
+    let t = 0;
+    lis.forEach((li, i) => {
+      prTimer.push(setTimeout(() => {
+        lis.forEach(x => x.classList.remove('on')); li.classList.add('on');
+        if (i === p.steps.length - 2 && p.big !== '-1'){
+          lhs.classList.add('grow');
+          lhs.childNodes[lhs.childNodes.length-1].textContent = p.big;
+          lhs.style.transform = 'scale(1.08)';
+        }
+        if (i === p.steps.length - 1){
+          const v = $('#pr-verdict');
+          v.textContent = p.result ? '→ true (1)' : '→ false (0)';
+          v.className = 'verdict show ' + (p.result ? 't' : 'f');
+          $('#pr-play').disabled = false;
+        }
+      }, t));
+      t += 1400;
+    });
+  }
+  $('#pr-play').addEventListener('click', prPlay);
+  $('#pr-reset').addEventListener('click', prReset);
+  $('#pr-sel').addEventListener('change', prReset);
+  prReset();
+
+  /* ---------- 6. switch fall-through ---------- */
+  const caseDefs = [
+    {lbl:'case 1:', body:'printf("one");'},
+    {lbl:'case 2:', body:'printf("two");'},
+    {lbl:'case 3:', body:'printf("three");'},
+    {lbl:'case 4:', body:'printf("four");'},
+    {lbl:'default:', body:'printf("other");'}
+  ];
+  const brk = [true, false, false, true, true];
+  const casesEl = $('#cases');
+  caseDefs.forEach((c, i) => {
+    const d = document.createElement('div');
+    d.className = 'case'; d.dataset.i = i;
+    d.innerHTML = `<span class="lbl">${c.lbl}</span><span class="body">${esc(c.body)}</span><div class="wall" role="button" tabindex="0" aria-label="break 토글" title="break 토글"></div>`;
+    const wall = $('.wall', d);
+    const tog = () => { brk[i] = !brk[i]; renderCases(); };
+    wall.addEventListener('click', tog);
+    wall.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); tog(); } });
+    casesEl.appendChild(d);
+  });
+  function renderCases(){
+    $$('.case').forEach((d,i) => { d.classList.toggle('brk', brk[i]); $('.wall', d).title = brk[i] ? 'break; 있음 (클릭해서 제거)' : 'break; 없음 (클릭해서 추가)'; });
+  }
+  renderCases();
+  let swTimers = [];
+  function runSwitch(){
+    swTimers.forEach(clearTimeout); swTimers = [];
+    const n = +$('#s-val').value;
+    let start = [1,2,3,4].indexOf(n); if (start < 0) start = 4;
+    const out = $('#s-out'); out.innerHTML = `<span class="c">// switch (${n})</span>\n`;
+    const cases = $$('.case'); cases.forEach(c => c.classList.remove('run'));
+    const ball = $('#ball');
+    ball.classList.add('show');
+    ball.style.top = (cases[start].offsetTop + 26) + 'px';
+    let t = 300, i = start, printed = [];
+    const step = () => {
+      if (i > 4){ finish(); return; }
+      const idx = i;
+      swTimers.push(setTimeout(() => {
+        cases[idx].classList.add('run');
+        ball.style.top = (cases[idx].offsetTop + 26) + 'px';
+        printed.push(caseDefs[idx].body.match(/"(.*?)"/)[1]);
+        out.innerHTML = `<span class="c">// switch (${n})</span>\n` + printed.join('') + '\n';
+        if (brk[idx]){ swTimers.push(setTimeout(() => finish(true, idx), 500)); }
+        else { i++; swTimers.push(setTimeout(step, 450)); }
+      }, t));
+      t = 0;
+    };
+    const finish = (byBreak, idx) => {
+      out.innerHTML += `<span class="c">// ${byBreak ? 'break를 만나 switch 종료' : 'switch 블록 끝에 도달'}</span>\n<span class="c">// 실행된 case: ${printed.length}개</span>`;
+      const note = $('#s-note');
+      const fell = printed.length > 1;
+      note.className = fell ? 'note warn' : 'note ok';
+      note.innerHTML = fell
+        ? `${printed.length}개의 case가 연달아 실행됐습니다. 의도한 게 아니라면 <code>break;</code>가 빠진 것입니다.`
+        : '정확히 하나의 case만 실행됐습니다.';
+      swTimers.push(setTimeout(() => ball.classList.remove('show'), 900));
+    };
+    step();
+  }
+  $('#s-run').addEventListener('click', runSwitch);
+  $('#s-all').addEventListener('click', () => { brk.fill(true); renderCases(); });
+  $('#s-none').addEventListener('click', () => { brk.fill(false); renderCases(); });
+
+  /* ---------- 7. stack frames ---------- */
+  const script = [
+    {line:7, desc:'main이 fact(3)을 호출합니다. 새 프레임이 스택에 올라갑니다.', push:'fact(3)', calls:0},
+    {line:2, desc:'calls++ — static 변수는 스택이 아니라 데이터 영역에서 증가합니다.', calls:1},
+    {line:4, desc:'n=3 ≤ 1 이 아니므로 3 * fact(2) 를 계산해야 합니다. fact(2) 호출.', push:'fact(2)', calls:1},
+    {line:2, desc:'calls++ (두 번째 호출)', calls:2},
+    {line:4, desc:'n=2. 다시 fact(1) 호출.', push:'fact(1)', calls:2},
+    {line:2, desc:'calls++ (세 번째 호출)', calls:3},
+    {line:3, desc:'n=1 이므로 1을 반환. fact(1) 프레임이 사라지고 값이 아래로 내려갑니다.', pop:'1', calls:3},
+    {line:4, desc:'fact(2)가 2 * 1 = 2 를 반환. 프레임 제거.', pop:'2', calls:3},
+    {line:4, desc:'fact(3)이 3 * 2 = 6 을 반환. 프레임 제거.', pop:'6', calls:3},
+    {line:7, desc:'main의 r = 6. 스택은 비었지만 calls는 3으로 남아 있습니다.', calls:3, done:true}
+  ];
+  let fstep = 0;
+  function fReset(){
+    fstep = 0;
+    $('#frames').innerHTML = '<div class="cap">스택 (아래에서 위로 쌓임)</div>';
+    $('#f-calls').textContent = '0';
+    $('#f-desc').textContent = '시작하려면 다음 단계를 누르세요.';
+    $$('.srcline').forEach(s => s.classList.remove('on'));
+    $('#f-next').disabled = false; $('#f-next').textContent = '다음 단계';
+  }
+  function fNext(){
+    if (fstep >= script.length) return;
+    const s = script[fstep++];
+    $$('.srcline').forEach(x => x.classList.toggle('on', +x.dataset.l === s.line));
+    $('#f-desc').textContent = s.desc;
+    $('#f-calls').textContent = s.calls;
+    const frames = $('#frames');
+    $$('.frame', frames).forEach(f => f.classList.remove('top'));
+    if (s.push){
+      const f = document.createElement('div'); f.className = 'frame top';
+      f.innerHTML = `<span>${s.push}</span><span class="rv"></span>`;
+      frames.appendChild(f);
+    }
+    if (s.pop){
+      const all = $$('.frame', frames); const top = all[all.length-1];
+      $('.rv', top).textContent = 'return ' + s.pop;
+      top.classList.add('pop');
+      setTimeout(() => { top.remove(); const rest = $$('.frame', frames); if (rest.length) rest[rest.length-1].classList.add('top'); }, 380);
+    }
+    if (!s.pop){ const rest = $$('.frame', frames); if (rest.length) rest[rest.length-1].classList.add('top'); }
+    if (s.done){ $('#f-next').disabled = true; $('#f-next').textContent = '완료'; }
+  }
+  $('#f-next').addEventListener('click', fNext);
+  $('#f-reset').addEventListener('click', fReset);
+
+  /* ---------- 8. baseball flow ---------- */
+  const flowDesc = [
+    '<b>gen_answer()</b> — srand(time(NULL)) 후 서로 다른 세 자리 숫자를 만듭니다. 배열 <code>int ans[3]</code>에 저장.',
+    '<b>read_guess()</b> — scanf 또는 fgets로 한 줄을 읽습니다. 반환값으로 읽기 성공 여부를 돌려주세요.',
+    '<b>is_valid()</b> — 세 자리인지, 숫자만인지, 중복이 없는지 검사. 실패하면 다시 입력으로 돌아갑니다.',
+    '<b>judge()</b> — 자리와 숫자가 같으면 S, 숫자만 있으면 B. 이중 for문 하나로 끝납니다.',
+    '<b>print_result()</b> — "1S 2B" 형식으로 출력. 3S면 종료, 아니면 다음 턴으로.'
+  ];
+  let bTimers = [];
+  function bReset(){
+    bTimers.forEach(clearTimeout); bTimers = [];
+    $$('#flow-svg .node').forEach(n => n.classList.remove('on','done'));
+    $('#b-desc').innerHTML = '첫 번째 상자는 게임당 한 번만, 나머지는 턴마다 반복됩니다.';
+    $('#b-play').disabled = false;
+  }
+  function bPlay(){
+    bReset(); $('#b-play').disabled = true;
+    const nodes = $$('#flow-svg .node');
+    nodes.forEach((n, i) => {
+      bTimers.push(setTimeout(() => {
+        nodes.forEach((x,j) => { x.classList.toggle('on', j===i); x.classList.toggle('done', j<i); });
+        $('#b-desc').innerHTML = flowDesc[i];
+        if (i === nodes.length-1) bTimers.push(setTimeout(() => { n.classList.remove('on'); n.classList.add('done'); $('#b-play').disabled = false; }, 1200));
+      }, i*1300));
+    });
+  }
+  $('#b-play').addEventListener('click', bPlay);
+  $('#b-reset').addEventListener('click', bReset);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C 언어 Day 1 개념 워크시트 — C 기초와 컴파일 과정</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:900px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.primary{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700;padding:9px 18px;font-size:14px}
+  button.submit{background:#3a2e12;border-color:var(--amber);color:var(--amber);font-weight:700;padding:9px 18px;font-size:14px}
+  button:disabled{opacity:.45;cursor:default}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  input[type=text]{background:#0a0f1c;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:14px}
+  .tabs{display:flex;flex-wrap:wrap;gap:6px}
+  .tabs button .s{font-family:var(--mono);font-size:11px;color:var(--dim);margin-left:6px}
+  .tabs button.graded .s{color:var(--green)}
+  .head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .head .t{color:var(--amber);font-size:17px}
+  .head .a{font-size:13px;color:var(--teal);font-family:var(--mono)}
+  .q{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#0e1628}
+  .q.unans{border-color:#5a3a1a}
+  .q .n{font-family:var(--mono);color:var(--dim);font-size:12px}
+  .q .p{margin:4px 0 10px;font-size:15px}
+  .q .p code,.opt code,.fb code,td code{font-family:var(--mono);color:var(--blue);background:#0a0f1c;padding:1px 5px;border-radius:4px}
+  .q pre{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin:6px 0 10px;font-size:14px;white-space:pre;overflow-x:auto}
+  .opts{display:grid;gap:6px}
+  .opt{text-align:left;padding:8px 12px;font-size:14px;font-family:inherit}
+  .opt.sel{border-color:var(--amber);background:#1f1a0c}
+  .opt.ok{border-color:var(--green);color:var(--green);background:#0d2216}
+  .opt.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .opt:disabled{cursor:default;opacity:.9}
+  .fb{margin-top:8px;font-size:13px;color:var(--dim);border-left:3px solid var(--line);padding-left:10px}
+  .fb.ok{border-left-color:var(--green)}.fb.bad{border-left-color:var(--red)}
+  .fb .anim{color:var(--teal);font-family:var(--mono);font-size:12px;display:block;margin-top:3px}
+  .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  .code{font-family:var(--mono);font-size:20px;color:var(--amber);letter-spacing:1px}
+  .score{font-family:var(--mono);color:var(--green);font-size:16px}
+  .hint{color:var(--dim);font-size:13px}
+  details{color:var(--dim);font-size:13px}
+  details summary{cursor:pointer;color:var(--dim)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  /* dialog */
+  dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:0;max-width:820px;width:92vw;max-height:88vh}
+  dialog::backdrop{background:#000a}
+  .dg{padding:18px 20px}
+  .dg h3{color:var(--amber);margin:0 0 4px;font-size:20px}
+  .dg .meta{color:var(--dim);font-size:13px;margin-bottom:12px;font-family:var(--mono)}
+  .dg .sec{margin:14px 0 6px;color:var(--teal);font-weight:700;font-size:14px}
+  .dg table{width:100%;border-collapse:collapse;font-size:13px}
+  .dg th{text-align:left;color:var(--dim);font-weight:600;padding:5px 8px;border-bottom:1px solid var(--line);font-size:12px}
+  .dg td{padding:5px 8px;border-bottom:1px solid #16203a;vertical-align:top}
+  .dg td.r{font-family:var(--mono)}
+  .dg .ok{color:var(--green)}.dg .bad{color:var(--red)}.dg .none{color:var(--dim)}
+  .dg .sum{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0;font-family:var(--mono)}
+  .dgbar{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:10px 20px;display:flex;gap:8px;justify-content:flex-end;align-items:center}
+  .toast{color:var(--green);font-size:13px;margin-right:auto}
+  .body{overflow:auto;max-height:calc(88vh - 60px)}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>C 언어 Day 1 개념 워크시트</h1>
+  <p class="sub">C 기초와 컴파일 과정 · 8교시 × 10문항. 🎬 표시는 index.html 의 애니메이션 번호입니다. 답을 고른 뒤 아래 <b style="color:var(--teal)">채점하기</b>를 누르면 정오·해설과 결과 코드가 나타납니다. 채점 전에는 답을 바꿀 수 있고, 채점 후에는 잠깁니다. 모든 교시를 마치면 <b style="color:var(--amber)">제출</b>로 오답 정리를 열고, <b>캡처</b>로 복사해 노션에 붙여 넣으세요.</p>
+
+  <div class="panel">
+    <div class="row"><label style="color:var(--dim);font-size:13px">이름 <input type="text" id="name" placeholder="홍길동"></label><span class="hint">이름은 결과 코드 계산에만 쓰이며 저장되지 않습니다.</span></div>
+  </div>
+  <div class="panel"><h2>교시</h2><div class="tabs" id="tabs"></div></div>
+  <div class="panel" id="sheet"></div>
+  <div class="panel">
+    <div class="actions">
+      <button class="primary" id="gradeBtn">채점하기</button>
+      <span class="code" id="rcode">—</span><span class="score" id="rscore"></span><span class="hint" id="rhint"></span>
+      <button class="submit" id="submitBtn" style="margin-left:auto">제출</button>
+    </div>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <div class="body"><div class="dg" id="dgBody"></div></div>
+  <div class="dgbar"><span class="toast" id="toast"></span><button id="captureBtn" class="primary">📋 캡처 (노션용 복사)</button><button id="closeBtn">닫기</button></div>
+</dialog>
+
+<script>
+const $=s=>document.querySelector(s);
+const Q=[
+ {t:'1교시 · 개발환경과 첫 컴파일',anim:'D1-1 빌드 파이프라인',qs:[
+  {p:'<code>gcc hello.c</code> 만 실행했을 때 생성되는 실행파일 이름은?',o:['hello','hello.out','a.out','main'],a:2,w:'출력 이름을 지정하지 않으면 gcc 는 a.out 을 만듭니다. -o 로 이름을 정하세요.',an:'D1-1 · 링커 단계'},
+  {p:'실행파일 이름을 hello 로 만들려면?',o:['gcc hello.c -o hello','gcc -c hello.c hello','gcc hello.c > hello','gcc --name hello'],a:0,w:'-o 뒤가 출력 파일 이름입니다. -c 는 오브젝트까지만 만듭니다.',an:'D1-1'},
+  {p:'<code>return 7;</code> 로 main 을 끝낸 뒤 <code>./hello; echo $?</code> 의 출력은?',o:['0','7','에러','아무것도 안 나옴'],a:1,w:'main 의 반환값이 프로세스 종료 코드가 되고, $? 로 읽을 수 있습니다.',an:'1교시'},
+  {p:'<code>#include &lt;stdio.h&gt;</code> 를 빼면 <code>printf</code> 에서 무슨 일이?',a:2,o:['아무 문제 없다','실행 시 크래시','암시적 선언 경고/에러 (C99 이후 에러)','링크 에러만 난다'],w:'헤더는 함수의 원형(선언)을 알려줍니다. 없으면 컴파일러가 printf 가 무엇인지 모릅니다.',an:'D1-2 · 선언 vs 정의'},
+  {p:'<code>int main(void)</code> 의 <code>void</code> 는?',o:['반환값이 없다','인자를 받지 않는다','main 을 static 으로 만든다','생략과 완전히 같다'],a:1,w:'매개변수 자리의 void 는 인자를 받지 않는다는 뜻. 반환형은 int 입니다.',an:'1교시'},
+  {p:'<code>-Wall</code> 옵션의 역할은?',o:['최적화를 켠다','흔한 실수에 대한 경고를 켠다','모든 경고를 에러로 만든다','디버그 정보를 넣는다'],a:1,w:'-Wall 은 자주 쓰는 경고 모음입니다. 경고를 에러로 만드는 것은 -Werror, 디버그 정보는 -g.',an:'3교시 Q5'},
+  {p:'<code>printf("Hello\\n")</code> 에서 <code>\\n</code> 은?',o:['역슬래시와 n 두 글자 출력','줄바꿈 문자 하나','탭','문자열 끝'],a:1,w:'이스케이프 시퀀스는 한 문자입니다. \\n 은 줄바꿈, \\t 는 탭, \\0 은 널 문자.',an:'1교시'},
+  {p:'C 소스 파일의 관례적 확장자와 헤더 파일의 확장자는?',o:['.c / .h','.cpp / .hpp','.c / .inc','.cc / .h'],a:0,w:'.cpp .cc 는 C++ 입니다. gcc 는 확장자를 보고 언어를 판단합니다.',an:'1교시'},
+  {p:'<code>gcc -g hello.c -o hello</code> 의 -g 는 무엇을 위해 쓰는가?',o:['빠른 실행','gdb 디버깅 정보 포함','경고 끄기','정적 링크'],a:1,w:'-g 가 있어야 gdb 에서 소스 줄 번호와 변수 이름을 볼 수 있습니다. Day 4 에서 씁니다.',an:'Day 4 예고'},
+  {p:'컴파일과 실행의 차이로 옳은 것은?',o:['같은 일이다','컴파일은 번역, 실행은 번역된 기계어를 CPU 가 수행','실행이 먼저','컴파일은 인터프리터가 한다'],a:1,w:'C 는 컴파일 언어입니다. 소스가 바뀌면 다시 컴파일해야 실행 결과가 바뀝니다.',an:'D1-1'},
+ ]},
+ {t:'2교시 · 빌드 과정 해부',anim:'D1-1 빌드 파이프라인',qs:[
+  {p:'gcc 의 네 단계 순서로 맞는 것은?',o:['컴파일 → 전처리 → 어셈블 → 링크','전처리 → 컴파일 → 어셈블 → 링크','전처리 → 어셈블 → 컴파일 → 링크','링크 → 컴파일 → 어셈블 → 전처리'],a:1,w:'전처리기가 #include/#define 을 풀고, 컴파일러가 어셈블리로, 어셈블러가 기계어로, 링커가 합칩니다.',an:'D1-1 · 4단계'},
+  {p:'전처리 결과만 보려면?',o:['gcc -S','gcc -E','gcc -c','gcc -P'],a:1,w:'-E 는 전처리까지, -S 는 어셈블리까지, -c 는 오브젝트까지.',an:'D1-1 · 전처리기'},
+  {p:'<code>gcc -S hello.c</code> 가 만드는 파일은?',o:['hello.i','hello.s','hello.o','hello'],a:1,w:'.i 전처리 결과, .s 어셈블리, .o 오브젝트 파일.',an:'D1-1 · 컴파일러'},
+  {p:'hello.i 가 원본보다 수백 줄 긴 이유는?',o:['최적화 때문','stdio.h 내용이 통째로 펼쳐져서','주석이 추가돼서','에러 메시지 때문'],a:1,w:'#include 는 그 파일을 그 자리에 붙여넣는 것입니다. 헤더 안의 헤더까지 전부 들어옵니다.',an:'D1-1 · hello.i'},
+  {p:'hello.o 에서 <code>nm</code> 이 <code>U puts</code> 를 보여주는 뜻은?',o:['puts 가 정의됨','puts 가 미해결(undefined) — 링커가 채워야 함','puts 가 삭제됨','puts 가 유니코드'],a:1,w:'오브젝트 파일은 아직 다른 파일의 함수 주소를 모릅니다. U 는 링크 시 해결됩니다.',an:'D1-1 · hello.o'},
+  {p:'컴파일러가 <code>printf("Hello\\n")</code> 를 <code>puts</code> 로 바꾸는 이유는?',o:['버그','형식 지정자가 없고 줄바꿈으로 끝나서 더 단순한 함수로 최적화','puts 가 표준','printf 가 없어져서'],a:1,w:'서식이 없는 단순 출력은 puts 가 더 빠릅니다. 컴파일러 최적화의 예입니다.',an:'D1-1 · hello.s'},
+  {p:'링크 단계에서 합쳐지는 것은?',o:['헤더 파일','오브젝트 파일들과 라이브러리(libc 등)','소스 파일','전처리 결과'],a:1,w:'링커의 입력은 .o 와 .a/.so 입니다. 헤더는 이미 전처리에서 소비됐습니다.',an:'D1-1 · 링커 + libc'},
+  {p:'"undefined reference to add" 에러는 어느 단계의 에러인가?',o:['전처리','컴파일','링크','실행'],a:2,w:'선언은 있는데 정의(본문)를 어느 오브젝트에서도 못 찾을 때 링커가 냅니다.',an:'D1-1 · 링커'},
+  {p:'-O2 로 컴파일한 어셈블리가 -O0 보다 짧은 이유는?',o:['주석 제거','불필요한 프레임 설정·저장을 최적화로 없애서','문자열 압축','오류'],a:1,w:'-O0 는 디버깅하기 쉽게 그대로, -O2 는 프레임 포인터 생략·tail call 등으로 줄입니다.',an:'2교시 Q3'},
+  {p:'<code>objdump -d hello.o</code> 가 보여주는 것은?',o:['소스 코드','전처리 결과','기계어를 어셈블리로 풀어 쓴 것(디스어셈블)','링크 맵'],a:2,w:'오브젝트 안의 바이트를 사람이 읽는 어셈블리로 다시 번역합니다.',an:'D1-1 · hello.o'},
+ ]},
+ {t:'3교시 · 헤더/소스 분리와 Makefile',anim:'D1-2 헤더 가드',qs:[
+  {p:'헤더 파일에 넣기 알맞은 것은?',o:['함수 본문','함수 선언(원형), 타입 정의, 매크로','main 함수','전역 변수 정의'],a:1,w:'헤더는 "무엇이 있는지" 를 알리는 곳. 본문은 .c 에 둡니다.',an:'D1-2'},
+  {p:'같은 헤더가 두 번 include 될 때 에러가 나는 경우는?',o:['함수 선언 중복','구조체/typedef 정의 중복','매크로 중복','아무 때도 안 난다'],a:1,w:'선언은 반복 가능, 타입 정의는 한 번만 허용됩니다. redefinition 에러.',an:'D1-2 · 가드 없음'},
+  {p:'헤더 가드의 올바른 형태는?',o:['#if MATH_H','#ifndef MATH_H / #define MATH_H / #endif','#include once','#guard MATH_H'],a:1,w:'매크로가 아직 없으면 정의하고 본문 포함, 이미 있으면 통째로 건너뜁니다.',an:'D1-2 · 가드 있음'},
+  {p:'<code>#include "a.h"</code> 와 <code>#include &lt;a.h&gt;</code> 의 차이는?',o:['없음','따옴표는 현재 디렉터리 먼저, 꺾쇠는 시스템 경로만','꺾쇠가 빠르다','따옴표는 C++ 용'],a:1,w:'내가 만든 헤더는 따옴표, 표준/시스템 헤더는 꺾쇠.',an:'3교시'},
+  {p:'Makefile 규칙의 명령 줄 앞에 반드시 와야 하는 것은?',o:['공백 4칸','탭 문자','세미콜론','$'],a:1,w:'탭이 아니면 "missing separator" 에러. 에디터 설정을 확인하세요.',an:'3교시 Q4'},
+  {p:'<code>app: main.o util.o</code> 에서 콜론 뒤의 의미는?',o:['app 이 만드는 파일','app 을 만드는 데 필요한 의존 파일','명령','변수'],a:1,w:'타깃: 의존성. 의존 파일이 타깃보다 새로우면 명령을 다시 실행합니다.',an:'3교시 Q4'},
+  {p:'수정한 파일이 없을 때 <code>make</code> 를 다시 치면?',o:['전부 재컴파일','"up to date" 하고 아무것도 안 함','에러','clean 실행'],a:1,w:'make 는 타임스탬프를 비교해 필요한 것만 다시 만듭니다.',an:'3교시 Q4 ①'},
+  {p:'main.o 와 util.o 가 모두 util.h 에 의존할 때 util.h 만 고치면?',o:['main.o 만 재컴파일','util.o 만','둘 다 재컴파일','아무것도'],a:2,w:'의존성에 헤더를 적어 두었기 때문에 둘 다 다시 만듭니다. 안 적으면 오래된 .o 가 남아 버그가 됩니다.',an:'3교시 Q4 ②'},
+  {p:'<code>$(CC) $(CFLAGS) -c main.c</code> 에서 $(CC) 는?',o:['명령 실행','Makefile 변수 CC 의 값(gcc) 치환','쉘 변수','주석'],a:1,w:'Makefile 변수는 $(이름) 으로 씁니다.',an:'3교시 Q4'},
+  {p:'<code>extern int count;</code> 의 뜻은?',o:['count 를 여기서 정의','count 가 다른 곳에 정의돼 있다고 선언만','count 를 상수로','count 를 static 으로'],a:1,w:'extern 은 정의 없이 존재만 알립니다. 정의는 정확히 한 .c 파일에 있어야 합니다.',an:'7교시'},
+ ]},
+ {t:'4교시 · 자료형과 메모리 표현',anim:'D1-3 메모리 바이트 뷰어 / D1-4 2의 보수 다이얼',qs:[
+  {p:'x86-64 Linux 에서 <code>sizeof(int)</code>, <code>sizeof(long)</code> 은?',o:['4, 4','4, 8','8, 8','2, 4'],a:1,w:'int 는 4, long 은 8 (Windows 는 long 도 4). 그래서 고정폭 타입이 필요합니다.',an:'4교시 Q6'},
+  {p:'임베디드에서 <code>uint8_t</code>, <code>int32_t</code> 를 쓰는 이유는?',o:['더 빠르다','플랫폼과 무관하게 크기가 고정','이름이 짧다','부동소수점 지원'],a:1,w:'레지스터·프로토콜은 비트 폭이 정해져 있어 크기가 확실한 타입이 필요합니다.',an:'D1-3 · 자료형 선택'},
+  {p:'<code>uint8_t a = 250; a += 10;</code> 후 a 는?',o:['260','4','255','에러'],a:1,w:'8비트는 0~255. 260 − 256 = 4 로 감깁니다(wrap-around).',an:'D1-3 · 300 → uint8_t'},
+  {p:'<code>int8_t b = 127; b++;</code> 후 b 는 (대부분의 환경에서)?',o:['128','-128','0','127'],a:1,w:'01111111 + 1 = 10000000 = 부호 비트가 켜져 −128. 엄밀히는 signed 오버플로는 정의되지 않은 동작.',an:'D1-4 · 127 → 128'},
+  {p:'8비트 2의 보수에서 <code>11111111</code> 은?',o:['255','-1','-127','127'],a:1,w:'unsigned 로는 255, signed 로는 255 − 256 = −1. 같은 비트, 다른 해석.',an:'D1-4 · 슬라이더 255'},
+  {p:'<code>int x = 300; unsigned char c = x;</code> 에서 c 는?',o:['300','44','255','0'],a:1,w:'300 = 0x12C. 하위 1바이트 0x2C = 44 만 남습니다.',an:'D1-3'},
+  {p:'리틀 엔디안이란?',o:['큰 수를 먼저 저장','가장 낮은 주소에 가장 낮은 바이트(LSB) 저장','비트를 거꾸로','음수 표현법'],a:1,w:'x86·ARM 기본. 0x11223344 를 덤프하면 44 33 22 11 로 보입니다.',an:'D1-3 · 엔디안 토글'},
+  {p:'<code>int v = 0x11223344;</code> 를 바이트 단위로 찍으면 (리틀 엔디안)?',o:['11 22 33 44','44 33 22 11','22 11 44 33','33 44 11 22'],a:1,w:'낮은 주소부터 LSB. 네트워크 바이트 순서(빅 엔디안)와 반대입니다.',an:'4교시 Q8'},
+  {p:'signed char 의 표현 범위는?',o:['0~255','-128~127','-127~127','-256~255'],a:1,w:'8비트 2의 보수: 음수 128개, 0, 양수 127개.',an:'D1-4'},
+  {p:'<code>sizeof(int *)</code> 가 8인 이유는?',o:['int 가 8바이트','64비트 주소를 담아야 해서','포인터는 항상 8','컴파일러 버그'],a:1,w:'포인터의 크기는 가리키는 타입이 아니라 주소 폭에 따릅니다. 32비트 MCU 에서는 4.',an:'Day 2 예고'},
+ ]},
+ {t:'5교시 · 형변환·오버플로·실수',anim:'D1-5 정수 승격 함정',qs:[
+  {p:'<code>-1 &lt; 1u</code> 의 값은?',o:['1 (참)','0 (거짓)','컴파일 에러','정의되지 않음'],a:1,w:'int 와 unsigned int 비교에서 int 가 unsigned 로 변환되어 4294967295 가 됩니다.',an:'D1-5 · -1 < 1u'},
+  {p:'위 비교에서 -1 이 변환된 값은?',o:['1','0','4294967295','2147483647'],a:2,w:'비트 0xFFFFFFFF 를 unsigned 로 읽은 값입니다.',an:'D1-5 · 4294967295'},
+  {p:'<code>-1 &lt; sizeof(int)</code> 가 거짓인 이유는?',o:['sizeof 가 0','sizeof 결과가 size_t(unsigned) 라 -1 이 거대한 양수로 변환','int 가 8','컴파일러 버그'],a:1,w:'size_t 는 unsigned long. 이 함정은 -Wsign-compare 경고로 잡힙니다.',an:'D1-5 · sizeof'},
+  {p:'<code>0.1 + 0.2 == 0.3</code> 이 거짓인 이유는?',o:['덧셈 버그','이진 부동소수점이 0.1 을 정확히 표현 못 함','== 가 실수에 안 됨','0.3 이 상수가 아님'],a:1,w:'실수 비교는 fabs(a−b) < EPS 처럼 오차 범위로 합니다.',an:'5교시 Q9'},
+  {p:'<code>7 / 2</code> 의 값은?',o:['3.5','3','4','3.0'],a:1,w:'정수끼리 나누면 정수 나눗셈(소수점 버림). 7.0 / 2 로 해야 3.5.',an:'5교시 Q9'},
+  {p:'<code>int c = 26; double f = c * 9 / 5 + 32;</code> 의 f 는?',o:['78.8','78.0','79.0','78.4'],a:1,w:'c*9=234, 234/5 는 정수 나눗셈으로 46, +32 = 78. 왼쪽부터 정수로 계산됩니다.',an:'5교시 Q10'},
+  {p:'위 코드를 고치는 가장 간단한 방법은?',o:['double 을 float 로','c * 9.0 / 5 + 32','(double)(c*9/5)+32','c / 5 * 9'],a:1,w:'피연산자 하나만 실수여도 그 연산부터 실수로 승격됩니다. ③은 이미 잘린 뒤 변환.',an:'5교시 Q10'},
+  {p:'<code>char c = &#39;A&#39;; c + 1</code> 의 타입은?',o:['char','int','short','unsigned char'],a:1,w:'int 보다 작은 정수형은 연산 시 int 로 정수 승격됩니다.',an:'D1-5'},
+  {p:'<code>(int)3.99</code> 의 값은?',o:['4','3','3.99','에러'],a:1,w:'실수→정수 캐스팅은 소수부를 버립니다(반올림 아님). 반올림은 round().',an:'5교시'},
+  {p:'컴파일러가 signed/unsigned 비교를 경고해 주는 옵션은?',o:['-O2','-Wsign-compare (또는 -Wextra)','-g','-std=c99'],a:1,w:'-Wall -Wextra 를 켜면 대부분 잡힙니다. 경고를 무시하지 마세요.',an:'D1-5'},
+ ]},
+ {t:'6교시 · 연산자와 제어문',anim:'D1-6 switch fall-through',qs:[
+  {p:'switch 에서 break 를 빼면?',o:['컴파일 에러','그 case 만 실행되고 끝','다음 case 코드까지 이어서 실행(fall-through)','default 로 점프'],a:2,w:'case 는 점프 목적지일 뿐 블록이 아닙니다. 공은 벽(break)을 만날 때까지 굴러갑니다.',an:'D1-6'},
+  {p:'<code>n=2</code>, case 2 에 break 없고 case 3 에 break 있을 때 출력은?',o:['two','two three','three','two three four'],a:1,w:'case 2 실행 → 이어서 case 3 실행 → break.',an:'D1-6 · n=2 실행'},
+  {p:'<code>if (x = 5)</code> 의 문제는?',o:['문법 에러','대입이라 항상 참','x 가 0이 됨','비교가 안 됨'],a:1,w:'= 는 대입, == 가 비교. -Wall 이 경고합니다. 습관: if (5 == x).',an:'6교시 Q12'},
+  {p:'a=2, b=4 일 때 <code>a &amp; b</code> 와 <code>a &amp;&amp; b</code> 는?',o:['둘 다 참','& 는 0(거짓), && 는 1(참)','둘 다 거짓','& 는 6'],a:1,w:'& 는 비트 AND (010 & 100 = 0), && 는 논리 AND (둘 다 0 이 아니므로 참).',an:'6교시 Q12'},
+  {p:'<code>1 &lt;&lt; 3 + 1</code> 의 값은?',o:['9','16','7','4'],a:1,w:'+ 가 << 보다 우선순위가 높아 1 << 4 = 16. 시프트에는 괄호를 붙이세요.',an:'6교시 Q12'},
+  {p:'<code>x % 2 == 0</code> 이 참이면?',o:['x 는 홀수','x 는 짝수','x 는 0','x 는 음수'],a:1,w:'% 는 나머지 연산. 2로 나눈 나머지가 0 이면 짝수.',an:'6교시'},
+  {p:'do-while 과 while 의 차이는?',o:['없다','do-while 은 조건 검사 전에 본문을 최소 한 번 실행','do-while 이 빠르다','while 은 break 불가'],a:1,w:'메뉴 입력처럼 "일단 한 번은 해야 하는" 반복에 do-while.',an:'6교시'},
+  {p:'중첩 for 안에서 <code>break</code> 는?',o:['모든 루프 탈출','가장 안쪽 루프 하나만 탈출','현재 반복만 건너뜀','함수 종료'],a:1,w:'break 는 가장 가까운 루프/switch 하나만 빠져나갑니다. 전체 탈출은 플래그나 return.',an:'6교시'},
+  {p:'<code>continue</code> 의 동작은?',o:['루프 종료','이번 반복의 나머지를 건너뛰고 다음 반복으로','조건 재설정','switch 종료'],a:1,w:'for 에서는 증감식으로 바로 갑니다.',an:'6교시'},
+  {p:'소수 판별에서 나눗셈 검사를 <code>i * i &lt;= n</code> 까지만 해도 되는 이유는?',o:['속도 무관','n 의 약수는 √n 을 기준으로 짝을 이루므로','C 규칙','i 가 int 라서'],a:1,w:'n = a×b 이면 둘 중 하나는 √n 이하. 그 범위에 약수가 없으면 소수.',an:'6교시 Q13'},
+ ]},
+ {t:'7교시 · 함수와 스코프',anim:'D1-7 스택 프레임',qs:[
+  {p:'<code>void inc(int x){ x++; }</code> 호출 후 원본 변수는?',o:['1 증가','변화 없음','0 이 됨','에러'],a:1,w:'C 는 값 전달(call by value). 복사본이 바뀔 뿐입니다. 원본을 바꾸려면 포인터(Day 2).',an:'7교시 Q14'},
+  {p:'함수 원형(prototype)을 미리 선언하는 이유는?',o:['속도','호출 지점보다 뒤에 정의된 함수도 컴파일러가 타입을 알 수 있게','링크 생략','스택 절약'],a:1,w:'컴파일러는 위에서 아래로 읽습니다. 원형이 없으면 인자·반환 타입을 검사할 수 없습니다.',an:'D1-2'},
+  {p:'<code>fact(3)</code> 호출 시 동시에 존재하는 fact 프레임 최대 개수는?',o:['1','3','6','9'],a:1,w:'fact(3)→fact(2)→fact(1) 세 개가 쌓였다가 위에서부터 사라집니다.',an:'D1-7 · 프레임 3개'},
+  {p:'재귀 호출에서 프레임이 사라지는 순서는?',o:['먼저 호출된 것부터','가장 나중에 호출된 것(맨 위)부터','무작위','동시에'],a:1,w:'스택은 LIFO. fact(1) 이 먼저 반환되고 값이 아래로 전달됩니다.',an:'D1-7 · pop 순서'},
+  {p:'함수 안의 <code>static int c = 0;</code> 는?',o:['호출마다 0 으로 초기화','프로그램 시작 시 한 번만 초기화, 값이 호출 사이에 유지','전역 변수와 완전히 같다','스택에 저장'],a:1,w:'데이터 영역에 살며 함수 밖에서는 보이지 않습니다. calls 카운터가 그 예.',an:'D1-7 · 데이터 영역'},
+  {p:'파일 범위의 <code>static int helper(void)</code> 에서 static 의 뜻은?',o:['값 유지','이 파일 밖에서 보이지 않게(내부 연결)','상수','인라인'],a:1,w:'같은 static 이지만 함수/전역에 붙으면 "이 파일 전용" 이라는 뜻입니다.',an:'7교시'},
+  {p:'<code>printf("%d %d", f(), f())</code> 에서 두 f() 의 호출 순서는?',o:['항상 왼쪽부터','항상 오른쪽부터','C 표준이 정하지 않음(컴파일러마다 다름)','동시에'],a:2,w:'인자 평가 순서는 미지정. gcc 는 보통 오른쪽부터 평가해 "3 2 1" 이 나옵니다.',an:'7교시 Q14'},
+  {p:'<code>fact(100000)</code> 처럼 아주 깊은 재귀의 위험은?',o:['없음','스택 오버플로(세그폴트)','컴파일 에러','너무 빠름'],a:1,w:'프레임마다 스택을 쓰므로 한계를 넘으면 죽습니다. 임베디드는 스택이 KB 단위라 더 위험.',an:'7교시 Q15'},
+  {p:'지역 변수는 어디에 저장되는가?',o:['데이터 영역','힙','스택 프레임 안','레지스터에만'],a:2,w:'함수가 호출될 때 프레임과 함께 생기고 반환되면 사라집니다.',an:'D1-7'},
+  {p:'반환값이 없는 함수의 반환형은?',o:['null','void','int 0','생략'],a:1,w:'void 함수는 return; 만 쓸 수 있습니다. main 은 int 를 반환해야 합니다.',an:'7교시'},
+ ]},
+ {t:'8교시 · 종합 (숫자 야구 설계)',anim:'D1-8 숫자 야구 흐름',qs:[
+  {p:'<code>srand(time(NULL))</code> 을 프로그램에서 호출하는 횟수는?',o:['난수마다','한 번, 시작할 때','매 턴','호출 안 해도 됨'],a:1,w:'시드는 한 번만. 매번 부르면 같은 초 안에서는 같은 난수가 나옵니다.',an:'D1-8 · gen_answer'},
+  {p:'<code>rand() % 10</code> 의 범위는?',o:['1~10','0~9','0~10','1~9'],a:1,w:'나머지는 0 부터 9. 1~9 가 필요하면 % 9 + 1.',an:'8교시'},
+  {p:'정답 세 자리를 담기에 알맞은 변수는?',o:['int a, b, c 세 개','int ans[3]','char *ans','double ans'],a:1,w:'같은 성격의 값 여러 개는 배열. 판정에서 for 로 돌릴 수 있습니다.',an:'D1-8'},
+  {p:'입력 검증 <code>is_valid()</code> 가 확인해야 할 것이 아닌 것은?',o:['세 자리인지','숫자만인지','서로 다른 숫자인지','정답과 같은지'],a:3,w:'정답 비교는 judge 의 일. 함수 하나는 한 가지 책임.',an:'D1-8 · is_valid'},
+  {p:'strike 판정 조건은?',o:['숫자만 같음','자리와 숫자 모두 같음','자리만 같음','합이 같음'],a:1,w:'ans[i] == guess[i]. ball 은 i≠j 이면서 ans[i] == guess[j].',an:'D1-8 · judge'},
+  {p:'judge() 가 결과 두 개(S, B)를 돌려주는 방법으로 C 에서 흔한 것은?',o:['return 두 번','포인터 인자로 받아 쓰기(Day 2) 또는 구조체 반환','전역 변수만','불가능'],a:1,w:'오늘은 int *s, int *b 인자를 미리 보여주거나, S*10+B 로 합쳐 반환해도 됩니다.',an:'Day 2 예고'},
+  {p:'잘못된 입력에서 프로그램이 죽지 않게 하려면?',o:['scanf 반환값 무시','scanf 반환값을 확인하고 실패 시 버퍼를 비우고 다시 묻기','exit 호출','입력 안 받기'],a:1,w:'scanf 가 1 을 반환하지 않으면 입력 실패. 남은 문자를 비워야 무한 루프를 막습니다.',an:'D1-8 · 재입력 루프'},
+  {p:'게임 루프를 끝내는 조건은?',o:['B 가 3','S 가 3','S+B 가 3','입력 10번'],a:1,w:'3 strike 면 정답. 시도 횟수를 출력하고 종료.',an:'D1-8 · print_result'},
+  {p:'파일을 main.c / game.c / game.h 로 나누는 이유는?',o:['컴파일이 빨라져서만','책임 분리와 재사용, 부분 재컴파일','C 규칙','main 이 짧아야 해서'],a:1,w:'game.c 는 다른 프로젝트에서도 쓸 수 있고, Makefile 이 바뀐 파일만 다시 만듭니다.',an:'3교시 · Makefile'},
+  {p:'제출 전 <code>-Wall -Wextra</code> 경고 0 개를 요구하는 이유는?',o:['형식','경고 대부분이 실제 버그(미초기화, 부호 비교 등)의 신호라서','속도','채점 프로그램 때문'],a:1,w:'오늘 본 함정들(=, signed/unsigned, unused) 은 전부 경고로 잡힙니다.',an:'5교시 · 6교시'},
+ ]},
+];
+
+let tab=0;const ans=Q.map(s=>s.qs.map(()=>null));const graded=Q.map(()=>false);
+function hash(s){let h=5381;for(const c of s)h=((h<<5)+h+c.charCodeAt(0))>>>0;return h.toString(16).padStart(8,'0').slice(-4);}
+function codeFor(name,t,score){return `${t}${'ABCDEFGHIJK'[10-score]||'K'}-${hash(`${name.trim()}|${t}|${score}|c-day1`)}`;}
+function scoreOf(i){return ans[i].filter((a,k)=>a===Q[i].qs[k].a).length;}
+function strip(h){const d=document.createElement('div');d.innerHTML=h;return d.textContent;}
+function renderTabs(){$('#tabs').innerHTML=Q.map((s,i)=>{const n=ans[i].filter(a=>a!==null).length;return `<button class="${i===tab?'active':''} ${graded[i]?'graded':''}" data-i="${i}">${i+1}교시<span class="s">${graded[i]?scoreOf(i)+'/10':n+'/10'}</span></button>`;}).join('');$('#tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{tab=+b.dataset.i;render();window.scrollTo({top:0});});}
+function render(){renderTabs();const s=Q[tab];const g=graded[tab];
+  $('#sheet').innerHTML=`<div class="head"><span class="t">${s.t}</span><span class="a">🎬 ${s.anim}</span></div>`+s.qs.map((q,k)=>{const a=ans[tab][k];
+    return `<div class="q ${g&&a===null?'unans':''}"><div class="n">문항 ${k+1}</div><div class="p">${q.p}</div><div class="opts">${q.o.map((o,j)=>{let cls='';if(g){if(j===q.a)cls='ok';else if(j===a)cls='bad';}else if(j===a)cls='sel';return `<button class="opt ${cls}" data-k="${k}" data-j="${j}" ${g?'disabled':''}>${'①②③④'[j]} ${o}</button>`;}).join('')}</div>${g?`<div class="fb ${a===q.a?'ok':'bad'}">${a===null?'미응답. ':(a===q.a?'정답. ':'오답. ')}${q.w}<span class="anim">확인: ${q.an}</span></div>`:''}</div>`;}).join('');
+  $('#sheet').querySelectorAll('.opt').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,j=+b.dataset.j;ans[tab][k]=(ans[tab][k]===j?null:j);render();});
+  $('#gradeBtn').disabled=g;$('#gradeBtn').textContent=g?'채점 완료':'채점하기';
+  const nm=$('#name').value;
+  if(g){const sc=scoreOf(tab);$('#rscore').textContent=`${sc}/10`;if(nm.trim()){$('#rcode').textContent=codeFor(nm,tab+1,sc);$('#rhint').textContent='결과 코드';}else{$('#rcode').textContent='—';$('#rhint').textContent='이름을 입력하면 결과 코드가 나옵니다.';}}
+  else{$('#rcode').textContent='—';$('#rscore').textContent='';const n=ans[tab].filter(a=>a!==null).length;$('#rhint').textContent=`${tab+1}교시: ${n}/10 골랐습니다. 채점하기를 누르면 잠깁니다.`;}
+}
+$('#gradeBtn').onclick=()=>{const n=ans[tab].filter(a=>a!==null).length;if(n<10&&!confirm(`아직 ${10-n}문항을 고르지 않았습니다. 그래도 채점할까요? (미응답은 오답 처리)`))return;graded[tab]=true;render();};
+$('#name').addEventListener('input',render);
+
+/* ── 제출 대화상자 ── */
+let lastHtml='',lastText='';
+function buildReport(){
+  const nm=$('#name').value.trim()||'(이름 없음)';const ds=new Date().toLocaleString('ko-KR');
+  let h=`<h3>C 언어 Day 1 개념 워크시트 — 오답 정리</h3><div class="meta">${nm} · ${ds}</div>`;
+  let t=`C 언어 Day 1 개념 워크시트 — 오답 정리\n이름: ${nm}\n일시: ${ds}\n\n`;
+  let any=false;
+  Q.forEach((s,i)=>{if(!graded[i])return;
+    const wrong=s.qs.map((q,k)=>({q,k,a:ans[i][k]})).filter(x=>x.a!==x.q.a);
+    h+=`<div class="sec">${s.t}</div>`;t+=`### ${s.t}\n`;
+    if(!wrong.length){h+=`<div class="ok" style="margin:4px 0 8px">오답 없음</div>`;t+=`오답 없음\n\n`;return;}
+    any=true;
+    h+=`<table><tr><th>#</th><th>문항</th><th>내 답</th><th>정답</th></tr>`;t+=`| # | 문항 | 내 답 | 정답 |\n|---|---|---|---|\n`;
+    wrong.forEach(({q,k,a})=>{const my=a===null?'미응답':'①②③④'[a]+' '+strip(q.o[a]);const co='①②③④'[q.a]+' '+strip(q.o[q.a]);const qt=strip(q.p).replace(/\s+/g,' ').slice(0,70);
+      h+=`<tr><td class="r">${k+1}</td><td>${qt}</td><td class="bad">${my}</td><td class="ok">${co}</td></tr>`;
+      t+=`| ${k+1} | ${qt.replace(/\|/g,'/')} | ${my.replace(/\|/g,'/')} | ${co.replace(/\|/g,'/')} |\n`;});
+    h+=`</table>`;t+=`\n`;});
+  const notGraded=Q.map((s,i)=>graded[i]?null:i+1).filter(x=>x);
+  if(notGraded.length){h+=`<div class="meta" style="margin-top:10px">미채점: ${notGraded.join(', ')}교시</div>`;t+=`미채점: ${notGraded.join(', ')}교시\n`;}
+  lastHtml=h;lastText=t;return h;
+}
+$('#submitBtn').onclick=()=>{if(!graded.some(x=>x)){alert('먼저 한 교시 이상 채점하기를 눌러 주세요.');return;}$('#dgBody').innerHTML=buildReport();$('#toast').textContent='';$('#dlg').showModal();};
+$('#closeBtn').onclick=()=>$('#dlg').close();
+function copyRich(html,text){
+  // 1) copy 이벤트에 두 형식을 직접 실어 보내기 (사용자 클릭 안에서 동기 실행 — file:// 에서도 동작)
+  let done=false;
+  const onCopy=e=>{e.clipboardData.setData('text/html',html);e.clipboardData.setData('text/plain',text);e.preventDefault();done=true;};
+  document.addEventListener('copy',onCopy);
+  try{
+    const body=$('#dgBody');const sel=window.getSelection();const range=document.createRange();range.selectNodeContents(body);sel.removeAllRanges();sel.addRange(range);
+    document.execCommand('copy');
+    sel.removeAllRanges();
+  }catch(e){}
+  document.removeEventListener('copy',onCopy);
+  return done;
+}
+$('#captureBtn').onclick=async()=>{
+  const htmlDoc=`<meta charset="utf-8">`+lastHtml.replace(/ class="[^"]*"/g,'').replace(/<table>/g,'<table border="1" style="border-collapse:collapse">');
+  if(copyRich(htmlDoc,lastText)){$('#toast').textContent='복사됨 — 노션 페이지에서 Ctrl+V 로 붙여 넣으세요.';return;}
+  // 2) 비동기 Clipboard API
+  try{
+    if(navigator.clipboard&&window.ClipboardItem){
+      await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([htmlDoc],{type:'text/html'}),'text/plain':new Blob([lastText],{type:'text/plain'})})]);
+    }else{await navigator.clipboard.writeText(lastText);}
+    $('#toast').textContent='복사됨 — 노션 페이지에서 Ctrl+V 로 붙여 넣으세요.';return;
+  }catch(e){}
+  // 3) 최종: 텍스트 영역 선택 복사
+  try{
+    const ta=document.createElement('textarea');ta.value=lastText;ta.style.position='fixed';ta.style.opacity='0';$('#dlg').appendChild(ta);ta.focus();ta.select();
+    const ok=document.execCommand('copy');ta.remove();
+    $('#toast').textContent=ok?'텍스트(마크다운 표)로 복사됨 — 노션에서 Ctrl+V.':'복사 실패 — 대화상자 내용을 드래그해 Ctrl+C 로 복사하세요.';
+  }catch(e){$('#toast').textContent='복사 실패 — 대화상자 내용을 드래그해 Ctrl+C 로 복사하세요.';}
+};
+render();
+</script>
+</body>
+</html>
