@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C Day 1 강의 자료 — C 기초와 컴파일 과정</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#EEF1F5;--panel:#fff;--ink:#1B2A41;--ink-soft:#5B6B80;--line:#C9D1DC;--blue:#2457C5;--blue-soft:#DCE6FA;--red:#D6452E;--red-soft:#FBE3DF;--green:#178A67;--green-soft:#DDF2EA;--amber:#C98A12;--amber-soft:#FBF0D3;--code:#F6F8FB;
+--mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;--sans:'IBM Plex Sans KR','Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:20px}
+body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--paper);font-size:16px;line-height:1.65;
+background-image:linear-gradient(rgba(27,42,65,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(27,42,65,.045) 1px,transparent 1px);background-size:24px 24px}
+code,pre,kbd{font-family:var(--mono)}
+.app{display:grid;grid-template-columns:270px 1fr;min-height:100vh}
+nav{background:var(--ink);color:#fff;padding:28px 18px;position:sticky;top:0;height:100vh;overflow:auto}
+nav .sup{font-size:12.5px;color:#8A9BB5;margin:0 0 4px}
+nav .ttl{font-size:20px;font-weight:600;line-height:1.25;margin:0 0 22px}
+nav ol{list-style:none;margin:0;padding:0}
+nav a{display:grid;grid-template-columns:38px 1fr;gap:8px;align-items:baseline;padding:8px 10px;border-radius:6px;color:#D9E1EC;text-decoration:none;font-size:14px;line-height:1.35}
+nav a .n{font-family:var(--mono);font-size:10.5px;color:#8A9BB5}
+nav a:hover{background:rgba(255,255,255,.07)}
+nav a.on{background:var(--blue);color:#fff} nav a.on .n{color:#C9D8F7}
+nav .tools{margin-top:22px;display:grid;gap:6px}
+nav .tools button{font:inherit;font-size:13px;padding:7px 10px;border-radius:6px;border:1px solid #3E5170;background:transparent;color:#D9E1EC;cursor:pointer;text-align:left}
+nav .tools button:hover{background:rgba(255,255,255,.07)}
+nav .legend{margin-top:22px;font-size:12px;color:#8A9BB5;line-height:1.7}
+main{padding:40px 48px 120px;max-width:1040px}
+.doc-head{margin-bottom:28px}
+.doc-head h1{font-size:34px;line-height:1.2;margin:0 0 6px}
+.doc-head p{margin:0;color:var(--ink-soft)}
+section.lesson,section.intro{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:30px 36px 34px;margin-bottom:26px;box-shadow:0 1px 0 rgba(27,42,65,.06)}
+.sec-head{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;margin:0 0 6px}
+.sec-head .period{font-family:var(--mono);font-size:12px;font-weight:600;color:#fff;background:var(--ink);padding:4px 10px;border-radius:999px}
+.sec-head h1{font-size:26px;margin:0;line-height:1.25}
+.sec-head .time{font-family:var(--mono);font-size:12px;color:var(--ink-soft)}
+h1{font-size:26px} h2{font-size:21px;margin:30px 0 10px} 
+h3{font-size:17px;margin:32px 0 8px;padding-top:18px;border-top:1px dashed var(--line)}
+h3.ex{color:var(--ink)} h3:first-of-type{border-top:0;padding-top:0}
+h4.fill{font-size:16px;margin:30px 0 6px;padding:10px 14px;background:var(--amber-soft);border-radius:6px;color:#5A3F04}
+p{margin:8px 0}
+.goal-title{margin-top:14px} .goal-title+ul{margin-top:0}
+p.anim{display:inline-block;background:var(--blue-soft);color:var(--blue);padding:6px 12px;border-radius:6px;font-size:14px;margin:4px 0 6px}
+p.predict{background:var(--paper);padding:8px 12px;border-radius:6px;font-family:var(--mono)}
+ul,ol{padding-left:24px} li{margin:3px 0}
+li input[type=checkbox]{width:16px;height:16px;accent-color:var(--green);margin-right:6px;vertical-align:-2px}
+code{background:var(--paper);padding:1px 5px;border-radius:4px;font-size:.9em}
+pre{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:14px 18px;overflow:auto;font-size:13.5px;line-height:1.55;margin:10px 0 14px;position:relative}
+pre code{background:none;padding:0;font-size:inherit}
+pre .copy{position:absolute;top:8px;right:8px;font:inherit;font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--line);background:#fff;color:var(--ink-soft);cursor:pointer;opacity:0;transition:opacity .2s}
+pre:hover .copy{opacity:1}
+pre.lang-bash{background:var(--ink);color:#D9E1EC;border-color:var(--ink)} pre.lang-bash .copy{background:#2A3C58;color:#D9E1EC;border-color:#3E5170}
+pre.lang-bash .hl .c1,pre.lang-bash .hl .c{color:#8A9BB5} pre.lang-bash .hl .go{color:#7FE0B8}
+pre.lang-plain,pre.lang-asm{background:#fff}
+table{border-collapse:collapse;width:100%;margin:12px 0 16px;font-size:14.5px}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--paper);font-weight:600}
+td code,th code{white-space:nowrap}
+blockquote{margin:12px 0;padding:10px 16px;border-left:3px solid var(--blue);background:var(--blue-soft);border-radius:0 6px 6px 0}
+details{margin:8px 0 20px;border:1px solid var(--green);border-radius:8px;background:var(--green-soft);overflow:hidden}
+details summary{cursor:pointer;padding:10px 14px;font-weight:600;color:var(--green);list-style:none;user-select:none}
+details summary::-webkit-details-marker{display:none}
+details summary::before{content:"▸ ";font-family:var(--mono)} details[open] summary::before{content:"▾ "}
+details>*:not(summary){margin-left:14px;margin-right:14px} details>*:last-child{margin-bottom:14px}
+details pre{background:#fff}
+strong{font-weight:600}
+hr{display:none}
+.warn-h{color:var(--red)}
+h3 .tag{font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:999px;margin-left:8px;vertical-align:middle}
+.trap{color:var(--red)}
+pre { line-height: 125%; }
+td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+span.linenos { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+td.linenos .special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+.hl .hll { background-color: #ffffcc }
+.hl { background: #f8f8f8; }
+.hl .c { color: #3D7B7B; font-style: italic } /* Comment */
+.hl .err { border: 1px solid #F00 } /* Error */
+.hl .k { color: #008000; font-weight: bold } /* Keyword */
+.hl .o { color: #666 } /* Operator */
+.hl .ch { color: #3D7B7B; font-style: italic } /* Comment.Hashbang */
+.hl .cm { color: #3D7B7B; font-style: italic } /* Comment.Multiline */
+.hl .cp { color: #9C6500 } /* Comment.Preproc */
+.hl .cpf { color: #3D7B7B; font-style: italic } /* Comment.PreprocFile */
+.hl .c1 { color: #3D7B7B; font-style: italic } /* Comment.Single */
+.hl .cs { color: #3D7B7B; font-style: italic } /* Comment.Special */
+.hl .gd { color: #A00000 } /* Generic.Deleted */
+.hl .ge { font-style: italic } /* Generic.Emph */
+.hl .ges { font-weight: bold; font-style: italic } /* Generic.EmphStrong */
+.hl .gr { color: #E40000 } /* Generic.Error */
+.hl .gh { color: #000080; font-weight: bold } /* Generic.Heading */
+.hl .gi { color: #008400 } /* Generic.Inserted */
+.hl .go { color: #717171 } /* Generic.Output */
+.hl .gp { color: #000080; font-weight: bold } /* Generic.Prompt */
+.hl .gs { font-weight: bold } /* Generic.Strong */
+.hl .gu { color: #800080; font-weight: bold } /* Generic.Subheading */
+.hl .gt { color: #04D } /* Generic.Traceback */
+.hl .kc { color: #008000; font-weight: bold } /* Keyword.Constant */
+.hl .kd { color: #008000; font-weight: bold } /* Keyword.Declaration */
+.hl .kn { color: #008000; font-weight: bold } /* Keyword.Namespace */
+.hl .kp { color: #008000 } /* Keyword.Pseudo */
+.hl .kr { color: #008000; font-weight: bold } /* Keyword.Reserved */
+.hl .kt { color: #B00040 } /* Keyword.Type */
+.hl .m { color: #666 } /* Literal.Number */
+.hl .s { color: #BA2121 } /* Literal.String */
+.hl .na { color: #687822 } /* Name.Attribute */
+.hl .nb { color: #008000 } /* Name.Builtin */
+.hl .nc { color: #00F; font-weight: bold } /* Name.Class */
+.hl .no { color: #800 } /* Name.Constant */
+.hl .nd { color: #A2F } /* Name.Decorator */
+.hl .ni { color: #717171; font-weight: bold } /* Name.Entity */
+.hl .ne { color: #CB3F38; font-weight: bold } /* Name.Exception */
+.hl .nf { color: #00F } /* Name.Function */
+.hl .nl { color: #767600 } /* Name.Label */
+.hl .nn { color: #00F; font-weight: bold } /* Name.Namespace */
+.hl .nt { color: #008000; font-weight: bold } /* Name.Tag */
+.hl .nv { color: #19177C } /* Name.Variable */
+.hl .ow { color: #A2F; font-weight: bold } /* Operator.Word */
+.hl .w { color: #BBB } /* Text.Whitespace */
+.hl .mb { color: #666 } /* Literal.Number.Bin */
+.hl .mf { color: #666 } /* Literal.Number.Float */
+.hl .mh { color: #666 } /* Literal.Number.Hex */
+.hl .mi { color: #666 } /* Literal.Number.Integer */
+.hl .mo { color: #666 } /* Literal.Number.Oct */
+.hl .sa { color: #BA2121 } /* Literal.String.Affix */
+.hl .sb { color: #BA2121 } /* Literal.String.Backtick */
+.hl .sc { color: #BA2121 } /* Literal.String.Char */
+.hl .dl { color: #BA2121 } /* Literal.String.Delimiter */
+.hl .sd { color: #BA2121; font-style: italic } /* Literal.String.Doc */
+.hl .s2 { color: #BA2121 } /* Literal.String.Double */
+.hl .se { color: #AA5D1F; font-weight: bold } /* Literal.String.Escape */
+.hl .sh { color: #BA2121 } /* Literal.String.Heredoc */
+.hl .si { color: #A45A77; font-weight: bold } /* Literal.String.Interpol */
+.hl .sx { color: #008000 } /* Literal.String.Other */
+.hl .sr { color: #A45A77 } /* Literal.String.Regex */
+.hl .s1 { color: #BA2121 } /* Literal.String.Single */
+.hl .ss { color: #19177C } /* Literal.String.Symbol */
+.hl .bp { color: #008000 } /* Name.Builtin.Pseudo */
+.hl .fm { color: #00F } /* Name.Function.Magic */
+.hl .vc { color: #19177C } /* Name.Variable.Class */
+.hl .vg { color: #19177C } /* Name.Variable.Global */
+.hl .vi { color: #19177C } /* Name.Variable.Instance */
+.hl .vm { color: #19177C } /* Name.Variable.Magic */
+.hl .il { color: #666 } /* Literal.Number.Integer.Long */
+.hl .k,.hl .kt,.hl .kr,.hl .cp{color:#7A3E9D;font-weight:500} .hl .kt{color:#2457C5} .hl .s,.hl .sc,.hl .se{color:#178A67} .hl .c1,.hl .cm,.hl .c{color:#8A9BB5;font-style:normal} .hl .mi,.hl .mf,.hl .mh{color:#B8641F} .hl .nf{color:#1B2A41;font-weight:600}
+.hl .err{border:0;color:inherit;background:none}
+@media (max-width:960px){.app{grid-template-columns:1fr} nav{position:static;height:auto} nav ol{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px} nav li{flex:0 0 auto} nav a{grid-template-columns:1fr;white-space:nowrap} nav .legend,nav .tools{display:none} main{padding:20px 14px 60px} section.lesson,section.intro{padding:20px 18px} .sec-head{grid-template-columns:1fr;gap:6px}}
+@media print{body{background:#fff;font-size:12.5px} .app{display:block} nav{display:none} main{max-width:none;padding:0} section.lesson,section.intro{border:0;box-shadow:none;padding:0;margin:0 0 20px;page-break-before:always} section.intro{page-break-before:auto} pre{white-space:pre-wrap;font-size:11px} pre.lang-bash{background:#fff;color:#000;border:1px solid #999} details{border-color:#999;background:#fff} details summary::before{content:"🔒 "} body.print-ans details{display:block} body.print-ans details>*{display:block} body:not(.print-ans) details>*:not(summary){display:none} pre .copy{display:none}}
+
+input.blank{font:inherit;font-family:var(--mono);font-size:.95em;border:0;border-bottom:2px solid var(--blue);background:var(--blue-soft);padding:0 6px;min-width:70px;width:var(--w,110px);color:var(--ink);border-radius:3px 3px 0 0;outline:none;vertical-align:baseline}
+input.blank:focus{background:#fff;box-shadow:0 0 0 2px rgba(36,87,197,.25)}
+input.blank.ok{border-color:var(--green);background:var(--green-soft)} input.blank.ng{border-color:var(--red);background:var(--red-soft)}
+select.blank{font:inherit;font-size:.95em;border:1px solid var(--blue);background:#fff;border-radius:4px;padding:1px 4px;color:var(--ink)}
+select.blank.ok{border-color:var(--green);background:var(--green-soft)} select.blank.ng{border-color:var(--red);background:var(--red-soft)}
+pre input.blank{width:9ch;min-width:5ch;line-height:1.2}
+li input.blank.pb{width:120px}
+.qbar{display:flex;gap:8px;align-items:center;margin:6px 0 10px}
+.qbar .btn{font:inherit;font-size:13px;padding:6px 12px;border-radius:6px;border:1px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer}
+.qbar .btn.clear{background:#fff;color:var(--ink);border-color:var(--line)}
+.qres{font-size:13.5px;font-weight:600} .qres.ok{color:var(--green)} .qres.ng{color:var(--red)}
+.score-box{margin-top:10px;font-size:12.5px;color:#D9E1EC;background:#2A3C58;border-radius:6px;padding:8px 10px}
+.score-box b{font-family:var(--mono);color:#7FE0B8}
+@media print{input.blank{background:#fff;border-bottom:1px solid var(--ink);-webkit-print-color-adjust:exact} .qbar{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+<nav>
+<p class="sup">프로그래밍 언어(C) · 1/4 · 9/7(월)</p>
+<p class="ttl">C 기초와<br>컴파일 과정</p>
+<ol id="nav"><li><a href="#intro"><span class="n">시작</span>사용법 · 준비</a></li><li><a href="#sec1"><span class="n">1교시</span>개발환경과 첫 컴파일</a></li><li><a href="#sec2"><span class="n">2교시</span>빌드 과정 해부</a></li><li><a href="#sec3"><span class="n">3교시</span>헤더/소스 분리와 Makefile</a></li><li><a href="#sec4"><span class="n">4교시</span>자료형과 메모리 표현</a></li><li><a href="#sec5"><span class="n">5교시</span>형변환·오버플로·실수 정밀도</a></li><li><a href="#sec6"><span class="n">6교시</span>연산자와 제어문</a></li><li><a href="#sec7"><span class="n">7교시</span>함수와 스코프</a></li><li><a href="#sec8"><span class="n">8교시</span>종합 실습 — 숫자 야구 · 정리</a></li></ol>
+<div class="tools">
+<button id="openAll">🔒 정답 모두 펼치기</button>
+<button id="closeAll">정답 모두 접기</button>
+<button id="printBtn">인쇄 (정답 제외)</button>
+<button id="printAnsBtn">인쇄 (정답 포함 · 강사용)</button>
+</div>
+<div class="score-box">내 답 진행: <b id="scoreDone">0</b> / <b id="scoreTot">0</b> 칸 · 맞힘 <b id="scoreOk">0</b></div>
+<p class="legend">▶ 예제 — 실행하고 출력 읽기<br>✏️ 빈칸·괄호 — 채운 뒤 정답 확인<br>⚠ 함정 — 일부러 틀려 보기<br>🎬 — index.html 애니메이션</p>
+</nav>
+<main>
+<section id="intro" class="intro">
+<div class="doc-head"><h1>C Day 1 강의 자료 — C 기초와 컴파일 과정</h1></div>
+
+<p><strong>HYUNDAI AI Insight Campus 온디바이스 AI · 프로그래밍 언어(C) 1/4 · 9/7(월)</strong></p>
+<table>
+<thead>
+<tr>
+<th>교시</th>
+<th>주제</th>
+<th>애니메이션 (index.html)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>개발환경과 첫 컴파일</td>
+<td>—</td>
+</tr>
+<tr>
+<td>2</td>
+<td>빌드 과정 해부 — 전처리·컴파일·어셈블·링크</td>
+<td>D1-1 빌드 파이프라인</td>
+</tr>
+<tr>
+<td>3</td>
+<td>헤더/소스 분리와 Makefile</td>
+<td>D1-2 헤더 가드</td>
+</tr>
+<tr>
+<td>4</td>
+<td>자료형과 메모리 표현</td>
+<td>D1-3 메모리 바이트 뷰어 · D1-4 2의 보수 다이얼</td>
+</tr>
+<tr>
+<td>5</td>
+<td>형변환·오버플로·실수 정밀도</td>
+<td>D1-5 정수 승격 함정</td>
+</tr>
+<tr>
+<td>6</td>
+<td>연산자와 제어문</td>
+<td>D1-6 switch fall-through</td>
+</tr>
+<tr>
+<td>7</td>
+<td>함수와 스코프</td>
+<td>D1-7 스택 프레임</td>
+</tr>
+<tr>
+<td>8</td>
+<td>종합 실습 — 숫자 야구 · 정리</td>
+<td>D1-8 숫자 야구 흐름</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_1">이 자료 사용법</h3>
+<ul>
+<li><strong>▶ 예제</strong>는 파일을 만들고, 적힌 명령으로 컴파일·실행한 뒤 출력을 함께 읽습니다. 주석의 <code>// →</code> 뒤가 기대 출력입니다.</li>
+<li><strong>✏️ 빈칸 채우기</strong>는 <code>____</code> 를 채워 컴파일합니다. 채우기 전에는 컴파일 에러가 나는 것이 정상입니다.</li>
+<li><strong>✏️ 괄호 넣기</strong>는 ( ) 에 들어갈 말을 먼저 생각한 뒤 정답을 펼쳐 확인합니다.</li>
+<li><strong>🔒 정답 보기</strong>는 접혀 있습니다. 강사가 신호를 준 뒤 펼치세요.</li>
+<li><strong>⚠ 함정</strong> 표시는 오늘 반드시 한 번은 직접 밟아 봐야 하는 실수입니다. 일부러 틀리게 실행해 보세요.</li>
+<li>어제까지 Python으로 다룬 센서 프레임(<code>$T=25.3,H=60,D=120*</code>)을 오늘부터 C로 다룹니다. 예제의 숫자들이 눈에 익을 것입니다.</li>
+</ul>
+<hr />
+<h2 id="_2">⚙️ 준비 — 가장 먼저 실행</h2>
+<div class="hl"><pre><span></span><code>mkdir<span class="w"> </span>-p<span class="w"> </span>~/c_day1<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>~/c_day1
+gcc<span class="w"> </span>--version<span class="w">      </span><span class="c1"># gcc (Ubuntu 13.x) ... 이 보이면 OK</span>
+make<span class="w"> </span>--version<span class="w">     </span><span class="c1"># GNU Make 4.x</span>
+</code></pre></div>
+
+<p>오늘 컴파일 명령은 거의 항상 이 형태입니다. 옵션의 뜻은 2교시에서 하나씩 확인합니다.</p>
+<div class="hl"><pre><span></span><code>gcc<span class="w"> </span>-Wall<span class="w"> </span>-Wextra<span class="w"> </span>-o<span class="w"> </span>프로그램이름<span class="w"> </span>소스파일.c<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>./프로그램이름
+</code></pre></div>
+
+<table>
+<thead>
+<tr>
+<th>옵션</th>
+<th>뜻</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-Wall -Wextra</code></td>
+<td>흔한 실수를 경고로 알려줌. <strong>오늘 하루 종일 켜 둡니다</strong></td>
+</tr>
+<tr>
+<td><code>-o 이름</code></td>
+<td>출력 파일 이름 (없으면 <code>a.out</code>)</td>
+</tr>
+<tr>
+<td><code>-g</code></td>
+<td>gdb 디버깅 정보 (Day 4)</td>
+</tr>
+<tr>
+<td><code>-O0</code> / <code>-O2</code></td>
+<td>최적화 끔 / 켬 (2교시에서 비교)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+
+</section>
+<section id="sec1" class="lesson"><header class="sec-head"><span class="period">1교시</span><h1>개발환경과 첫 컴파일</h1><span class="time">09:00–09:50</span></header>
+<p class="goal-title"><strong>학습 목표</strong></p>
+<ul><li>hello.c 를 컴파일하고 실행한다</li><li>컴파일과 실행이 다른 일임을 설명한다</li><li><code>main</code> 의 반환값이 어디로 가는지 확인한다</li></ul>
+<h3 id="1-1-helloc">▶ 예제 1-1 · hello.c</h3>
+<p><code>hello.c</code></p>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Hello, C!</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="hl"><pre><span></span><code>gcc<span class="w"> </span>hello.c<span class="w">            </span><span class="c1"># 출력 이름을 안 주면 a.out</span>
+ls<span class="w">                     </span><span class="c1"># a.out  hello.c</span>
+./a.out<span class="w">                </span><span class="c1"># → Hello, C!</span>
+gcc<span class="w"> </span>hello.c<span class="w"> </span>-o<span class="w"> </span>hello<span class="w">   </span><span class="c1"># 이름 지정</span>
+./hello<span class="w">                </span><span class="c1"># → Hello, C!</span>
+</code></pre></div>
+
+<p>Python과 다른 점: 소스를 고치면 <strong>다시 컴파일해야</strong> 실행 결과가 바뀝니다. 한 번 해 보세요 — 문자열을 바꾸고 <code>./hello</code> 만 다시 실행하면 옛날 결과가 나옵니다.</p>
+<h3 id="1-2-main">▶ 예제 1-2 · main 의 반환값은 어디로 가는가</h3>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;센서 초기화 실패</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">7</span><span class="p">;</span><span class="w">                  </span><span class="c1">// 0 이 아니면 &quot;비정상 종료&quot; 라는 약속</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="hl"><pre><span></span><code>gcc<span class="w"> </span>-Wall<span class="w"> </span>-Wextra<span class="w"> </span>exitcode.c<span class="w"> </span>-o<span class="w"> </span>exitcode
+./exitcode<span class="p">;</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;종료 코드: </span><span class="nv">$?</span><span class="s2">&quot;</span><span class="w">     </span><span class="c1"># → 종료 코드: 7</span>
+</code></pre></div>
+
+<p><code>$?</code> 는 직전 프로그램의 종료 코드입니다. 셸 스크립트·Makefile·systemd 가 이 값으로 성공/실패를 판단합니다. Jetson 에서 서비스가 죽었는지 확인할 때 다시 만납니다.</p>
+<h3 id="1-3">▶ 예제 1-3 · ⚠ 함정 — 헤더를 빼면</h3>
+<div class="hl"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Hello</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span><span class="w">     </span><span class="c1">// stdio.h 없음</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="hl"><pre><span></span><code>gcc<span class="w"> </span>-Wall<span class="w"> </span>-Wextra<span class="w"> </span>nohdr.c<span class="w"> </span>-o<span class="w"> </span>nohdr
+<span class="c1"># → error: implicit declaration of function &#39;printf&#39;</span>
+</code></pre></div>
+
+<p>헤더는 "이런 함수가 있다" 는 <strong>선언</strong>을 담습니다. 컴파일러는 선언 없이는 printf 의 인자·반환 타입을 검사할 수 없습니다. 3교시에서 선언과 정의를 정확히 나눕니다.</p>
+<h4 id="1-1" class="fill">✏️ 빈칸 채우기 1-1</h4>
+<p><code>____</code> 를 채워 컴파일하세요.</p>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;<input class="blank" data-q="b1-1" data-i="0" spellcheck="false" autocomplete="off">&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><input class="blank" data-q="b1-1" data-i="1" spellcheck="false" autocomplete="off"><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;ESP32-01 ready</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><input class="blank" data-q="b1-1" data-i="2" spellcheck="false" autocomplete="off"><span class="p">;</span><span class="w">          </span><span class="c1">// 정상 종료</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="qbar"><button class="btn check" data-q="b1-1">확인</button><button class="btn clear" data-q="b1-1">지우기</button><span class="qres" id="res-b1-1"></span></div><details><summary class="lock">🔒 정답 보기 1-1</summary>
+
+
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;ESP32-01 ready</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+</details>
+
+<h4 id="1-2" class="fill">✏️ 괄호 넣기 1-2</h4>
+<ol>
+<li>출력 이름을 지정하지 않은 <code>gcc hello.c</code> 는 <input class="blank pb" data-q="p1-2" data-i="0" spellcheck="false" autocomplete="off"> 파일을 만든다.</li>
+<li>소스를 고친 뒤 결과를 바꾸려면 반드시 다시 <input class="blank pb" data-q="p1-2" data-i="1" spellcheck="false" autocomplete="off">해야 한다.</li>
+<li><code>main</code> 의 반환값은 셸에서 <input class="blank pb" data-q="p1-2" data-i="2" spellcheck="false" autocomplete="off"> 로 읽을 수 있고, <input class="blank pb" data-q="p1-2" data-i="3" spellcheck="false" autocomplete="off"> 이 정상 종료를 뜻한다.</li>
+<li><code>printf</code> 를 쓰려면 <input class="blank pb" data-q="p1-2" data-i="4" spellcheck="false" autocomplete="off"> 헤더를 include 해야 한다.</li>
+</ol>
+<div class="qbar"><button class="btn check" data-q="p1-2">확인</button><button class="btn clear" data-q="p1-2">지우기</button><span class="qres" id="res-p1-2"></span></div><details><summary class="lock">🔒 정답 보기 1-2</summary>
+
+1. a.out
+2. 컴파일
+3. `$?` / 0
+4. stdio.h
+</details>
+
+<hr />
+</section><section id="sec2" class="lesson"><header class="sec-head"><span class="period">2교시</span><h1>빌드 과정 해부</h1><span class="time">10:00–10:50</span></header>
+<p class="goal-title"><strong>학습 목표</strong></p>
+<ul><li>전처리 → 컴파일 → 어셈블 → 링크 네 단계를 각각 멈춰 세워 산출물을 본다</li><li>"undefined reference" 가 어느 단계의 에러인지 안다</li></ul>
+<p class="anim">🎬 <strong>D1-1 빌드 파이프라인</strong> — 상자를 하나씩 눌러 산출물을 확인하며 진행</p>
+<h3 id="2-1">▶ 예제 2-1 · 네 단계를 따로 실행</h3>
+<div class="hl"><pre><span></span><code>gcc<span class="w"> </span>-E<span class="w"> </span>hello.c<span class="w"> </span>-o<span class="w"> </span>hello.i<span class="w">     </span><span class="c1"># ① 전처리:  #include, #define 을 풀어 씀</span>
+gcc<span class="w"> </span>-S<span class="w"> </span>hello.i<span class="w"> </span>-o<span class="w"> </span>hello.s<span class="w">     </span><span class="c1"># ② 컴파일:  C → 어셈블리</span>
+gcc<span class="w"> </span>-c<span class="w"> </span>hello.s<span class="w"> </span>-o<span class="w"> </span>hello.o<span class="w">     </span><span class="c1"># ③ 어셈블:  어셈블리 → 기계어 (오브젝트)</span>
+gcc<span class="w"> </span>hello.o<span class="w"> </span>-o<span class="w"> </span>hello<span class="w">          </span><span class="c1"># ④ 링크:    오브젝트 + libc → 실행파일</span>
+ls<span class="w"> </span>hello*<span class="w">                     </span><span class="c1"># hello  hello.c  hello.i  hello.o  hello.s</span>
+</code></pre></div>
+
+<div class="hl"><pre><span></span><code>wc<span class="w"> </span>-l<span class="w"> </span>hello.c<span class="w"> </span>hello.i<span class="w">         </span><span class="c1"># → 6 hello.c / 800줄 안팎 hello.i</span>
+</code></pre></div>
+
+<p>6줄이 800줄이 된 이유: <code>#include &lt;stdio.h&gt;</code> 는 그 파일을 <strong>그 자리에 통째로 붙여넣기</strong> 하라는 뜻입니다. <code>hello.i</code> 맨 아래로 내려가 보면 우리가 쓴 main 이 그대로 있습니다.</p>
+<h3 id="2-2-printf">▶ 예제 2-2 · 어셈블리 읽기 — printf 가 사라졌다?</h3>
+<div class="hl"><pre><span></span><code>cat<span class="w"> </span>hello.s
+</code></pre></div>
+
+<div class="hl"><pre><span></span><code><span class="nl">.LC0:</span>
+<span class="w">        </span><span class="na">.string</span><span class="w"> </span><span class="s">&quot;Hello, C!&quot;</span>
+<span class="nl">main:</span>
+<span class="w">        </span><span class="nf">pushq</span><span class="w">   </span><span class="nv">%rbp</span>
+<span class="w">        </span><span class="nf">movq</span><span class="w">    </span><span class="nv">%rsp</span><span class="p">,</span><span class="w"> </span><span class="nv">%rbp</span>
+<span class="w">        </span><span class="nf">leaq</span><span class="w">    </span><span class="no">.LC0</span><span class="p">(</span><span class="nv">%rip</span><span class="p">),</span><span class="w"> </span><span class="nv">%rdi</span>
+<span class="w">        </span><span class="nf">call</span><span class="w">    </span><span class="no">puts@PLT</span><span class="w">          </span><span class="c1"># ← printf 가 아니라 puts</span>
+<span class="w">        </span><span class="nf">movl</span><span class="w">    </span><span class="no">$0</span><span class="p">,</span><span class="w"> </span><span class="nv">%eax</span>
+<span class="w">        </span><span class="nf">popq</span><span class="w">    </span><span class="nv">%rbp</span>
+<span class="w">        </span><span class="nf">ret</span>
+</code></pre></div>
+
+<p>서식(<code>%d</code> 등)이 없고 <code>\n</code> 으로 끝나는 printf 는 컴파일러가 더 단순한 <code>puts</code> 로 바꿉니다. 컴파일러가 코드를 "그대로" 번역하지 않는다는 첫 번째 증거입니다.</p>
+<h3 id="2-3-puts">▶ 예제 2-3 · 오브젝트는 아직 puts 의 주소를 모른다</h3>
+<div class="hl"><pre><span></span><code>nm<span class="w"> </span>hello.o
+<span class="c1">#                  U puts     ← U = undefined. &quot;누군가 채워 줘야 함&quot;</span>
+<span class="c1"># 0000000000000000 T main     ← T = text(코드). 여기서 정의됨</span>
+
+nm<span class="w"> </span>hello<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-E<span class="w"> </span><span class="s2">&quot;main|puts&quot;</span>
+<span class="c1"># 0000000000001139 T main</span>
+<span class="c1">#                  U puts@GLIBC_2.2.5   ← 링크 후: 실행 시 libc.so 에서 찾기로 연결됨</span>
+</code></pre></div>
+
+<p>🎬 D1-1 링커 단계에서 옆에서 합쳐지는 <code>libc</code> 상자가 이것입니다.</p>
+<h3 id="2-4">▶ 예제 2-4 · ⚠ 함정 — 링크 에러 만들어 보기</h3>
+<p><code>link_err.c</code></p>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="kt">int</span><span class="w"> </span><span class="nf">read_sensor</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span><span class="w">          </span><span class="c1">// 선언만 있고 정의(본문)가 없다</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">read_sensor</span><span class="p">());</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="hl"><pre><span></span><code>gcc<span class="w"> </span>-c<span class="w"> </span>link_err.c<span class="w">               </span><span class="c1"># ③ 어셈블까지는 성공! (선언이 있으니 컴파일러는 만족)</span>
+gcc<span class="w"> </span>link_err.o<span class="w"> </span>-o<span class="w"> </span>link_err<span class="w">      </span><span class="c1"># ④ 링크에서 실패</span>
+<span class="c1"># → undefined reference to `read_sensor&#39;</span>
+</code></pre></div>
+
+<p>"컴파일은 됐는데 undefined reference" 는 <strong>정의를 어느 .o 에서도 못 찾았다</strong> 는 링커의 말입니다. 함수 이름 오타, .c 파일 빠뜨림, 라이브러리 옵션(<code>-lm</code>) 누락이 단골 원인입니다.</p>
+<h3 id="2-5">▶ 예제 2-5 · 최적화 수준 비교</h3>
+<div class="hl"><pre><span></span><code>gcc<span class="w"> </span>-S<span class="w"> </span>-O0<span class="w"> </span>hello.c<span class="w"> </span>-o<span class="w"> </span>o0.s
+gcc<span class="w"> </span>-S<span class="w"> </span>-O2<span class="w"> </span>hello.c<span class="w"> </span>-o<span class="w"> </span>o2.s
+wc<span class="w"> </span>-l<span class="w"> </span>o0.s<span class="w"> </span>o2.s<span class="w">               </span><span class="c1"># -O2 가 더 짧다</span>
+diff<span class="w"> </span>o0.s<span class="w"> </span>o2.s<span class="w">                </span><span class="c1"># pushq %rbp / movq %rsp,%rbp 가 사라진 것을 확인</span>
+</code></pre></div>
+
+<p><code>-O0</code> 는 디버깅하기 쉽게 코드를 그대로, <code>-O2</code> 는 프레임 포인터 생략 등으로 줄입니다. 임베디드 릴리스 빌드는 <code>-O2</code> 또는 크기 우선 <code>-Os</code>.</p>
+<h4 id="2-1_1" class="fill">✏️ 빈칸 채우기 2-1</h4>
+<p>각 단계에서 멈추는 옵션을 채우세요.</p>
+<div class="hl"><pre><span></span><code>gcc<span class="w"> </span><input class="blank" data-q="b2-1" data-i="0" spellcheck="false" autocomplete="off"><span class="w"> </span>hello.c<span class="w"> </span>-o<span class="w"> </span>hello.i<span class="w">     </span><span class="c1"># 전처리까지</span>
+gcc<span class="w"> </span><input class="blank" data-q="b2-1" data-i="1" spellcheck="false" autocomplete="off"><span class="w"> </span>hello.i<span class="w"> </span>-o<span class="w"> </span>hello.s<span class="w">     </span><span class="c1"># 어셈블리까지</span>
+gcc<span class="w"> </span><input class="blank" data-q="b2-1" data-i="2" spellcheck="false" autocomplete="off"><span class="w"> </span>hello.s<span class="w"> </span>-o<span class="w"> </span>hello.o<span class="w">     </span><span class="c1"># 오브젝트까지</span>
+gcc<span class="w"> </span>hello.o<span class="w"> </span>-o<span class="w"> </span>hello<span class="w">            </span><span class="c1"># 링크</span>
+</code></pre></div>
+
+<div class="qbar"><button class="btn check" data-q="b2-1">확인</button><button class="btn clear" data-q="b2-1">지우기</button><span class="qres" id="res-b2-1"></span></div><details><summary class="lock">🔒 정답 보기 2-1</summary>
+
+
+<div class="hl"><pre><span></span><code>gcc<span class="w"> </span>-E<span class="w"> </span>hello.c<span class="w"> </span>-o<span class="w"> </span>hello.i
+gcc<span class="w"> </span>-S<span class="w"> </span>hello.i<span class="w"> </span>-o<span class="w"> </span>hello.s
+gcc<span class="w"> </span>-c<span class="w"> </span>hello.s<span class="w"> </span>-o<span class="w"> </span>hello.o
+</code></pre></div>
+
+
+</details>
+
+<h4 id="2-2" class="fill">✏️ 괄호 넣기 2-2</h4>
+<ol>
+<li><code>#include</code> 를 풀어 쓰는 단계는 <input class="blank pb" data-q="p2-2" data-i="0" spellcheck="false" autocomplete="off">이고, 그 결과 파일 확장자는 <input class="blank pb" data-q="p2-2" data-i="1" spellcheck="false" autocomplete="off">이다.</li>
+<li><code>nm hello.o</code> 의 <code>U puts</code> 는 puts 가 <input class="blank pb" data-q="p2-2" data-i="2" spellcheck="false" autocomplete="off"> 상태라는 뜻이며, <input class="blank pb" data-q="p2-2" data-i="3" spellcheck="false" autocomplete="off"> 단계에서 해결된다.</li>
+<li>"undefined reference to X" 는 X 의 <select class="blank sel" data-q="p2-2" data-i="4"><option value="">선택</option><option>선언</option><option>정의</option></select> 을(를) 못 찾았다는 뜻이다.</li>
+<li>서식 없는 <code>printf("...\n")</code> 를 컴파일러가 <input class="blank pb" data-q="p2-2" data-i="5" spellcheck="false" autocomplete="off"> 로 바꾸는 것은 최적화의 예다.</li>
+</ol>
+<div class="qbar"><button class="btn check" data-q="p2-2">확인</button><button class="btn clear" data-q="p2-2">지우기</button><span class="qres" id="res-p2-2"></span></div><details><summary class="lock">🔒 정답 보기 2-2</summary>
+
+1. 전처리 / `.i`
+2. 미해결(undefined) / 링크
+3. 정의
+4. puts
+</details>
+
+<hr />
+</section><section id="sec3" class="lesson"><header class="sec-head"><span class="period">3교시</span><h1>헤더/소스 분리와 Makefile</h1><span class="time">11:00–11:50</span></header>
+<p class="goal-title"><strong>학습 목표</strong></p>
+<ul><li>선언은 .h 에, 정의는 .c 에 나누고 헤더 가드를 붙인다</li><li>Makefile 로 다중 파일 프로젝트를 빌드하고, 바뀐 파일만 다시 컴파일되는 것을 본다</li></ul>
+<p class="anim">🎬 <strong>D1-2 헤더 가드</strong> — 토글을 끄고 재정의 에러부터 본다</p>
+<h3 id="3-1-3">▶ 예제 3-1 · 파일 3개로 나누기</h3>
+<p><code>sensor.h</code> — 선언 (무엇이 있는지)</p>
+<div class="hl"><pre><span></span><code><span class="cp">#ifndef SENSOR_H</span>
+<span class="cp">#define SENSOR_H</span>
+
+<span class="k">typedef</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">t</span><span class="p">;</span><span class="w">      </span><span class="c1">// 온도</span>
+<span class="w">    </span><span class="kt">int</span><span class="w">    </span><span class="n">h</span><span class="p">;</span><span class="w">      </span><span class="c1">// 습도</span>
+<span class="w">    </span><span class="kt">int</span><span class="w">    </span><span class="n">d</span><span class="p">;</span><span class="w">      </span><span class="c1">// 거리(mm)</span>
+<span class="p">}</span><span class="w"> </span><span class="n">Reading</span><span class="p">;</span>
+
+<span class="kt">int</span><span class="w">  </span><span class="nf">is_alert</span><span class="p">(</span><span class="n">Reading</span><span class="w"> </span><span class="n">r</span><span class="p">);</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">print_reading</span><span class="p">(</span><span class="n">Reading</span><span class="w"> </span><span class="n">r</span><span class="p">);</span>
+
+<span class="cp">#endif</span>
+</code></pre></div>
+
+<p><code>sensor.c</code> — 정의 (실제 본문)</p>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;sensor.h&quot;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">is_alert</span><span class="p">(</span><span class="n">Reading</span><span class="w"> </span><span class="n">r</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">r</span><span class="p">.</span><span class="n">t</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mf">35.0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">print_reading</span><span class="p">(</span><span class="n">Reading</span><span class="w"> </span><span class="n">r</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;T=%.1f H=%d D=%d %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">r</span><span class="p">.</span><span class="n">t</span><span class="p">,</span><span class="w"> </span><span class="n">r</span><span class="p">.</span><span class="n">h</span><span class="p">,</span><span class="w"> </span><span class="n">r</span><span class="p">.</span><span class="n">d</span><span class="p">,</span><span class="w"> </span><span class="n">is_alert</span><span class="p">(</span><span class="n">r</span><span class="p">)</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="s">&quot;ALERT&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;OK&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><code>main.c</code></p>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;sensor.h&quot;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">Reading</span><span class="w"> </span><span class="n">r1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mf">25.3</span><span class="p">,</span><span class="w"> </span><span class="mi">60</span><span class="p">,</span><span class="w"> </span><span class="mi">120</span><span class="p">};</span>
+<span class="w">    </span><span class="n">Reading</span><span class="w"> </span><span class="n">r2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mf">36.9</span><span class="p">,</span><span class="w"> </span><span class="mi">70</span><span class="p">,</span><span class="w"> </span><span class="mi">150</span><span class="p">};</span>
+<span class="w">    </span><span class="n">print_reading</span><span class="p">(</span><span class="n">r1</span><span class="p">);</span><span class="w">     </span><span class="c1">// → T=25.3 H=60 D=120 OK</span>
+<span class="w">    </span><span class="n">print_reading</span><span class="p">(</span><span class="n">r2</span><span class="p">);</span><span class="w">     </span><span class="c1">// → T=36.9 H=70 D=150 ALERT</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="hl"><pre><span></span><code>gcc<span class="w"> </span>-Wall<span class="w"> </span>-Wextra<span class="w"> </span>main.c<span class="w"> </span>sensor.c<span class="w"> </span>-o<span class="w"> </span>app<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>./app
+</code></pre></div>
+
+<p><code>"sensor.h"</code> (따옴표) 는 현재 폴더에서 먼저 찾고, <code>&lt;stdio.h&gt;</code> (꺾쇠) 는 시스템 경로만 찾습니다. 구조체 문법은 Day 3 에서 자세히 — 오늘은 "여러 값을 한 묶음으로" 정도로만 읽으세요.</p>
+<h3 id="3-2">▶ 예제 3-2 · ⚠ 함정 — 헤더 가드를 지우면</h3>
+<p><code>sensor.h</code> 의 <code>#ifndef / #define / #endif</code> 세 줄을 지우고, <code>main.c</code> 에 <code>#include "sensor.h"</code> 를 <strong>두 번</strong> 쓰세요.</p>
+<div class="hl"><pre><span></span><code>gcc<span class="w"> </span>-Wall<span class="w"> </span>-Wextra<span class="w"> </span>main.c<span class="w"> </span>sensor.c<span class="w"> </span>-o<span class="w"> </span>app
+<span class="c1"># → error: redefinition of &#39;struct &lt;anonymous&gt;&#39;</span>
+<span class="c1"># → error: conflicting types for &#39;Reading&#39;</span>
+</code></pre></div>
+
+<p>함수 <strong>선언</strong>은 몇 번 나와도 되지만, 구조체·typedef <strong>정의</strong>는 한 번만 허용됩니다. a.h 와 b.h 가 같은 공용 헤더를 include 하는 순간 실제 프로젝트에서 반드시 일어나는 일입니다. 가드를 되돌리고 다시 빌드하세요.</p>
+<h3 id="3-3-makefile">▶ 예제 3-3 · Makefile — 바뀐 것만 다시</h3>
+<p><code>Makefile</code> (명령 줄 앞은 <strong>반드시 탭</strong>)</p>
+<div class="hl"><pre><span></span><code><span class="nv">CC</span><span class="w">     </span><span class="o">=</span><span class="w"> </span>gcc
+<span class="nv">CFLAGS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>-Wall<span class="w"> </span>-Wextra<span class="w"> </span>-O2
+
+<span class="nf">app</span><span class="o">:</span><span class="w"> </span><span class="n">main</span>.<span class="n">o</span> <span class="n">sensor</span>.<span class="n">o</span>
+<span class="w">    </span><span class="k">$(</span>CC<span class="k">)</span><span class="w"> </span><span class="k">$(</span>CFLAGS<span class="k">)</span><span class="w"> </span>-o<span class="w"> </span>app<span class="w"> </span>main.o<span class="w"> </span>sensor.o
+
+<span class="nf">main.o</span><span class="o">:</span><span class="w"> </span><span class="n">main</span>.<span class="n">c</span> <span class="n">sensor</span>.<span class="n">h</span>
+<span class="w">    </span><span class="k">$(</span>CC<span class="k">)</span><span class="w"> </span><span class="k">$(</span>CFLAGS<span class="k">)</span><span class="w"> </span>-c<span class="w"> </span>main.c
+
+<span class="nf">sensor.o</span><span class="o">:</span><span class="w"> </span><span class="n">sensor</span>.<span class="n">c</span> <span class="n">sensor</span>.<span class="n">h</span>
+<span class="w">    </span><span class="k">$(</span>CC<span class="k">)</span><span class="w"> </span><span class="k">$(</span>CFLAGS<span class="k">)</span><span class="w"> </span>-c<span class="w"> </span>sensor.c
+
+<span class="nf">clean</span><span class="o">:</span>
+<span class="w">    </span>rm<span class="w"> </span>-f<span class="w"> </span>*.o<span class="w"> </span>app
+</code></pre></div>
+
+<div class="hl"><pre><span></span><code>make<span class="w">            </span><span class="c1"># 세 줄의 gcc 가 실행됨</span>
+make<span class="w">            </span><span class="c1"># → make: &#39;app&#39; is up to date.   (아무것도 안 함)</span>
+touch<span class="w"> </span>sensor.c<span class="w">  </span><span class="c1"># sensor.c 만 &quot;수정&quot;</span>
+make<span class="w">            </span><span class="c1"># sensor.o 와 app 만 다시 만들어짐</span>
+touch<span class="w"> </span>sensor.h<span class="w">  </span><span class="c1"># 헤더 수정</span>
+make<span class="w">            </span><span class="c1"># main.o, sensor.o, app 전부 — 둘 다 sensor.h 에 의존하므로</span>
+make<span class="w"> </span>clean<span class="w">      </span><span class="c1"># 산출물 삭제</span>
+</code></pre></div>
+
+<p><code>타깃: 의존파일</code> 규칙에서 의존 파일이 타깃보다 새로우면 명령을 실행합니다. <strong>헤더를 의존성에 적지 않으면</strong> 헤더를 고쳐도 오래된 .o 가 그대로 링크되어 "분명 고쳤는데 안 바뀌는" 버그가 됩니다.</p>
+<h3 id="3-4">▶ 예제 3-4 · 경고 읽는 연습</h3>
+<p><code>main.c</code> 에 <code>int unused = 1;</code> 한 줄을 넣고 <code>make</code> 하세요.</p>
+<div class="hl"><pre><span></span><code>main.c:5:9: warning: unused variable &#39;unused&#39; [-Wunused-variable]
+</code></pre></div>
+
+<p>파일:줄:열 — 경고 종류 — [옵션 이름]. 오늘 나오는 경고는 전부 실제 버그의 신호입니다. 경고 0 개가 제출 조건입니다.</p>
+<h4 id="3-1" class="fill">✏️ 빈칸 채우기 3-1</h4>
+<div class="hl"><pre><span></span><code><span class="c1">// mathutil.h</span>
+<span class="cp">#ifndef <input class="blank" data-q="b3-1" data-i="0" spellcheck="false" autocomplete="off">
+<span class="cp">#define <input class="blank" data-q="b3-1" data-i="1" spellcheck="false" autocomplete="off">
+<span class="kt">int</span><span class="w"> </span><span class="nf">add</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">);</span>
+<span class="kt">int</span><span class="w"> </span><span class="nf">mul</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">);</span>
+<span class="cp">#endif</span>
+</code></pre></div>
+
+<div class="hl"><pre><span></span><code><span class="c1">// main.c</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include <input class="blank" data-q="b3-1" data-i="2" spellcheck="false" autocomplete="off">
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">add</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">),</span><span class="w"> </span><span class="n">mul</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">));</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="p">}</span><span class="w">   </span><span class="c1">// → 5 6</span>
+</code></pre></div>
+
+<div class="hl"><pre><span></span><code><span class="nf">mathutil.o</span><span class="o">:</span><span class="w"> </span><input class="blank" data-q="b3-1" data-i="3" spellcheck="false" autocomplete="off"> <input class="blank" data-q="b3-1" data-i="4" spellcheck="false" autocomplete="off">
+<span class="w">    </span><span class="k">$(</span>CC<span class="k">)</span><span class="w"> </span><span class="k">$(</span>CFLAGS<span class="k">)</span><span class="w"> </span>-c<span class="w"> </span>mathutil.c
+</code></pre></div>
+
+<div class="qbar"><button class="btn check" data-q="b3-1">확인</button><button class="btn clear" data-q="b3-1">지우기</button><span class="qres" id="res-b3-1"></span></div><details><summary class="lock">🔒 정답 보기 3-1</summary>
+
+
+<div class="hl"><pre><span></span><code><span class="cp">#ifndef MATHUTIL_H</span>
+<span class="cp">#define MATHUTIL_H</span>
+</code></pre></div>
+
+
+
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;mathutil.h&quot;</span>
+</code></pre></div>
+
+
+
+<div class="hl"><pre><span></span><code><span class="nf">mathutil.o</span><span class="o">:</span><span class="w"> </span><span class="n">mathutil</span>.<span class="n">c</span> <span class="n">mathutil</span>.<span class="n">h</span>
+</code></pre></div>
+
+
+가드 이름은 `파일명_H` 대문자가 관례입니다.
+</details>
+
+<h4 id="3-2_1" class="fill">✏️ 괄호 넣기 3-2</h4>
+<ol>
+<li>헤더에는 <select class="blank sel" data-q="p3-2" data-i="0"><option value="">선택</option><option>선언</option><option>정의</option></select> 을, .c 파일에는 <select class="blank sel" data-q="p3-2" data-i="1"><option value="">선택</option><option>선언</option><option>정의</option></select> 를 둔다.</li>
+<li>같은 헤더가 두 번 들어와도 에러가 나지 않게 하는 것이 <input class="blank pb" data-q="p3-2" data-i="2" spellcheck="false" autocomplete="off">이다.</li>
+<li>Makefile 규칙의 명령 줄 앞에는 공백이 아니라 <input class="blank pb" data-q="p3-2" data-i="3" spellcheck="false" autocomplete="off"> 문자가 와야 한다.</li>
+<li><code>make</code> 는 의존 파일의 <input class="blank pb" data-q="p3-2" data-i="4" spellcheck="false" autocomplete="off">를 비교해 필요한 것만 다시 만든다.</li>
+</ol>
+<div class="qbar"><button class="btn check" data-q="p3-2">확인</button><button class="btn clear" data-q="p3-2">지우기</button><span class="qres" id="res-p3-2"></span></div><details><summary class="lock">🔒 정답 보기 3-2</summary>
+
+1. 선언 / 정의
+2. 헤더 가드 (`#ifndef` … `#endif`)
+3. 탭
+4. 수정 시각(타임스탬프)
+</details>
+
+<hr />
+</section><section id="sec4" class="lesson"><header class="sec-head"><span class="period">4교시</span><h1>자료형과 메모리 표현</h1><span class="time">13:00–13:50</span></header>
+<p class="goal-title"><strong>학습 목표</strong></p>
+<ul><li>자료형별 크기를 예측하고 확인한다</li><li>값이 바이트로 어떻게 놓이는지, 넘치면 어떻게 잘리는지 본다</li><li>2의 보수와 리틀 엔디안을 설명한다</li></ul>
+<p class="anim">🎬 <strong>D1-3 메모리 바이트 뷰어</strong> (300 을 uint8_t 로) · <strong>D1-4 2의 보수 다이얼</strong> (127 → 128)</p>
+<p><strong>규칙: 예측 먼저 쓰고, 그 다음 실행합니다.</strong></p>
+<h3 id="4-1-sizeof">▶ 예제 4-1 · sizeof — 예측 후 확인</h3>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdint.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;char     %zu</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">char</span><span class="p">));</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;short    %zu</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">short</span><span class="p">));</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;int      %zu</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;long     %zu</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">long</span><span class="p">));</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;float    %zu</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">float</span><span class="p">));</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;double   %zu</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">double</span><span class="p">));</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;uint8_t  %zu</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">uint8_t</span><span class="p">));</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;int32_t  %zu</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int32_t</span><span class="p">));</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;int *    %zu</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="p">));</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="hl"><pre><span></span><code>char 1 · short 2 · int 4 · long 8 · float 4 · double 8 · uint8_t 1 · int32_t 4 · int * 8   (x86-64 Linux)
+</code></pre></div>
+
+<p><code>long</code> 은 Windows 에서 4, <code>int *</code> 는 32비트 MCU(ESP32)에서 4 입니다. <strong>플랫폼마다 다르기 때문에</strong> 임베디드는 <code>stdint.h</code> 의 고정폭 타입(<code>uint8_t</code>, <code>int32_t</code> …)을 씁니다. <code>%zu</code> 는 <code>size_t</code> 출력용 서식입니다.</p>
+<h3 id="4-2">▶ 예제 4-2 · 바이트로 보기 — 리틀 엔디안</h3>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x11223344</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="o">&amp;</span><span class="n">v</span><span class="p">;</span><span class="w">    </span><span class="c1">// v 의 첫 바이트 주소 (Day 2 에서 자세히)</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%02X %02X %02X %02X</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">p</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="w"> </span><span class="n">p</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span><span class="w"> </span><span class="n">p</span><span class="p">[</span><span class="mi">3</span><span class="p">]);</span><span class="w">   </span><span class="c1">// → 44 33 22 11</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>낮은 주소에 낮은 바이트(LSB) 가 옵니다. 메모리 덤프나 시리얼로 받은 바이트가 "거꾸로" 보이는 이유이며, 네트워크 바이트 순서(빅 엔디안)와 반대라 통신 프로토콜에서 항상 확인해야 합니다. 🎬 D1-3 엔디안 토글.</p>
+<h3 id="4-3">▶ 예제 4-3 · ⚠ 함정 — 넘치면 잘린다</h3>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdint.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">250</span><span class="p">;</span>
+<span class="w">    </span><span class="n">a</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span><span class="w">                    </span><span class="c1">// 260 은 8비트에 없다</span>
+<span class="w">    </span><span class="kt">int8_t</span><span class="w"> </span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">127</span><span class="p">;</span>
+<span class="w">    </span><span class="n">b</span><span class="o">++</span><span class="p">;</span><span class="w">                        </span><span class="c1">// 01111111 + 1</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">300</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">x</span><span class="p">;</span><span class="w">        </span><span class="c1">// 0x12C 에서 하위 1바이트만</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d %d %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="n">c</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p class="predict">예측: ______ &nbsp; 실제: <code>4 -128 44</code></p>
+<ul>
+<li><code>a</code>: 260 − 256 = 4 (감김, wrap-around)</li>
+<li><code>b</code>: 최상위 비트가 1이 되어 −128. signed 오버플로는 C 표준상 <strong>정의되지 않은 동작</strong>이라 컴파일러가 뭘 해도 됩니다 — 실제 코드에서는 절대 의존하지 마세요</li>
+<li><code>c</code>: 300 = 0x12C → 하위 바이트 0x2C = 44</li>
+</ul>
+<p>🎬 D1-3 에서 300 을 넣고 자료형을 <code>uint8_t</code> 로 바꿔 상위 바이트가 떨어져 나가는 것을 보세요.</p>
+<h3 id="4-4">▶ 예제 4-4 · 같은 비트, 다른 해석</h3>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="n">u</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">200</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">signed</span><span class="w"> </span><span class="kt">char</span><span class="w">   </span><span class="n">s</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">u</span><span class="p">;</span><span class="w">        </span><span class="c1">// 같은 비트 11001000</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%u %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">u</span><span class="p">,</span><span class="w"> </span><span class="n">s</span><span class="p">);</span><span class="w">    </span><span class="c1">// → 200 -56</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">200</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">256</span><span class="p">);</span><span class="w">  </span><span class="c1">// → -56  (2의 보수: 값 − 2^8)</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>🎬 D1-4 슬라이더를 200 에 맞추면 부호 비트가 빨갛게 켜집니다.</p>
+<h4 id="4-1" class="fill">✏️ 빈칸 채우기 4-1</h4>
+<p>센서 프레임의 거리값은 0~4000mm, 온도는 −40~125℃ 입니다. 낭비 없이 담을 고정폭 타입을 고르세요.</p>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdint.h&gt;</span>
+<span class="k">typedef</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><input class="blank" data-q="b4-1" data-i="0" spellcheck="false" autocomplete="off"><span class="w">  </span><span class="n">distance_mm</span><span class="p">;</span><span class="w">   </span><span class="c1">// 0 ~ 4000</span>
+<span class="w">    </span><input class="blank" data-q="b4-1" data-i="1" spellcheck="false" autocomplete="off"><span class="w">  </span><span class="n">temp_c</span><span class="p">;</span><span class="w">        </span><span class="c1">// -40 ~ 125 (정수부만)</span>
+<span class="w">    </span><input class="blank" data-q="b4-1" data-i="2" spellcheck="false" autocomplete="off"><span class="w">  </span><span class="n">humidity</span><span class="p">;</span><span class="w">      </span><span class="c1">// 0 ~ 100</span>
+<span class="p">}</span><span class="w"> </span><span class="n">Frame</span><span class="p">;</span>
+<span class="c1">// sizeof(Frame) 을 출력해 보세요. 예상보다 크다면 5교시 뒤 Day 3 의 &quot;패딩&quot; 에서 이유를 배웁니다.</span>
+</code></pre></div>
+
+<div class="qbar"><button class="btn check" data-q="b4-1">확인</button><button class="btn clear" data-q="b4-1">지우기</button><span class="qres" id="res-b4-1"></span></div><details><summary class="lock">🔒 정답 보기 4-1</summary>
+
+
+<div class="hl"><pre><span></span><code><span class="kt">uint16_t</span><span class="w"> </span><span class="n">distance_mm</span><span class="p">;</span><span class="w">   </span><span class="c1">// 4000 &gt; 255 이므로 16비트, 음수 없음</span>
+<span class="kt">int8_t</span><span class="w">   </span><span class="n">temp_c</span><span class="p">;</span><span class="w">        </span><span class="c1">// 음수 필요, 125 ≤ 127</span>
+<span class="kt">uint8_t</span><span class="w">  </span><span class="n">humidity</span><span class="p">;</span><span class="w">      </span><span class="c1">// 0~100, 음수 없음</span>
+</code></pre></div>
+
+
+`sizeof(Frame)` 은 4 입니다 (2+1+1). 순서를 `int8_t, uint16_t, uint8_t` 로 바꾸면 6 이 됩니다 — 정렬(alignment) 때문. Day 3 예고.
+</details>
+
+<h4 id="4-2_1" class="fill">✏️ 괄호 넣기 4-2</h4>
+<ol>
+<li><code>uint8_t</code> 의 범위는 <input class="blank pb" data-q="p4-2" data-i="0" spellcheck="false" autocomplete="off"> ~ <input class="blank pb" data-q="p4-2" data-i="1" spellcheck="false" autocomplete="off">, <code>int8_t</code> 는 <input class="blank pb" data-q="p4-2" data-i="2" spellcheck="false" autocomplete="off"> ~ <input class="blank pb" data-q="p4-2" data-i="3" spellcheck="false" autocomplete="off">이다.</li>
+<li><code>0x11223344</code> 를 리틀 엔디안으로 저장하면 첫 바이트는 <input class="blank pb" data-q="p4-2" data-i="4" spellcheck="false" autocomplete="off">이다.</li>
+<li><code>uint8_t a = 255; a++;</code> 후 a 는 <input class="blank pb" data-q="p4-2" data-i="5" spellcheck="false" autocomplete="off">이다.</li>
+<li>임베디드에서 <code>int</code> 대신 <code>int32_t</code> 를 쓰는 이유는 크기가 <input class="blank pb" data-q="p4-2" data-i="6" spellcheck="false" autocomplete="off">와 무관하게 고정되기 때문이다.</li>
+</ol>
+<div class="qbar"><button class="btn check" data-q="p4-2">확인</button><button class="btn clear" data-q="p4-2">지우기</button><span class="qres" id="res-p4-2"></span></div><details><summary class="lock">🔒 정답 보기 4-2</summary>
+
+1. 0 ~ 255 / −128 ~ 127
+2. 0x44
+3. 0
+4. 플랫폼(컴파일러·CPU)
+</details>
+
+<hr />
+</section><section id="sec5" class="lesson"><header class="sec-head"><span class="period">5교시</span><h1>형변환·오버플로·실수 정밀도</h1><span class="time">14:00–14:50</span></header>
+<p class="goal-title"><strong>학습 목표</strong></p>
+<ul><li>암시적 변환(정수 승격, signed↔unsigned)이 언제 일어나는지 안다</li><li>정수 나눗셈과 실수 비교의 함정을 직접 밟는다</li></ul>
+<p class="anim">🎬 <strong>D1-5 정수 승격 함정</strong> — <code>-1 &lt; 1u</code> 재생</p>
+<h3 id="5-1-1-1">▶ 예제 5-1 · ⚠ 함정 — -1 은 1 보다 작다. 정말?</h3>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">-1</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span><span class="w">              </span><span class="c1">// → 1  (참)</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">-1</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">1u</span><span class="p">);</span><span class="w">             </span><span class="c1">// → 0  (거짓!)</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">-1</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span><span class="w">    </span><span class="c1">// → 0  (거짓!)</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%u</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="kt">unsigned</span><span class="p">)</span><span class="mi">-1</span><span class="p">);</span><span class="w">        </span><span class="c1">// → 4294967295</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="hl"><pre><span></span><code>gcc<span class="w"> </span>-Wall<span class="w"> </span>-Wextra<span class="w"> </span>promo.c<span class="w"> </span>-o<span class="w"> </span>promo
+<span class="c1"># warning: comparison of integer expressions of different signedness [-Wsign-compare]</span>
+</code></pre></div>
+
+<p>int 와 unsigned int 를 비교하면 <strong>int 쪽이 unsigned 로 변환</strong>됩니다. −1 의 비트 <code>0xFFFFFFFF</code> 는 unsigned 로 4294967295. <code>sizeof</code> 의 결과 타입이 <code>size_t</code>(unsigned) 라서 배열 길이와 음수 인덱스를 비교하는 코드가 이 함정에 자주 빠집니다. <strong>-Wextra 가 잡아 줍니다.</strong></p>
+<h3 id="5-2-char-int">▶ 예제 5-2 · 정수 승격 — char 도 계산하면 int</h3>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="sc">&#39;A&#39;</span><span class="p">;</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%zu %zu</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">c</span><span class="p">),</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">c</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">));</span><span class="w">    </span><span class="c1">// → 1 4</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%c %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span><span class="w">                  </span><span class="c1">// → B 66</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>int 보다 작은 타입은 연산에 들어가는 순간 int 로 승격됩니다. 4교시의 <code>uint8_t a += 10</code> 도 사실 int 로 계산한 뒤 다시 8비트로 잘라 넣는 것입니다.</p>
+<h3 id="5-3">▶ 예제 5-3 · ⚠ 함정 — 정수 나눗셈</h3>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w">   </span><span class="mi">7</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span><span class="w">        </span><span class="c1">// → 3     (정수 나눗셈, 버림)</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%.1f</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">7</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">2.0</span><span class="p">);</span><span class="w">      </span><span class="c1">// → 3.5   (한쪽만 실수여도 실수 연산)</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w">   </span><span class="mi">7</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span><span class="w">        </span><span class="c1">// → 1     (나머지)</span>
+
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">26</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">f1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">9</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">32</span><span class="p">;</span><span class="w">     </span><span class="c1">// 왼쪽부터: 234 / 5 = 46 (이미 잘림)</span>
+<span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">f2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">9.0</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">32</span><span class="p">;</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%.1f %.1f</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">f1</span><span class="p">,</span><span class="w"> </span><span class="n">f2</span><span class="p">);</span><span class="w">  </span><span class="c1">// → 78.0 78.8</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><code>c = 25</code> 로 바꾸면 둘 다 77.0 으로 <strong>우연히</strong> 맞습니다. 테스트 값 하나로 안심하면 안 되는 이유.</p>
+<h3 id="5-4">▶ 예제 5-4 · 실수 비교</h3>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;math.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mf">0.2</span><span class="p">;</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mf">0.3</span><span class="p">);</span><span class="w">                  </span><span class="c1">// → 0</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%.20f</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">a</span><span class="p">);</span><span class="w">                      </span><span class="c1">// → 0.30000000000000004441</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">fabs</span><span class="p">(</span><span class="n">a</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mf">0.3</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mf">1e-9</span><span class="p">);</span><span class="w">      </span><span class="c1">// → 1  (오차 범위 비교)</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="mf">3.99</span><span class="p">);</span><span class="w">                 </span><span class="c1">// → 3  (캐스팅은 버림, 반올림 아님)</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="hl"><pre><span></span><code>gcc<span class="w"> </span>-Wall<span class="w"> </span>-Wextra<span class="w"> </span>fp.c<span class="w"> </span>-o<span class="w"> </span>fp<span class="w"> </span>-lm<span class="w">     </span><span class="c1"># math.h 를 쓰면 -lm (링커에 libm 알리기)</span>
+</code></pre></div>
+
+<p><code>-lm</code> 을 빼면 2교시에서 본 <code>undefined reference to 'fabs'</code> 가 납니다 — 링크 단계 에러입니다.</p>
+<h4 id="5-1" class="fill">✏️ 빈칸 채우기 5-1</h4>
+<p>센서 평균을 구하는 코드입니다. 정수 나눗셈 버그를 고치세요.</p>
+<div class="hl"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">sum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="kt">int</span><span class="w"> </span><span class="n">vals</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">25</span><span class="p">,</span><span class="w"> </span><span class="mi">26</span><span class="p">,</span><span class="w"> </span><span class="mi">26</span><span class="p">,</span><span class="w"> </span><span class="mi">27</span><span class="p">};</span>
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="n">sum</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">vals</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+<span class="kt">double</span><span class="w"> </span><span class="n">avg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sum</span><span class="w"> </span><input class="blank" data-q="b5-1" data-i="0" spellcheck="false" autocomplete="off"><span class="w"> </span><span class="mi">4</span><span class="p">;</span><span class="w">          </span><span class="c1">// 26.0 이어야 하는데 26.0? 26? 확인</span>
+<span class="n">printf</span><span class="p">(</span><span class="s">&quot;%.2f</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">avg</span><span class="p">);</span><span class="w">            </span><span class="c1">// → 26.00 이 나와야 정답 (sum=104 이므로 이 경우엔 우연히 맞음)</span>
+<span class="c1">// vals 를 {25, 26, 26, 26} 로 바꿔 103/4 로 다시 확인하세요 → 25.75 가 나와야 합니다</span>
+</code></pre></div>
+
+<div class="qbar"><button class="btn check" data-q="b5-1">확인</button><button class="btn clear" data-q="b5-1">지우기</button><span class="qres" id="res-b5-1"></span></div><details><summary class="lock">🔒 정답 보기 5-1</summary>
+
+
+<div class="hl"><pre><span></span><code><span class="kt">double</span><span class="w"> </span><span class="n">avg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">double</span><span class="p">)</span><span class="n">sum</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span><span class="w">     </span><span class="c1">// 또는 sum / 4.0</span>
+</code></pre></div>
+
+
+`(double)(sum / 4)` 는 틀립니다 — 이미 정수로 잘린 뒤 변환.
+</details>
+
+<h4 id="5-2" class="fill">✏️ 괄호 넣기 5-2</h4>
+<ol>
+<li>int 와 unsigned int 를 비교하면 <select class="blank sel" data-q="p5-2" data-i="0"><option value="">선택</option><option>int</option><option>unsigned</option></select> 쪽이 변환된다.</li>
+<li><code>sizeof</code> 의 결과 타입은 <input class="blank pb" data-q="p5-2" data-i="1" spellcheck="false" autocomplete="off">이며 부호가 <select class="blank sel" data-q="p5-2" data-i="2"><option value="">선택</option><option>있다</option><option>없다</option></select>.</li>
+<li><code>7 / 2</code> 는 <input class="blank pb" data-q="p5-2" data-i="3" spellcheck="false" autocomplete="off">, <code>7 / 2.0</code> 은 <input class="blank pb" data-q="p5-2" data-i="4" spellcheck="false" autocomplete="off">이다.</li>
+<li>실수는 <code>==</code> 대신 <input class="blank pb" data-q="p5-2" data-i="5" spellcheck="false" autocomplete="off"> 가 작은 값보다 작은지로 비교한다.</li>
+<li>이 교시의 함정 대부분을 경고로 잡아주는 옵션은 <input class="blank pb" data-q="p5-2" data-i="6" spellcheck="false" autocomplete="off">이다.</li>
+</ol>
+<div class="qbar"><button class="btn check" data-q="p5-2">확인</button><button class="btn clear" data-q="p5-2">지우기</button><span class="qres" id="res-p5-2"></span></div><details><summary class="lock">🔒 정답 보기 5-2</summary>
+
+1. int
+2. `size_t` / 없다
+3. 3 / 3.5
+4. 두 값의 차의 절댓값 (`fabs(a - b)`)
+5. `-Wall -Wextra` (특히 `-Wsign-compare`)
+</details>
+
+<hr />
+</section><section id="sec6" class="lesson"><header class="sec-head"><span class="period">6교시</span><h1>연산자와 제어문</h1><span class="time">15:00–15:50</span></header>
+<p class="goal-title"><strong>학습 목표</strong></p>
+<ul><li><code>=</code>/<code>==</code>, <code>&amp;</code>/<code>&amp;&amp;</code>, 시프트 우선순위 함정을 밟아 본다</li><li>switch fall-through 를 직접 재현하고 break 로 막는다</li></ul>
+<p class="anim">🎬 <strong>D1-6 switch fall-through</strong> — n=2 로 실행, 벽을 눌러 break 넣기</p>
+<h3 id="6-1">▶ 예제 6-1 · ⚠ 함정 셋</h3>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">)</span><span class="w"> </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;A</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span><span class="w">            </span><span class="c1">// → A   (대입! 항상 참)</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">5</span><span class="p">)</span><span class="w"> </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;B</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span><span class="w">           </span><span class="c1">// → B</span>
+
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">b</span><span class="p">);</span><span class="w">    </span><span class="c1">// → 0 1  (비트 AND vs 논리 AND)</span>
+
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span><span class="w">          </span><span class="c1">// → 16  (+ 가 먼저: 1 &lt;&lt; 4)</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span><span class="w">        </span><span class="c1">// → 9</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="hl"><pre><span></span><code>warning: suggest parentheses around assignment used as truth value
+warning: suggest parentheses around &#39;+&#39; inside &#39;&lt;&lt;&#39;
+</code></pre></div>
+
+<p>세 줄 모두 -Wall 이 경고합니다. 비트 연산은 Day 3 에서 레지스터 제어에 본격적으로 쓰므로 <strong>시프트에는 항상 괄호</strong> 를 습관으로.</p>
+<h3 id="6-2-switch">▶ 예제 6-2 · switch — 공은 벽을 만날 때까지 굴러간다</h3>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">level</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+<span class="w">    </span><span class="k">switch</span><span class="w"> </span><span class="p">(</span><span class="n">level</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="mi">1</span><span class="p">:</span><span class="w">  </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;FREEZE &quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="mi">2</span><span class="p">:</span><span class="w">  </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;COLD &quot;</span><span class="p">);</span><span class="w">           </span><span class="c1">// break 없음</span>
+<span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="mi">3</span><span class="p">:</span><span class="w">  </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;NORMAL &quot;</span><span class="p">);</span><span class="w"> </span><span class="k">break</span><span class="p">;</span>
+<span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="mi">4</span><span class="p">:</span><span class="w">  </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;WARM &quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="k">default</span><span class="o">:</span><span class="w"> </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;ALERT &quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span><span class="w">                            </span><span class="c1">// → COLD NORMAL</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><code>case</code> 는 블록이 아니라 <strong>점프 목적지</strong>입니다. <code>level</code> 을 1, 4, 9 로 바꿔 각각 무엇이 출력되는지 예측한 뒤 실행하세요. 🎬 D1-6.</p>
+<div class="hl"><pre><span></span><code>warning: this statement may fall through [-Wimplicit-fallthrough=]
+</code></pre></div>
+
+<p>-Wextra 는 이것도 잡습니다. 의도적인 fall-through 라면 <code>// fall through</code> 주석을 달면 경고가 사라집니다 (gcc 가 주석을 인식합니다):</p>
+<div class="hl"><pre><span></span><code><span class="k">case</span><span class="w"> </span><span class="sc">&#39;y&#39;</span><span class="p">:</span><span class="w"> </span><span class="k">case</span><span class="w"> </span><span class="sc">&#39;Y&#39;</span><span class="p">:</span><span class="w">     </span><span class="c1">// 값이 여럿, 처리는 하나 — 빈 case 는 경고 없음</span>
+<span class="w">    </span><span class="n">ok</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="k">break</span><span class="p">;</span>
+<span class="k">case</span><span class="w"> </span><span class="mi">1</span><span class="p">:</span>
+<span class="w">    </span><span class="n">prepare</span><span class="p">();</span>
+<span class="w">    </span><span class="c1">// fall through      ← 의도 표시</span>
+<span class="k">case</span><span class="w"> </span><span class="mi">2</span><span class="p">:</span>
+<span class="w">    </span><span class="n">run</span><span class="p">();</span><span class="w"> </span><span class="k">break</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="6-3-python-level-c">▶ 예제 6-3 · 온도 판정 — 어제 Python 의 level() 을 C 로</h3>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="nf">level</span><span class="p">(</span><span class="kt">double</span><span class="w"> </span><span class="n">t</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">t</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w">       </span><span class="k">return</span><span class="w"> </span><span class="s">&quot;FREEZE&quot;</span><span class="p">;</span>
+<span class="w">    </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">t</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">20</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s">&quot;COLD&quot;</span><span class="p">;</span>
+<span class="w">    </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">t</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">30</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s">&quot;NORMAL&quot;</span><span class="p">;</span>
+<span class="w">    </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">t</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">40</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s">&quot;WARM&quot;</span><span class="p">;</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="s">&quot;ALERT&quot;</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">temps</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">-5</span><span class="p">,</span><span class="w"> </span><span class="mi">25</span><span class="p">,</span><span class="w"> </span><span class="mi">45</span><span class="p">};</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span>
+<span class="w">        </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%.0f → %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">temps</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="n">level</span><span class="p">(</span><span class="n">temps</span><span class="p">[</span><span class="n">i</span><span class="p">]));</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="hl"><pre><span></span><code>-5 → FREEZE
+25 → NORMAL
+45 → ALERT
+</code></pre></div>
+
+<p><code>const char *</code> 는 "문자열 리터럴을 가리키는 포인터" — Day 2 의 주제입니다. 오늘은 "문자열을 돌려준다" 로 읽으세요.</p>
+<h3 id="6-4">▶ 예제 6-4 · 반복문 — 소수 판별</h3>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">is_prime</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="n">n</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w">      </span><span class="c1">// √n 까지만 검사</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mi">100</span><span class="p">;</span><span class="w"> </span><span class="n">n</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">is_prime</span><span class="p">(</span><span class="n">n</span><span class="p">))</span><span class="w"> </span><span class="k">continue</span><span class="p">;</span><span class="w">       </span><span class="c1">// 소수가 아니면 다음 n 으로</span>
+<span class="w">        </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%3d &quot;</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">);</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">++</span><span class="n">count</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h4 id="6-1_1" class="fill">✏️ 빈칸 채우기 6-1</h4>
+<p>메뉴 루프 — 일단 한 번은 보여줘야 하므로 do-while.</p>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">sel</span><span class="p">;</span>
+<span class="w">    </span><input class="blank" data-q="b6-1" data-i="0" spellcheck="false" autocomplete="off"><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;1) 측정  2) 저장  0) 종료 &gt; &quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">scanf</span><span class="p">(</span><span class="s">&quot;%d&quot;</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">sel</span><span class="p">)</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="k">break</span><span class="p">;</span><span class="w">     </span><span class="c1">// 입력 실패 시 탈출 (8교시 재입력 처리의 원형)</span>
+<span class="w">        </span><span class="k">switch</span><span class="w"> </span><span class="p">(</span><span class="n">sel</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">case</span><span class="w"> </span><span class="mi">1</span><span class="p">:</span><span class="w"> </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;측정</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span><span class="w"> </span><input class="blank" data-q="b6-1" data-i="1" spellcheck="false" autocomplete="off"><span class="p">;</span>
+<span class="w">            </span><span class="k">case</span><span class="w"> </span><span class="mi">2</span><span class="p">:</span><span class="w"> </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;저장</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span><span class="w"> </span><input class="blank" data-q="b6-1" data-i="2" spellcheck="false" autocomplete="off"><span class="p">;</span>
+<span class="w">            </span><span class="k">case</span><span class="w"> </span><span class="mi">0</span><span class="p">:</span><span class="w"> </span><span class="k">break</span><span class="p">;</span>
+<span class="w">            </span><input class="blank" data-q="b6-1" data-i="3" spellcheck="false" autocomplete="off"><span class="p">:</span><span class="w"> </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;잘못된 선택</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">sel</span><span class="w"> </span><input class="blank" data-q="b6-1" data-i="4" spellcheck="false" autocomplete="off"><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="qbar"><button class="btn check" data-q="b6-1">확인</button><button class="btn clear" data-q="b6-1">지우기</button><span class="qres" id="res-b6-1"></span></div><details><summary class="lock">🔒 정답 보기 6-1</summary>
+
+
+<div class="hl"><pre><span></span><code><span class="w">    </span><span class="k">do</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="p">...</span>
+<span class="w">            </span><span class="k">case</span><span class="w"> </span><span class="mi">1</span><span class="p">:</span><span class="w"> </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;측정</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span><span class="w"> </span><span class="k">break</span><span class="p">;</span>
+<span class="w">            </span><span class="k">case</span><span class="w"> </span><span class="mi">2</span><span class="p">:</span><span class="w"> </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;저장</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span><span class="w"> </span><span class="k">break</span><span class="p">;</span>
+<span class="w">            </span><span class="k">case</span><span class="w"> </span><span class="mi">0</span><span class="p">:</span><span class="w"> </span><span class="k">break</span><span class="p">;</span>
+<span class="w">            </span><span class="k">default</span><span class="o">:</span><span class="w"> </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;잘못된 선택</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="p">...</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">sel</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+</code></pre></div>
+
+
+switch 안의 `break` 는 switch 만 빠져나옵니다. 루프 종료는 while 조건이 담당합니다.
+</details>
+
+<h4 id="6-2" class="fill">✏️ 괄호 넣기 6-2</h4>
+<ol>
+<li><code>if (x = 5)</code> 는 <select class="blank sel" data-q="p6-2" data-i="0"><option value="">선택</option><option>비교</option><option>대입</option></select> 이라 항상 <input class="blank pb" data-q="p6-2" data-i="1" spellcheck="false" autocomplete="off">이다.</li>
+<li><code>a &amp; b</code> 는 <input class="blank pb" data-q="p6-2" data-i="2" spellcheck="false" autocomplete="off"> AND, <code>a &amp;&amp; b</code> 는 <input class="blank pb" data-q="p6-2" data-i="3" spellcheck="false" autocomplete="off"> AND 이다.</li>
+<li><code>1 &lt;&lt; 3 + 1</code> 이 16 인 이유는 <input class="blank pb" data-q="p6-2" data-i="4" spellcheck="false" autocomplete="off"> 가 <input class="blank pb" data-q="p6-2" data-i="5" spellcheck="false" autocomplete="off"> 보다 우선순위가 높기 때문이다.</li>
+<li>switch 에서 break 가 없으면 다음 case 로 이어지는 현상을 <input class="blank pb" data-q="p6-2" data-i="6" spellcheck="false" autocomplete="off"> 라 한다.</li>
+<li>중첩 루프 안의 break 는 <input class="blank pb" data-q="p6-2" data-i="7" spellcheck="false" autocomplete="off"> 루프 하나만 빠져나온다.</li>
+</ol>
+<div class="qbar"><button class="btn check" data-q="p6-2">확인</button><button class="btn clear" data-q="p6-2">지우기</button><span class="qres" id="res-p6-2"></span></div><details><summary class="lock">🔒 정답 보기 6-2</summary>
+
+1. 대입 / 참
+2. 비트 / 논리
+3. `+` / `<<`
+4. fall-through
+5. 가장 안쪽
+</details>
+
+<hr />
+</section><section id="sec7" class="lesson"><header class="sec-head"><span class="period">7교시</span><h1>함수와 스코프</h1><span class="time">16:00–16:50</span></header>
+<p class="goal-title"><strong>학습 목표</strong></p>
+<ul><li>값 전달(call by value) 을 실행으로 확인한다</li><li>재귀 호출에서 스택 프레임이 쌓이고 사라지는 순서를 설명한다</li><li>static 변수가 스택 밖에 산다는 것을 본다</li></ul>
+<p class="anim">🎬 <strong>D1-7 스택 프레임</strong> — fact(3) 을 한 단계씩</p>
+<h3 id="7-1">▶ 예제 7-1 · 값 전달 — 복사본이 바뀔 뿐</h3>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">inc</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">x</span><span class="o">++</span><span class="p">;</span><span class="w">                          </span><span class="c1">// 복사본 x</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;안: %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">x</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
+<span class="w">    </span><span class="n">inc</span><span class="p">(</span><span class="n">a</span><span class="p">);</span><span class="w">                       </span><span class="c1">// → 안: 6</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;밖: %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">a</span><span class="p">);</span><span class="w">        </span><span class="c1">// → 밖: 5</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>원본을 바꾸려면 주소를 넘겨야 합니다 — Day 2 포인터의 첫 번째 동기입니다.</p>
+<h3 id="7-2-static-vs">▶ 예제 7-2 · 재귀와 static — 스택 vs 데이터 영역</h3>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="k">static</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">calls</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w">             </span><span class="c1">// 데이터 영역: 프로그램 끝까지 산다</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">fact</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">calls</span><span class="o">++</span><span class="p">;</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%*sfact(%d) 진입</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="mi">3</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">);</span><span class="w">   </span><span class="c1">// 들여쓰기로 깊이 표시</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">r</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">fact</span><span class="p">(</span><span class="n">n</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%*sfact(%d) → %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="mi">3</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">r</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">r</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">r</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">fact</span><span class="p">(</span><span class="mi">3</span><span class="p">);</span><span class="w">              </span><span class="c1">// 먼저 변수에 받는다 — 이유는 예제 7-4 에서</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;결과 %d, 호출 %d번</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">r</span><span class="p">,</span><span class="w"> </span><span class="n">calls</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="hl"><pre><span></span><code>fact(3) 진입
+  fact(2) 진입
+    fact(1) 진입
+  fact(2) → 2
+fact(3) → 6
+결과 6, 호출 3번
+</code></pre></div>
+
+<p>들어갈 때는 3→2→1, 돌아올 때는 1→2→3. 가장 나중에 쌓인 프레임이 먼저 사라집니다(LIFO). <code>calls</code> 는 프레임과 무관하게 계속 남습니다. 🎬 D1-7 에서 프레임 push/pop 과 오른쪽 데이터 영역을 비교하세요.</p>
+<h3 id="7-3-static">▶ 예제 7-3 · 함수 안의 static — 호출 사이에 값 유지</h3>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">next_id</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">static</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w">            </span><span class="c1">// 첫 호출에 한 번만 초기화</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="o">++</span><span class="n">id</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">next_id</span><span class="p">());</span><span class="w">    </span><span class="c1">// → 1</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">next_id</span><span class="p">());</span><span class="w">    </span><span class="c1">// → 2</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">next_id</span><span class="p">());</span><span class="w">    </span><span class="c1">// → 3</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>같은 <code>static</code> 이지만 <strong>파일 범위 함수/전역</strong>에 붙으면 뜻이 다릅니다: "이 파일 밖에서 보이지 않음" (internal linkage). 다른 .c 와 이름이 겹쳐도 충돌하지 않게 하는 용도로 Day 3·4 에서 씁니다.</p>
+<h3 id="7-4">▶ 예제 7-4 · ⚠ 함정 — 인자 평가 순서는 정해져 있지 않다</h3>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">next_id</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">static</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="o">++</span><span class="n">id</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d %d %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">next_id</span><span class="p">(),</span><span class="w"> </span><span class="n">next_id</span><span class="p">(),</span><span class="w"> </span><span class="n">next_id</span><span class="p">());</span><span class="w">   </span><span class="c1">// → 3 2 1  (gcc)</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><code>1 2 3</code> 을 기대했겠지만 gcc 는 오른쪽 인자부터 평가합니다. C 표준은 순서를 정하지 않으므로 <strong>부수효과가 있는 호출을 한 식에 여러 번 넣지 마세요.</strong> 순서가 중요하면 변수에 먼저 받습니다.</p>
+<p>예제 7-2 의 main 을 <code>printf("결과 %d, 호출 %d번\n", fact(3), calls);</code> 로 바꿔 보세요. gcc 에서는 <code>calls</code> 가 먼저 읽혀 <strong>"호출 0번"</strong> 이 나옵니다 — 같은 함정입니다.</p>
+<h3 id="7-5">▶ 예제 7-5 · 재귀의 한계</h3>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="kt">int</span><span class="w"> </span><span class="nf">depth</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">depth</span><span class="p">(</span><span class="n">n</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span><span class="w"> </span><span class="p">}</span>
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">depth</span><span class="p">(</span><span class="mi">10000</span><span class="p">));</span><span class="w">       </span><span class="c1">// 보통 OK</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">depth</span><span class="p">(</span><span class="mi">10000000</span><span class="p">));</span><span class="w">    </span><span class="c1">// → Segmentation fault (스택 오버플로)</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>PC 스택은 8MB 정도지만 ESP32 태스크 스택은 <strong>수 KB</strong> 입니다. 임베디드에서 재귀는 깊이를 확실히 알 때만 씁니다.</p>
+<h4 id="7-1_1" class="fill">✏️ 빈칸 채우기 7-1</h4>
+<p>이동평균 필터의 뼈대 — 마지막 4개 값의 합을 유지합니다. Day 4 링 버퍼의 예고편.</p>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="kt">double</span><span class="w"> </span><span class="nf">moving_avg</span><span class="p">(</span><span class="kt">double</span><span class="w"> </span><span class="n">x</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><input class="blank" data-q="b7-1" data-i="0" spellcheck="false" autocomplete="off"><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">buf</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">0</span><span class="p">};</span><span class="w">      </span><span class="c1">// 호출 사이에 유지되어야 한다</span>
+<span class="w">    </span><input class="blank" data-q="b7-1" data-i="1" spellcheck="false" autocomplete="off"><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><input class="blank" data-q="b7-1" data-i="2" spellcheck="false" autocomplete="off"><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">sum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="n">sum</span><span class="w"> </span><span class="o">-=</span><span class="w"> </span><span class="n">buf</span><span class="p">[</span><span class="n">idx</span><span class="p">];</span><span class="w">               </span><span class="c1">// 가장 오래된 값 빼고</span>
+<span class="w">    </span><span class="n">buf</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">x</span><span class="p">;</span><span class="w">                  </span><span class="c1">// 새 값 넣고</span>
+<span class="w">    </span><span class="n">sum</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">x</span><span class="p">;</span>
+<span class="w">    </span><span class="n">idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">idx</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><input class="blank" data-q="b7-1" data-i="3" spellcheck="false" autocomplete="off"><span class="w"> </span><span class="mi">4</span><span class="p">;</span><span class="w">        </span><span class="c1">// 0,1,2,3,0,1,...</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">sum</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">in</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">25</span><span class="p">,</span><span class="w"> </span><span class="mi">25</span><span class="p">,</span><span class="w"> </span><span class="mi">25</span><span class="p">,</span><span class="w"> </span><span class="mi">25</span><span class="p">,</span><span class="w"> </span><span class="mi">37</span><span class="p">,</span><span class="w"> </span><span class="mi">25</span><span class="p">,</span><span class="w"> </span><span class="mi">25</span><span class="p">,</span><span class="w"> </span><span class="mi">25</span><span class="p">};</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">8</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%.2f &quot;</span><span class="p">,</span><span class="w"> </span><span class="n">moving_avg</span><span class="p">(</span><span class="n">in</span><span class="p">[</span><span class="n">i</span><span class="p">]));</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span><span class="w">    </span><span class="c1">// → 6.25 12.50 18.75 25.00 28.00 28.00 28.00 28.00</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="qbar"><button class="btn check" data-q="b7-1">확인</button><button class="btn clear" data-q="b7-1">지우기</button><span class="qres" id="res-b7-1"></span></div><details><summary class="lock">🔒 정답 보기 7-1</summary>
+
+
+<div class="hl"><pre><span></span><code><span class="w">    </span><span class="k">static</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">buf</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+<span class="w">    </span><span class="k">static</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="k">static</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">sum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="p">...</span>
+<span class="w">    </span><span class="n">idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">idx</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
+</code></pre></div>
+
+
+`static` 이 없으면 매 호출마다 0 으로 초기화되어 평균이 아니라 `x/4` 가 나옵니다. 튀는 값 37 이 한 번 들어와도 평균은 28 로 완만하게 반응하는 것이 필터의 목적입니다.
+</details>
+
+<h4 id="7-2" class="fill">✏️ 괄호 넣기 7-2</h4>
+<ol>
+<li>C 의 함수 인자는 <select class="blank sel" data-q="p7-2" data-i="0"><option value="">선택</option><option>값</option><option>주소</option></select> 이 전달되므로 함수 안에서 바꿔도 원본은 <input class="blank pb" data-q="p7-2" data-i="1" spellcheck="false" autocomplete="off">.</li>
+<li>지역 변수는 <input class="blank pb" data-q="p7-2" data-i="2" spellcheck="false" autocomplete="off">에, static 변수와 전역 변수는 <input class="blank pb" data-q="p7-2" data-i="3" spellcheck="false" autocomplete="off">에 저장된다.</li>
+<li><code>fact(3)</code> 에서 가장 먼저 반환되는 프레임은 <input class="blank pb" data-q="p7-2" data-i="4" spellcheck="false" autocomplete="off">이다.</li>
+<li><code>f(g(), h())</code> 에서 g 와 h 의 호출 순서는 <input class="blank pb" data-q="p7-2" data-i="5" spellcheck="false" autocomplete="off">.</li>
+<li>임베디드에서 깊은 재귀가 위험한 이유는 <input class="blank pb" data-q="p7-2" data-i="6" spellcheck="false" autocomplete="off">이 작기 때문이다.</li>
+</ol>
+<div class="qbar"><button class="btn check" data-q="p7-2">확인</button><button class="btn clear" data-q="p7-2">지우기</button><span class="qres" id="res-p7-2"></span></div><details><summary class="lock">🔒 정답 보기 7-2</summary>
+
+1. 값 / 바뀌지 않는다
+2. 스택 / 데이터 영역
+3. fact(1)
+4. 정해져 있지 않다(컴파일러마다 다름)
+5. 스택
+</details>
+
+<hr />
+</section><section id="sec8" class="lesson"><header class="sec-head"><span class="period">8교시</span><h1>종합 실습 — 숫자 야구 · 정리</h1><span class="time">17:00–17:50</span></header>
+<p class="anim">🎬 <strong>D1-8 숫자 야구 흐름</strong> — 한 턴 재생으로 함수 경계 확인</p>
+<p><strong>과제</strong> — 서로 다른 세 자리 숫자를 맞히는 게임. 파일 4개(<code>main.c</code>, <code>game.c</code>, <code>game.h</code>, <code>Makefile</code>) 로 나누고 <code>-Wall -Wextra</code> 경고 0 개.</p>
+<table>
+<thead>
+<tr>
+<th>함수</th>
+<th>역할</th>
+<th>오늘 배운 것</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gen_answer(int ans[3])</code></td>
+<td><code>srand(time(NULL))</code> 은 main 에서 한 번. 중복 없는 0~9 세 개</td>
+<td>배열, 반복문, <code>rand() % 10</code></td>
+</tr>
+<tr>
+<td><code>read_guess(int g[3])</code></td>
+<td>한 줄 입력. 성공 1, 실패 0 반환</td>
+<td><code>scanf</code> 반환값 검사, 입력 버퍼 비우기</td>
+</tr>
+<tr>
+<td><code>is_valid(const int g[3])</code></td>
+<td>서로 다른 숫자인지</td>
+<td>이중 for</td>
+</tr>
+<tr>
+<td><code>judge(const int ans[3], const int g[3], int *s, int *b)</code></td>
+<td>자리·숫자 같으면 S, 숫자만 있으면 B</td>
+<td>이중 for, 포인터 인자(Day 2 예고 — 아래 뼈대 제공)</td>
+</tr>
+<tr>
+<td><code>print_result(int s, int b, int tries)</code></td>
+<td><code>"1S 2B"</code>, 3S 면 시도 횟수 출력</td>
+<td>printf 서식</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_3">▶ 뼈대 — 여기서 시작</h3>
+<p><code>game.h</code></p>
+<div class="hl"><pre><span></span><code><span class="cp">#ifndef GAME_H</span>
+<span class="cp">#define GAME_H</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">gen_answer</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">ans</span><span class="p">[</span><span class="mi">3</span><span class="p">]);</span>
+<span class="kt">int</span><span class="w">  </span><span class="nf">read_guess</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">g</span><span class="p">[</span><span class="mi">3</span><span class="p">]);</span>
+<span class="kt">int</span><span class="w">  </span><span class="nf">is_valid</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">g</span><span class="p">[</span><span class="mi">3</span><span class="p">]);</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">judge</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">ans</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">g</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">strike</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">ball</span><span class="p">);</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">print_result</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">strike</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">ball</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">tries</span><span class="p">);</span>
+
+<span class="cp">#endif</span>
+</code></pre></div>
+
+<p><code>main.c</code></p>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;time.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;game.h&quot;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">srand</span><span class="p">((</span><span class="kt">unsigned</span><span class="p">)</span><span class="n">time</span><span class="p">(</span><span class="nb">NULL</span><span class="p">));</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">ans</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span><span class="w"> </span><span class="n">g</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span><span class="w"> </span><span class="n">tries</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="n">gen_answer</span><span class="p">(</span><span class="n">ans</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;세 자리 (예: 1 2 3) &gt; &quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">read_guess</span><span class="p">(</span><span class="n">g</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;입력 오류</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span><span class="w"> </span><span class="k">continue</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">is_valid</span><span class="p">(</span><span class="n">g</span><span class="p">))</span><span class="w">   </span><span class="p">{</span><span class="w"> </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;서로 다른 숫자 세 개</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span><span class="w"> </span><span class="k">continue</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">        </span><span class="n">tries</span><span class="o">++</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">        </span><span class="n">judge</span><span class="p">(</span><span class="n">ans</span><span class="p">,</span><span class="w"> </span><span class="n">g</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">s</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">b</span><span class="p">);</span><span class="w">           </span><span class="c1">// &amp;s : &quot;s 의 주소를 넘긴다&quot; — Day 2 에서 설명</span>
+<span class="w">        </span><span class="n">print_result</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="n">tries</span><span class="p">);</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">s</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span><span class="w"> </span><span class="k">break</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><code>game.c</code> — 빈칸을 채우세요</p>
+<div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;game.h&quot;</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">gen_answer</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">ans</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">r</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">rand</span><span class="p">()</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">dup</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">n</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">ans</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">r</span><span class="p">)</span><span class="w"> </span><span class="n">dup</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">dup</span><span class="p">)</span><span class="w"> </span><span class="n">ans</span><span class="p">[</span><span class="n">n</span><span class="o">++</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">r</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">read_guess</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">g</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">scanf</span><span class="p">(</span><span class="s">&quot;%d %d %d&quot;</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">g</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="o">&amp;</span><span class="n">g</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="w"> </span><span class="o">&amp;</span><span class="n">g</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">c</span><span class="p">;</span><span class="w"> </span><span class="k">while</span><span class="w"> </span><span class="p">((</span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">getchar</span><span class="p">())</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="sc">&#39;\n&#39;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">EOF</span><span class="p">)</span><span class="w"> </span><span class="p">{}</span><span class="w">   </span><span class="c1">// 남은 입력 버리기</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">is_valid</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">g</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// ____ : 세 값이 모두 0~9 이고 서로 다르면 1</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">judge</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">ans</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">g</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">strike</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">ball</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="o">*</span><span class="n">strike</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="o">*</span><span class="n">ball</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">++</span><span class="p">)</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">ans</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">g</span><span class="p">[</span><span class="n">j</span><span class="p">])</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">j</span><span class="p">)</span><span class="w"> </span><span class="n">____</span><span class="p">;</span><span class="w">      </span><span class="c1">// 자리까지 같음</span>
+<span class="w">                </span><span class="k">else</span><span class="w">        </span><span class="n">____</span><span class="p">;</span><span class="w">      </span><span class="c1">// 숫자만 같음</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">print_result</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">strike</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">ball</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">tries</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// ____ : &quot;1S 2B&quot; 형식, strike==3 이면 &quot;정답! N번 만에&quot; 추가</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><code>Makefile</code> — 3교시 것을 이름만 바꿔 쓰세요.</p>
+<details><summary class="lock">🔒 정답 보기 8-A (리뷰 시간에 함께 엽니다)</summary>
+
+
+<div class="hl"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="nf">is_valid</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">g</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">g</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">g</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">9</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">++</span><span class="p">)</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">g</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">g</span><span class="p">[</span><span class="n">j</span><span class="p">])</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="cm">/* judge 안 */</span>
+<span class="w">                </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">j</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="n">strike</span><span class="p">)</span><span class="o">++</span><span class="p">;</span>
+<span class="w">                </span><span class="k">else</span><span class="w">        </span><span class="p">(</span><span class="o">*</span><span class="n">ball</span><span class="p">)</span><span class="o">++</span><span class="p">;</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">print_result</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">strike</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">ball</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">tries</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%dS %dB</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">strike</span><span class="p">,</span><span class="w"> </span><span class="n">ball</span><span class="p">);</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">strike</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span><span class="w"> </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;정답! %d번 만에</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">tries</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+`(*strike)++` 의 괄호: `*strike++` 는 포인터를 먼저 옮깁니다. Day 2 첫 시간의 주제.
+</details>
+
+<p><strong>제출 체크리스트</strong>
+- [ ] <code>make clean &amp;&amp; make</code> 가 처음부터 성공
+- [ ] <code>-Wall -Wextra</code> 경고 0 개
+- [ ] <code>"12"</code>, <code>"abc"</code>, <code>"1 1 2"</code> 입력에서 죽지 않고 다시 묻는다
+- [ ] 미완성이어도 함수 분리 구조가 잡혀 있으면 통과</p>
+<h3 id="_4">오늘의 여섯 문장</h3>
+<ol>
+<li>컴파일은 전처리 → 컴파일 → 어셈블 → 링크. "undefined reference" 는 링크 에러다 (D1-1)</li>
+<li>선언은 .h, 정의는 .c. 헤더 가드로 재정의를 막고, Makefile 의존성에 헤더를 적는다 (D1-2)</li>
+<li>자료형은 바이트 수와 해석 규칙이다. 넘치면 잘리고, 같은 비트도 signed/unsigned 로 다르게 읽힌다 (D1-3·D1-4)</li>
+<li>int 와 unsigned 를 섞으면 int 가 unsigned 로 변환된다. <code>-1 &lt; 1u</code> 는 거짓 (D1-5)</li>
+<li><code>=</code> 과 <code>==</code>, <code>&amp;</code> 와 <code>&amp;&amp;</code>, 시프트 괄호, switch 의 break — 네 함정은 전부 <code>-Wall -Wextra</code> 가 잡는다 (D1-6)</li>
+<li>
+<p>인자는 값 복사, 지역 변수는 스택, static 은 데이터 영역. 재귀는 깊이를 알 때만 (D1-7)</p>
+</li>
+<li>
+<p>개념 워크시트: <code>worksheet.html</code> 8교시까지 채점 후 결과 코드 제출</p>
+</li>
+<li>제출: <code>c_day1/baseball/</code> 폴더 (4개 파일) + 워크시트 캡처</li>
+<li><strong>Day 2 예고</strong>: 포인터. 오늘 세 번 미뤄둔 것들 — <code>(unsigned char *)&amp;v</code>, <code>const char *level()</code>, <code>judge(..., &amp;s, &amp;b)</code> — 이 전부 내일 첫 시간에 풀립니다.</li>
+</ol></section>
+</main>
+</div>
+<script>
+(function(){
+  // language class on <pre>
+  document.querySelectorAll('pre').forEach(function(pre){
+    var c=pre.querySelector('code'); var m=(c&&c.className.match(/language-(\w+)/))||(pre.className.match(/language-(\w+)/));
+    var lang = m?m[1]:'plain';
+    // codehilite puts class on div.hl > pre; handle both
+    pre.classList.add('lang-'+lang);
+    var b=document.createElement('button'); b.className='copy'; b.textContent='복사';
+    b.addEventListener('click',function(){ navigator.clipboard.writeText(pre.innerText.replace(/복사$/,'').trim()); b.textContent='복사됨'; setTimeout(function(){b.textContent='복사'},1200); });
+    pre.appendChild(b);
+  });
+  // checkbox lists: "[ ]" text -> checkbox
+  document.querySelectorAll('li').forEach(function(li){ if(/^\[ \]/.test(li.textContent.trim())){ li.innerHTML=li.innerHTML.replace(/\[ \]\s*/,'<input type="checkbox"> '); li.style.listStyle='none'; li.style.marginLeft='-20px'; } });
+  // ⚠ headings red
+  document.querySelectorAll('h3').forEach(function(h){ if(h.textContent.indexOf('⚠')>=0) h.classList.add('trap'); });
+  var det=document.querySelectorAll('details');
+  document.getElementById('openAll').onclick=function(){det.forEach(function(d){d.open=true})};
+  document.getElementById('closeAll').onclick=function(){det.forEach(function(d){d.open=false})};
+  document.getElementById('printBtn').onclick=function(){document.body.classList.remove('print-ans');window.print()};
+  document.getElementById('printAnsBtn').onclick=function(){document.body.classList.add('print-ans');det.forEach(function(d){d.open=true});window.print()};
+  // scrollspy
+  var links=[].slice.call(document.querySelectorAll('#nav a')); var secs=links.map(function(a){return document.querySelector(a.getAttribute('href'))});
+  var io=new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ links.forEach(function(a){a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id)}); } }); },{rootMargin:'-20% 0px -70% 0px'});
+  secs.forEach(function(s){ if(s) io.observe(s) });
+})();
+</script>
+
+<script>
+(function(){
+  var ANS={"b1-1": [["stdio.h"], ["void"], ["0"]], "b2-1": [["-E"], ["-S"], ["-c"]], "b3-1": [["MATHUTIL_H"], ["MATHUTIL_H"], ["\"mathutil.h\"", "mathutil.h"], ["mathutil.c", "mathutil.h"], ["mathutil.h", "mathutil.c"]], "b4-1": [["uint16_t"], ["int8_t"], ["uint8_t"]], "b5-1": [["/(double)", "/ (double)", "*1.0/", "* 1.0 /", "/1.0/", "*1.0 /"]], "b6-1": [["do"], ["break"], ["break"], ["default"], ["!="]], "b7-1": [["static"], ["static"], ["static"], ["%"]], "p1-2": [["a.out"], ["컴파일"], ["$?"], ["0"], ["stdio.h"]], "p2-2": [["전처리"], [".i", "i"], ["미해결", "undefined", "미정의"], ["링크"], ["정의"], ["puts"]], "p3-2": [["선언"], ["정의"], ["헤더 가드", "헤더가드", "header guard"], ["탭", "tab"], ["수정 시각", "타임스탬프", "수정시각", "timestamp", "수정 시간"]], "p4-2": [["0"], ["255"], ["-128", "−128"], ["127"], ["0x44", "44"], ["0"], ["플랫폼", "컴파일러", "cpu", "플랫폼(컴파일러·cpu)"]], "p5-2": [["int"], ["size_t"], ["없다"], ["3"], ["3.5"], ["차의 절댓값", "fabs", "fabs(a - b)", "fabs(a-b)", "절댓값", "차"], ["-Wall -Wextra", "-Wextra", "-Wsign-compare", "-Wall"]], "p6-2": [["대입"], ["참"], ["비트"], ["논리"], ["+"], ["<<"], ["fall-through", "fallthrough", "fall through", "폴스루"], ["가장 안쪽", "안쪽"]], "p7-2": [["값"], ["바뀌지 않는다", "바뀌지않는다", "변하지 않는다", "안 바뀐다"], ["스택"], ["데이터 영역", "데이터영역"], ["fact(1)"], ["정해져 있지 않다", "정해져있지 않다", "미정의", "컴파일러마다 다르다", "정해지지 않았다"], ["스택"]]};
+  var KEY='cday1-answers';
+  var store={}; try{ store=JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){}
+  var fields=[].slice.call(document.querySelectorAll('.blank'));
+  function norm(v){ return String(v||'').trim().toLowerCase().replace(/\s+/g,' ').replace(/;$/,''); }
+  function wch(v){ var n=0; for(var c of String(v)) n+= c.charCodeAt(0)>255?2:1; return Math.max(6,n+3)+'ch'; }
+  function fid(f){ return f.dataset.q+':'+f.dataset.i; }
+  fields.forEach(function(f){ var v=store[fid(f)]; if(v!=null) f.value=v;
+    f.addEventListener('input',function(){ store[fid(f)]=f.value; try{localStorage.setItem(KEY,JSON.stringify(store));}catch(e){} f.classList.remove('ok','ng'); document.getElementById('res-'+f.dataset.q).textContent=''; tally(); });
+    if(f.tagName==='INPUT') f.addEventListener('input',function(){ f.style.width=wch(f.value); });
+  });
+  function check(q){
+    var fs=fields.filter(function(f){return f.dataset.q===q}); var ok=0;
+    fs.forEach(function(f){ var i=+f.dataset.i; var good=(ANS[q][i]||[]).some(function(a){return norm(a)===norm(f.value)});
+      f.classList.toggle('ok',good); f.classList.toggle('ng',!good); if(good) ok++; store['ok:'+fid(f)]=good; });
+    try{localStorage.setItem(KEY,JSON.stringify(store));}catch(e){}
+    var r=document.getElementById('res-'+q); r.textContent= ok===fs.length ? '모두 맞았습니다 ('+ok+'/'+fs.length+')' : ok+' / '+fs.length+' 맞음 — 빨간 칸을 다시 생각해 보세요';
+    r.className='qres '+(ok===fs.length?'ok':'ng'); tally();
+  }
+  function tally(){ var done=fields.filter(function(f){return norm(f.value)}).length; var ok=fields.filter(function(f){return f.classList.contains('ok')}).length;
+    document.getElementById('scoreDone').textContent=done; document.getElementById('scoreTot').textContent=fields.length; document.getElementById('scoreOk').textContent=ok; }
+  document.querySelectorAll('.qbar .check').forEach(function(b){ b.addEventListener('click',function(){ check(b.dataset.q); }); });
+  document.querySelectorAll('.qbar .clear').forEach(function(b){ b.addEventListener('click',function(){ fields.filter(function(f){return f.dataset.q===b.dataset.q}).forEach(function(f){ f.value=''; f.classList.remove('ok','ng'); delete store[fid(f)]; delete store['ok:'+fid(f)]; if(f.tagName==='INPUT') f.style.width=''; }); try{localStorage.setItem(KEY,JSON.stringify(store));}catch(e){} document.getElementById('res-'+b.dataset.q).textContent=''; tally(); }); });
+  // restore ok marks
+  fields.forEach(function(f){ if(store['ok:'+fid(f)]===true) f.classList.add('ok'); if(f.tagName==='INPUT'&&f.value) f.style.width=wch(f.value); });
+  tally();
+  // enter -> check
+  fields.forEach(function(f){ f.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); check(f.dataset.q); } }); });
+})();
+</script>
+</body>
+</html>
