@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C 언어 2일차 — 눈으로 보는 8가지 개념</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EEF1F5;
+    --panel:#FFFFFF;
+    --ink:#1B2A41;
+    --ink-soft:#5B6B80;
+    --line:#C9D1DC;
+    --blue:#2457C5;
+    --blue-soft:#DCE6FA;
+    --red:#D6452E;
+    --red-soft:#FBE3DF;
+    --green:#178A67;
+    --green-soft:#DDF2EA;
+    --amber:#C98A12;
+    --amber-soft:#FBF0D3;
+    --mono:'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    --sans:'IBM Plex Sans KR', 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    --t:.35s;
+  }
+  @media (prefers-reduced-motion: reduce){ :root{ --t:0s; } *{ animation:none !important; transition:none !important; } }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; }
+  body{
+    font-family:var(--sans); color:var(--ink); background:var(--paper);
+    background-image:
+      linear-gradient(rgba(27,42,65,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(27,42,65,.045) 1px, transparent 1px);
+    background-size:24px 24px;
+    font-size:16px; line-height:1.55;
+  }
+  code, .mono{ font-family:var(--mono); }
+
+  .app{ display:grid; grid-template-columns:260px 1fr; min-height:100vh; }
+  nav{
+    background:var(--ink); color:#fff; padding:28px 20px;
+    position:sticky; top:0; height:100vh; overflow:auto;
+  }
+  nav h1{ font-size:15px; font-weight:500; margin:0 0 4px; letter-spacing:.01em; color:#AEBBD1; }
+  nav .day{ font-size:26px; font-weight:600; margin:0 0 26px; line-height:1.2; }
+  nav ol{ list-style:none; margin:0; padding:0; counter-reset:lesson; }
+  nav li{ margin:0; }
+  nav button{
+    all:unset; display:grid; grid-template-columns:32px 1fr; gap:10px; align-items:baseline;
+    width:100%; padding:9px 10px; border-radius:6px; cursor:pointer; font-size:14.5px; line-height:1.35;
+    color:#D9E1EC;
+  }
+  nav button::before{ counter-increment:lesson; content:counter(lesson) "교시"; font-family:var(--mono); font-size:11px; color:#8A9BB5; }
+  nav button:hover{ background:rgba(255,255,255,.07); }
+  nav button[aria-current="true"]{ background:var(--blue); color:#fff; }
+  nav button[aria-current="true"]::before{ color:#C9D8F7; }
+  nav button:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
+  nav .hint{ margin-top:28px; font-size:12.5px; color:#8A9BB5; line-height:1.5; }
+  nav .hint kbd{ font-family:var(--mono); background:rgba(255,255,255,.12); padding:1px 5px; border-radius:3px; }
+
+  main{ padding:36px 44px 80px; max-width:1100px; }
+  section.lesson{ display:none; }
+  section.lesson.active{ display:block; }
+  .lesson header{ margin-bottom:22px; }
+  .lesson h2{ font-size:30px; font-weight:600; margin:0 0 6px; line-height:1.25; }
+  .lesson header p{ margin:0; color:var(--ink-soft); font-size:16px; max-width:64ch; }
+
+  .stage{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:26px;
+    box-shadow:0 1px 0 rgba(27,42,65,.06);
+  }
+  .controls{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:20px; }
+  .controls label{ font-size:14px; color:var(--ink-soft); display:flex; align-items:center; gap:6px; }
+  button.btn{
+    font:inherit; font-size:14px; font-weight:500; padding:8px 14px; border-radius:6px; cursor:pointer;
+    border:1px solid var(--ink); background:var(--ink); color:#fff;
+  }
+  button.btn.secondary{ background:#fff; color:var(--ink); border-color:var(--line); }
+  button.btn:disabled{ opacity:.4; cursor:default; }
+  button.btn:focus-visible, select:focus-visible, input:focus-visible{ outline:2px solid var(--blue); outline-offset:2px; }
+  select, input[type=number], input[type=text]{
+    font:inherit; font-size:14px; padding:7px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink);
+  }
+  input[type=number], input[type=text]{ font-family:var(--mono); }
+  .toggle{ display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+  .toggle input{ position:absolute; opacity:0; width:0; height:0; }
+  .toggle .sw{ width:38px; height:22px; border-radius:11px; background:var(--line); position:relative; transition:background var(--t); }
+  .toggle .sw::after{ content:""; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition:transform var(--t); }
+  .toggle input:checked + .sw{ background:var(--blue); }
+  .toggle input:checked + .sw::after{ transform:translateX(16px); }
+  .toggle input:focus-visible + .sw{ outline:2px solid var(--blue); outline-offset:2px; }
+
+  .note{ margin-top:18px; padding:14px 16px; border-left:3px solid var(--blue); background:var(--blue-soft); border-radius:0 6px 6px 0; font-size:14.5px; }
+  .note.warn{ border-color:var(--red); background:var(--red-soft); }
+  .note.ok{ border-color:var(--green); background:var(--green-soft); }
+  .note code{ background:rgba(255,255,255,.7); padding:1px 5px; border-radius:3px; }
+
+  pre.code{
+    font-family:var(--mono); font-size:13.5px; background:#F6F8FB; border:1px solid var(--line); border-radius:6px;
+    padding:14px 16px; margin:0; overflow:auto; line-height:1.55; white-space:pre;
+  }
+  pre.code .dim{ color:#9AA7B8; }
+  pre.code .hi{ background:var(--amber-soft); }
+  pre.code .err{ background:var(--red-soft); color:var(--red); }
+
+    .readout{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-top:16px; }
+  .readout div{ padding:12px 14px; border:1px solid var(--line); border-radius:6px; background:#F6F8FB; }
+  .readout b{ display:block; font-size:12.5px; font-weight:500; color:var(--ink-soft); margin-bottom:2px; }
+  .readout span{ font-family:var(--mono); font-size:17px; font-weight:600; }
+  /* ---------- shared ---------- */
+  .mcell{ display:inline-flex; flex-direction:column; align-items:center; min-width:70px; border:2px solid var(--ink); border-radius:6px; background:#fff; overflow:hidden; transition:all var(--t); }
+  .mcell .a{ font-family:var(--mono); font-size:10px; color:var(--ink-soft); background:#F6F8FB; width:100%; text-align:center; padding:3px 4px; border-bottom:1px solid var(--line); }
+  .mcell .v{ font-family:var(--mono); font-size:20px; font-weight:600; padding:8px 6px; }
+  .mcell .n{ font-family:var(--mono); font-size:11px; color:var(--blue); padding:0 4px 6px; }
+  .mcell.hi{ border-color:var(--blue); background:var(--blue-soft); }
+  .mcell.bad{ border-color:var(--red); background:var(--red-soft); }
+  .mcell.ok{ border-color:var(--green); background:var(--green-soft); }
+  .mcell.dim{ opacity:.35; }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+  .lab{ font-size:12.5px; color:var(--ink-soft); margin:14px 0 6px; }
+  .term{ font-family:var(--mono); font-size:13.5px; background:var(--ink); color:#D9E1EC; padding:12px 16px; border-radius:6px; min-height:60px; white-space:pre-wrap; margin-top:16px; }
+  .term .r{ color:#FF9B8A; } .term .g{ color:#7FE0B8; } .term .y{ color:#FFD27F; } .term .c{ color:#8A9BB5; }
+  svg text{ font-family:var(--mono); }
+  .shake{ animation:shake .4s; } @keyframes shake{ 0%,100%{transform:none} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+  .pop-in{ animation:popin .3s ease-out; } @keyframes popin{ from{ transform:scale(.8); opacity:0; } }
+  .fade-out{ animation:fadeout .4s forwards; } @keyframes fadeout{ to{ opacity:0; transform:translateY(-8px); } }
+  /* 1 */
+  .ptr-wrap{ position:relative; min-height:200px; }
+  .ptr-wrap svg.arrows{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
+  /* 2 */
+  .ruler{ display:flex; gap:2px; margin:8px 0; flex-wrap:wrap; }
+  .byte{ width:25px; height:34px; border:1px solid var(--line); border-radius:3px; display:grid; place-items:center; font-family:var(--mono); font-size:9px; color:var(--ink-soft); background:#fff; transition:all var(--t); }
+  .byte.p0{ background:var(--blue); color:#fff; border-color:var(--blue); } .byte.p1{ background:var(--blue-soft); border-color:var(--blue); } .byte.p2{ background:var(--amber-soft); border-color:var(--amber); }
+  .byte.grp{ border-top:2px solid var(--ink); border-bottom:2px solid var(--ink); }
+  /* 3 */
+  .frame-box{ border:2px dashed var(--line); border-radius:8px; padding:14px; min-width:300px; transition:border-color var(--t); }
+  .frame-box.on{ border-color:var(--blue); }
+  .frame-box h5{ margin:0 0 10px; font-size:13px; color:var(--ink-soft); font-weight:500; }
+  .sz{ font-family:var(--mono); font-size:22px; font-weight:600; margin-top:10px; }
+  .sz.bad{ color:var(--red); }
+  /* 4 */
+  .bars{ display:flex; align-items:flex-end; gap:8px; height:170px; padding:8px 0; }
+  .bar{ width:52px; background:var(--blue-soft); border:2px solid var(--blue); border-radius:6px 6px 0 0; display:grid; place-items:end center; font-family:var(--mono); font-weight:600; font-size:13px; padding-bottom:6px; transition:height var(--t), background var(--t), border-color var(--t); position:relative; }
+  .bar.cmp{ background:var(--amber-soft); border-color:var(--amber); }
+  .bar.swp{ background:var(--red-soft); border-color:var(--red); }
+  .bar.done{ background:var(--green-soft); border-color:var(--green); }
+  .bar.lo::after,.bar.hi::after,.bar.mid::after{ content:attr(data-tag); position:absolute; top:-22px; font-size:11px; color:var(--ink-soft); }
+  .bar.mid{ background:var(--amber-soft); border-color:var(--amber); } .bar.found{ background:var(--green-soft); border-color:var(--green); } .bar.out{ opacity:.3; }
+  .tabs2{ display:flex; gap:6px; margin-bottom:12px; }
+  .tabs2 button{ font:inherit; font-size:13px; padding:6px 12px; border-radius:6px; border:1px solid var(--line); background:#fff; cursor:pointer; }
+  .tabs2 button.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  /* 5 */
+  .zone{ border:2px solid var(--line); border-radius:8px; padding:10px 12px; }
+  .zone h5{ margin:0 0 8px; font-size:12px; color:var(--ink-soft); font-weight:500; }
+  .zone.ro{ border-color:var(--amber); background:var(--amber-soft); }
+  .chr{ width:40px; height:48px; border:2px solid var(--ink); border-radius:5px; display:grid; place-items:center; font-family:var(--mono); font-size:16px; font-weight:600; background:#fff; transition:all var(--t); }
+  .chr.nul{ color:var(--ink-soft); font-size:12px; }
+  .chr.ovf{ border-color:var(--red); background:var(--red-soft); color:var(--red); }
+  .chr.lvl{ border-color:var(--amber); background:var(--amber-soft); }
+  /* 6 */
+  .tokrow{ display:flex; gap:3px; flex-wrap:wrap; }
+  .tk{ width:26px; height:38px; border:1.5px solid var(--line); border-radius:4px; display:grid; place-items:center; font-family:var(--mono); font-size:13px; background:#fff; transition:all var(--t); }
+  .tk.cut{ background:var(--red-soft); border-color:var(--red); color:var(--red); font-size:10px; }
+  .tk.tok{ background:var(--blue-soft); border-color:var(--blue); }
+  .tk.start{ box-shadow:0 -4px 0 var(--blue); }
+  /* 7 */
+  .heap{ display:flex; gap:6px; align-items:stretch; min-height:64px; border:2px dashed var(--line); border-radius:8px; padding:8px; }
+  .hb{ border:2px solid var(--green); background:var(--green-soft); border-radius:6px; padding:8px 10px; font-family:var(--mono); font-size:12px; display:flex; flex-direction:column; justify-content:center; transition:all var(--t); }
+  .hb.freed{ border-style:dashed; border-color:var(--line); background:#fff; color:var(--ink-soft); }
+  .hb.err{ border-color:var(--red); background:var(--red-soft); }
+  .pvar{ display:inline-flex; gap:6px; align-items:center; font-family:var(--mono); font-size:13px; padding:6px 10px; border:2px solid var(--ink); border-radius:6px; margin-right:8px; }
+  .pvar.null{ border-color:var(--ink-soft); color:var(--ink-soft); }
+  .pvar.dangle{ border-color:var(--red); color:var(--red); }
+  /* 8 */
+  .flow svg{ width:100%; height:auto; }
+  .flow .node rect{ fill:#fff; stroke:var(--line); stroke-width:2; transition:stroke var(--t), fill var(--t); }
+  .flow .node.on rect{ stroke:var(--blue); fill:var(--blue-soft); }
+  .flow .node.done rect{ stroke:var(--green); }
+  .flow .node text{ font-family:var(--sans); font-size:14px; fill:var(--ink); text-anchor:middle; }
+  .flow .node .fn{ font-family:var(--mono); font-size:11px; fill:var(--ink-soft); }
+  .flow .link{ stroke:var(--ink-soft); stroke-width:1.5; fill:none; marker-end:url(#arr2); }
+  .flow .link.loop{ stroke:var(--amber); stroke-dasharray:5 4; }
+  @media (max-width:900px){ .frame-box{ min-width:0; } .bar{ width:36px; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav aria-label="교시 선택">
+    <h1>C 언어 · 프로그래밍 언어 과목</h1>
+    <p class="day">2일차<br>눈으로 보는 8가지</p>
+    <ol id="navlist">
+      <li><button data-go="1" aria-current="true">포인터 화살표 뷰어</button></li>
+      <li><button data-go="2">p+1 은 몇 바이트</button></li>
+      <li><button data-go="3">배열 감쇠(decay)</button></li>
+      <li><button data-go="4">버블 정렬 · 이진 검색</button></li>
+      <li><button data-go="5">char[] vs char* · 오버플로</button></li>
+      <li><button data-go="6">strtok 분리</button></li>
+      <li><button data-go="7">힙 할당·해제</button></li>
+      <li><button data-go="8">로그 분석기 흐름</button></li>
+    </ol>
+    <p class="hint">키보드 <kbd>←</kbd> <kbd>→</kbd> 로 교시 이동</p>
+  </nav>
+  <main>
+
+  <!-- 1 -->
+  <section class="lesson active" id="l1">
+    <header><h2>포인터는 화살표다</h2><p>p 에 주소를 넣으면 화살표가 생깁니다. 화살표를 따라가 값을 읽고 쓰는 것이 *p 입니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <button class="btn" data-op="px">p = &amp;x</button>
+        <button class="btn" data-op="py">p = &amp;y</button>
+        <button class="btn" data-op="w42">*p = 42</button>
+        <button class="btn" data-op="inc">(*p)++</button>
+        <button class="btn secondary" data-op="null">p = NULL</button>
+        <button class="btn secondary" data-op="wild">int *q; *q = 1;</button>
+        <button class="btn secondary" data-op="reset">처음으로</button>
+      </div>
+      <div class="ptr-wrap" id="ptrwrap">
+        <div class="row" style="gap:40px">
+          <div class="mcell" id="c-x"><div class="a">0x7ffc..20</div><div class="v">5</div><div class="n">int x</div></div>
+          <div class="mcell" id="c-y"><div class="a">0x7ffc..24</div><div class="v">9</div><div class="n">int y</div></div>
+          <div class="mcell" id="c-p" style="margin-left:60px;min-width:120px"><div class="a">0x7ffc..28</div><div class="v" id="pv">?</div><div class="n">int *p</div></div>
+        </div>
+        <svg class="arrows" id="parrow"><defs><marker id="ah" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#2457C5"/></marker></defs><path id="ppath" d="" fill="none" stroke="#2457C5" stroke-width="2.5" marker-end="url(#ah)" opacity="0"/></svg>
+      </div>
+      <div class="term" id="pterm"><span class="c">// p 는 아직 아무 곳도 가리키지 않습니다 (쓰레기 값)</span></div>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson" id="l2">
+    <header><h2>p + 1 은 몇 바이트 이동하는가</h2><p>같은 메모리라도 포인터의 타입에 따라 +1 의 보폭이 다릅니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>포인터 타입
+          <select id="pt-type"><option value="1">char *</option><option value="2">uint16_t *</option><option value="4" selected>int *</option><option value="8">double *</option></select>
+        </label>
+        <label>n <input type="number" id="pt-n" value="1" min="0" max="7" style="width:70px"></label>
+      </div>
+      <div class="lab">메모리 (주소 0x1000 부터 32바이트)</div>
+      <div class="ruler" id="ruler"></div>
+      <div class="readout">
+        <div><b>p</b><span id="pt-p">0x1000</span></div>
+        <div><b>p + n</b><span id="pt-pn"></span></div>
+        <div><b>이동한 바이트</b><span id="pt-bytes"></span></div>
+        <div><b>(p + n) − p</b><span id="pt-diff"></span></div>
+      </div>
+      <div class="note" id="pt-note"></div>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson" id="l3">
+    <header><h2>배열은 함수에 넘기는 순간 포인터가 된다</h2><p>main 에서 20바이트였던 arr 이 함수 안에서는 8바이트 주소 하나입니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <button class="btn" id="dc-call">show(arr) 호출</button>
+        <button class="btn secondary" id="dc-ret">반환</button>
+      </div>
+      <div class="row" style="gap:30px;align-items:flex-start">
+        <div class="frame-box on" id="fr-main">
+          <h5>main 의 프레임</h5>
+          <div class="row" id="dc-arr"></div>
+          <div class="sz">sizeof(arr) = 20</div>
+        </div>
+        <div class="frame-box" id="fr-show" style="opacity:.35">
+          <h5>show 의 프레임 (int arr[] == int *arr)</h5>
+          <div class="mcell" style="min-width:160px"><div class="a">0x7ffc..60</div><div class="v" id="dc-pv">—</div><div class="n">int *arr</div></div>
+          <div class="sz" id="dc-sz">sizeof(arr) = ?</div>
+        </div>
+      </div>
+      <div class="term" id="dc-term"><span class="c">// 배열 이름 arr 은 식 안에서 &amp;arr[0] 으로 "감쇠(decay)" 합니다</span></div>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson" id="l4">
+    <header><h2>정렬과 검색 — 한 걸음씩</h2><p>버블 정렬은 비교와 교환, 이진 검색은 범위 반으로 줄이기.</p></header>
+    <div class="stage">
+      <div class="tabs2"><button class="on" data-t="bub">버블 정렬</button><button data-t="bin">이진 검색</button></div>
+      <div id="pane-bub">
+        <div class="controls"><button class="btn" id="bs-step">다음 비교</button><button class="btn secondary" id="bs-reset">처음으로</button><span id="bs-info" style="font-size:13px;color:var(--ink-soft)"></span></div>
+        <div class="bars" id="bs-bars"></div>
+        <div class="term" id="bs-term"></div>
+      </div>
+      <div id="pane-bin" style="display:none">
+        <div class="controls"><label>key <input type="number" id="bn-key" value="26" style="width:80px"></label><button class="btn" id="bn-step">다음 단계</button><button class="btn secondary" id="bn-reset">처음으로</button></div>
+        <div class="bars" id="bn-bars" style="height:150px;padding-top:30px"></div>
+        <div class="term" id="bn-term"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson" id="l5">
+    <header><h2>char[] 와 char* 는 다른 곳에 산다 · 넘치면 옆을 덮는다</h2><p>왼쪽은 수정 가능한 복사본, 오른쪽은 읽기 전용 리터럴. 아래는 8칸 버퍼에 긴 문자열을 복사하는 실험.</p></header>
+    <div class="stage">
+      <div class="row" style="gap:24px;align-items:stretch">
+        <div class="zone" style="flex:1">
+          <h5>스택 — char s1[] = "ABC"</h5>
+          <div class="row" id="s1cells"></div>
+          <div class="controls" style="margin:10px 0 0"><button class="btn" id="s1w">s1[0] = 'X'</button><span style="font-family:var(--mono);font-size:12px;color:var(--ink-soft)">sizeof = 4 · strlen = 3</span></div>
+        </div>
+        <div class="zone ro" style="flex:1">
+          <h5>읽기 전용 영역 — char *s2 = "ABC"</h5>
+          <div class="row"><div class="mcell" style="min-width:110px"><div class="a">스택</div><div class="v" style="font-size:13px">0x5555..04</div><div class="n">char *s2 (8B)</div></div><span style="font-size:20px;align-self:center">→</span><div class="row" id="s2cells"></div></div>
+          <div class="controls" style="margin:10px 0 0"><button class="btn" id="s2w">s2[0] = 'X'</button><span style="font-family:var(--mono);font-size:12px;color:var(--ink-soft)">sizeof(s2) = 8</span></div>
+        </div>
+      </div>
+      <div class="term" id="s-term"><span class="c">// 버튼을 눌러 두 선언의 차이를 확인하세요</span></div>
+      <div class="lab">버퍼 오버플로 — struct Dev { char name[8]; int level; }  ·  strcpy(d.name, 입력)</div>
+      <div class="controls"><input type="text" id="ov-in" value="ESP32-SENSOR" maxlength="16" style="width:200px"><button class="btn" id="ov-go">strcpy 실행</button></div>
+      <div class="row" id="ovcells"></div>
+      <div class="readout" style="margin-top:12px"><div><b>name 으로 읽으면</b><span id="ov-name"></span></div><div><b>level 값</b><span id="ov-level">1</span></div><div><b>level 의 16진</b><span id="ov-hex">0x00000001</span></div></div>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="lesson" id="l6">
+    <header><h2>strtok 은 원본을 자른다</h2><p>구분자 자리에 '\0' 을 써 넣고 그 앞 조각의 시작 주소를 돌려줍니다.</p></header>
+    <div class="stage">
+      <div class="controls"><button class="btn" id="tk-next">strtok(…, ",")</button><button class="btn secondary" id="tk-reset">처음으로</button></div>
+      <div class="lab">char line[] = "$T=25.3,H=60,D=120*"   (strtok(line + 1, ",") 부터)</div>
+      <div class="tokrow" id="tokrow"></div>
+      <div class="term" id="tk-term"></div>
+      <div class="note warn">문자열 리터럴(<code>char *s = "…"</code>)에 strtok 을 쓰면 읽기 전용 메모리에 '\0' 을 쓰려다 세그폴트. 반드시 배열(복사본)에 쓰세요.</div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson" id="l7">
+    <header><h2>힙 — 빌리고, 키우고, 돌려주기</h2><p>malloc 은 빌림, free 는 반납. 반납하지 않으면 누수, 두 번 반납하면 에러.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <button class="btn" data-h="malloc">p = malloc(3 * sizeof(int))</button>
+        <button class="btn" data-h="realloc">p = realloc(p, 6 * sizeof(int))</button>
+        <button class="btn" data-h="free">free(p)</button>
+        <button class="btn secondary" data-h="use">p[0] = 1</button>
+        <button class="btn secondary" data-h="exit">return 0 (프로그램 종료)</button>
+        <button class="btn secondary" data-h="reset">처음으로</button>
+      </div>
+      <div class="lab">스택</div>
+      <div><span class="pvar null" id="hp">int *p = <b id="hpv">?</b></span></div>
+      <div class="lab">힙</div>
+      <div class="heap" id="heap"><span style="color:var(--ink-soft);font-size:12px;align-self:center">(비어 있음)</span></div>
+      <div class="term" id="h-term"><span class="c">// valgrind 가 보는 세계</span></div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson" id="l8">
+    <header><h2>센서 로그 분석기 — 오늘 배운 것을 한 줄로</h2><p>과제의 흐름입니다. 재생하면 각 단계가 어느 교시에서 왔는지 보입니다.</p></header>
+    <div class="stage">
+      <div class="controls"><button class="btn" id="b-play">재생</button><button class="btn secondary" id="b-reset">처음으로</button></div>
+      <div class="flow">
+        <svg viewBox="0 0 900 250" id="flow-svg" role="img" aria-label="분석기 흐름도">
+          <defs><marker id="arr2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5B6B80"/></marker></defs>
+          <g class="node" data-i="0"><rect x="15" y="70" width="130" height="70" rx="8"/><text x="80" y="100">줄 읽기</text><text class="fn" x="80" y="122">fgets · 6교시</text></g>
+          <g class="node" data-i="1"><rect x="165" y="70" width="130" height="70" rx="8"/><text x="230" y="100">파싱</text><text class="fn" x="230" y="122">parse_frame · 6교시</text></g>
+          <g class="node" data-i="2"><rect x="315" y="70" width="130" height="70" rx="8"/><text x="380" y="100">힙에 누적</text><text class="fn" x="380" y="122">realloc · 7교시</text></g>
+          <g class="node" data-i="3"><rect x="465" y="70" width="130" height="70" rx="8"/><text x="530" y="100">정렬</text><text class="fn" x="530" y="122">bubble · 4교시</text></g>
+          <g class="node" data-i="4"><rect x="615" y="70" width="130" height="70" rx="8"/><text x="680" y="100">통계</text><text class="fn" x="680" y="122">min/max/median · 3·4교시</text></g>
+          <g class="node" data-i="5"><rect x="765" y="70" width="120" height="70" rx="8"/><text x="825" y="100">해제</text><text class="fn" x="825" y="122">free · 7교시</text></g>
+          <path class="link" d="M145,105 L165,105"/><path class="link" d="M295,105 L315,105"/><path class="link" d="M445,105 L465,105"/><path class="link" d="M595,105 L615,105"/><path class="link" d="M745,105 L765,105"/>
+          <path class="link loop" d="M230,140 C230,200 80,200 80,140"/><text x="155" y="212" font-family="IBM Plex Sans KR" font-size="12" fill="#7A5405" text-anchor="middle">BAD 면 건너뛰고 다음 줄</text>
+          <path class="link loop" d="M380,140 C380,235 80,235 80,142"/><text x="300" y="246" font-family="IBM Plex Sans KR" font-size="12" fill="#7A5405" text-anchor="middle">EOF 까지 반복</text>
+        </svg>
+      </div>
+      <div class="note flowdesc" id="b-desc" style="min-height:64px">읽기·파싱·누적은 줄마다 반복, 정렬·통계·해제는 마지막에 한 번.</div>
+    </div>
+  </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+  let cur=1;
+  function go(n){ cur=Math.max(1,Math.min(8,n)); $$('.lesson').forEach(s=>s.classList.toggle('active',s.id==='l'+cur)); $$('#navlist button').forEach(b=>b.setAttribute('aria-current',b.dataset.go==cur?'true':'false')); location.hash='l'+cur; if(cur===1) drawArrow(); }
+  $$('#navlist button').forEach(b=>b.addEventListener('click',()=>go(+b.dataset.go)));
+  document.addEventListener('keydown',e=>{ if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName))return; if(e.key==='ArrowRight')go(cur+1); if(e.key==='ArrowLeft')go(cur-1); });
+  if(/^#l[1-8]$/.test(location.hash)) go(+location.hash[2]);
+
+  /* 1 pointer */
+  let mem={x:5,y:9}, pt=null; // 'x','y',null,'wild'
+  function drawArrow(){
+    const path=$('#ppath'); const wrap=$('#ptrwrap');
+    if(pt!=='x'&&pt!=='y'){ path.setAttribute('opacity',0); return; }
+    const from=$('#c-p').getBoundingClientRect(), to=$('#c-'+pt).getBoundingClientRect(), w=wrap.getBoundingClientRect();
+    const x1=from.left-w.left+from.width/2, y1=from.bottom-w.top+2, x2=to.left-w.left+to.width/2, y2=to.bottom-w.top+2;
+    path.setAttribute('d',`M${x1},${y1} C${x1},${y1+70} ${x2},${y2+70} ${x2},${y2}`); path.setAttribute('opacity',1);
+  }
+  function renderPtr(msg,cls){
+    $('#c-x .v').textContent=mem.x; $('#c-y .v').textContent=mem.y;
+    $('#pv').textContent= pt==='x'?'0x..20': pt==='y'?'0x..24': pt===null?'NULL':'?';
+    $('#c-x').classList.toggle('hi',pt==='x'); $('#c-y').classList.toggle('hi',pt==='y');
+    $('#c-p').classList.toggle('bad',pt==='wild');
+    if(msg) $('#pterm').innerHTML=`<span class="${cls||''}">${msg}</span>`;
+    drawArrow();
+  }
+  $$('#l1 [data-op]').forEach(b=>b.addEventListener('click',()=>{
+    const op=b.dataset.op;
+    if(op==='px'){ pt='x'; renderPtr('p = &x;   // p 에 x 의 주소가 들어감 — 화살표 생성','g'); }
+    else if(op==='py'){ pt='y'; renderPtr('p = &y;   // 화살표가 y 로 옮겨감','g'); }
+    else if(op==='null'){ pt=null; renderPtr('p = NULL; // "아무 곳도 가리키지 않음"을 명시. *p 는 여전히 금지','y'); }
+    else if(op==='wild'){ $('#c-p').classList.add('shake'); setTimeout(()=>$('#c-p').classList.remove('shake'),400); $('#pterm').innerHTML='<span class="r">Segmentation fault (core dumped)</span>\n<span class="c">// 초기화 안 된 q 는 쓰레기 주소 — 그곳에 쓰려다 죽음. gdb bt 로 줄 번호를 찾는다</span>'; }
+    else if(op==='reset'){ mem={x:5,y:9}; pt='wild'; renderPtr('<span class="c">// p 는 아직 아무 곳도 가리키지 않습니다 (쓰레기 값)</span>'); }
+    else { // w42, inc
+      if(pt==='x'||pt==='y'){ if(op==='w42') mem[pt]=42; else mem[pt]++; $('#c-'+pt).classList.add('pop-in'); setTimeout(()=>$('#c-'+pt).classList.remove('pop-in'),300);
+        renderPtr(`${op==='w42'?'*p = 42;':'(*p)++;'}   // 화살표를 따라가 ${pt} 를 바꿈 → ${pt} = ${mem[pt]}`,'g'); }
+      else { $('#c-p').classList.add('shake'); setTimeout(()=>$('#c-p').classList.remove('shake'),400); $('#pterm').innerHTML=`<span class="r">Segmentation fault</span>\n<span class="c">// p 가 ${pt===null?'NULL':'쓰레기 주소'}인데 역참조 — 먼저 p = &x 로 화살표를 만드세요</span>`; }
+    }
+  }));
+  pt='wild'; renderPtr(); window.addEventListener('resize',drawArrow); requestAnimationFrame(drawArrow);
+
+  /* 2 pointer arithmetic */
+  const ruler=$('#ruler'); for(let i=0;i<32;i++){ const d=document.createElement('div'); d.className='byte'; d.textContent=i.toString(16).padStart(2,'0'); ruler.appendChild(d); }
+  function renderPA(){
+    const sz=+$('#pt-type').value, n=Math.min(7,Math.max(0,+$('#pt-n').value||0));
+    const bytes=$$('.byte',ruler); bytes.forEach(b=>b.className='byte');
+    for(let i=0;i<sz;i++) bytes[i].classList.add('p0');
+    const off=n*sz; for(let i=off;i<off+sz&&i<32;i++) if(!(n===0)) bytes[i].classList.add('p1');
+    bytes.forEach((b,i)=>{ if(i%sz===0||i%sz===sz-1) b.classList.add('grp'); });
+    const name={1:'char',2:'uint16_t',4:'int',8:'double'}[sz];
+    $('#pt-p').textContent='0x1000'; $('#pt-pn').textContent='0x'+(0x1000+off).toString(16); $('#pt-bytes').textContent=`${off} 바이트 (= ${n} × sizeof(${name}) ${sz})`; $('#pt-diff').textContent=`${n} (요소 개수)`;
+    $('#pt-note').className='note'; $('#pt-note').innerHTML= off>=32? `<b>${name} *</b> 로 ${n} 칸 이동하면 32바이트 밖 — 배열 끝을 넘어갔습니다.` : `<code>p + ${n}</code> 은 ${n} 이 아니라 <b>${off}</b> 바이트 뒤입니다. 뺄셈 <code>(p+${n}) - p</code> 는 다시 <b>${n}</b> — 요소 단위로 되돌아옵니다.`;
+    if(off>=32) $('#pt-note').className='note warn';
+  }
+  $('#pt-type').addEventListener('input',renderPA); $('#pt-n').addEventListener('input',renderPA); renderPA();
+
+  /* 3 decay */
+  const arrv=[10,20,30,40,50]; const dcArr=$('#dc-arr');
+  arrv.forEach((v,i)=>{ const c=document.createElement('div'); c.className='mcell'; c.style.minWidth='58px'; c.innerHTML=`<div class="a">..${(0x40+i*4).toString(16)}</div><div class="v" style="font-size:15px">${v}</div><div class="n">[${i}]</div>`; dcArr.appendChild(c); });
+  $('#dc-call').addEventListener('click',()=>{ $('#fr-show').style.opacity=1; $('#fr-show').classList.add('on'); $('#fr-main').classList.remove('on'); $('#dc-pv').textContent='0x..40'; $$('.mcell',dcArr)[0].classList.add('hi'); const s=$('#dc-sz'); s.textContent='sizeof(arr) = 8'; s.classList.add('bad');
+    $('#dc-term').innerHTML='<span class="y">warning: \'sizeof\' on array function parameter \'arr\' will return size of \'int *\'</span>\n<span class="c">// show 가 받은 것은 첫 요소의 주소 하나. 요소 5개라는 정보는 넘어오지 않았다 → 길이를 따로 넘겨라: sum(arr, 5)</span>'; });
+  $('#dc-ret').addEventListener('click',()=>{ $('#fr-show').style.opacity=.35; $('#fr-show').classList.remove('on'); $('#fr-main').classList.add('on'); $('#dc-pv').textContent='—'; $$('.mcell',dcArr)[0].classList.remove('hi'); const s=$('#dc-sz'); s.textContent='sizeof(arr) = ?'; s.classList.remove('bad'); $('#dc-term').innerHTML='<span class="c">// main 으로 돌아옴. 여기서 sizeof(arr) 는 여전히 20 (배열 전체)</span>'; });
+
+  /* 4 sort/search */
+  $$('.tabs2 button').forEach(b=>b.addEventListener('click',()=>{ $$('.tabs2 button').forEach(x=>x.classList.toggle('on',x===b)); $('#pane-bub').style.display=b.dataset.t==='bub'?'':'none'; $('#pane-bin').style.display=b.dataset.t==='bin'?'':'none'; }));
+  const base=[26,25,37,25,24]; let bsA, bi, bj, bswaps, bcmp, bdone;
+  function bars(el,a,cls=[]){ el.innerHTML=''; a.forEach((v,i)=>{ const d=document.createElement('div'); d.className='bar '+(cls[i]||''); d.style.height=(v-20)*9+30+'px'; d.textContent=v; d.dataset.tag=(cls[i]||'').split(' ').filter(c=>['lo','hi','mid'].includes(c)).join('/'); el.appendChild(d); }); }
+  function bsReset(){ bsA=base.slice(); bi=0; bj=0; bswaps=0; bcmp=0; bdone=false; bars($('#bs-bars'),bsA); $('#bs-info').textContent=''; $('#bs-term').innerHTML='<span class="c">// for (i) for (j &lt; n-1-i) if (a[j] &gt; a[j+1]) swap</span>'; $('#bs-step').disabled=false; }
+  $('#bs-step').addEventListener('click',()=>{
+    const n=bsA.length; if(bdone) return;
+    if(bj>=n-1-bi){ bi++; bj=0; if(bi>=n-1){ bdone=true; bars($('#bs-bars'),bsA,bsA.map(()=>'done')); $('#bs-term').innerHTML=`<span class="g">정렬 완료: ${bsA.join(' ')}   (비교 ${bcmp}회, 교환 ${bswaps}회)</span>`; $('#bs-step').disabled=true; return; } }
+    const cls=bsA.map((_,k)=>k>=n-bi?'done':''); cls[bj]='cmp'; cls[bj+1]='cmp'; bcmp++;
+    let msg=`i=${bi} j=${bj}: a[${bj}]=${bsA[bj]} > a[${bj+1}]=${bsA[bj+1]} ?`;
+    if(bsA[bj]>bsA[bj+1]){ [bsA[bj],bsA[bj+1]]=[bsA[bj+1],bsA[bj]]; bswaps++; cls[bj]='swp'; cls[bj+1]='swp'; msg+=' 예 → swap(&a[j], &a[j+1])'; } else msg+=' 아니오';
+    bars($('#bs-bars'),bsA,cls); $('#bs-info').textContent=`패스 ${bi+1} · 비교 ${bcmp} · 교환 ${bswaps}`; $('#bs-term').innerHTML=msg+`\n<span class="c">// 패스 ${bi+1} 끝나면 뒤에서 ${bi+1}번째가 확정 → 안쪽 상한 n-1-i</span>`; bj++;
+  });
+  $('#bs-reset').addEventListener('click',bsReset); bsReset();
+  const sorted=[24,25,25,26,37]; let lo,hi,bnDone;
+  function bnReset(){ lo=0; hi=sorted.length-1; bnDone=false; bars($('#bn-bars'),sorted,sorted.map((_,i)=>i===lo?'lo':i===hi?'hi':'')); $('#bn-term').innerHTML='<span class="c">// lo=0, hi=4. 정렬돼 있으므로 가운데를 보고 절반을 버린다</span>'; }
+  $('#bn-step').addEventListener('click',()=>{
+    if(bnDone) return; const key=+$('#bn-key').value;
+    if(lo>hi){ bnDone=true; bars($('#bn-bars'),sorted,sorted.map(()=>'out')); $('#bn-term').innerHTML=`<span class="r">lo(${lo}) > hi(${hi}) → return -1   // ${key} 없음</span>`; return; }
+    const mid=lo+((hi-lo)>>1); const cls=sorted.map((_,i)=>(i<lo||i>hi)?'out':'');
+    cls[lo]+=' lo'; cls[hi]+=' hi'; cls[mid]+=' mid';
+    let msg=`mid=${mid}: a[mid]=${sorted[mid]} vs key=${key} → `;
+    if(sorted[mid]===key){ cls[mid]='found'; msg+=`같음 → return ${mid}`; bnDone=true; }
+    else if(sorted[mid]<key){ lo=mid+1; msg+=`작음 → lo = mid+1 = ${lo}`; } else { hi=mid-1; msg+=`큼 → hi = mid-1 = ${hi}`; }
+    bars($('#bn-bars'),sorted,cls); $('#bn-term').innerHTML=msg;
+  });
+  $('#bn-reset').addEventListener('click',bnReset); $('#bn-key').addEventListener('input',bnReset); bnReset();
+
+  /* 5 strings */
+  function chars(el,str,addr0,extra){ el.innerHTML=''; (str+'\0').split('').forEach((ch,i)=>{ const d=document.createElement('div'); d.className='chr'+(ch==='\0'?' nul':''); d.textContent=ch==='\0'?'\\0':ch; d.title='0x'+(addr0+i).toString(16); el.appendChild(d); }); }
+  chars($('#s1cells'),'ABC',0x7ffc10); chars($('#s2cells'),'ABC',0x555504);
+  $('#s1w').addEventListener('click',()=>{ const c=$$('.chr',$('#s1cells'))[0]; c.textContent='X'; c.classList.add('ovf'); c.classList.remove('ovf'); c.style.background='var(--green-soft)'; c.style.borderColor='var(--green)'; $('#s-term').innerHTML='<span class="g">s1[0] = \'X\';  → printf("%s", s1) → XBC</span>\n<span class="c">// 스택의 복사본이라 수정 가능</span>'; });
+  $('#s2w').addEventListener('click',()=>{ const z=$('#s2cells'); z.classList.add('shake'); setTimeout(()=>z.classList.remove('shake'),400); $('#s-term').innerHTML='<span class="r">Segmentation fault</span>\n<span class="c">// 리터럴 "ABC" 는 읽기 전용 영역. const char *s2 로 선언하면 컴파일 에러로 바꿀 수 있다</span>'; });
+  function renderOv(str){
+    const el=$('#ovcells'); el.innerHTML=''; const cells=[];
+    for(let i=0;i<12;i++){ const d=document.createElement('div'); d.className='chr'+(i>=8?' lvl':''); d.title=i<8?`name[${i}]`:`level 바이트 ${i-8}`; cells.push(d); el.appendChild(d); }
+    let lvl=[1,0,0,0]; const s=str+'\0';
+    for(let i=0;i<12;i++){ if(i<s.length){ cells[i].textContent=s[i]==='\0'?'\\0':s[i]; if(s[i]==='\0') cells[i].classList.add('nul'); if(i>=8){ cells[i].classList.add('ovf'); lvl[i-8]=s.charCodeAt(i); } } else cells[i].textContent= i<8?'·':lvl[i-8].toString(16).padStart(2,'0'); }
+    const lv=(lvl[0]|(lvl[1]<<8)|(lvl[2]<<16)|(lvl[3]<<24))>>>0;
+    $('#ov-name').textContent=str; $('#ov-level').textContent=lv|0; $('#ov-hex').textContent='0x'+lv.toString(16).toUpperCase().padStart(8,'0');
+    const lab=$('.lab',$('#l5')); 
+  }
+  renderOv('ESP');
+  $('#ov-go').addEventListener('click',()=>{ const v=$('#ov-in').value; renderOv(v); $('#s-term').innerHTML= v.length>=8 ? `<span class="y">warning: writing ${v.length+1} bytes into a region of size 8</span>\n<span class="c">// 넘친 글자가 level 을 덮었다 → level = ${$('#ov-level').textContent}. 컴파일러는 경고만, 실행은 된다</span>` : `<span class="g">// ${v.length+1} 바이트 ≤ 8. level 은 그대로 1</span>`; });
+
+  /* 6 strtok */
+  const line='$T=25.3,H=60,D=120*'; let tkState;
+  function tkReset(){ tkState={s:line.split(''),pos:1,step:0}; renderTk(); $('#tk-term').innerHTML='<span class="c">// char *tok = strtok(line + 1, ",");</span>'; $('#tk-next').disabled=false; }
+  function renderTk(cls={}){ const el=$('#tokrow'); el.innerHTML=''; tkState.s.concat(['\0']).forEach((ch,i)=>{ const d=document.createElement('div'); d.className='tk '+(cls[i]||''); d.textContent=ch==='\0'?'\\0':ch; el.appendChild(d); }); }
+  $('#tk-next').addEventListener('click',()=>{
+    const st=tkState; if(st.pos>=st.s.length){ $('#tk-term').innerHTML='<span class="c">tok = NULL   // 더 이상 토큰 없음 → 루프 종료</span>'; $('#tk-next').disabled=true; return; }
+    let start=st.pos, end=start; while(end<st.s.length&&st.s[end]!==','&&st.s[end]!=='\0') end++;
+    const cls={}; for(let i=start;i<end;i++) cls[i]='tok'; cls[start]+=' start';
+    let msg=`tok = &line[${start}]  → "${st.s.slice(start,end).join('')}"`;
+    if(end<st.s.length&&st.s[end]===','){ st.s[end]='\0'; cls[end]='cut'; msg+=`\n<span class="r">line[${end}] = '\\0'   // 콤마가 널로 바뀜 — 원본 수정!</span>`; }
+    st.pos=end+1; st.step++; renderTk(cls); $('#tk-term').innerHTML=msg+`\n<span class="c">// 다음 호출: strtok(NULL, ",") — 내부에 저장된 위치 ${st.pos} 부터</span>`;
+  });
+  $('#tk-reset').addEventListener('click',tkReset); tkReset();
+
+  /* 7 heap */
+  let hp={state:'uninit',block:null,freed:false};
+  function renderHeap(){ const h=$('#heap'); h.innerHTML=''; const pv=$('#hp');
+    pv.className='pvar '+(hp.state==='null'?'null':hp.state==='dangle'?'dangle':''); $('#hpv').textContent= hp.state==='uninit'?'?':hp.state==='null'?'NULL':hp.block?('0x55..'+hp.block.addr):'0x55..a0';
+    if(!hp.block){ h.innerHTML='<span style="color:var(--ink-soft);font-size:12px;align-self:center">(비어 있음)</span>'; return; }
+    const b=document.createElement('div'); b.className='hb'+(hp.block.freed?' freed':''); b.style.width=(hp.block.size*6)+'px'; b.innerHTML=`<b>${hp.block.size} bytes</b><span>0x55..${hp.block.addr}</span><span>${hp.block.freed?'(반납됨)':'p[0..'+(hp.block.size/4-1)+']'}</span>`; h.appendChild(b); if(hp.block.moved){ const g=document.createElement('div'); g.className='hb freed'; g.style.width='60px'; g.innerHTML='<span>이전 블록</span><span>(복사 후 해제)</span>'; h.insertBefore(g,b); } }
+  const HT=$('#h-term');
+  $$('#l7 [data-h]').forEach(b=>b.addEventListener('click',()=>{
+    const op=b.dataset.h;
+    if(op==='reset'){ hp={state:'uninit',block:null}; HT.innerHTML='<span class="c">// valgrind 가 보는 세계</span>'; }
+    else if(op==='malloc'){ if(hp.block&&!hp.block.freed){ HT.innerHTML='<span class="y">// 이전 블록을 free 하지 않고 p 를 덮어씀 → 그 블록은 영영 못 찾는다 (definitely lost)</span>'; hp.block={size:12,addr:'b0',freed:false,lost:true}; } else { hp.block={size:12,addr:'a0',freed:false}; HT.innerHTML='<span class="g">p = malloc(12);   // 12바이트 빌림. if (p == NULL) 검사!</span>'; } hp.state='ptr'; }
+    else if(op==='realloc'){ if(!hp.block||hp.block.freed){ HT.innerHTML='<span class="r">// 유효한 블록이 없는데 realloc — 정의되지 않은 동작</span>'; } else { hp.block={size:24,addr:'c0',freed:false,moved:true}; HT.innerHTML='<span class="g">p = realloc(p, 24);   // 자리가 없으면 새 블록에 복사 후 옛 블록 해제 → 주소가 바뀔 수 있다</span>\n<span class="c">// 실패하면 NULL 반환 + 원본 유지 → tmp 로 받아야 원본을 잃지 않는다</span>'; hp.state='ptr'; } }
+    else if(op==='free'){ if(!hp.block){ HT.innerHTML='<span class="c">// free(NULL) 은 아무 일도 하지 않는다 (안전)</span>'; } else if(hp.block.freed){ hp.block.err=true; HT.innerHTML='<span class="r">Invalid free() / delete / delete[] / realloc()\n   at free ... by main (leak.c:9)</span>\n<span class="c">// 이중 해제(double free). 습관: free 뒤에 p = NULL</span>'; $('#heap').classList.add('shake'); setTimeout(()=>$('#heap').classList.remove('shake'),400); } else { hp.block.freed=true; hp.block.moved=false; hp.state='dangle'; HT.innerHTML='<span class="g">free(p);   // 반납. 그러나 p 에는 옛 주소가 그대로 남아 있다 (dangling)</span>'; } }
+    else if(op==='use'){ if(hp.state==='uninit'||hp.state==='null'){ HT.innerHTML='<span class="r">Segmentation fault</span>'; } else if(hp.block&&hp.block.freed){ HT.innerHTML='<span class="r">Invalid write of size 4\n   Address 0x4a4a0a0 is 0 bytes inside a block of size 12 free\'d</span>\n<span class="c">// 해제 후 사용(use-after-free)</span>'; } else HT.innerHTML='<span class="g">p[0] = 1;   // OK</span>'; }
+    else if(op==='exit'){ if(hp.block&&!hp.block.freed){ HT.innerHTML=`<span class="y">HEAP SUMMARY: in use at exit: ${hp.block.size} bytes in 1 blocks\nLEAK SUMMARY: definitely lost: ${hp.block.size} bytes in 1 blocks\n   at malloc ... by main (leak.c:5)</span>\n<span class="c">// 누수. PC 에서는 OS 가 회수하지만 MCU 에서는 재부팅까지 사라진 메모리</span>`; } else HT.innerHTML='<span class="g">All heap blocks were freed -- no leaks are possible\nERROR SUMMARY: 0 errors</span>'; }
+    renderHeap();
+  }));
+  renderHeap();
+
+  /* 8 flow */
+  const fd=['<b>fgets(line, sizeof line, stdin)</b> — 버퍼 크기 안에서만 읽는다. 끝의 \\n 은 strcspn 으로 제거.','<b>parse_frame(line, &r)</b> — 실패하면 0 을 반환하고 r 은 건드리지 않는다. BAD 줄은 세고 건너뛴다.','<b>realloc</b> — n == cap 이면 cap 두 배. tmp 로 받아 실패 시 원본을 지킨다. log[n++] = r.','<b>sort_by_temp</b> — Reading 을 통째로 swap 하는 버블 정렬. 구조체 대입 한 줄이면 된다.','<b>통계</b> — 정렬됐으니 min = log[0].t, max = log[n-1].t, 중앙값은 n 홀짝 구분. ALERT 는 35℃ 초과 개수.','<b>free(log)</b> — 마지막에 한 번. valgrind: definitely lost 0 bytes.'];
+  let bT=[]; function bReset(){ bT.forEach(clearTimeout); bT=[]; $$('#flow-svg .node').forEach(n=>n.classList.remove('on','done')); $('#b-desc').innerHTML='읽기·파싱·누적은 줄마다 반복, 정렬·통계·해제는 마지막에 한 번.'; $('#b-play').disabled=false; }
+  $('#b-play').addEventListener('click',()=>{ bReset(); $('#b-play').disabled=true; const ns=$$('#flow-svg .node'); ns.forEach((n,i)=>{ bT.push(setTimeout(()=>{ ns.forEach((x,j)=>{ x.classList.toggle('on',j===i); x.classList.toggle('done',j<i); }); $('#b-desc').innerHTML=fd[i]; if(i===ns.length-1) bT.push(setTimeout(()=>{ n.classList.remove('on'); n.classList.add('done'); $('#b-play').disabled=false; },1200)); },i*1400)); }); });
+  $('#b-reset').addEventListener('click',bReset);
+})();
+</script>
+</body>
+</html>
