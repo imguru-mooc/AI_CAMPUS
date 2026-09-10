@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C 언어 Day 3 개념 워크시트 — 구조체·비트 연산·함수 포인터</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:900px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.primary{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700;padding:9px 18px;font-size:14px}
+  button.submit{background:#3a2e12;border-color:var(--amber);color:var(--amber);font-weight:700;padding:9px 18px;font-size:14px}
+  button:disabled{opacity:.45;cursor:default}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  input[type=text]{background:#0a0f1c;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:14px}
+  .tabs{display:flex;flex-wrap:wrap;gap:6px}
+  .tabs button .s{font-family:var(--mono);font-size:11px;color:var(--dim);margin-left:6px}
+  .tabs button.graded .s{color:var(--green)}
+  .head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .head .t{color:var(--amber);font-size:17px}
+  .head .a{font-size:13px;color:var(--teal);font-family:var(--mono)}
+  .q{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#0e1628}
+  .q.unans{border-color:#5a3a1a}
+  .q .n{font-family:var(--mono);color:var(--dim);font-size:12px}
+  .q .p{margin:4px 0 10px;font-size:15px}
+  .q .p code,.opt code,.fb code,td code{font-family:var(--mono);color:var(--blue);background:#0a0f1c;padding:1px 5px;border-radius:4px}
+  .q pre.qc{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:6px;padding:10px 12px;margin:4px 0 12px;font-size:13.5px;line-height:1.5;white-space:pre;overflow-x:auto;color:#dbe4f3}
+  .q pre{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin:6px 0 10px;font-size:14px;white-space:pre;overflow-x:auto}
+  .opts{display:grid;gap:6px}
+  .opt{text-align:left;padding:8px 12px;font-size:14px;font-family:inherit}
+  .opt.sel{border-color:var(--amber);background:#1f1a0c}
+  .opt.ok{border-color:var(--green);color:var(--green);background:#0d2216}
+  .opt.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .opt:disabled{cursor:default;opacity:.9}
+  .fb{margin-top:8px;font-size:13px;color:var(--dim);border-left:3px solid var(--line);padding-left:10px}
+  .fb.ok{border-left-color:var(--green)}.fb.bad{border-left-color:var(--red)}
+  .fb .anim{color:var(--teal);font-family:var(--mono);font-size:12px;display:block;margin-top:3px}
+  .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  .code{font-family:var(--mono);font-size:20px;color:var(--amber);letter-spacing:1px}
+  .score{font-family:var(--mono);color:var(--green);font-size:16px}
+  .hint{color:var(--dim);font-size:13px}
+  details{color:var(--dim);font-size:13px}
+  details summary{cursor:pointer;color:var(--dim)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  /* dialog */
+  dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:0;max-width:820px;width:92vw;max-height:88vh}
+  dialog::backdrop{background:#000a}
+  .dg{padding:18px 20px}
+  .dg h3{color:var(--amber);margin:0 0 4px;font-size:20px}
+  .dg .meta{color:var(--dim);font-size:13px;margin-bottom:12px;font-family:var(--mono)}
+  .dg .sec{margin:14px 0 6px;color:var(--teal);font-weight:700;font-size:14px}
+  .dg table{width:100%;border-collapse:collapse;font-size:13px}
+  .dg th{text-align:left;color:var(--dim);font-weight:600;padding:5px 8px;border-bottom:1px solid var(--line);font-size:12px}
+  .dg td{padding:5px 8px;border-bottom:1px solid #16203a;vertical-align:top}
+  .dg td.r{font-family:var(--mono)}
+  .dg .ok{color:var(--green)}.dg .bad{color:var(--red)}.dg .none{color:var(--dim)}
+  .dg .sum{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0;font-family:var(--mono)}
+  .dgbar{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:10px 20px;display:flex;gap:8px;justify-content:flex-end;align-items:center}
+  .toast{color:var(--green);font-size:13px;margin-right:auto}
+  .body{overflow:auto;max-height:calc(88vh - 60px)}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>C 언어 Day 3 개념 워크시트</h1>
+  <p class="sub">구조체·비트 연산·함수 포인터 · 8교시 × 10문항. 🎬 표시는 index_day3.html 의 애니메이션 번호입니다. 답을 고른 뒤 아래 <b style="color:var(--teal)">채점하기</b>를 누르면 정오·해설과 결과 코드가 나타납니다. 채점 전에는 답을 바꿀 수 있고, 채점 후에는 잠깁니다. 모든 교시를 마치면 <b style="color:var(--amber)">제출</b>로 오답 정리를 열고, <b>캡처</b>로 복사해 노션에 붙여 넣으세요.</p>
+
+  <div class="panel">
+    <div class="row"><label style="color:var(--dim);font-size:13px">이름 <input type="text" id="name" placeholder="홍길동"></label><span class="hint">이름은 결과 코드 계산에만 쓰이며 저장되지 않습니다.</span></div>
+  </div>
+  <div class="panel"><h2>교시</h2><div class="tabs" id="tabs"></div></div>
+  <div class="panel" id="sheet"></div>
+  <div class="panel">
+    <div class="actions">
+      <button class="primary" id="gradeBtn">채점하기</button>
+      <span class="code" id="rcode">—</span><span class="score" id="rscore"></span><span class="hint" id="rhint"></span>
+      <button class="submit" id="submitBtn" style="margin-left:auto">제출</button>
+    </div>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <div class="body"><div class="dg" id="dgBody"></div></div>
+  <div class="dgbar"><span class="toast" id="toast"></span><button id="captureBtn" class="primary">📋 캡처 (노션용 복사)</button><button id="closeBtn">닫기</button></div>
+</dialog>
+
+<script>
+const $=s=>document.querySelector(s);
+const Q=[
+ {t:'1교시 · 구조체 기초',anim:'D3-1 구조체 메모리 뷰어',qs:[
+  {p:'아래 코드에서 s 의 세 필드 값은 각각 무엇입니까?',c:'typedef struct { double t; int h; int d; } Reading;\nReading s = {.d = 150, .t = 36.9};',o:['36.9, 150, 0 — 지정한 순서대로','36.9, 0, 150 — 지정하지 않은 h 는 0','컴파일 에러 — 순서를 바꿀 수 없다','36.9, 쓰레기값, 150'],a:1,w:'지정 초기화(C99)는 필드 이름으로 값을 넣고, 빠진 필드는 0 으로 채웁니다.',an:'1교시 예제 1-1'},
+  {p:'구조체를 다른 변수에 대입한 뒤 복사본을 고쳤습니다. 출력은?',c:'Reading r = {25.3, 60, 120};\nReading c = r;\nc.t = 99.0;\nprintf("%.1f %.1f\\n", r.t, c.t);',o:['99.0 99.0 — 같은 메모리를 가리킨다','25.3 99.0 — 통째로 복사된 독립 사본','컴파일 에러 — 구조체는 대입 불가','25.3 25.3'],a:1,w:'구조체 대입은 memcpy 와 같은 통째 복사입니다. 배열은 = 로 복사되지 않지만 구조체는 됩니다.',an:'D3-1 · c = r'},
+  {p:'p 가 r 을 가리킬 때 p->h 와 같은 뜻의 표현은 무엇입니까?',c:'Reading r = {25.3, 60, 120};\nReading *p = &r;',o:['*p.h','(*p).h','p.h','&p->h'],a:1,w:'-> 는 (*p). 의 줄임입니다. *p.h 는 .이 * 보다 우선이라 *(p.h) 로 읽혀 에러입니다.',an:'D3-1 · p->h'},
+  {p:'구조체를 값으로 넘기는 함수를 호출한 뒤 r.t 는 얼마입니까?',c:'void bump(Reading r) { r.t += 1.0; }\n\nReading r = {25.0, 60, 120};\nbump(r);\nprintf("%.1f\\n", r.t);',o:['26.0','25.0 — 복사본만 바뀜','컴파일 에러','0.0'],a:1,w:'Day 2 의 값 전달 그대로입니다. 16바이트 구조체가 복사되어 함수 안의 r 은 사본입니다. 원본을 바꾸려면 Reading *r 과 r->t.',an:'1교시 예제 1-2'},
+  {p:'배열 인자로 구조체 배열을 받는 함수입니다. a[i].t 와 같은 표현은 무엇입니까?',c:'double avg_t(const Reading *a, int n) {\n    double s = 0;\n    for (int i = 0; i < n; i++) s += a[i].t;\n    return s / n;\n}',o:['(a + i)->t','a->t[i]','*a.t + i','a[i]->t'],a:0,w:'a[i] 는 *(a + i) 이고 그 구조체의 필드이므로 (a + i)->t 와 같습니다. a[i]->t 는 a[i] 가 포인터가 아니라 에러.',an:'1교시 예제 1-2'},
+  {p:'구조체 두 개가 같은지 == 로 비교하면 어떻게 됩니까?',c:'Reading a = {25.3, 60, 120}, b = {25.3, 60, 120};\nif (a == b) printf("same\\n");',o:['same 이 출력된다','컴파일 에러 — 구조체에는 == 가 없다','주소를 비교해 거짓','런타임 에러'],a:1,w:'C 는 구조체 비교 연산자를 제공하지 않습니다. 필드별로 비교하는 함수를 씁니다. memcmp 는 패딩 때문에 믿을 수 없습니다.',an:'1교시 예제 1-3'},
+  {p:'구조체 안의 배열 필드는 대입 시 어떻게 됩니까?',c:'typedef struct { char id[8]; double t; } Node;\nNode a = {"ESP-01", 25.3};\nNode b = a;\nb.id[0] = \'X\';\nprintf("%s %s\\n", a.id, b.id);',o:['XSP-01 XSP-01 — 배열은 주소만 복사','ESP-01 XSP-01 — 구조체 안의 배열도 통째로 복사','컴파일 에러','ESP-01 ESP-01'],a:1,w:'구조체 대입은 안의 배열까지 바이트 단위로 복사합니다. 배열 단독으로는 = 가 안 되지만 구조체에 싸면 됩니다.',an:'1교시 빈칸 1-1'},
+  {p:'함수가 구조체 배열 중 하나를 골라 돌려줄 때 아래 반환형을 쓴 이유는?',c:'const Node *hottest(const Node *a, int n);',o:['속도','호출자가 결과를 읽기만 하게 하고 복사를 피하기 위해','구조체는 값으로 반환 불가','NULL 을 돌려주기 위해'],a:1,w:'포인터 반환은 8바이트 복사로 끝나고, const 는 호출자가 원본 배열을 수정하지 못하게 합니다.',an:'1교시 빈칸 1-1'},
+  {p:'구조체를 함수 인자로 넘길 때 기본으로 권장하는 형태는?',o:['Reading r — 값','Reading *r','const Reading *r — 읽기만 할 때','Reading &r'],a:2,w:'큰 구조체 복사를 피하고 수정 의도를 타입으로 드러냅니다. 수정해야 할 때만 const 를 뺍니다. & 참조는 C++ 문법.',an:'1교시 예제 1-2'},
+  {p:'sizeof(Reading) 은 얼마입니까? (double t; int h; int d;)',o:['12','16','20','24'],a:1,w:'8 + 4 + 4 = 16. 이 경우엔 패딩 없이 딱 맞습니다. 순서가 다르면 달라집니다 — 2교시.',an:'D3-1'},
+ ]},
+ {t:'2교시 · 패딩·정렬·공용체·열거형',anim:'D3-2 패딩 실험실',qs:[
+  {p:'아래 구조체의 sizeof 가 6 이 아니라 12 인 이유는?',c:'typedef struct { char id; int v; char f; } Bad;',o:['int 가 8바이트라서','int 는 4의 배수 주소에 놓여야 해서 id 뒤 3바이트, 그리고 전체를 4의 배수로 맞추려 f 뒤 3바이트 패딩','char 가 4바이트로 저장돼서','컴파일러 버그'],a:1,w:'정렬 규칙 ①(필드는 자기 크기 배수 주소) ②(전체 크기는 최대 필드 배수) 두 가지가 모두 작동합니다.',an:'D3-2 · char int char'},
+  {p:'같은 필드를 순서만 바꿨습니다. sizeof 는?',c:'typedef struct { int v; char id; char f; } Good;',o:['12','8','6','4'],a:1,w:'v(0~3) id(4) f(5) 뒤에 2바이트 패딩으로 8. 큰 필드부터 놓으면 패딩이 줄어듭니다.',an:'D3-2 · 순서 바꾸기'},
+  {p:'offsetof(Bad, f) 의 값은? (Bad = char id; int v; char f;)',o:['5','6','8','9'],a:2,w:'id@0, 패딩 1~3, v@4~7, f@8. offsetof 는 <stddef.h> 의 매크로입니다.',an:'2교시 예제 2-1'},
+  {p:'#pragma pack(1) 을 쓰면 무엇을 얻고 무엇을 잃습니까?',c:'#pragma pack(push, 1)\ntypedef struct { char id; int v; char f; } Packed;   // sizeof 6\n#pragma pack(pop)',o:['크기 감소, 손해 없음','패딩이 사라지지만 정렬되지 않은 접근이 생겨 x86 은 느려지고 일부 MCU 는 죽는다','컴파일이 빨라진다','이식성이 좋아진다'],a:1,w:'통신 프레임과 1:1 대응할 때 유혹적이지만, 안전한 답은 Day 2 의 바이트 조립입니다.',an:'2교시 예제 2-2'},
+  {p:'union 의 크기와 멤버의 관계로 옳은 것은?',c:'typedef union { uint32_t w; uint8_t b[4]; float f; } Word;',o:['12바이트, 멤버가 순서대로 놓인다','4바이트, 모든 멤버가 같은 자리를 공유한다','4바이트, 마지막 멤버만 저장된다','16바이트'],a:1,w:'union 크기 = 가장 큰 멤버. 한 자리를 여러 이름으로 읽는 것이라 마지막에 쓴 멤버의 값만 의미가 있습니다.',an:'2교시 예제 2-3'},
+  {p:'아래 코드의 출력은? (리틀 엔디안)',c:'Word x;\nx.w = 0x11223344;\nprintf("%02X %02X\\n", x.b[0], x.b[3]);',o:['11 44','44 11','00 00','컴파일 에러'],a:1,w:'같은 4바이트를 바이트 배열로 읽으면 리틀 엔디안 순서 44 33 22 11 이 보입니다. Day 1 4교시의 캐스팅을 union 으로 한 것.',an:'D3-2 · union'},
+  {p:'x.f = 1.0f 을 넣은 뒤 x.w 를 16진수로 찍으면 0x3F800000 이 나옵니다. 이것은 무엇을 보여줍니까?',o:['float 이 int 로 변환된 값 1','float 1.0 의 IEEE 754 비트 패턴 — union 으로 실수의 내부 표현을 볼 수 있다','오류 값','컴파일러 최적화'],a:1,w:'센서가 float 을 4바이트로 보낼 때 b[] 에 받아 f 로 읽는 것이 union 의 전형적 용도입니다.',an:'2교시 예제 2-3'},
+  {p:'enum 선언에서 각 이름의 값은?',c:'typedef enum { ST_IDLE, ST_HEAT, ST_COOL, ST_ALERT, ST_COUNT } State;',o:['모두 0','0, 1, 2, 3, 4 — 순서대로','1, 2, 3, 4, 5','정해지지 않음'],a:1,w:'첫 값이 0 이고 하나씩 증가합니다. 마지막 ST_COUNT 가 자동으로 "상태 개수"가 되는 관용구입니다.',an:'2교시 예제 2-4'},
+  {p:'enum 마지막에 ST_COUNT 를 두는 이유는?',c:'static const char *NAME[ST_COUNT] = {"IDLE","HEAT","COOL","ALERT"};\nfor (int i = 0; i < ST_COUNT; i++) ...',o:['문법 규칙','상태를 추가해도 배열 크기와 루프 상한이 자동으로 맞기 때문','enum 은 마지막 값이 필요해서','디버깅용'],a:1,w:'7교시 상태 머신 테이블의 크기가 이 값입니다. 상태 하나 추가 = enum 한 줄.',an:'2교시 예제 2-4'},
+  {p:'enum 변수에 범위 밖 값을 대입하면?',c:'State st = 99;\nswitch (st) { ... }',o:['컴파일 에러','컴파일되고 실행된다 — enum 은 int 라서. default 로 방어해야','런타임 예외','자동으로 0 이 된다'],a:1,w:'C 의 enum 은 타입 검사가 느슨합니다. 테이블 인덱스로 쓸 때 범위 검사가 필요한 이유.',an:'2교시 예제 2-4'},
+ ]},
+ {t:'3교시 · 비트 연산 기초',anim:'D3-3 비트 연산기',qs:[
+  {p:'아래 연산의 결과를 2진수로 쓰면?',c:'uint8_t a = 0b10110010;\na & 0x0F',o:['0b10110010','0b00000010 — 하위 4비트만 남음','0b10110000','0b00001111'],a:1,w:'AND 는 마스크가 1 인 자리만 통과시킵니다. 0x0F = 00001111 이므로 하위 니블만 남습니다.',an:'D3-3 · a & 0x0F'},
+  {p:'a | 0x01 의 결과는? (a = 0b10110010)',o:['0b10110011 — 최하위 비트가 켜짐','0b00000001','0b10110010','0b01001101'],a:0,w:'OR 은 1 을 이기지 못합니다. 마스크의 1 자리가 무조건 1 이 되므로 "켜기"에 씁니다.',an:'D3-3 · a | b'},
+  {p:'a ^ 0xFF 의 결과는? (a = 0b10110010)',o:['0b10110010','0b01001101 — 전부 반전','0b11111111','0b00000000'],a:1,w:'XOR 1 은 반전입니다. 0xFF 와 XOR 하면 ~a 와 같고, XOR 은 같은 값을 두 번 하면 원래대로 돌아옵니다.',an:'D3-3 · a ^ 0xFF'},
+  {p:'8비트 변수인데 a << 1 이 356 이 나온 이유는?',c:'uint8_t a = 178;   // 0b10110010\nprintf("%d\\n", a << 1);   // 356',o:['printf 버그','uint8_t 는 연산 전에 int 로 정수 승격되어 8비트로 잘리지 않기 때문','<< 는 두 배가 아니라서','a 가 부호 있는 값이라'],a:1,w:'Day 1 5교시의 정수 승격입니다. 8비트로 자르려면 (uint8_t)(a << 1) 로 캐스팅. ~a 도 같은 이유로 캐스팅 필요.',an:'3교시 예제 3-1'},
+  {p:'n 번 비트를 끄는 올바른 관용구는?',o:['reg |= (1u << n)','reg &= ~(1u << n)','reg ^= (1u << n)','reg &= (1u << n)'],a:1,w:'그 자리만 0 인 마스크(~(1<<n))와 AND. reg &= (1<<n) 은 그 비트만 남기고 나머지를 전부 끄는 것이라 반대입니다.',an:'3교시 예제 3-2'},
+  {p:'n 번 비트가 켜져 있는지 검사하는 식은?',o:['reg & n','(reg >> n) & 1','reg << n','reg == (1 << n)'],a:1,w:'검사할 비트를 0번 자리로 내린 뒤 1 과 AND. reg & (1u << n) 도 되지만 결과가 0/1 이 아니라 0/2ⁿ 입니다.',an:'3교시 예제 3-2'},
+  {p:'비트 8~15 를 0xAB 로 바꾸는 올바른 코드는? (reg = 0x12345678)',c:'reg = ____;\n// 기대: 0x1234AB78',o:['reg | (0xABu << 8)','(reg & ~(0xFFu << 8)) | (0xABu << 8) — 먼저 지우고 넣는다','reg ^ (0xABu << 8)','reg & (0xABu << 8)'],a:1,w:'OR 만 하면 기존 0x56 과 섞여 0xFF 가 됩니다. 필드 쓰기는 항상 AND NOT 으로 지운 뒤 OR.',an:'3교시 예제 3-3'},
+  {p:'1 << 31 대신 1u << 31 을 써야 하는 이유는?',o:['더 빠르다','int 에서 1 << 31 은 부호 비트로 넘어가는 signed 오버플로(정의되지 않은 동작)이기 때문','u 가 없으면 컴파일 에러','결과가 같아서 상관없다'],a:1,w:'레지스터 조작은 항상 unsigned 로 합니다. 최상위 비트를 다룰 때 특히 중요합니다.',an:'3교시 예제 3-2'},
+  {p:'음수를 오른쪽 시프트하면?',c:'int8_t neg = -8;\nprintf("%d\\n", neg >> 1);',o:['항상 -4','대부분 -4 (산술 시프트) 이지만 C 표준상 구현 정의 — 컴파일러마다 다를 수 있다','항상 124','컴파일 에러'],a:1,w:'signed 시프트는 결과가 보장되지 않습니다. 비트 연산은 unsigned 로만 하는 것이 규칙.',an:'3교시 예제 3-4'},
+  {p:'니블(4비트)을 교환하는 식으로 옳은 것은? (v 는 uint8_t)',c:'0b01100101 → 0b01010110',o:['v << 4 | v >> 4','(uint8_t)((v << 4) | (v >> 4)) — 캐스팅 필수','v ^ 0xF0','(v & 0x0F) << 4'],a:1,w:'v << 4 가 int 로 승격되어 상위 비트가 남으므로 8비트로 캐스팅해야 합니다. ④는 상위만 채우고 하위가 0.',an:'3교시 빈칸 3-1'},
+ ]},
+ {t:'4교시 · 비트 연산 실전',anim:'D3-4 가상 GPIO 레지스터',qs:[
+  {p:'GPIO_SET 매크로의 본문으로 옳은 것은?',c:'#define GPIO_SET(pin)  ____',o:['(GPIO_OUT = (1u << (pin)))','(GPIO_OUT |= (1u << (pin)))','(GPIO_OUT &= (1u << (pin)))','(GPIO_OUT + (pin))'],a:1,w:'= 는 다른 핀을 전부 꺼 버리고, &= 는 그 핀만 남기고 나머지를 끕니다. 다른 핀을 건드리지 않고 켜려면 |=.',an:'D3-4 · GPIO_SET'},
+  {p:'아래 순서대로 실행한 뒤 GPIO_OUT 의 값은? (PIN_LED_R=2, PIN_LED_G=4)',c:'GPIO_SET(PIN_LED_R);\nGPIO_SET(PIN_LED_G);\nGPIO_CLR(PIN_LED_R);',o:['0x00000004','0x00000010 — 비트 4 만 남음','0x00000014','0x00000000'],a:1,w:'비트 2 켬(0x04) → 비트 4 켬(0x14) → 비트 2 끔(0x10).',an:'4교시 예제 4-1'},
+  {p:'d & FLAG_ALARM 이 참일 때 값은? (FLAG_ALARM = 1u << 5)',c:'uint8_t d = 120;   // 0b01111000\nint v = d & FLAG_ALARM;',o:['1','32 — 마스크 값 자체','5','0'],a:1,w:'AND 결과는 그 비트 자리의 값(2⁵=32)입니다. 0/1 이 필요하면 !!(d & FLAG_ALARM) 또는 (d >> 5) & 1.',an:'4교시 예제 4-2'},
+  {p:'!!(x) 관용구의 역할은?',o:['x 를 반전한다','0 이 아닌 값을 1 로, 0 은 0 으로 만든다','x 를 두 배로','비트를 센다'],a:1,w:'! 를 두 번 적용하면 논리값(0/1)으로 정규화됩니다. 플래그를 출력하거나 저장할 때 씁니다.',an:'4교시 예제 4-2'},
+  {p:'D=120 (0b01111000) 의 하위 4비트를 신호 세기로 읽으면?',c:'#define LEVEL_MASK 0x0Fu\nd & LEVEL_MASK',o:['7','8','120','15'],a:1,w:'0b01111000 의 하위 4비트는 1000 = 8. 상위 4비트(0111)는 개별 플래그로 해석했습니다.',an:'4교시 예제 4-2'},
+  {p:'XOR 체크섬이 프레임 검증에 쓰일 수 있는 이유는?',c:'uint8_t cs = 0;\nfor (; *s && *s != \'*\'; s++) cs ^= (uint8_t)*s;',o:['XOR 이 가장 빠른 연산이라','한 글자만 바뀌어도 결과가 달라지고, 같은 값을 두 번 XOR 하면 원래대로 돌아오기 때문','XOR 은 항상 0 이라','오류를 고칠 수 있어서'],a:1,w:'NMEA(GPS) 의 $…*hh 가 이 방식입니다. 검출은 되지만 정정은 못 합니다(CRC 도 마찬가지).',an:'4교시 예제 4-3'},
+  {p:'리틀 엔디안 두 바이트를 uint16_t 로 조립하는 식은?',c:'uint8_t buf[2] = {0x2C, 0x01};   // 300',o:['buf[0] << 8 | buf[1]','buf[0] | (buf[1] << 8)','buf[0] + buf[1]','(buf[0] << 8) + (buf[1] << 8)'],a:1,w:'낮은 주소가 하위 바이트입니다. buf[1] 을 8비트 올려 상위로 보내고 OR.',an:'4교시 빈칸 4-1'},
+  {p:'16비트 값에서 상위 바이트를 꺼내는 식은?',c:'uint16_t v = 0x012C;\nuint8_t hi = ____;   // 0x01',o:['v & 0xFF','(v >> 8) & 0xFF','v << 8','v / 2'],a:1,w:'8비트 내려서 하위 8비트만 남깁니다. & 0xFF 는 16비트 값에서는 생략 가능하지만 습관으로 붙입니다.',an:'4교시 빈칸 4-1'},
+  {p:'두 16비트 값을 32비트 하나로 합치는 식은?',c:'uint16_t dist = 300, hum = 60;\nuint32_t packed = ____;   // 0x012C003C',o:['dist | hum','((uint32_t)dist << 16) | hum','dist + hum','dist << 8 | hum'],a:1,w:'상위 16비트에 dist, 하위 16비트에 hum. 캐스팅은 dist 가 int 로 승격되어 안전하지만 명시하는 것이 좋습니다.',an:'4교시 빈칸 4-1'},
+  {p:'gpio.h 에서 GPIO_OUT 을 extern uint32_t 로 둔 이유와 다음 주의 변화는?',c:'extern uint32_t GPIO_OUT;\n// 실제 MCU: #define GPIO_OUT (*(volatile uint32_t *)0x3FF44004)',o:['PC 에서는 진짜 주소가 없어 변수로 흉내 내고, MCU 에서는 이 한 줄만 주소 캐스팅으로 바꾸면 매크로들은 그대로 쓴다','extern 이 더 빠르다','MCU 에서는 매크로를 전부 다시 쓴다','차이 없다'],a:0,w:'하드웨어 의존 부분을 한 줄에 가두는 것이 이식성 있는 임베디드 코드의 기본 구조입니다.',an:'4교시 예제 4-1 · 5교시 예제 5-4'},
+ ]},
+ {t:'5교시 · 매크로·volatile·메모리 맵',anim:'D3-5 매크로 전개기',qs:[
+  {p:'아래 매크로로 SQ(1 + 2) 를 계산하면?',c:'#define SQ(x) x * x\nprintf("%d\\n", SQ(1 + 2));',o:['9','5 — 1 + 2 * 1 + 2 로 치환된다','6','컴파일 에러'],a:1,w:'매크로는 인자를 계산하지 않고 글자를 그대로 붙여 넣습니다. * 가 + 보다 먼저라 5.',an:'D3-5 · SQ(1+2)'},
+  {p:'전체를 감싸는 괄호가 없는 매크로로 100 / SQ(5) 를 계산하면?',c:'#define SQ(x) (x) * (x)\nprintf("%d\\n", 100 / SQ(5));',o:['4','100 — 100 / 5 * 5 로 읽힌다','20','컴파일 에러'],a:1,w:'같은 우선순위는 왼쪽부터. ((x) * (x)) 처럼 전체 괄호가 있어야 100 / 25 = 4.',an:'D3-5 · 100/SQ(5)'},
+  {p:'i = 3 일 때 아래 호출 후 i 의 값은?',c:'#define MAX(a, b) ((a) > (b) ? (a) : (b))\nint r = MAX(i++, 2);',o:['4','5 — i++ 가 두 번 평가된다','3','정의되지 않음(컴파일러마다)'],a:1,w:'치환 후 i++ 가 조건과 결과 자리에 각각 나타나 두 번 실행됩니다. 부수효과 있는 인자는 매크로에 넣지 마세요.',an:'D3-5 · MAX(i++, 2)'},
+  {p:'함수형 매크로 대신 권장하는 대안은?',c:'static inline uint16_t sq(uint16_t x) { return x * x; }',o:['#define 을 더 많이','static inline 함수 — 타입 검사가 되고 인자가 한 번만 평가된다','전역 함수','매크로가 항상 더 낫다'],a:1,w:'bits.h 의 print_bin8 이 이 형태입니다. 성능은 같고 매크로의 함정이 없습니다.',an:'5교시 예제 5-1'},
+  {p:'-DDEBUG 옵션은 무엇과 같습니까?',c:'$ gcc -DDEBUG dbg.c -o dbg',o:['디버거 실행','소스 첫 줄에 #define DEBUG 를 쓴 것','-g 와 같다','최적화 끄기'],a:1,w:'#ifdef DEBUG 블록이 켜집니다. -g(디버그 정보)와는 다른 옵션입니다.',an:'5교시 예제 5-2'},
+  {p:'릴리스 빌드에서 아래 LOG 가 남기는 코드는?',c:'#ifdef DEBUG\n#  define LOG(fmt, ...) fprintf(stderr, ...)\n#else\n#  define LOG(fmt, ...) ((void)0)\n#endif',o:['빈 함수 호출','아무 코드도 남지 않는다 — 플래시·속도 비용 0','fprintf 가 남지만 실행 안 됨','컴파일 에러'],a:1,w:'((void)0) 은 아무것도 하지 않는 식입니다. 조건부 컴파일은 런타임 if 와 달리 코드 자체를 없앱니다.',an:'5교시 예제 5-2'},
+  {p:'volatile 이 컴파일러에게 하는 지시는?',c:'volatile uint32_t hw_flag = 0;\nwhile (hw_flag == 0) {}',o:['변수를 레지스터에 캐시하라','이 변수는 밖에서 바뀔 수 있으니 매번 메모리에서 다시 읽고 접근을 생략하지 마라','스레드 안전하게 만들어라','값을 상수로 취급하라'],a:1,w:'volatile 이 없으면 -O2 가 "아무도 안 바꾸니 무한 루프"로 최적화할 수 있습니다.',an:'5교시 예제 5-3'},
+  {p:'volatile 이 반드시 필요한 곳이 아닌 것은?',o:['하드웨어 레지스터','인터럽트 핸들러가 바꾸는 플래그','다른 스레드가 바꾸는 플래그(동기화는 별도)','루프 안의 일반 카운터'],a:3,w:'일반 지역 변수에 volatile 을 붙이면 최적화만 막힙니다. 밖에서 바뀌는 것에만.',an:'5교시 예제 5-3'},
+  {p:'아래 매크로를 읽는 순서로 옳은 것은?',c:'#define GPIO_OUT_REG (*(volatile uint32_t *)0x3FF44004)',o:['주소를 volatile uint32_t 포인터로 캐스팅한 뒤 역참조 → 그 주소를 변수처럼 쓴다','uint32_t 를 주소로 바꾼다','포인터 배열','함수 호출'],a:0,w:'이렇게 정의하면 GPIO_OUT_REG |= … 처럼 일반 변수 문법으로 레지스터에 씁니다. 메모리 맵 I/O 의 표준 형태.',an:'5교시 예제 5-4'},
+  {p:'ARRAY_LEN 매크로를 포인터에 쓰면?',c:'#define ARRAY_LEN(a) (sizeof(a) / sizeof((a)[0]))\nvoid f(int *p) { printf("%zu\\n", ARRAY_LEN(p)); }',o:['배열 길이','2 — 8 / 4, 포인터 크기를 나눈 것','컴파일 에러','0'],a:1,w:'Day 2 의 감쇠 함정 그대로입니다. 배열 선언이 보이는 곳에서만 씁니다.',an:'5교시 빈칸 5-1'},
+ ]},
+ {t:'6교시 · 함수 포인터',anim:'D3-6 함수 포인터 테이블',qs:[
+  {p:'아래 선언을 올바르게 읽은 것은?',c:'int (*op)(int, int);',o:['int 포인터를 돌려주는 함수 op','(int, int) 를 받아 int 를 돌려주는 함수의 포인터 op','int 배열 op','두 int 를 담는 구조체'],a:1,w:'괄호가 *op 를 먼저 묶습니다. 괄호를 빼면 int *op(int, int) — int 포인터를 돌려주는 함수 선언이 됩니다.',an:'6교시 예제 6-1'},
+  {p:'함수 이름을 함수 포인터에 대입하면 무엇이 들어갑니까?',c:'op = add;\nprintf("%p %p\\n", (void *)add, (void *)op);   // 같은 값',o:['함수의 반환값','함수 코드의 주소','함수 복사본','컴파일 에러 — &add 가 필요'],a:1,w:'배열 이름이 첫 요소 주소로 감쇠하듯 함수 이름은 함수 주소입니다. &add 도 같은 값.',an:'D3-6'},
+  {p:'typedef 로 함수 포인터 타입에 이름을 붙이는 올바른 형태는?',o:['typedef int BinOp(int, int)*;','typedef int (*BinOp)(int, int);','typedef (int, int) -> int BinOp;','typedef int *BinOp(int, int);'],a:1,w:'선언과 같은 모양에서 변수 이름 자리에 타입 이름이 옵니다. 이후 BinOp op; 로 씁니다.',an:'6교시 예제 6-2'},
+  {p:'함수 포인터 배열로 연산을 골랐습니다. 출력은?',c:'static const BinOp OPS[] = { add, sub, mul };\nprintf("%d\\n", OPS[2](7, 3));',o:['10','4','21','컴파일 에러'],a:2,w:'OPS[2] 는 mul 의 주소. 그 주소로 점프해 7 * 3 = 21. switch 없는 분기입니다.',an:'D3-6 · OPS[2]'},
+  {p:'qsort 의 네 인자는 순서대로 무엇입니까?',c:'qsort(log, n, sizeof log[0], cmp_temp);',o:['배열, 요소 크기, 개수, 비교 함수','배열, 요소 개수, 요소 크기, 비교 함수','비교 함수, 배열, 개수, 크기','배열, 개수, 비교 함수, 크기'],a:1,w:'앞 세 인자는 Day 2 "길이를 같이 넘겨라"의 완성형(감쇠 때문), 넷째가 함수 포인터.',an:'6교시 예제 6-3'},
+  {p:'비교 함수의 매개변수가 const void * 인 이유는?',c:'int cmp_temp(const void *a, const void *b) {\n    const Reading *x = a, *y = b;\n    ...\n}',o:['속도','qsort 는 요소의 타입을 모르므로 아무 타입이나 받을 수 있게 하고, 비교 함수가 원래 타입으로 되돌린다','void 가 int 보다 작아서','C 문법 규칙'],a:1,w:'라이브러리는 타입을 모르고, 비교 함수만 압니다. 이것이 C 의 다형성(제네릭) 방식입니다.',an:'6교시 예제 6-3'},
+  {p:'double 을 비교하는 함수에서 아래 형태를 쓰는 이유는?',c:'return (x->t > y->t) - (x->t < y->t);',o:['더 빠르다','반환형이 int 라 x->t - y->t 의 소수부가 잘려 0.3 차이가 0 이 되기 때문','double 은 빼기가 안 돼서','정렬 방향을 바꾸려고'],a:1,w:'-1/0/1 을 안전하게 만드는 관용구입니다. int 뺄셈도 오버플로가 있어 이 형태가 모든 타입에 안전합니다.',an:'6교시 예제 6-3'},
+  {p:'내림차순 비교 함수를 만드는 가장 간단한 방법은?',c:'int cmp_hum_desc(const void *a, const void *b) {\n    return ((const Reading *)____)->h - ((const Reading *)____)->h;\n}',o:['a, b 순서 그대로','b, a — 순서를 바꾼다','-a, -b','비교 결과에 100 을 더한다'],a:1,w:'비교 함수가 "a 가 앞이면 음수"를 돌려주므로 인자를 바꾸면 순서가 뒤집힙니다.',an:'6교시 예제 6-3'},
+  {p:'int 뺄셈으로 비교 함수를 만들면 어떤 위험이 있습니까?',c:'return *(const int *)a - *(const int *)b;',o:['없음','INT_MAX - (-1) 같은 경우 오버플로로 부호가 뒤집혀 잘못 정렬된다','항상 0 이 된다','컴파일 에러'],a:1,w:'값이 작을 때만 우연히 맞습니다. (x > y) - (x < y) 를 습관으로.',an:'6교시 예제 6-4'},
+  {p:'함수 포인터를 매개변수로 받는 함수 선언으로 옳은 것은?',c:'void apply(double *a, int n, ____);\napply(temps, 3, c_to_f);',o:['double f(double)','double (*f)(double)','double *f(double)','f(double)'],a:1,w:'매개변수 자리에 함수 포인터 선언을 그대로 씁니다. 호출할 때는 함수 이름만 넘깁니다.',an:'6교시 빈칸 6-1'},
+ ]},
+ {t:'7교시 · 콜백과 상태 머신',anim:'D3-7 상태 머신 시뮬레이터',qs:[
+  {p:'콜백 패턴을 가장 잘 설명한 것은?',c:'void register_alert(Callback cb) { on_alert = cb; }\nvoid feed(double t) { if (t > 35.0 && on_alert) on_alert(t); }',o:['함수가 자기 자신을 부른다','"이 이벤트가 생기면 이 함수를 불러라"라고 미리 등록해 두고, 라이브러리가 나중에 호출한다','함수를 복사한다','재귀'],a:1,w:'feed 를 짠 사람은 beep 이 존재하는지 모릅니다. 인터럽트·타이머·버튼 이벤트가 전부 이 패턴.',an:'7교시 예제 7-1'},
+  {p:'콜백을 호출하기 전에 && on_alert 를 검사하는 이유는?',o:['속도','등록된 콜백이 없을 때(NULL) 호출하면 세그폴트이기 때문','on_alert 가 항상 참이라','문법 규칙'],a:1,w:'Day 2 1교시: NULL 역참조는 죽습니다. 함수 포인터도 포인터입니다.',an:'7교시 예제 7-1'},
+  {p:'상태 머신 핵심 한 줄의 뜻은?',c:'State next = TABLE[st](temps[i]);',o:['배열의 st 번째 온도를 읽는다','현재 상태 st 를 인덱스로 핸들러 함수를 꺼내 호출하고, 반환값이 다음 상태','st 를 temps 로 바꾼다','컴파일 에러'],a:1,w:'switch 없이 "상태 = 인덱스". 상태를 추가하면 enum 한 줄 + 핸들러 + 테이블 한 항목.',an:'D3-7'},
+  {p:'COOL 상태에서 온도 36.0 이 들어오면 다음 상태와 핀은?',c:'static State on_cool(double t) { GPIO |= BIT_FAN; if (t > 35) return ST_ALERT; if (t <= 26) return ST_IDLE; return ST_COOL; }',o:['IDLE, 모두 꺼짐','ALERT, FAN 켜짐 (0x2)','COOL, 변화 없음','HEAT'],a:1,w:'핸들러가 먼저 FAN 을 켜고(0x2), 36 > 35 이므로 ALERT 를 돌려줍니다. ALARM 은 다음 틱에 on_alert 가 켭니다.',an:'D3-7 · 36'},
+  {p:'테이블을 아래처럼 잘못 썼을 때 일어나는 일은?',c:'static const Handler TABLE[ST_COUNT] = { on_idle, on_cool, on_heat, on_alert };   // HEAT/COOL 바뀜',o:['컴파일 에러','컴파일·실행 모두 되지만 HEAT 상태에서 팬이 돌고 COOL 에서 히터가 켜진다','런타임 에러','자동으로 정렬된다'],a:1,w:'오늘의 함정은 조용히 틀립니다. 지정 초기화 [ST_HEAT] = on_heat 로 enum 과 묶어 막습니다.',an:'7교시 예제 7-3'},
+  {p:'지정 초기화의 장점은?',c:'{ [ST_IDLE] = on_idle, [ST_HEAT] = on_heat, [ST_COOL] = on_cool, [ST_ALERT] = on_alert }',o:['더 빠르다','enum 값과 핸들러가 이름으로 묶여 순서가 바뀌어도 어긋나지 않는다','메모리 절약','문법 규칙'],a:1,w:'enum 순서를 바꾸거나 상태를 중간에 끼워 넣어도 안전합니다.',an:'7교시 예제 7-3'},
+  {p:'핸들러 함수의 반환값이 뜻하는 것은?',c:'typedef State (*Handler)(double);',o:['오류 코드','다음 상태','핀 값','온도'],a:1,w:'현재 상태의 핸들러가 조건을 보고 "어디로 갈지"를 돌려주면 main 이 st 를 갱신합니다.',an:'D3-7'},
+  {p:'상태별 체류 횟수를 세는 배열을 enum 크기로 잡은 이유는?',c:'int visits[ST_COUNT] = {0};\nvisits[st]++;',o:['문법 규칙','상태 값을 그대로 인덱스로 써서 switch 없이 세고, 상태가 늘어도 자동으로 맞기 때문','메모리 절약','enum 은 배열이라'],a:1,w:'2교시 ST_COUNT 관용구의 활용입니다. NAME[] 테이블과 인덱스를 공유합니다.',an:'8교시 뼈대'},
+  {p:'여러 콜백을 등록할 수 있는 시스템에서 등록 함수가 0 을 돌려주는 경우는?',c:'int on_button(Handler h) {\n    if (n_handlers >= MAX_HANDLERS) return 0;\n    handlers[n_handlers++] = h;\n    return 1;\n}',o:['등록 성공','배열이 가득 차서 더 등록할 수 없을 때','h 가 NULL 일 때만','항상'],a:1,w:'고정 크기 배열이므로 한계를 검사해 실패를 알립니다. 반환값 = 성공 여부 패턴.',an:'7교시 빈칸 7-1'},
+  {p:'다음 주 ESP32 코드에서 콜백 패턴이 나타나는 대표 API 는?',o:['printf','attachInterrupt(pin, handler, mode) — 핀 인터럽트에 함수 등록','malloc','strtok'],a:1,w:'인터럽트 핸들러 등록이 그대로 register_alert(beep) 입니다. 오늘 7교시가 그 문법.',an:'7교시 예제 7-1'},
+ ]},
+ {t:'8교시 · 종합 (온도 조절기 컨트롤러)',anim:'D3-8 컨트롤러 흐름',qs:[
+  {p:'fsm.h 에서 STATE_NAME 을 extern 으로 선언한 이유는?',c:'extern const char *STATE_NAME[ST_COUNT];   // fsm.h\nconst char *STATE_NAME[ST_COUNT] = {...};  // fsm.c',o:['속도','정의는 fsm.c 한 곳에 두고 다른 파일에서는 존재만 알리기 위해 (Day 1 선언 vs 정의)','extern 이 없으면 배열을 못 만들어서','헤더에 정의하면 에러라서'],a:1,w:'헤더에 정의를 넣으면 include 하는 파일마다 정의가 생겨 링크 에러(중복 정의)가 납니다.',an:'8교시 뼈대'},
+  {p:'fsm_step 의 본문으로 알맞은 것은?',c:'State fsm_step(State cur, double t) {\n    return ____;\n}',o:['TABLE[t](cur)','TABLE[cur](t)','cur + 1','TABLE(cur, t)'],a:1,w:'현재 상태를 인덱스로 핸들러를 꺼내 온도를 넘깁니다. 7교시 핵심 한 줄.',an:'D3-8 · 상태 머신'},
+  {p:'제출 조건 "핀 제어는 GPIO_SET/CLR 매크로로만" 의 이유는?',o:['매크로가 빠르다','핀 번호와 레지스터 접근을 gpio.h 한 곳에 가둬 다음 주 실제 하드웨어로 옮길 때 그 파일만 바꾸면 되게 하기 위해','직접 |= 는 컴파일 에러','채점 편의'],a:1,w:'하드웨어 의존 코드를 격리하는 것이 임베디드 이식성의 기본 구조입니다.',an:'8교시 체크리스트'},
+  {p:'온도 내림차순 비교 함수로 옳은 것은?',c:'static int cmp_temp_desc(const void *a, const void *b) {\n    const Reading *x = a, *y = b;\n    return ____;\n}',o:['(x->t > y->t) - (x->t < y->t)','(y->t > x->t) - (y->t < x->t) — x, y 를 바꾼다','x->t - y->t','y->t - x->t'],a:1,w:'③④는 반환형이 int 라 소수부가 잘립니다. 순서를 바꾸면 내림차순.',an:'8교시 정답 8-A'},
+  {p:'디버그 로그를 켜서 빌드하는 명령은?',c:'make CFLAGS="-Wall -Wextra -g -DDEBUG"',o:['make -g','make CFLAGS="-Wall -Wextra -g -DDEBUG" — 매크로 정의를 컴파일 옵션으로','make DEBUG','소스를 고쳐야 한다'],a:1,w:'Makefile 변수를 명령줄에서 덮어씁니다. 소스 수정 없이 릴리스/디버그 빌드를 오갑니다.',an:'5교시 예제 5-2'},
+  {p:'테스트 입력 10줄 후 visits 가 IDLE 3 HEAT 2 COOL 3 ALERT 2 로 나왔습니다. visits 를 갱신하는 위치로 옳은 것은?',c:'State next = fsm_step(st, r.t);\nst = next;\n____',o:['visits[next]++ 를 fsm_step 앞에','visits[st]++ 를 st = next 뒤에 — 전이 후의 상태를 센다','visits[0]++','visits[r.t]++'],a:1,w:'"어느 상태에 머물렀나"를 세므로 전이가 끝난 뒤의 st 를 셉니다.',an:'8교시 뼈대'},
+  {p:'체크섬 검증을 추가할 때 프레임 끝 *2C 의 두 자리를 숫자로 바꾸는 방법은?',c:'const char *star = strchr(line, \'*\');\nlong rx = ____;',o:['atoi(star + 1)','strtol(star + 1, NULL, 16) — 16진수로 파싱','star[1] - \'0\'','strlen(star)'],a:1,w:'세 번째 인자 16 이 진법입니다. Day 2 strtol 의 확장. atoi 는 10진수라 "2C" 를 2 로 읽습니다.',an:'8교시 정답 8-A'},
+  {p:'main.c 에 GPIO_OUT 변수를 정의한 이유는?',c:'uint32_t GPIO_OUT = 0, GPIO_IN = 0;   // main.c',o:['gpio.h 가 extern 으로 선언만 했으므로 정의가 한 곳에 있어야 링크되기 때문','전역이 빠르다','매크로가 요구','헤더에 정의하면 느려서'],a:0,w:'선언(extern)은 여러 곳에, 정의는 정확히 한 곳에. 없으면 undefined reference.',an:'Day 1 2교시 · 8교시 뼈대'},
+  {p:'ALERT 상태에서 온도 29.0 이 들어왔을 때 GPIO 와 다음 상태는?',c:'static State on_alert(double t) { GPIO |= BIT_ALARM | BIT_FAN; if (t <= 30) return ST_COOL; return ST_ALERT; }',o:['0x0, IDLE','0x6, COOL — 핸들러가 먼저 핀을 켜고 조건을 본다','0x2, COOL','0x6, ALERT'],a:1,w:'핀 제어가 조건 검사보다 먼저이므로 GPIO 는 0x6. 29 ≤ 30 이라 COOL. 다음 틱의 on_cool 이 FAN 만 유지합니다.',an:'D3-7 · 시나리오'},
+  {p:'Day 4 예고에서 "gdb 로 예제 7-3 의 버그 잡기"를 언급했습니다. 이 버그가 gdb 연습에 적합한 이유는?',o:['세그폴트라서','컴파일 경고도 없고 죽지도 않으면서 결과만 틀리는 논리 버그라 실행을 따라가며 상태·핀 값을 봐야 찾을 수 있기 때문','gdb 가 자동으로 고쳐 줘서','매크로 버그라서'],a:1,w:'오늘 함정들의 공통점입니다. 도구 없이는 "왜 팬이 히터 자리에서 도는지" 알기 어렵습니다.',an:'Day 4 예고'},
+ ]},
+];
+
+let tab=0;const ans=Q.map(s=>s.qs.map(()=>null));const graded=Q.map(()=>false);
+function hash(s){let h=5381;for(const c of s)h=((h<<5)+h+c.charCodeAt(0))>>>0;return h.toString(16).padStart(8,'0').slice(-4);}
+function codeFor(name,t,score){return `${t}${'ABCDEFGHIJK'[10-score]||'K'}-${hash(`${name.trim()}|${t}|${score}|c-day3`)}`;}
+function scoreOf(i){return ans[i].filter((a,k)=>a===Q[i].qs[k].a).length;}
+function strip(h){const d=document.createElement('div');d.innerHTML=h;return d.textContent;}
+function renderTabs(){$('#tabs').innerHTML=Q.map((s,i)=>{const n=ans[i].filter(a=>a!==null).length;return `<button class="${i===tab?'active':''} ${graded[i]?'graded':''}" data-i="${i}">${i+1}교시<span class="s">${graded[i]?scoreOf(i)+'/10':n+'/10'}</span></button>`;}).join('');$('#tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{tab=+b.dataset.i;render();window.scrollTo({top:0});});}
+function render(){renderTabs();const s=Q[tab];const g=graded[tab];
+  $('#sheet').innerHTML=`<div class="head"><span class="t">${s.t}</span><span class="a">🎬 ${s.anim}</span></div>`+s.qs.map((q,k)=>{const a=ans[tab][k];
+    return `<div class="q ${g&&a===null?'unans':''}"><div class="n">문항 ${k+1}</div><div class="p">${q.p}</div>${q.c?`<pre class="qc">${q.c}</pre>`:``}<div class="opts">${q.o.map((o,j)=>{let cls='';if(g){if(j===q.a)cls='ok';else if(j===a)cls='bad';}else if(j===a)cls='sel';return `<button class="opt ${cls}" data-k="${k}" data-j="${j}" ${g?'disabled':''}>${'①②③④'[j]} ${o}</button>`;}).join('')}</div>${g?`<div class="fb ${a===q.a?'ok':'bad'}">${a===null?'미응답. ':(a===q.a?'정답. ':'오답. ')}${q.w}<span class="anim">확인: ${q.an}</span></div>`:''}</div>`;}).join('');
+  $('#sheet').querySelectorAll('.opt').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,j=+b.dataset.j;ans[tab][k]=(ans[tab][k]===j?null:j);render();});
+  $('#gradeBtn').disabled=g;$('#gradeBtn').textContent=g?'채점 완료':'채점하기';
+  const nm=$('#name').value;
+  if(g){const sc=scoreOf(tab);$('#rscore').textContent=`${sc}/10`;if(nm.trim()){$('#rcode').textContent=codeFor(nm,tab+1,sc);$('#rhint').textContent='결과 코드';}else{$('#rcode').textContent='—';$('#rhint').textContent='이름을 입력하면 결과 코드가 나옵니다.';}}
+  else{$('#rcode').textContent='—';$('#rscore').textContent='';const n=ans[tab].filter(a=>a!==null).length;$('#rhint').textContent=`${tab+1}교시: ${n}/10 골랐습니다. 채점하기를 누르면 잠깁니다.`;}
+}
+$('#gradeBtn').onclick=()=>{const n=ans[tab].filter(a=>a!==null).length;if(n<10&&!confirm(`아직 ${10-n}문항을 고르지 않았습니다. 그래도 채점할까요? (미응답은 오답 처리)`))return;graded[tab]=true;render();};
+$('#name').addEventListener('input',render);
+
+/* ── 제출 대화상자 ── */
+let lastHtml='',lastText='';
+function buildReport(){
+  const nm=$('#name').value.trim()||'(이름 없음)';const ds=new Date().toLocaleString('ko-KR');
+  let h=`<h3>C 언어 Day 3 개념 워크시트 — 오답 정리</h3><div class="meta">${nm} · ${ds}</div>`;
+  let t=`C 언어 Day 3 개념 워크시트 — 오답 정리\n이름: ${nm}\n일시: ${ds}\n\n`;
+  let any=false;
+  Q.forEach((s,i)=>{if(!graded[i])return;
+    const wrong=s.qs.map((q,k)=>({q,k,a:ans[i][k]})).filter(x=>x.a!==x.q.a);
+    h+=`<div class="sec">${s.t}</div>`;t+=`### ${s.t}\n`;
+    if(!wrong.length){h+=`<div class="ok" style="margin:4px 0 8px">오답 없음</div>`;t+=`오답 없음\n\n`;return;}
+    any=true;
+    h+=`<table><tr><th>#</th><th>문항</th><th>내 답</th><th>정답</th></tr>`;t+=`| # | 문항 | 내 답 | 정답 |\n|---|---|---|---|\n`;
+    wrong.forEach(({q,k,a})=>{const my=a===null?'미응답':'①②③④'[a]+' '+strip(q.o[a]);const co='①②③④'[q.a]+' '+strip(q.o[q.a]);const qt=strip(q.p).replace(/\s+/g,' ').slice(0,70);
+      h+=`<tr><td class="r">${k+1}</td><td>${qt}</td><td class="bad">${my}</td><td class="ok">${co}</td></tr>`;
+      t+=`| ${k+1} | ${qt.replace(/\|/g,'/')} | ${my.replace(/\|/g,'/')} | ${co.replace(/\|/g,'/')} |\n`;});
+    h+=`</table>`;t+=`\n`;});
+  const notGraded=Q.map((s,i)=>graded[i]?null:i+1).filter(x=>x);
+  if(notGraded.length){h+=`<div class="meta" style="margin-top:10px">미채점: ${notGraded.join(', ')}교시</div>`;t+=`미채점: ${notGraded.join(', ')}교시\n`;}
+  lastHtml=h;lastText=t;return h;
+}
+$('#submitBtn').onclick=()=>{if(!graded.some(x=>x)){alert('먼저 한 교시 이상 채점하기를 눌러 주세요.');return;}$('#dgBody').innerHTML=buildReport();$('#toast').textContent='';$('#dlg').showModal();};
+$('#closeBtn').onclick=()=>$('#dlg').close();
+function copyRich(html,text){
+  // 1) copy 이벤트에 두 형식을 직접 실어 보내기 (사용자 클릭 안에서 동기 실행 — file:// 에서도 동작)
+  let done=false;
+  const onCopy=e=>{e.clipboardData.setData('text/html',html);e.clipboardData.setData('text/plain',text);e.preventDefault();done=true;};
+  document.addEventListener('copy',onCopy);
+  try{
+    const body=$('#dgBody');const sel=window.getSelection();const range=document.createRange();range.selectNodeContents(body);sel.removeAllRanges();sel.addRange(range);
+    document.execCommand('copy');
+    sel.removeAllRanges();
+  }catch(e){}
+  document.removeEventListener('copy',onCopy);
+  return done;
+}
+$('#captureBtn').onclick=async()=>{
+  const htmlDoc=`<meta charset="utf-8">`+lastHtml.replace(/ class="[^"]*"/g,'').replace(/<table>/g,'<table border="1" style="border-collapse:collapse">');
+  if(copyRich(htmlDoc,lastText)){$('#toast').textContent='복사됨 — 노션 페이지에서 Ctrl+V 로 붙여 넣으세요.';return;}
+  // 2) 비동기 Clipboard API
+  try{
+    if(navigator.clipboard&&window.ClipboardItem){
+      await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([htmlDoc],{type:'text/html'}),'text/plain':new Blob([lastText],{type:'text/plain'})})]);
+    }else{await navigator.clipboard.writeText(lastText);}
+    $('#toast').textContent='복사됨 — 노션 페이지에서 Ctrl+V 로 붙여 넣으세요.';return;
+  }catch(e){}
+  // 3) 최종: 텍스트 영역 선택 복사
+  try{
+    const ta=document.createElement('textarea');ta.value=lastText;ta.style.position='fixed';ta.style.opacity='0';$('#dlg').appendChild(ta);ta.focus();ta.select();
+    const ok=document.execCommand('copy');ta.remove();
+    $('#toast').textContent=ok?'텍스트(마크다운 표)로 복사됨 — 노션에서 Ctrl+V.':'복사 실패 — 대화상자 내용을 드래그해 Ctrl+C 로 복사하세요.';
+  }catch(e){$('#toast').textContent='복사 실패 — 대화상자 내용을 드래그해 Ctrl+C 로 복사하세요.';}
+};
+render();
+</script>
+</body>
+</html>
