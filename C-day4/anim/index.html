@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C 언어 4일차 — 눈으로 보는 8가지 개념</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EEF1F5;
+    --panel:#FFFFFF;
+    --ink:#1B2A41;
+    --ink-soft:#5B6B80;
+    --line:#C9D1DC;
+    --blue:#2457C5;
+    --blue-soft:#DCE6FA;
+    --red:#D6452E;
+    --red-soft:#FBE3DF;
+    --green:#178A67;
+    --green-soft:#DDF2EA;
+    --amber:#C98A12;
+    --amber-soft:#FBF0D3;
+    --mono:'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    --sans:'IBM Plex Sans KR', 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    --t:.35s;
+  }
+  @media (prefers-reduced-motion: reduce){ :root{ --t:0s; } *{ animation:none !important; transition:none !important; } }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; }
+  body{
+    font-family:var(--sans); color:var(--ink); background:var(--paper);
+    background-image:
+      linear-gradient(rgba(27,42,65,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(27,42,65,.045) 1px, transparent 1px);
+    background-size:24px 24px;
+    font-size:16px; line-height:1.55;
+  }
+  code, .mono{ font-family:var(--mono); }
+
+  .app{ display:grid; grid-template-columns:260px 1fr; min-height:100vh; }
+  nav{
+    background:var(--ink); color:#fff; padding:28px 20px;
+    position:sticky; top:0; height:100vh; overflow:auto;
+  }
+  nav h1{ font-size:15px; font-weight:500; margin:0 0 4px; letter-spacing:.01em; color:#AEBBD1; }
+  nav .day{ font-size:26px; font-weight:600; margin:0 0 26px; line-height:1.2; }
+  nav ol{ list-style:none; margin:0; padding:0; counter-reset:lesson; }
+  nav li{ margin:0; }
+  nav button{
+    all:unset; display:grid; grid-template-columns:32px 1fr; gap:10px; align-items:baseline;
+    width:100%; padding:9px 10px; border-radius:6px; cursor:pointer; font-size:14.5px; line-height:1.35;
+    color:#D9E1EC;
+  }
+  nav button::before{ counter-increment:lesson; content:counter(lesson) "교시"; font-family:var(--mono); font-size:11px; color:#8A9BB5; }
+  nav button:hover{ background:rgba(255,255,255,.07); }
+  nav button[aria-current="true"]{ background:var(--blue); color:#fff; }
+  nav button[aria-current="true"]::before{ color:#C9D8F7; }
+  nav button:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
+  nav .hint{ margin-top:28px; font-size:12.5px; color:#8A9BB5; line-height:1.5; }
+  nav .hint kbd{ font-family:var(--mono); background:rgba(255,255,255,.12); padding:1px 5px; border-radius:3px; }
+
+  main{ padding:36px 44px 80px; max-width:1100px; }
+  section.lesson{ display:none; }
+  section.lesson.active{ display:block; }
+  .lesson header{ margin-bottom:22px; }
+  .lesson h2{ font-size:30px; font-weight:600; margin:0 0 6px; line-height:1.25; }
+  .lesson header p{ margin:0; color:var(--ink-soft); font-size:16px; max-width:64ch; }
+
+  .stage{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:26px;
+    box-shadow:0 1px 0 rgba(27,42,65,.06);
+  }
+  .controls{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:20px; }
+  .controls label{ font-size:14px; color:var(--ink-soft); display:flex; align-items:center; gap:6px; }
+  button.btn{
+    font:inherit; font-size:14px; font-weight:500; padding:8px 14px; border-radius:6px; cursor:pointer;
+    border:1px solid var(--ink); background:var(--ink); color:#fff;
+  }
+  button.btn.secondary{ background:#fff; color:var(--ink); border-color:var(--line); }
+  button.btn:disabled{ opacity:.4; cursor:default; }
+  button.btn:focus-visible, select:focus-visible, input:focus-visible{ outline:2px solid var(--blue); outline-offset:2px; }
+  select, input[type=number], input[type=text]{
+    font:inherit; font-size:14px; padding:7px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink);
+  }
+  input[type=number], input[type=text]{ font-family:var(--mono); }
+  .toggle{ display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+  .toggle input{ position:absolute; opacity:0; width:0; height:0; }
+  .toggle .sw{ width:38px; height:22px; border-radius:11px; background:var(--line); position:relative; transition:background var(--t); }
+  .toggle .sw::after{ content:""; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition:transform var(--t); }
+  .toggle input:checked + .sw{ background:var(--blue); }
+  .toggle input:checked + .sw::after{ transform:translateX(16px); }
+  .toggle input:focus-visible + .sw{ outline:2px solid var(--blue); outline-offset:2px; }
+
+  .note{ margin-top:18px; padding:14px 16px; border-left:3px solid var(--blue); background:var(--blue-soft); border-radius:0 6px 6px 0; font-size:14.5px; }
+  .note.warn{ border-color:var(--red); background:var(--red-soft); }
+  .note.ok{ border-color:var(--green); background:var(--green-soft); }
+  .note code{ background:rgba(255,255,255,.7); padding:1px 5px; border-radius:3px; }
+
+  pre.code{
+    font-family:var(--mono); font-size:13.5px; background:#F6F8FB; border:1px solid var(--line); border-radius:6px;
+    padding:14px 16px; margin:0; overflow:auto; line-height:1.55; white-space:pre;
+  }
+  pre.code .dim{ color:#9AA7B8; }
+  pre.code .hi{ background:var(--amber-soft); }
+  pre.code .err{ background:var(--red-soft); color:var(--red); }
+
+    /* ---------- shared ---------- */
+  .term{ font-family:var(--mono); font-size:13.5px; background:var(--ink); color:#D9E1EC; padding:12px 16px; border-radius:6px; min-height:60px; white-space:pre-wrap; margin-top:16px; }
+  .term .r{ color:#FF9B8A; } .term .g{ color:#7FE0B8; } .term .y{ color:#FFD27F; } .term .c{ color:#8A9BB5; } .term .b{ color:#8FB4FF; }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+  .lab{ font-size:12.5px; color:var(--ink-soft); margin:14px 0 6px; }
+  .readout{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-top:16px; }
+  .readout div{ padding:12px 14px; border:1px solid var(--line); border-radius:6px; background:#F6F8FB; }
+  .readout b{ display:block; font-size:12.5px; font-weight:500; color:var(--ink-soft); margin-bottom:2px; }
+  .readout span{ font-family:var(--mono); font-size:17px; font-weight:600; }
+  .bytecell{ width:40px; height:48px; border:1.5px solid var(--line); border-radius:5px; display:grid; grid-template-rows:12px 1fr; place-items:center; font-family:var(--mono); font-size:11px; background:#fff; transition:all var(--t); }
+  .bytecell .off{ font-size:8px; color:var(--ink-soft); }
+  .bytecell.hi{ background:var(--blue-soft); border-color:var(--blue); } .bytecell.cur{ box-shadow:0 0 0 3px var(--amber); border-color:var(--amber); }
+  .bytecell.t{ background:var(--green-soft); border-color:var(--green); }
+  .pop-in{ animation:popin .3s ease-out; } @keyframes popin{ from{ transform:scale(.8); opacity:0; } }
+  .shake{ animation:shake .4s; } @keyframes shake{ 0%,100%{transform:none} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+  .box{ border:2px solid var(--line); border-radius:8px; padding:12px 14px; background:#fff; transition:all var(--t); }
+  .box h5{ margin:0 0 8px; font-size:12px; color:var(--ink-soft); font-weight:500; }
+  .box.on{ border-color:var(--blue); background:var(--blue-soft); } .box.bad{ border-color:var(--red); background:var(--red-soft); } .box.ok{ border-color:var(--green); background:var(--green-soft); }
+  .mono{ font-family:var(--mono); font-size:13px; }
+  .filebuf{ display:flex; gap:3px; flex-wrap:wrap; min-height:40px; }
+  .filebuf .ch{ width:18px; height:26px; border:1px solid var(--line); border-radius:3px; display:grid; place-items:center; font-family:var(--mono); font-size:11px; background:#fff; }
+  .filebuf .ch.pend{ background:var(--amber-soft); border-color:var(--amber); } .filebuf .ch.disk{ background:var(--green-soft); border-color:var(--green); }
+  .ringwrap{ display:grid; grid-template-columns:320px 1fr; gap:24px; align-items:center; }
+  .ringwrap svg{ width:100%; height:auto; }
+  .ringwrap .slot rect{ fill:#fff; stroke:var(--line); stroke-width:2; transition:all var(--t); } .ringwrap .slot.full rect{ fill:var(--blue-soft); stroke:var(--blue); }
+  .ringwrap .slot text{ font-family:var(--mono); font-size:14px; font-weight:600; fill:var(--ink); text-anchor:middle; }
+  .ringwrap .ptr{ font-family:var(--mono); font-size:11px; font-weight:600; }
+  .gdb{ display:grid; grid-template-columns:1.2fr 1fr; gap:20px; }
+  .src{ font-family:var(--mono); font-size:13px; background:#F6F8FB; border:1px solid var(--line); border-radius:6px; padding:10px 0; }
+  .src .ln{ display:grid; grid-template-columns:36px 20px 1fr; padding:2px 10px; white-space:pre; transition:background var(--t); }
+  .src .ln .no{ color:var(--ink-soft); font-size:11px; text-align:right; padding-right:8px; } .src .ln .bp{ color:var(--red); }
+  .src .ln.cur{ background:var(--amber-soft); } .src .ln.hasbp .bp::before{ content:"●"; }
+  .stack{ display:flex; flex-direction:column-reverse; gap:6px; min-height:100px; border:2px dashed var(--line); border-radius:8px; padding:10px; }
+  .stack .fr{ font-family:var(--mono); font-size:12px; padding:6px 10px; border:1.5px solid var(--ink); border-radius:5px; background:#fff; } .stack .fr.top{ background:var(--blue-soft); border-color:var(--blue); }
+  .vars{ font-family:var(--mono); font-size:12.5px; background:#fff; border:1px solid var(--line); border-radius:6px; padding:8px 12px; margin-top:8px; }
+  .vars b{ color:var(--blue); }
+  .dep{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  .mod{ border:2px solid var(--line); border-radius:8px; padding:10px 12px; background:#fff; cursor:pointer; transition:all var(--t); }
+  .mod h5{ margin:0 0 4px; font-family:var(--mono); font-size:13px; }
+  .mod p{ margin:0; font-size:11.5px; color:var(--ink-soft); }
+  .mod.on{ border-color:var(--blue); background:var(--blue-soft); } .mod.dep-of{ border-color:var(--green); background:var(--green-soft); } .mod.bad{ border-color:var(--red); background:var(--red-soft); }
+  .flow svg{ width:100%; height:auto; }
+  .flow .node rect{ fill:#fff; stroke:var(--line); stroke-width:2; transition:stroke var(--t), fill var(--t); } .flow .node.on rect{ stroke:var(--blue); fill:var(--blue-soft); } .flow .node.done rect{ stroke:var(--green); }
+  .flow .node text{ font-family:var(--sans); font-size:13px; fill:var(--ink); text-anchor:middle; } .flow .node .fn{ font-family:var(--mono); font-size:10.5px; fill:var(--ink-soft); }
+  .flow .link{ stroke:var(--ink-soft); stroke-width:1.5; fill:none; marker-end:url(#arr2); } .flow .link.loop{ stroke:var(--amber); stroke-dasharray:5 4; }
+  .map{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  .daycol{ border:2px solid var(--line); border-radius:10px; padding:12px; background:#fff; }
+  .daycol h5{ margin:0 0 8px; font-size:14px; }
+  .concept{ font-size:12px; padding:5px 8px; border-radius:5px; background:var(--paper); margin:4px 0; cursor:pointer; transition:all var(--t); border-left:3px solid transparent; }
+  .concept.on{ background:var(--blue-soft); border-left-color:var(--blue); } .concept.from{ background:var(--amber-soft); border-left-color:var(--amber); } .concept.to{ background:var(--green-soft); border-left-color:var(--green); }
+  @media (max-width:900px){ .ringwrap,.gdb{ grid-template-columns:1fr; } .dep,.map{ grid-template-columns:1fr 1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav aria-label="교시 선택">
+    <h1>C 언어 · 프로그래밍 언어 과목</h1>
+    <p class="day">4일차<br>눈으로 보는 8가지</p>
+    <ol id="navlist">
+      <li><button data-go="1" aria-current="true">파일 스트림 뷰어</button></li>
+      <li><button data-go="2">텍스트 vs 바이너리</button></li>
+      <li><button data-go="3">파일 커서 (fseek)</button></li>
+      <li><button data-go="4">링 버퍼</button></li>
+      <li><button data-go="5">gdb 스텝 시뮬레이터</button></li>
+      <li><button data-go="6">모듈 의존 그래프</button></li>
+      <li><button data-go="7">수집기 파이프라인</button></li>
+      <li><button data-go="8">4일 지도</button></li>
+    </ol>
+    <p class="hint">키보드 <kbd>←</kbd> <kbd>→</kbd> 로 교시 이동</p>
+  </nav>
+  <main>
+
+  <!-- 1 -->
+  <section class="lesson active" id="l1">
+    <header><h2>fopen 은 FILE 구조체와 버퍼를 만든다</h2><p>fprintf 는 버퍼에 쓰고, fflush/fclose 가 디스크에 씁니다. 닫지 않으면 남은 글자는 사라집니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <button class="btn" data-f="open_r">fopen("temps.txt", "r")</button>
+        <button class="btn" data-f="open_w">fopen("log.txt", "w")</button>
+        <button class="btn" data-f="open_a">fopen("log.txt", "a")</button>
+        <button class="btn" data-f="write">fprintf(fp, "T=25\n")</button>
+        <button class="btn" data-f="flush">fflush(fp)</button>
+        <button class="btn" data-f="close">fclose(fp)</button>
+        <button class="btn secondary" data-f="nope">fopen("nope.txt", "r")</button>
+        <button class="btn secondary" data-f="reset">처음으로</button>
+      </div>
+      <div class="row" style="gap:20px;align-items:stretch">
+        <div class="box" id="fbox" style="flex:1"><h5>FILE *fp (메모리)</h5><div class="mono" id="fmeta">NULL</div><div class="lab">버퍼 (4KB 중 일부)</div><div class="filebuf" id="fbuf"></div></div>
+        <div class="box" id="dbox" style="flex:1"><h5>디스크 — log.txt</h5><div class="filebuf" id="fdisk"></div><div class="lab" id="fsize">0 bytes</div></div>
+      </div>
+      <div class="term" id="f-term"><span class="c">// FILE *fp = NULL;  열린 파일 없음</span></div>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson" id="l2">
+    <header><h2>같은 값, 다른 바이트 — 텍스트 vs 바이너리</h2><p>25.3 을 fprintf 로 쓰면 글자 4개, fwrite 로 쓰면 double 8바이트. 구조체 하나는 16바이트.</p></header>
+    <div class="stage">
+      <div class="controls"><label>온도 <input type="number" id="tb-t" value="25.3" step="0.1" style="width:90px"></label><label>습도 <input type="number" id="tb-h" value="60" style="width:70px"></label><label>거리 <input type="number" id="tb-d" value="120" style="width:80px"></label></div>
+      <div class="lab">텍스트 — fprintf(fp, "%.1f,%d,%d\n", t, h, d)</div>
+      <div class="row" id="tb-text" style="gap:3px"></div>
+      <div class="lab">바이너리 — fwrite(&r, sizeof r, 1, fp)   (double 8 · int 4 · int 4, 리틀 엔디안)</div>
+      <div class="row" id="tb-bin" style="gap:3px"></div>
+      <div class="readout"><div><b>텍스트 크기</b><span id="tb-ts"></span></div><div><b>바이너리 크기</b><span id="tb-bs">16 bytes</span></div><div><b>텍스트로 읽으려면</b><span style="font-size:13px">strtod / strtol 파싱</span></div><div><b>바이너리로 읽으려면</b><span style="font-size:13px">fread 한 번</span></div></div>
+      <div class="note" id="tb-note">텍스트는 사람과 Excel 이 읽고, 바이너리는 정확하고 빠릅니다. 단, 바이너리는 같은 컴파일러·같은 CPU 에서만 (패딩·엔디안).</div>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson" id="l3">
+    <header><h2>파일 커서 — fseek 로 옮기고 fread 로 꺼낸다</h2><p>readings.bin 은 16바이트 레코드 3개. 커서(노랑)를 옮겨 보세요.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <button class="btn" data-s="set0">fseek(fp, 0, SEEK_SET)</button>
+        <button class="btn" data-s="rec1">fseek(fp, 1*16, SEEK_SET)</button>
+        <button class="btn" data-s="end">fseek(fp, 0, SEEK_END)</button>
+        <button class="btn" data-s="read">fread(&r, 16, 1, fp)</button>
+        <button class="btn secondary" data-s="tell">ftell(fp)</button>
+        <button class="btn secondary" data-s="rewind">rewind(fp)</button>
+      </div>
+      <div class="row" id="sk-cells" style="gap:1px"></div>
+      <div class="readout"><div><b>ftell</b><span id="sk-pos">0</span></div><div><b>레코드 번호</b><span id="sk-rec">0</span></div><div><b>마지막 fread 결과</b><span id="sk-val" style="font-size:13px">—</span></div></div>
+      <div class="term" id="sk-term"><span class="c">// 파일 크기 = fseek(END) 후 ftell = 48. 레코드 수 = 48 / 16 = 3</span></div>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson" id="l4">
+    <header><h2>링 버퍼 — head 는 쓰고, tail 은 읽고, 끝에서 0 으로</h2><p>CAP=4. 가득 차면 가장 오래된 값을 버립니다(tail 전진). 이동평균은 tail 부터 count 개.</p></header>
+    <div class="stage">
+      <div class="controls"><label>값 <input type="number" id="rg-v" value="25" style="width:80px"></label><button class="btn" id="rg-push">ring_push</button><button class="btn" id="rg-pop">ring_pop</button><button class="btn secondary" id="rg-seq">시나리오 (25 25 25 25 37 25 25 25)</button><button class="btn secondary" id="rg-reset">처음으로</button></div>
+      <div class="ringwrap">
+        <svg viewBox="0 0 300 300" id="rg-svg"></svg>
+        <div>
+          <div class="readout" style="grid-template-columns:1fr 1fr"><div><b>head (다음 쓸 곳)</b><span id="rg-head">0</span></div><div><b>tail (다음 읽을 곳)</b><span id="rg-tail">0</span></div><div><b>count</b><span id="rg-count">0</span></div><div><b>ring_avg</b><span id="rg-avg">0.00</span></div></div>
+          <div class="term" id="rg-term"><span class="c">// head = (head + 1) % CAP  — % 가 원을 만든다</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson" id="l5">
+    <header><h2>gdb — 실행을 멈추고 안을 들여다본다</h2><p>Day 3 예제 7-3 의 조용한 버그. 컴파일 경고 없음, 죽지 않음. HEAT 상태에서 무엇이 불리는지 실행 중에 봅니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <button class="btn" data-g="break">break fsm_step</button>
+        <button class="btn" data-g="run">run &lt; temps.txt</button>
+        <button class="btn" data-g="next">next</button>
+        <button class="btn" data-g="print">print TABLE[cur]</button>
+        <button class="btn" data-g="bt">bt</button>
+        <button class="btn" data-g="cont">continue</button>
+        <button class="btn secondary" data-g="reset">quit</button>
+      </div>
+      <div class="gdb">
+        <div class="src" id="gsrc"></div>
+        <div>
+          <div class="lab">스택 (bt)</div><div class="stack" id="gstack"></div>
+          <div class="vars" id="gvars">(정지 상태 아님)</div>
+        </div>
+      </div>
+      <div class="term" id="g-term"><span class="c">(gdb) </span></div>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="lesson" id="l6">
+    <header><h2>모듈 의존 그래프 — 아래로만 의존한다</h2><p>모듈을 클릭하면 그 모듈이 include 하는 헤더가 초록으로. main 은 조립만, ring 은 아무것도 모릅니다.</p></header>
+    <div class="stage">
+      <div class="dep" id="dep"></div>
+      <div class="controls" style="margin-top:14px"><label class="toggle"><input type="checkbox" id="dep-bad"><span class="sw"></span>ring.c 에 #include "frame.h" 를 넣어 보기 (나쁜 예)</label></div>
+      <div class="term" id="dep-term"><span class="c">// 모듈을 클릭하세요</span></div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson" id="l7">
+    <header><h2>센서 데이터 수집기 — 4일치를 한 파이프라인으로</h2><p>재생하면 프레임 하나가 어디를 거쳐 어느 파일로 가는지 보입니다.</p></header>
+    <div class="stage">
+      <div class="controls"><button class="btn" id="b-play">재생</button><button class="btn secondary" id="b-reset">처음으로</button></div>
+      <div class="flow">
+        <svg viewBox="0 0 900 260" id="flow-svg">
+          <defs><marker id="arr2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5B6B80"/></marker></defs>
+          <g class="node" data-i="0"><rect x="10" y="60" width="120" height="66" rx="8"/><text x="70" y="88">파일 읽기</text><text class="fn" x="70" y="108">fopen·fgets · 1교시</text></g>
+          <g class="node" data-i="1"><rect x="150" y="60" width="120" height="66" rx="8"/><text x="210" y="88">파싱</text><text class="fn" x="210" y="108">parse_frame · Day 2</text></g>
+          <g class="node" data-i="2"><rect x="290" y="60" width="120" height="66" rx="8"/><text x="350" y="88">링 버퍼</text><text class="fn" x="350" y="108">ring_push/avg · 4교시</text></g>
+          <g class="node" data-i="3"><rect x="430" y="60" width="120" height="66" rx="8"/><text x="490" y="88">상태 머신</text><text class="fn" x="490" y="108">fsm_step(avg) · Day 3</text></g>
+          <g class="node" data-i="4"><rect x="570" y="60" width="120" height="66" rx="8"/><text x="630" y="88">CSV 로그</text><text class="fn" x="630" y="108">log_row · 2·6교시</text></g>
+          <g class="node" data-i="5"><rect x="710" y="10" width="120" height="56" rx="8"/><text x="770" y="34">events.log</text><text class="fn" x="770" y="52">전이 시 "a"</text></g>
+          <g class="node" data-i="6"><rect x="710" y="120" width="120" height="56" rx="8"/><text x="770" y="144">readings.bin</text><text class="fn" x="770" y="162">끝나면 fwrite · 3교시</text></g>
+          <path class="link" d="M130,93 L150,93"/><path class="link" d="M270,93 L290,93"/><path class="link" d="M410,93 L430,93"/><path class="link" d="M550,93 L570,93"/>
+          <path class="link" d="M550,80 C620,40 660,38 710,38"/><path class="link" d="M410,110 C500,200 620,148 710,148"/>
+          <path class="link loop" d="M350,126 C350,220 70,220 70,126"/><text x="210" y="232" font-family="IBM Plex Sans KR" font-size="12" fill="#7A5405" text-anchor="middle">줄마다 반복 (BAD 면 stderr 에 적고 건너뜀)</text>
+        </svg>
+      </div>
+      <div class="note" id="b-desc" style="min-height:64px">읽기·파싱·링·상태 머신·CSV 는 줄마다, 이벤트는 전이가 있을 때만, 바이너리는 마지막에 한 번.</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson" id="l8">
+    <header><h2>4일 지도 — 개념이 어디서 와서 어디로 갔나</h2><p>개념을 클릭하면 그것이 나온 곳(노랑)과 쓰인 곳(초록)이 표시됩니다.</p></header>
+    <div class="stage">
+      <div class="map" id="map"></div>
+      <div class="term" id="map-term"><span class="c">// 개념을 클릭하세요</span></div>
+    </div>
+  </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+  let cur=1;
+  function go(n){ cur=Math.max(1,Math.min(8,n)); $$('.lesson').forEach(s=>s.classList.toggle('active',s.id==='l'+cur)); $$('#navlist button').forEach(b=>b.setAttribute('aria-current',b.dataset.go==cur?'true':'false')); location.hash='l'+cur; }
+  $$('#navlist button').forEach(b=>b.addEventListener('click',()=>go(+b.dataset.go)));
+  document.addEventListener('keydown',e=>{ if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName))return; if(e.key==='ArrowRight')go(cur+1); if(e.key==='ArrowLeft')go(cur-1); });
+  if(/^#l[1-8]$/.test(location.hash)) go(+location.hash[2]);
+
+  /* 1 file stream */
+  let FS={fp:null,mode:'',buf:'',disk:'',name:''};
+  function chars(el,str,cls){ el.innerHTML=''; str.split('').forEach(c=>{ const d=document.createElement('div'); d.className='ch '+cls; d.textContent=c==='\n'?'↵':c; el.appendChild(d); }); }
+  function renderF(){ $('#fmeta').textContent= FS.fp? `fp → { mode:"${FS.mode}", name:"${FS.name}", pos:${FS.disk.length+FS.buf.length} }` : 'NULL'; chars($('#fbuf'),FS.buf,'pend'); chars($('#fdisk'),FS.disk,'disk'); $('#fsize').textContent=FS.disk.length+' bytes'; $('#fbox').className='box'+(FS.fp?' on':''); }
+  $$('#l1 [data-f]').forEach(b=>b.addEventListener('click',()=>{ const op=b.dataset.f, T=$('#f-term');
+    if(op==='reset'){ FS={fp:null,mode:'',buf:'',disk:'',name:''}; T.innerHTML='<span class="c">// FILE *fp = NULL;</span>'; }
+    else if(op==='nope'){ $('#fbox').classList.add('shake'); setTimeout(()=>$('#fbox').classList.remove('shake'),400); T.innerHTML='<span class="r">fopen: No such file or directory   (errno=2)</span>\n<span class="c">// fp == NULL → 검사 없이 fgets(…, fp) 하면 세그폴트. errno 는 실패 직후 읽어라</span>'; }
+    else if(op.startsWith('open')){ if(FS.fp){ T.innerHTML='<span class="y">// 이미 열린 fp 를 덮어씀 — 이전 파일은 닫히지 않음 (누수). 먼저 fclose</span>'; return; } const m=op.split('_')[1]; FS.fp=true; FS.mode=m; FS.buf=''; if(m==='r'){ FS.name='temps.txt'; T.innerHTML='<span class="g">fp = fopen("temps.txt", "r");   // 읽기 전용. 없으면 NULL</span>'; } else if(m==='w'){ FS.name='log.txt'; FS.disk=''; T.innerHTML='<span class="g">fp = fopen("log.txt", "w");   </span><span class="r">// 기존 내용이 지워졌다!</span>'; } else { FS.name='log.txt'; T.innerHTML='<span class="g">fp = fopen("log.txt", "a");   // 끝에 이어 쓴다. 로그는 이것</span>'; } }
+    else if(!FS.fp){ T.innerHTML='<span class="r">// fp 가 NULL — 먼저 fopen</span>'; }
+    else if(op==='write'){ if(FS.mode==='r'){ T.innerHTML='<span class="r">// "r" 로 연 파일에 쓰기 → 실패 (fprintf 가 음수 반환)</span>'; return; } FS.buf+='T=25\n'; T.innerHTML='<span class="g">fprintf(fp, "T=25\\n");   // 버퍼에만 들어감 — 디스크는 아직 그대로</span>'; }
+    else if(op==='flush'){ FS.disk+=FS.buf; FS.buf=''; T.innerHTML='<span class="g">fflush(fp);   // 버퍼 → 디스크. 로그가 중요하면 줄마다</span>'; }
+    else if(op==='close'){ FS.disk+=FS.buf; FS.fp=null; FS.buf=''; T.innerHTML='<span class="g">fclose(fp);   // flush + 닫기. 열었으면 반드시 (malloc/free 짝)</span>'; }
+    renderF(); })); renderF();
+
+  /* 2 text vs binary */
+  function f64le(v){ const b=new ArrayBuffer(8); new DataView(b).setFloat64(0,v,true); return Array.from(new Uint8Array(b)); }
+  function i32le(v){ const b=new ArrayBuffer(4); new DataView(b).setInt32(0,v|0,true); return Array.from(new Uint8Array(b)); }
+  function renderTB(){ const t=+$('#tb-t').value||0, h=+$('#tb-h').value|0, d=+$('#tb-d').value|0;
+    const txt=`${t.toFixed(1)},${h},${d}\n`; const te=$('#tb-text'); te.innerHTML=''; txt.split('').forEach((c,i)=>{ const x=document.createElement('div'); x.className='bytecell'; x.innerHTML=`<span class="off">${i}</span><span>${c==='\n'?'\\n':c}</span>`; te.appendChild(x); });
+    const bytes=[...f64le(t),...i32le(h),...i32le(d)]; const be=$('#tb-bin'); be.innerHTML=''; bytes.forEach((b,i)=>{ const x=document.createElement('div'); x.className='bytecell '+(i<8?'hi':i<12?'t':''); x.innerHTML=`<span class="off">${i}</span><span>${b.toString(16).toUpperCase().padStart(2,'0')}</span>`; be.appendChild(x); });
+    $('#tb-ts').textContent=txt.length+' bytes'; }
+  ['#tb-t','#tb-h','#tb-d'].forEach(s=>$(s).addEventListener('input',renderTB)); renderTB();
+
+  /* 3 fseek */
+  const REC=[[25.3,60,120],[17.0,55,118],[36.9,70,150]]; let pos=0;
+  function renderSK(){ const el=$('#sk-cells'); el.innerHTML=''; for(let i=0;i<48;i++){ const x=document.createElement('div'); x.className='bytecell'+(i===pos?' cur':'')+(Math.floor(i/16)%2?' hi':''); x.style.width='17px'; x.style.height='34px'; x.innerHTML=`<span class="off">${i}</span><span style="font-size:8px">${i%16===0?'r'+Math.floor(i/16):''}</span>`; el.appendChild(x); } if(pos===48){ const x=document.createElement('div'); x.className='bytecell cur'; x.style.width='30px'; x.style.height='36px'; x.innerHTML='<span class="off">48</span><span style="font-size:8px">EOF</span>'; el.appendChild(x); } $('#sk-pos').textContent=pos; $('#sk-rec').textContent= pos%16===0? (pos/16) : (pos/16).toFixed(2); }
+  $$('#l3 [data-s]').forEach(b=>b.addEventListener('click',()=>{ const op=b.dataset.s, T=$('#sk-term');
+    if(op==='set0'||op==='rewind'){ pos=0; T.innerHTML='<span class="g">커서 → 0   // 처음</span>'; }
+    else if(op==='rec1'){ pos=16; T.innerHTML='<span class="g">fseek(fp, 1 * sizeof(Reading), SEEK_SET);   // 두 번째 레코드 앞으로 점프</span>'; }
+    else if(op==='end'){ pos=48; T.innerHTML='<span class="g">fseek(fp, 0, SEEK_END);  ftell(fp) → 48   // = 파일 크기. 48 / 16 = 3 레코드</span>'; }
+    else if(op==='tell'){ T.innerHTML=`<span class="g">ftell(fp) → ${pos}</span>`; }
+    else if(op==='read'){ if(pos>=48){ $('#sk-val').textContent='0 (EOF)'; T.innerHTML='<span class="r">fread → 0   // EOF. 반환값을 검사하지 않으면 쓰레기 r 을 쓴다</span>'; } else if(pos%16){ $('#sk-val').textContent='엉뚱한 값'; T.innerHTML='<span class="r">// 레코드 경계가 아닌 곳에서 읽으면 필드가 밀려 쓰레기 값</span>'; pos=Math.min(48,pos+16); } else { const r=REC[pos/16]; $('#sk-val').textContent=`t=${r[0]} h=${r[1]} d=${r[2]}`; pos+=16; T.innerHTML=`<span class="g">fread(&r, 16, 1, fp) → 1   // r = {${r.join(', ')}}. 커서는 16 전진 → ${pos}</span>`; } }
+    renderSK(); })); renderSK();
+
+  /* 4 ring */
+  const CAP=4; let R={buf:[null,null,null,null],head:0,tail:0,count:0}; let rgT=[];
+  function rgPush(v){ let msg=''; if(R.count===CAP){ R.tail=(R.tail+1)%CAP; R.count--; msg='<span class="y">// 가득: tail 전진 — 가장 오래된 값 버림</span>\n'; } R.buf[R.head]=v; R.head=(R.head+1)%CAP; R.count++; return msg+`<span class="g">ring_push(${v})   head=${R.head} tail=${R.tail} count=${R.count}</span>`+(R.head===0?'\n<span class="c">// head 가 CAP 에서 0 으로 감김 — % CAP</span>':''); }
+  function rgPop(){ if(R.count===0) return '<span class="r">ring_pop → false   // 비었음</span>'; const v=R.buf[R.tail]; R.buf[R.tail]=null; R.tail=(R.tail+1)%CAP; R.count--; return `<span class="g">ring_pop → ${v}   tail=${R.tail} count=${R.count}</span>`; }
+  function rgAvg(){ if(!R.count)return 0; let s=0; for(let i=0;i<R.count;i++) s+=R.buf[(R.tail+i)%CAP]; return s/R.count; }
+  function renderRG(){ const svg=$('#rg-svg'); let h=''; for(let i=0;i<CAP;i++){ const a=i/CAP*2*Math.PI-Math.PI/2; const cx=150+90*Math.cos(a), cy=150+90*Math.sin(a); const full=R.buf[i]!==null; h+=`<g class="slot ${full?'full':''}"><rect x="${cx-32}" y="${cy-24}" width="64" height="48" rx="8"/><text x="${cx}" y="${cy+5}">${full?R.buf[i]:'·'}</text><text x="${cx}" y="${cy-30}" style="font-size:10px;fill:#5B6B80">[${i}]</text></g>`;
+      const lx=150+38*Math.cos(a), ly=150+38*Math.sin(a);
+      if(R.head===i) h+=`<text class="ptr" x="${lx}" y="${ly-4}" fill="#2457C5" text-anchor="middle">head ▸</text>`;
+      if(R.tail===i) h+=`<text class="ptr" x="${lx}" y="${ly+10}" fill="#D6452E" text-anchor="middle">tail ▸</text>`; }
+    svg.innerHTML=`<circle cx="150" cy="150" r="90" fill="none" stroke="#C9D1DC" stroke-dasharray="4 4"/>`+h; $('#rg-head').textContent=R.head; $('#rg-tail').textContent=R.tail; $('#rg-count').textContent=R.count; $('#rg-avg').textContent=rgAvg().toFixed(2); }
+  $('#rg-push').addEventListener('click',()=>{ $('#rg-term').innerHTML=rgPush(+$('#rg-v').value); renderRG(); });
+  $('#rg-pop').addEventListener('click',()=>{ $('#rg-term').innerHTML=rgPop(); renderRG(); });
+  $('#rg-reset').addEventListener('click',()=>{ rgT.forEach(clearTimeout); R={buf:[null,null,null,null],head:0,tail:0,count:0}; $('#rg-term').innerHTML='<span class="c">// ring_init: head = tail = count = 0</span>'; renderRG(); });
+  $('#rg-seq').addEventListener('click',()=>{ rgT.forEach(clearTimeout); R={buf:[null,null,null,null],head:0,tail:0,count:0}; renderRG(); [25,25,25,25,37,25,25,25].forEach((v,i)=>rgT.push(setTimeout(()=>{ $('#rg-v').value=v; $('#rg-term').innerHTML=rgPush(v)+`\n<span class="c">// avg = ${rgAvg().toFixed(2)}  — 37 이 들어와도 평균은 28 (Day 1 이동평균)</span>`; renderRG(); },i*800))); });
+  renderRG();
+
+  /* 5 gdb */
+  const SRC=[[12,'typedef State (*Handler)(double);'],[13,'static const Handler TABLE[ST_COUNT] ='],[14,'    { on_idle, on_cool, on_heat, on_alert };   // ← HEAT/COOL 바뀜'],[15,''],[16,'State fsm_step(State cur, double t) {'],[17,'    Handler h = TABLE[cur];'],[18,'    return h(t);'],[19,'}']];
+  const TAB=['on_idle','on_cool','on_heat','on_alert'], NM=['ST_IDLE','ST_HEAT','ST_COOL','ST_ALERT'];
+  const SEQ=[[0,25],[0,17],[1,19],[1,21]]; // (cur, t) at each breakpoint hit
+  let G={bp:false,running:false,hit:-1,line:null,stack:[]};
+  function renderG(){ const s=$('#gsrc'); s.innerHTML=''; SRC.forEach(([n,t])=>{ const d=document.createElement('div'); d.className='ln'+(G.bp&&n===16?' hasbp':'')+(G.line===n?' cur':''); d.innerHTML=`<span class="no">${n}</span><span class="bp"></span><span>${t.replace(/</g,'&lt;')}</span>`; s.appendChild(d); });
+    const st=$('#gstack'); st.innerHTML=''; G.stack.forEach((f,i)=>{ const d=document.createElement('div'); d.className='fr'+(i===G.stack.length-1?' top':''); d.textContent=`#${G.stack.length-1-i}  ${f}`; st.appendChild(d); });
+    if(G.hit>=0&&G.line){ const [c,t]=SEQ[G.hit]; $('#gvars').innerHTML=`<b>cur</b> = ${NM[c]} (${c})   <b>t</b> = ${t}${G.line>=18?`   <b>h</b> = &lt;${TAB[c]}&gt;`:''}`; } else $('#gvars').textContent='(정지 상태 아님)'; }
+  const GT=$('#g-term'); function gout(cmd,out){ GT.innerHTML=`<span class="c">(gdb) </span><span class="b">${cmd}</span>\n${out}`; }
+  $$('#l5 [data-g]').forEach(b=>b.addEventListener('click',()=>{ const op=b.dataset.g;
+    if(op==='reset'){ G={bp:false,running:false,hit:-1,line:null,stack:[]}; gout('quit',''); }
+    else if(op==='break'){ G.bp=true; gout('break fsm_step','Breakpoint 1 at 0x1189: file fsm.c, line 17.'); }
+    else if(op==='run'){ if(!G.bp){ G.running=true; G.line=null; G.stack=[]; gout('run < temps.txt','<span class="c">IDLE 3 / HEAT 2 / COOL 3 / ALERT 2\n[Inferior 1 exited normally]   // 중단점이 없어 그냥 끝까지. 출력은 그럴듯하다 — 그래서 조용한 버그</span>'); } else { G.running=true; G.hit=0; G.line=17; G.stack=['main () at main.c:31',`fsm_step (cur=${NM[0]}, t=${SEQ[0][1]}) at fsm.c:17`]; gout('run < temps.txt',`Breakpoint 1, fsm_step (cur=ST_IDLE, t=25) at fsm.c:17\n17\t    Handler h = TABLE[cur];`); } }
+    else if(!G.running||G.line===null){ gout(op,'<span class="r">The program is not being run.</span>'); }
+    else if(op==='next'){ if(G.line===17){ G.line=18; gout('next','18\t    return h(t);'); } else if(G.line===18){ G.line=19; gout('next',`19\t}   // h(t) 실행됨 (next 는 함수 안으로 안 들어감. step 이면 ${TAB[SEQ[G.hit][0]]} 안으로)`); } else { gout('next','main () at main.c:32\n32\t    st = next;'); G.line=null; G.stack=['main () at main.c:32']; } }
+    else if(op==='print'){ const [c]=SEQ[G.hit]; const fn=TAB[c]; const bad=(c===1&&fn==='on_cool')||(c===2&&fn==='on_heat'); gout('print TABLE[cur]',`$${G.hit+1} = (Handler) 0x5555555551a9 &lt;${fn}&gt;`+(bad?`\n<span class="r">// ${NM[c]} 인데 ${fn} !!  테이블 순서가 enum 과 어긋났다 → 지정 초기화 [ST_HEAT] = on_heat</span>`:`\n<span class="c">// ${NM[c]} → ${fn}. 여기까진 맞다. continue 로 다음 상태에서 다시 보자</span>`)); }
+    else if(op==='bt'){ gout('bt',G.stack.slice().reverse().map((f,i)=>`#${i}  ${f}`).join('\n')+'\n<span class="c">// 세그폴트 직후엔 이것부터 — 어디서 죽었는지</span>'); }
+    else if(op==='cont'){ if(G.hit<SEQ.length-1){ G.hit++; G.line=17; const [c,t]=SEQ[G.hit]; G.stack=['main () at main.c:31',`fsm_step (cur=${NM[c]}, t=${t}) at fsm.c:17`]; gout('continue',`Continuing.\nBreakpoint 1, fsm_step (cur=${NM[c]}, t=${t}) at fsm.c:17\n17\t    Handler h = TABLE[cur];`+(c===1?'\n<span class="y">// HEAT 상태에 왔다. 이제 print TABLE[cur]</span>':'')); } else { G.running=false; G.line=null; G.stack=[]; gout('continue','Continuing.\n[Inferior 1 exited normally]'); } }
+    renderG(); })); renderG();
+
+  /* 6 dep graph */
+  const MODS=[['main.c','조립만','frame.h ring.h fsm.h gpio.h logger.h'],['logger.c','CSV 쓰기','logger.h frame.h'],['fsm.c','상태 머신','fsm.h gpio.h'],['frame.c','프레임 파싱','frame.h'],['ring.c','링 버퍼','ring.h'],['ring.h','','stdbool.h'],['frame.h','','—'],['fsm.h','','—'],['gpio.h','','stdint.h'],['logger.h','','frame.h stdio.h'],['test_ring.c','단위 테스트','ring.h'],['Makefile','test · asan · debug','—']];
+  const dep=$('#dep'); MODS.forEach(m=>{ const d=document.createElement('div'); d.className='mod'; d.dataset.n=m[0]; d.innerHTML=`<h5>${m[0]}</h5><p>${m[1]||'&nbsp;'}</p>`; d.addEventListener('click',()=>selMod(m)); dep.appendChild(d); });
+  function selMod(m){ const bad=$('#dep-bad').checked; const deps=(m[2]+(bad&&m[0]==='ring.c'?' frame.h':'')).split(' '); $$('.mod').forEach(x=>{ x.classList.toggle('on',x.dataset.n===m[0]); x.classList.toggle('dep-of',deps.includes(x.dataset.n)); x.classList.toggle('bad',bad&&m[0]==='ring.c'&&x.dataset.n==='frame.h'); }); $('#dep-term').innerHTML=`<span class="g">${m[0]}  →  #include ${deps.filter(d=>d!=='—').map(d=>'"'+d+'"').join(' ')||'(없음)'}</span>`+(bad&&m[0]==='ring.c'?'\n<span class="r">// ring 이 frame 을 알면: frame 을 바꿀 때 ring 도 다시 컴파일, test_ring 이 frame.o 까지 링크해야 함, ring 을 다른 프로젝트로 못 가져감</span>':m[0]==='main.c'?'\n<span class="c">// main 은 모든 헤더를 보지만 로직은 없다 — 모듈 함수를 부르는 순서만</span>':m[0]==='ring.c'?'\n<span class="c">// ring 은 표준 헤더 말고 아무것도 모른다 → 단독 테스트 가능, 다른 프로젝트로 그대로</span>':''); }
+  $('#dep-bad').addEventListener('change',()=>{ const on=$('.mod.on'); if(on) selMod(MODS.find(m=>m[0]===on.dataset.n)); });
+
+  /* 7 flow */
+  const fd=['<b>fopen(argv[1], "r")</b> — 없으면 perror 후 종료 코드 1. fgets 로 한 줄씩.','<b>parse_frame</b> — BAD 면 stderr 에 줄 번호, 세고 continue.','<b>ring_push(t) → ring_avg()</b> — 원값이 아니라 4개 평균을 다음 단계로. 튀는 값 하나에 반응하지 않는다.','<b>fsm_step(st, avg)</b> — 전이가 일어나면 events.log 에 "seq,avg,from,to" 를 "a" 로 덧붙이고 fflush.','<b>log_row</b> — 모든 행을 readings.csv 에. 매 실행 "w" 로 새로. 줄마다 fflush.','<b>events.log</b> — 실행마다 이어진다. 두 번 돌리면 두 배.','<b>readings.bin</b> — 끝나면 Reading 배열을 fwrite 한 번. 크기 = rows × 16.'];
+  let bT=[]; function bReset(){ bT.forEach(clearTimeout); bT=[]; $$('#flow-svg .node').forEach(n=>n.classList.remove('on','done')); $('#b-desc').innerHTML='읽기·파싱·링·상태 머신·CSV 는 줄마다, 이벤트는 전이가 있을 때만, 바이너리는 마지막에 한 번.'; $('#b-play').disabled=false; }
+  $('#b-play').addEventListener('click',()=>{ bReset(); $('#b-play').disabled=true; const ns=$$('#flow-svg .node'); ns.forEach((n,i)=>{ bT.push(setTimeout(()=>{ ns.forEach((x,j)=>{ x.classList.toggle('on',j===i); x.classList.toggle('done',j<i); }); $('#b-desc').innerHTML=fd[i]; if(i===ns.length-1) bT.push(setTimeout(()=>{ n.classList.remove('on'); n.classList.add('done'); $('#b-play').disabled=false; },1200)); },i*1400)); }); });
+  $('#b-reset').addEventListener('click',bReset);
+
+  /* 8 map */
+  const MAP={ 'Day 1':['빌드 4단계','선언 vs 정의','자료형·엔디안','정수 승격','switch·break','값 전달·static'], 'Day 2':['& 와 *','포인터 산술','배열 감쇠','문자열·\\0','fgets·strtol','malloc·free'], 'Day 3':['구조체·패딩','비트 연산','매크로','volatile','함수 포인터','상태 머신'], 'Day 4':['fopen·fclose','텍스트 vs 바이너리','fseek','링 버퍼','gdb·assert·ASan','모듈 구조'] };
+  const LINK={ '& 와 *':{from:['값 전달·static'],to:['함수 포인터','fseek']}, '배열 감쇠':{from:['포인터 산술'],to:['함수 포인터']}, '자료형·엔디안':{from:[],to:['포인터 산술','비트 연산','텍스트 vs 바이너리']}, '정수 승격':{from:[],to:['비트 연산']}, '값 전달·static':{from:[],to:['& 와 *','링 버퍼','상태 머신']}, '선언 vs 정의':{from:[],to:['모듈 구조']}, 'malloc·free':{from:[],to:['fopen·fclose','링 버퍼']}, 'fgets·strtol':{from:['문자열·\\0'],to:['fopen·fclose','텍스트 vs 바이너리']}, '구조체·패딩':{from:['자료형·엔디안'],to:['텍스트 vs 바이너리']}, '비트 연산':{from:['자료형·엔디안','정수 승격'],to:[]}, '매크로':{from:['빌드 4단계'],to:['gdb·assert·ASan']}, 'volatile':{from:[],to:['링 버퍼']}, '함수 포인터':{from:['& 와 *','배열 감쇠'],to:['상태 머신']}, '상태 머신':{from:['함수 포인터','switch·break'],to:['gdb·assert·ASan']}, 'fopen·fclose':{from:['malloc·free','fgets·strtol'],to:[]}, '텍스트 vs 바이너리':{from:['구조체·패딩','자료형·엔디안'],to:['fseek']}, 'fseek':{from:['포인터 산술','텍스트 vs 바이너리'],to:[]}, '링 버퍼':{from:['값 전달·static','malloc·free','volatile'],to:[]}, 'gdb·assert·ASan':{from:['매크로','상태 머신'],to:[]}, '모듈 구조':{from:['선언 vs 정의','빌드 4단계'],to:[]}, '빌드 4단계':{from:[],to:['매크로','모듈 구조']}, 'switch·break':{from:[],to:['상태 머신']}, '포인터 산술':{from:['자료형·엔디안'],to:['배열 감쇠','fseek']}, '문자열·\\0':{from:[],to:['fgets·strtol']} };
+  const mp=$('#map'); Object.entries(MAP).forEach(([d,cs])=>{ const col=document.createElement('div'); col.className='daycol'; col.innerHTML=`<h5>${d}</h5>`; cs.forEach(c=>{ const x=document.createElement('div'); x.className='concept'; x.dataset.c=c; x.textContent=c; x.addEventListener('click',()=>selC(c)); col.appendChild(x); }); mp.appendChild(col); });
+  function selC(c){ const l=LINK[c]||{from:[],to:[]}; $$('.concept').forEach(x=>{ x.classList.toggle('on',x.dataset.c===c); x.classList.toggle('from',l.from.includes(x.dataset.c)); x.classList.toggle('to',l.to.includes(x.dataset.c)); }); $('#map-term').innerHTML=`<span class="b">${c}</span>\n<span class="y">← 이것이 필요했다: ${l.from.join(', ')||'(출발점)'}</span>\n<span class="g">→ 여기서 쓰였다: ${l.to.join(', ')||'(다음 주 MCU 로)'}</span>`; }
+})();
+</script>
+</body>
+</html>

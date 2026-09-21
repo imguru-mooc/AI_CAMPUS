@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C 언어 Day 4 개념 워크시트 — 파일 I/O·디버깅·종합 프로젝트</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:900px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.primary{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700;padding:9px 18px;font-size:14px}
+  button.submit{background:#3a2e12;border-color:var(--amber);color:var(--amber);font-weight:700;padding:9px 18px;font-size:14px}
+  button:disabled{opacity:.45;cursor:default}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  input[type=text]{background:#0a0f1c;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:14px}
+  .tabs{display:flex;flex-wrap:wrap;gap:6px}
+  .tabs button .s{font-family:var(--mono);font-size:11px;color:var(--dim);margin-left:6px}
+  .tabs button.graded .s{color:var(--green)}
+  .head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .head .t{color:var(--amber);font-size:17px}
+  .head .a{font-size:13px;color:var(--teal);font-family:var(--mono)}
+  .q{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#0e1628}
+  .q.unans{border-color:#5a3a1a}
+  .q .n{font-family:var(--mono);color:var(--dim);font-size:12px}
+  .q .p{margin:4px 0 10px;font-size:15px}
+  .q .p code,.opt code,.fb code,td code{font-family:var(--mono);color:var(--blue);background:#0a0f1c;padding:1px 5px;border-radius:4px}
+  .q pre.qc{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:6px;padding:10px 12px;margin:4px 0 12px;font-size:13.5px;line-height:1.5;white-space:pre;overflow-x:auto;color:#dbe4f3}
+  .q pre{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin:6px 0 10px;font-size:14px;white-space:pre;overflow-x:auto}
+  .opts{display:grid;gap:6px}
+  .opt{text-align:left;padding:8px 12px;font-size:14px;font-family:inherit}
+  .opt.sel{border-color:var(--amber);background:#1f1a0c}
+  .opt.ok{border-color:var(--green);color:var(--green);background:#0d2216}
+  .opt.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .opt:disabled{cursor:default;opacity:.9}
+  .fb{margin-top:8px;font-size:13px;color:var(--dim);border-left:3px solid var(--line);padding-left:10px}
+  .fb.ok{border-left-color:var(--green)}.fb.bad{border-left-color:var(--red)}
+  .fb .anim{color:var(--teal);font-family:var(--mono);font-size:12px;display:block;margin-top:3px}
+  .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  .code{font-family:var(--mono);font-size:20px;color:var(--amber);letter-spacing:1px}
+  .score{font-family:var(--mono);color:var(--green);font-size:16px}
+  .hint{color:var(--dim);font-size:13px}
+  details{color:var(--dim);font-size:13px}
+  details summary{cursor:pointer;color:var(--dim)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  /* dialog */
+  dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:0;max-width:820px;width:92vw;max-height:88vh}
+  dialog::backdrop{background:#000a}
+  .dg{padding:18px 20px}
+  .dg h3{color:var(--amber);margin:0 0 4px;font-size:20px}
+  .dg .meta{color:var(--dim);font-size:13px;margin-bottom:12px;font-family:var(--mono)}
+  .dg .sec{margin:14px 0 6px;color:var(--teal);font-weight:700;font-size:14px}
+  .dg table{width:100%;border-collapse:collapse;font-size:13px}
+  .dg th{text-align:left;color:var(--dim);font-weight:600;padding:5px 8px;border-bottom:1px solid var(--line);font-size:12px}
+  .dg td{padding:5px 8px;border-bottom:1px solid #16203a;vertical-align:top}
+  .dg td.r{font-family:var(--mono)}
+  .dg .ok{color:var(--green)}.dg .bad{color:var(--red)}.dg .none{color:var(--dim)}
+  .dg .sum{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0;font-family:var(--mono)}
+  .dgbar{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:10px 20px;display:flex;gap:8px;justify-content:flex-end;align-items:center}
+  .toast{color:var(--green);font-size:13px;margin-right:auto}
+  .body{overflow:auto;max-height:calc(88vh - 60px)}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>C 언어 Day 4 개념 워크시트</h1>
+  <p class="sub">파일 I/O·디버깅·종합 프로젝트 · 8교시 × 10문항. 🎬 표시는 index_day4.html 의 애니메이션 번호입니다. 답을 고른 뒤 아래 <b style="color:var(--teal)">채점하기</b>를 누르면 정오·해설과 결과 코드가 나타납니다. 채점 전에는 답을 바꿀 수 있고, 채점 후에는 잠깁니다. 모든 교시를 마치면 <b style="color:var(--amber)">제출</b>로 오답 정리를 열고, <b>캡처</b>로 복사해 노션에 붙여 넣으세요.</p>
+
+  <div class="panel">
+    <div class="row"><label style="color:var(--dim);font-size:13px">이름 <input type="text" id="name" placeholder="홍길동"></label><span class="hint">이름은 결과 코드 계산에만 쓰이며 저장되지 않습니다.</span></div>
+  </div>
+  <div class="panel"><h2>교시</h2><div class="tabs" id="tabs"></div></div>
+  <div class="panel" id="sheet"></div>
+  <div class="panel">
+    <div class="actions">
+      <button class="primary" id="gradeBtn">채점하기</button>
+      <span class="code" id="rcode">—</span><span class="score" id="rscore"></span><span class="hint" id="rhint"></span>
+      <button class="submit" id="submitBtn" style="margin-left:auto">제출</button>
+    </div>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <div class="body"><div class="dg" id="dgBody"></div></div>
+  <div class="dgbar"><span class="toast" id="toast"></span><button id="captureBtn" class="primary">📋 캡처 (노션용 복사)</button><button id="closeBtn">닫기</button></div>
+</dialog>
+
+<script>
+const $=s=>document.querySelector(s);
+const Q=[
+ {t:'1교시 · 파일 열고 닫기',anim:'D4-1 파일 스트림 뷰어',qs:[
+  {p:'fopen 이 실패했을 때 반환값과 올바른 처리는?',c:'FILE *fp = fopen("temps.txt", "r");\n____',o:['0 을 반환, 무시해도 된다','NULL 을 반환 — 사용 전에 검사하고 perror 로 원인 출력','예외를 던진다','-1 을 반환'],a:1,w:'검사 없이 fgets(…, fp) 하면 NULL 역참조로 세그폴트. Day 2 malloc 검사와 같은 규칙입니다.',an:'D4-1 · nope.txt'},
+  {p:'로그 파일을 실행할 때마다 이어 쓰려면 어떤 모드로 열어야 합니까?',c:'FILE *log = fopen("events.log", ____);',o:['"r"','"w" — 새로 쓰기','"a" — 끝에 덧붙이기','"r+"'],a:2,w:'"w" 는 기존 내용을 지우고 시작합니다. 오늘 가장 흔한 사고가 로그를 "w" 로 열어 이전 기록이 사라지는 것.',an:'1교시 예제 1-3'},
+  {p:'아래 코드에서 errno 를 먼저 변수에 복사한 이유는?',c:'if (!fp) {\n    int err = errno;\n    printf("...");\n    perror("fopen");\n}',o:['errno 가 지역 변수라서','errno 는 전역이라 그 뒤에 부른 함수(printf 등)가 덮어쓸 수 있기 때문','perror 가 errno 를 0 으로 만들어서','문법 규칙'],a:1,w:'실패 직후 읽어야 정확합니다. MCU 에서는 errno 대신 반환값 규약을 씁니다(6교시).',an:'1교시 예제 1-2'},
+  {p:'파일을 2000번 열고 닫지 않는 루프를 돌리면 어떻게 됩니까?',c:'for (int i = 0; i < 2000; i++) {\n    FILE *fp = fopen("temps.txt", "r");\n    // fclose 없음\n}',o:['문제 없음','약 1000번째에서 fopen 이 "Too many open files" 로 실패한다','메모리 부족으로 죽는다','컴파일 에러'],a:1,w:'프로세스가 동시에 열 수 있는 파일 수 한계(보통 1024)입니다. fopen/fclose 는 malloc/free 와 같은 짝 규칙.',an:'1교시 예제 1-4'},
+  {p:'stdin, stdout, stderr 의 정체는?',o:['정수 상수','미리 열려 있는 FILE * 세 개','문자열','매크로 함수'],a:1,w:'fgets(line, n, stdin) 의 stdin 자리에 fopen 결과를 넣으면 파일에서 읽습니다. 어제까지 배운 코드가 그대로 파일에 쓰입니다.',an:'1교시 예제 1-1'},
+  {p:'"r" 모드로 연 파일에 fprintf 하면 어떻게 됩니까?',c:'FILE *fp = fopen("temps.txt", "r");\nfprintf(fp, "hello\\n");',o:['파일에 써진다','실패 — fprintf 가 음수를 반환하고 파일은 그대로','자동으로 "w" 로 바뀐다','세그폴트'],a:1,w:'읽기 전용 스트림에는 쓸 수 없습니다. 반환값을 검사하지 않으면 조용히 실패합니다.',an:'D4-1 · "r" 에 쓰기'},
+  {p:'main(int argc, char *argv[]) 에서 argv[1] 을 쓰기 전에 argc 를 검사하는 이유는?',c:'if (argc < 2) { fprintf(stderr, "usage: %s file\\n", argv[0]); return 1; }\nFILE *fp = fopen(argv[1], "r");',o:['속도','인자 없이 실행하면 argv[1] 이 NULL 이라 fopen 에 넘기면 세그폴트','argc 는 항상 1 이라','C 문법 규칙'],a:1,w:'argv 는 Day 2 의 char * 배열이고 argv[argc] 는 NULL 입니다.',an:'1교시 빈칸 1-1'},
+  {p:'파일을 이미 fp 로 열어 둔 상태에서 같은 변수에 다시 fopen 을 대입하면?',c:'fp = fopen("a.txt", "r");\nfp = fopen("b.txt", "r");   // fclose 없이',o:['a.txt 가 자동으로 닫힌다','a.txt 는 열린 채 남고 그 핸들을 잃는다 — 파일 핸들 누수','b.txt 가 열리지 않는다','컴파일 에러'],a:1,w:'Day 2 malloc 을 free 없이 덮어쓰는 것과 같은 실수입니다. 먼저 fclose.',an:'D4-1 · 이미 열린 fp'},
+  {p:'프로그램이 종료 코드 1 로 끝나야 하는 상황은?',o:['정상 처리 완료','파일을 못 열었거나 인자가 잘못됐을 때 — 셸/Makefile 이 실패를 알 수 있게','항상 1 로 끝낸다','0 과 1 은 차이 없다'],a:1,w:'Day 1 의 $? 입니다. 스크립트에서 ./logger || echo 실패 처럼 분기할 수 있습니다.',an:'8교시 체크리스트'},
+  {p:'"r+" 와 "w+" 의 차이는?',o:['차이 없음','"r+" 는 기존 내용을 유지한 채 읽기·쓰기, "w+" 는 내용을 지우고 읽기·쓰기','"w+" 는 읽기 전용','"r+" 는 파일이 없으면 만든다'],a:1,w:'3교시 patch_temp 가 "r+b" 를 쓰는 이유입니다. "w+b" 로 열면 레코드가 전부 사라집니다.',an:'3교시 빈칸 3-1'},
+ ]},
+ {t:'2교시 · 텍스트 쓰기와 CSV',anim:'D4-2 텍스트 vs 바이너리',qs:[
+  {p:'printf("...") 와 같은 뜻의 호출은?',o:['fprintf(stdin, "...")','fprintf(stdout, "...")','fprintf(stderr, "...")','fputs("...", NULL)'],a:1,w:'printf 는 fprintf 의 첫 인자가 stdout 으로 고정된 것입니다. 파일 하나만 더 넘기면 파일에 씁니다.',an:'2교시 예제 2-1'},
+  {p:'오류 메시지를 stderr 로 보내는 이유는?',c:'./logger temps.txt > out.txt',o:['stderr 가 더 빠르다','> 로 stdout 을 파일에 담아도 stderr 는 화면에 남아 오류를 놓치지 않기 때문','stderr 는 버퍼링이 없어서만','C 규칙'],a:1,w:'2>/dev/null 로 오류만 버리거나, 2>err.log 로 따로 담을 수도 있습니다. 어제 LOG 매크로가 stderr 였던 이유.',an:'2교시 예제 2-1'},
+  {p:'fprintf 로 쓴 직후 다른 터미널에서 cat 했더니 파일이 비어 있었습니다. 원인은?',c:'fprintf(out, "sensor started\\n");\nsleep(10);    // 이 사이에 cat buf.txt → 비어 있음',o:['fprintf 버그','출력이 메모리 버퍼에 모여 있고 아직 디스크에 쓰이지 않았기 때문 — fflush 나 fclose 가 필요','파일 권한','sleep 이 파일을 잠근다'],a:1,w:'파일 스트림은 블록 단위(보통 4KB) 버퍼링입니다. 프로그램이 죽으면 버퍼 내용은 사라집니다.',an:'2교시 예제 2-2 · D4-1'},
+  {p:'로그를 줄마다 확실히 기록하는 방법은?',o:['printf 를 쓴다','fprintf 뒤에 fflush(fp), 또는 setvbuf 로 줄 단위 버퍼링','파일을 매번 새로 만든다','sleep 을 넣는다'],a:1,w:'성능은 조금 떨어지지만 전원이 나가도 마지막 줄까지 남습니다. 7교시 events.log 가 이 방식.',an:'2교시 예제 2-2'},
+  {p:'CSV 한 줄 "1,25.3,IDLE" 을 strtok 으로 자르기 전에 복사하는 이유는?',c:'char buf[64];\nsnprintf(buf, sizeof buf, "%s", line);\nchar *a = strtok(buf, ",");',o:['속도','strtok 이 원본에 \'\\0\' 을 써서 망가뜨리기 때문 (Day 2)','line 이 const 라서 컴파일 에러','버퍼 크기 때문'],a:1,w:'원본 line 을 오류 메시지에 그대로 출력하려면 복사본을 잘라야 합니다.',an:'2교시 예제 2-3'},
+  {p:'CSV 의 장점이 아닌 것은?',o:['사람이 읽을 수 있다','Excel·Python 이 바로 연다','크기가 작고 파싱이 필요 없다','디버깅이 쉽다'],a:2,w:'25.3 이 4글자 + 구분자로 저장되고, 읽을 때 strtod 파싱이 필요합니다. 그것이 3교시 바이너리의 이유.',an:'D4-2'},
+  {p:'파싱 함수가 헤더 줄을 건너뛰는 방법으로 알맞은 것은?',c:'FILE *in = fopen("log.csv", "r");\n____\nwhile (fgets(line, sizeof line, in)) { ... }',o:['fseek(in, 1, SEEK_SET)','fgets(line, sizeof line, in); — 첫 줄을 읽고 버린다','rewind(in)','헤더는 자동으로 건너뛴다'],a:1,w:'첫 줄이 "seq,temp,state" 이므로 한 번 읽어서 버립니다. 헤더 유무를 확인하려면 첫 글자가 숫자인지 검사.',an:'2교시 예제 2-3'},
+  {p:'strtod(b, &end) 뒤에 end == b 를 검사하는 이유는?',o:['end 가 NULL 인지','숫자를 하나도 읽지 못한 실패를 감지하기 위해 (Day 2 strtol 과 같음)','문자열 끝 확인','속도'],a:1,w:'atof 는 실패해도 0 을 돌려줘 구분이 안 됩니다. 어제의 strtol 규칙이 실수에도 그대로.',an:'2교시 예제 2-3'},
+  {p:'파일에 문자열만(서식 없이) 쓸 때 적합한 함수는?',c:'____("2,17.0,HEAT\\n", out);',o:['fprintf','fputs','fwrite 만 가능','puts'],a:1,w:'fputs(str, fp) 는 서식 해석이 없어 % 가 들어간 문자열도 안전합니다. puts 는 stdout 전용이고 개행을 붙입니다.',an:'2교시 예제 2-1'},
+  {p:'log_transition 을 매 호출마다 fopen("a")·fclose 하는 방식의 장단점은?',o:['빠르고 안전','느리지만 매번 확실히 기록되고 핸들 누수 위험이 없다','파일이 매번 지워진다','스레드 안전'],a:1,w:'단순함이 장점. 자주 부르면 한 번 열어 두고 fflush 만 하는 7교시 방식이 낫습니다.',an:'2교시 빈칸 2-1'},
+ ]},
+ {t:'3교시 · 바이너리 I/O',anim:'D4-3 파일 커서',qs:[
+  {p:'fwrite 의 인자 순서로 옳은 것은?',c:'fwrite(r, sizeof r[0], 3, fp);',o:['파일, 주소, 크기, 개수','주소, 요소 크기, 개수, 파일 — qsort 와 같은 모양','주소, 개수, 크기, 파일','개수, 크기, 주소, 파일'],a:1,w:'Day 2 "길이를 같이 넘겨라" 의 완성형입니다. 반환값은 쓴 요소 개수.',an:'3교시 예제 3-1'},
+  {p:'Reading 3개를 fwrite 한 파일의 크기는? (sizeof(Reading) = 16)',o:['12 bytes','48 bytes','36 bytes','텍스트 길이에 따라 다름'],a:1,w:'구조체 통째로 쓰므로 패딩 포함 16 × 3. od 로 보면 첫 8바이트가 double 25.3 입니다.',an:'D4-3 · 48'},
+  {p:'파일 크기를 재는 관용구는?',c:'fseek(fp, 0, ____);\nlong size = ____(fp);',o:['SEEK_SET / ftell','SEEK_END / ftell','SEEK_CUR / fread','SEEK_END / rewind'],a:1,w:'끝으로 커서를 옮긴 뒤 위치를 물으면 크기입니다. 그 뒤 rewind 로 처음으로.',an:'3교시 예제 3-1'},
+  {p:'두 번째 레코드로 바로 점프하는 코드는?',c:'fseek(fp, ____, SEEK_SET);',o:['1','16','1 * sizeof(Reading) — 16','2 * sizeof(Reading)'],a:2,w:'레코드 번호 × 크기가 바이트 오프셋입니다. 인덱스는 0 부터이므로 두 번째는 1.',an:'D4-3 · rec1'},
+  {p:'fread 의 반환값을 검사해야 하는 이유는?',c:'if (fread(&x, sizeof x, 1, fp) == 1) ...',o:['속도','EOF 나 오류면 요청한 개수보다 적게 돌아오고 x 는 쓰레기이기 때문','fread 는 항상 1 을 돌려줘서','문법'],a:1,w:'Day 2 scanf 반환값 검사와 같습니다. 애니메이션에서 EOF 에서 fread 하면 0.',an:'D4-3 · EOF'},
+  {p:'od 덤프의 첫 8바이트 cd cc cc cc cc 4c 39 40 은 무엇입니까?',o:['문자열 "25.3"','double 25.3 의 IEEE 754 리틀 엔디안 표현','int 25 와 int 3','쓰레기'],a:1,w:'Day 3 union 으로 본 것과 같은 비트 패턴입니다. 텍스트 "25.3" 은 32 35 2e 33 이었을 것.',an:'3교시 예제 3-1'},
+  {p:'구조체를 통째로 쓴 바이너리 파일이 다른 장치에서 안 읽히는 원인 둘은?',o:['파일 이름과 확장자','패딩(정렬)과 엔디안','권한과 크기','fopen 모드'],a:1,w:'같은 컴파일러·같은 CPU 에서만 안전합니다. 장치 간 교환은 Day 3 4교시처럼 필드별 바이트 직렬화.',an:'3교시 예제 3-2'},
+  {p:'Linux 에서 "rb" 의 b 는 무엇을 위한 것입니까?',o:['빠른 읽기','Windows 등에서 줄바꿈 변환을 막기 위해 — Linux 에선 차이 없지만 이식성 습관','바이트 단위 읽기 강제','읽기 전용 표시'],a:1,w:'Windows 는 텍스트 모드에서 \\n ↔ \\r\\n 을 바꿉니다. 바이너리에 그것이 일어나면 데이터가 깨집니다.',an:'3교시 예제 3-1'},
+  {p:'load_bin 이 realloc 루프 없이 한 번의 malloc 으로 끝나는 이유는?',c:'fseek(fp, 0, SEEK_END); long size = ftell(fp); rewind(fp);\nint n = size / sizeof(Reading);\nReading *a = malloc(n * sizeof *a);',o:['바이너리가 작아서','파일 크기를 먼저 잴 수 있어 레코드 수를 미리 알기 때문','realloc 은 바이너리에 못 쓴다','malloc 이 자동으로 늘어난다'],a:1,w:'텍스트는 줄 수를 모르니 Day 2 처럼 늘려 가야 했습니다. 크기 정보가 바이너리의 또 다른 장점.',an:'3교시 예제 3-3'},
+  {p:'fread 로 읽은 직후 같은 자리에 fwrite 하려면 그 사이에 무엇이 필요합니까?',c:'fread(&r, sizeof r, 1, fp);\nr.t = 99.9;\n____\nfwrite(&r, sizeof r, 1, fp);',o:['아무것도 필요 없음','fseek 으로 커서를 레코드 시작으로 되돌린다 (읽기 후 커서가 전진했고, 읽기·쓰기 전환에도 필요)','fclose 후 다시 fopen','fflush 만'],a:1,w:'커서가 다음 레코드에 가 있어 그대로 쓰면 엉뚱한 곳에 씁니다. C 표준은 읽기↔쓰기 전환 사이에 fseek/fflush 를 요구합니다.',an:'3교시 빈칸 3-1'},
+ ]},
+ {t:'4교시 · 링 버퍼',anim:'D4-4 링 버퍼',qs:[
+  {p:'센서가 초당 100번 보내고 로그는 1초에 한 번 쓸 때 링 버퍼를 쓰는 이유는?',o:['배열보다 빨라서','고정 배열을 원형으로 써서 할당(realloc)도 이동도 없기 때문 — MCU 에 맞다','링이 더 많이 저장해서','C 표준 자료구조라서'],a:1,w:'Day 2 realloc 은 MCU 에서 위험하고, 배열을 앞으로 당기는 것은 느립니다.',an:'4교시 예제 4-1'},
+  {p:'head 와 tail 의 역할은?',c:'typedef struct { double buf[RING_CAP]; int head, tail, count; } Ring;',o:['head 는 최댓값, tail 은 최솟값','head 는 다음에 쓸 자리, tail 은 다음에 읽을 자리','head 는 처음, tail 은 끝 인덱스(고정)','둘 다 같은 값'],a:1,w:'push 는 head 에 쓰고 head 를 전진, pop 은 tail 에서 읽고 tail 을 전진합니다.',an:'D4-4'},
+  {p:'인덱스가 끝을 넘어 0 으로 돌아가게 하는 연산은?',c:'r->head = (r->head + 1) ____ RING_CAP;',o:['+','%','&','<<'],a:1,w:'나머지 연산이 원을 만듭니다. CAP 이 2 의 거듭제곱이면 & (CAP-1) 로 대체 가능(더 빠름).',an:'4교시 예제 4-1'},
+  {p:'CAP=4 에 4개가 들어 있는 상태에서 push 하면(덮어쓰기 정책)?',o:['거부된다','tail 을 전진시켜 가장 오래된 값을 버리고 새 값을 head 에 쓴다','배열이 커진다','head 가 멈춘다'],a:1,w:'애니메이션 시나리오의 5번째 push(37)에서 tail 도 1 로 전진했습니다. count 는 4 유지.',an:'D4-4 · 가득'},
+  {p:'이동평균 ring_avg 가 tail 부터 count 개를 순회하는 코드는?',c:'for (int i = 0; i < r->count; i++) s += r->buf[____];',o:['i','(r->tail + i) % RING_CAP','r->head + i','r->tail - i'],a:1,w:'tail 이 0 이 아닐 수 있고 끝을 넘어 감길 수 있으므로 % 가 필요합니다.',an:'4교시 예제 4-1'},
+  {p:'count 없이 head/tail 만으로 구현하면 생기는 문제는?',o:['없음','head == tail 이 "비었음"과 "가득 참" 둘 다여서 구분이 안 된다','속도가 느려진다','컴파일 에러'],a:1,w:'해법: count 필드, 한 칸 비워 두기, 또는 head/tail 을 감지 않고 접근 시에만 %.',an:'4교시 예제 4-2'},
+  {p:'인터럽트가 push 하고 메인 루프가 pop 하는 구조에서 주의할 점은?',o:['없음','count 를 두 쪽이 동시에 고치면 깨지므로 한 칸 비워 두기 방식을 쓰고 head/tail 을 volatile 로','링 버퍼를 쓸 수 없다','malloc 을 써야 한다'],a:1,w:'Day 3 volatile 이 실제로 쓰이는 자리입니다. 다음 주 ESP32 인터럽트에서 만납니다.',an:'4교시 예제 4-2'},
+  {p:'덮어쓰기와 거부, 어느 정책이 맞습니까?',o:['항상 덮어쓰기','항상 거부','용도가 정한다 — 센서 표시는 최신 우선(덮어쓰기), 이벤트 로그는 과거 보존(거부+경고)','랜덤'],a:2,w:'ring_push_nodrop 이 거부 버전입니다. 반환값으로 성공 여부를 알립니다.',an:'4교시 빈칸 4-1'},
+  {p:'Day 1 의 moving_avg(static 배열) 와 오늘 Ring 의 차이는?',o:['차이 없음','Ring 은 구조체라 여러 개 만들 수 있고(온도용·습도용), 단독 테스트할 수 있다','Ring 이 더 느리다','static 이 더 안전하다'],a:1,w:'static 은 함수 하나에 상태 하나. 구조체 + 포인터 인자가 C 의 "객체" 입니다.',an:'4교시 예제 4-1'},
+  {p:'시나리오 25 25 25 25 37 25 25 25 에서 37 이 들어온 직후 평균은?',o:['37','28.00','25','31'],a:1,w:'(25+25+25+37)/4 = 28. 튀는 값 하나가 평균을 완만하게 올립니다. 7교시에서 이 평균을 상태 머신에 넣습니다.',an:'D4-4 · 시나리오'},
+ ]},
+ {t:'5교시 · 디버깅',anim:'D4-5 gdb 스텝 시뮬레이터',qs:[
+  {p:'gdb 로 변수 이름·줄 번호를 보려면 필요한 컴파일 옵션 조합은?',c:'gcc ____ fsm_bug.c -o fsm_bug',o:['-O2','-g -O0','-Wall','-DDEBUG'],a:1,w:'-g 는 디버그 정보, -O0 은 최적화를 꺼서 코드 순서가 소스와 같게. -O2 면 next 가 여러 줄을 건너뜁니다.',an:'5교시 예제 5-1'},
+  {p:'Day 3 예제 7-3 의 버그(TABLE 순서 어긋남)를 gdb 로 잡는 결정적 명령은?',c:'Breakpoint 1, fsm_step (cur=ST_HEAT, t=19)\n(gdb) ____',o:['bt','print TABLE[cur] — HEAT 인데 on_cool 이 나온다','next','run'],a:1,w:'컴파일 경고도 없고 죽지도 않는 버그는 "이 상태에서 무엇이 불리는가"를 실행 중에 보는 수밖에 없습니다.',an:'D4-5 · print TABLE[cur]'},
+  {p:'next 와 step 의 차이는?',o:['같다','next 는 함수 호출을 한 줄로 건너뛰고, step 은 함수 안으로 들어간다','step 이 더 빠르다','next 는 중단점을 지운다'],a:1,w:'on_heat 의 내부를 보려면 step, 결과만 보려면 next.',an:'5교시 예제 5-1'},
+  {p:'세그폴트가 났을 때 가장 먼저 칠 gdb 명령은?',o:['run','bt — 어느 함수의 몇 번째 줄에서 죽었는지','print','continue'],a:1,w:'gdb -batch -ex run -ex bt ./app 한 줄로 스크립트화할 수 있습니다. Makefile debug 타깃.',an:'5교시 예제 5-2'},
+  {p:'"누가 이 변수를 바꿨지?" 를 찾는 gdb 명령은?',o:['print','watch 변수 — 값이 바뀌는 순간 멈춘다','break','info'],a:1,w:'배열 밖 쓰기로 엉뚱한 변수가 바뀌는 Day 2 오버플로를 찾을 때 유용합니다.',an:'5교시 명령표'},
+  {p:'assert(n > 0) 이 실패하면?',c:'double median(const int *a, int n) {\n    assert(n > 0 && "median of empty array");\n    ...',o:['경고만 출력','파일:줄:함수와 조건을 출력하고 즉시 중단(abort)','0 을 반환','컴파일 에러'],a:1,w:'전제 조건을 코드로 적어 두는 계약입니다. 위반 순간 잡히므로 원인이 가깝습니다.',an:'5교시 예제 5-3'},
+  {p:'-DNDEBUG 로 컴파일하면 assert 는?',o:['더 엄격해진다','사라진다 — 그래서 부수효과 있는 식을 넣으면 안 된다','경고로 바뀐다','변화 없음'],a:1,w:'assert(fp = fopen(...)) 은 릴리스에서 fopen 자체가 사라집니다. Day 3 조건부 컴파일의 실제 예.',an:'5교시 예제 5-3'},
+  {p:'assert 안에 부수효과가 있는 식을 넣으면 안 되는 이유는?',c:'assert(ring_pop(&r, &v));   // 나쁜 예',o:['느려서','NDEBUG 빌드에서 그 식이 통째로 사라져 동작이 달라지기 때문','assert 는 bool 만 받아서','문법 에러'],a:1,w:'결과를 변수에 받고 그 변수를 assert 하세요: bool ok = ring_pop(...); assert(ok);',an:'5교시 예제 5-3'},
+  {p:'AddressSanitizer(-fsanitize=address) 가 잡는 것이 아닌 것은?',o:['배열 밖 접근','해제 후 사용','논리 버그(테이블 순서 어긋남)','힙 오버플로'],a:2,w:'ASan 은 메모리 오류 전문입니다. 조용한 논리 버그는 gdb 나 테스트로 잡아야 합니다.',an:'5교시 예제 5-4'},
+  {p:'ASan 과 valgrind 의 관계는?',o:['같은 도구','ASan 은 컴파일 시 계측을 넣어 빠르고(2~3배), valgrind 는 재컴파일 없이 되지만 느리다(20배)','valgrind 가 항상 낫다','ASan 은 Windows 전용'],a:1,w:'개발 중엔 ASan 을 켜 두고, 릴리스에서 뺍니다. make asan 타깃이 그것.',an:'5교시 예제 5-4'},
+ ]},
+ {t:'6교시 · 코드 품질',anim:'D4-6 모듈 의존 그래프',qs:[
+  {p:'헤더 파일(.h)에 넣어야 하는 것은?',o:['모든 함수 본문','다른 모듈이 알아야 할 것만 — 구조체, 함수 원형, 매크로','static 함수','main'],a:1,w:'구현 세부는 .c 의 static 으로 숨깁니다. Day 1 선언 vs 정의의 확장.',an:'6교시 예제 6-1'},
+  {p:'ring.c 가 frame.h 를 include 하면 안 되는 이유는?',o:['컴파일 에러라서','의존이 양방향이 되어 frame 을 바꿀 때 ring 도 재컴파일되고, ring 을 단독 테스트하거나 다른 프로젝트로 가져갈 수 없기 때문','ring 이 느려져서','헤더 가드 충돌'],a:1,w:'모듈은 아래로만 의존합니다. 애니메이션 D4-6 의 "나쁜 예" 토글.',an:'D4-6 · 나쁜 예'},
+  {p:'main.c 의 역할로 옳은 것은?',o:['모든 로직을 담는다','모듈 함수를 부르는 순서만 — 조립','링 버퍼를 구현한다','헤더를 만든다'],a:1,w:'main 에 로직이 없으면 모듈만 바꿔 끼워 재사용할 수 있고, 테스트도 모듈 단위로 됩니다.',an:'6교시 예제 6-1'},
+  {p:'에러 규약 A(성공 1/실패 0), B(0/음수 코드), C(포인터/NULL) 중 프로젝트에서 지켜야 할 원칙은?',o:['A 가 항상 최고','한 프로젝트 안에서 섞지 않는다','B 는 쓰면 안 된다','함수마다 다르게'],a:1,w:'섞이면 호출자가 매번 헤더를 봐야 합니다. ESP32 SDK 는 B(esp_err_t) 로 통일되어 있습니다.',an:'6교시 예제 6-2'},
+  {p:'main 없이 ring 모듈만 시험하는 파일의 이름과 역할은?',c:'test_ring: test_ring.o ring.o',o:['main.c 복사본','test_ring.c — 단위 테스트. assert 로 push/pop/count 규칙 검증','ring.h','Makefile'],a:1,w:'make test 가 통과하지 않으면 main 을 건드리지 않는 것이 규칙.',an:'6교시 예제 6-3'},
+  {p:'Makefile 에서 $@, $^, $< 는 각각?',c:'logger: $(OBJS)\n\t$(CC) $(CFLAGS) -o $@ $^',o:['타깃, 의존 전체, 첫 의존','첫 의존, 타깃, 의존 전체','의존 전체, 타깃, 첫 의존','모두 같다'],a:0,w:'자동 변수입니다. 규칙마다 파일 이름을 반복해 적지 않아도 됩니다.',an:'6교시 예제 6-3'},
+  {p:'%.o: %.c 규칙의 뜻은?',c:'%.o: %.c\n\t$(CC) $(CFLAGS) -c $<',o:['특정 파일 하나','패턴 규칙 — 모든 .c 를 같은 명령으로 .o 로 만든다','오류','주석'],a:1,w:'Day 1 의 규칙 세 개를 한 줄로 대신합니다. 헤더 의존성은 main.o: frame.h … 처럼 따로 적습니다.',an:'6교시 예제 6-3'},
+  {p:'asan: CFLAGS += -fsanitize=address 의 뜻은?',c:'asan: CFLAGS += -fsanitize=address\nasan: clean logger',o:['전역 CFLAGS 변경','asan 타깃을 만들 때만 CFLAGS 에 옵션을 추가(타깃별 변수)하고 clean 후 다시 빌드','컴파일 에러','asan 이라는 파일 생성'],a:1,w:'make asan 이면 ASan 빌드, make 면 일반 빌드. 소스는 그대로.',an:'6교시 예제 6-3'},
+  {p:'.PHONY: test asan debug clean 의 역할은?',o:['속도','test 라는 실제 파일이 있어도 규칙을 항상 실행하게 한다 (파일이 아닌 명령 타깃 표시)','타깃을 숨긴다','필수 문법'],a:1,w:'clean 이라는 파일이 우연히 있으면 make clean 이 "up to date" 로 아무것도 안 합니다.',an:'6교시 예제 6-3'},
+  {p:'log_close 에서 fp = NULL 을 하는 이유는?',c:'void log_close(Logger *lg) {\n    if (lg->fp) { fclose(lg->fp); lg->fp = NULL; }\n}',o:['메모리 해제','두 번 닫거나 닫은 뒤 쓰는 실수를 막기 위해 — Day 2 free 후 NULL 과 같은 습관','fclose 가 요구','속도'],a:1,w:'닫힌 FILE * 를 다시 fclose 하면 정의되지 않은 동작입니다.',an:'6교시 빈칸 6-1'},
+ ]},
+ {t:'7교시 · 종합 프로젝트 설계',anim:'D4-7 수집기 파이프라인',qs:[
+  {p:'상태 머신에 원값 대신 이동평균을 넣는 이유는?',c:'ring_push(&ring, r.t);\nState next = fsm_step(st, ring_avg(&ring));',o:['속도','튀는 값 하나(37.2 한 번)에 반응하지 않게 — 오경보 방지','상태 머신은 평균만 받아서','메모리 절약'],a:1,w:'같은 입력에서 Day 3 컨트롤러는 ALERT 2 번, 오늘은 0 번입니다. 대신 진짜 위험에 늦게 반응하는 대가.',an:'D4-7 · 링 버퍼'},
+  {p:'events.log 와 readings.csv 를 여는 모드가 다른 이유는?',o:['형식이 달라서','events.log 는 실행 간 이력을 이어 가야 하니 "a", readings.csv 는 이번 실행 결과만이니 "w"','둘 다 "w" 가 맞다','둘 다 "a" 가 맞다'],a:1,w:'두 번 실행하면 events.log 는 두 배, readings.csv 는 그대로. 제출 체크리스트 항목.',an:'7교시 요구표'},
+  {p:'BAD 프레임을 만났을 때의 처리는?',c:'if (!parse_frame(line, &r)) {\n    fprintf(stderr, "BAD line %d: %s\\n", lineno, line);\n    bad++; ____\n}',o:['return 1','continue — 세고 다음 줄로','break','exit'],a:1,w:'Day 2 분석기와 같습니다. stderr 로 보내 2>/dev/null 로 걸러낼 수 있게.',an:'7교시 뼈대'},
+  {p:'readings.bin 을 마지막에 한 번 fwrite 하기 위해 필요한 것은?',o:['링 버퍼','모든 Reading 을 힙 배열(realloc)에 누적해 두는 것 — Day 2','파일을 매 줄 열기','CSV'],a:1,w:'링 버퍼는 최근 4개만 갖습니다. 전체를 저장하려면 별도 누적이 필요합니다.',an:'8교시 정답 8-A'},
+  {p:'전이 로그 한 줄 "7,29.75,IDLE,COOL" 의 필드는?',o:['seq, 원 온도, from, to','seq, 이동평균, from, to','lineno, 온도, 상태, 핀','시간, 온도, 습도, 거리'],a:1,w:'상태 머신이 본 값(평균)을 남겨야 왜 전이했는지 나중에 검증할 수 있습니다.',an:'7교시 뼈대'},
+  {p:'log_open 을 "a" 전용에서 모드 인자를 받게 바꾸는 이유는?',c:'int log_open(Logger *lg, const char *path, const char *mode);',o:['속도','같은 Logger 모듈을 readings.csv("w") 와 events.log("a") 양쪽에 쓰기 위해','C 규칙','헤더 때문'],a:1,w:'모듈을 특정 용도에 묶지 않는 것이 재사용의 기본입니다. 헤더에 "w" 이면 헤더 줄 씀 규칙도 적습니다.',an:'8교시 정답 8-A'},
+  {p:'파일을 못 열었을 때 이미 연 파일을 닫고 나가야 하는 이유는?',c:'FILE *ev = fopen("events.log", "a");\nif (!ev) { perror("events.log"); log_close(&csv); fclose(in); return 1; }',o:['필요 없음 — OS 가 닫아 준다','조기 종료 경로에서도 핸들·메모리를 정리하는 습관 — Day 2 valgrind 누수의 대부분이 여기서','속도','문법'],a:1,w:'PC 에서는 OS 가 회수하지만, 함수 안에서 return 하면 누수입니다. 습관을 만드는 자리.',an:'7교시 뼈대'},
+  {p:'RING_CAP 을 2 로 줄이면 어떻게 될까요?',o:['변화 없음','평균이 원값에 가까워져 HEAT·ALERT 전이가 다시 생긴다 (필터가 약해짐)','컴파일 에러','평균이 더 완만해진다'],a:1,w:'8교시 리뷰 실험입니다. 필터 길이 = 반응 속도와 오경보의 트레이드오프.',an:'7교시 결과 설명'},
+  {p:'fsm_step 이 GPIO 를 조작하는데 main.c 에 GPIO_OUT 정의가 있는 이유는?',o:['main 이 핀을 직접 제어해서','gpio.h 가 extern 선언만 하고 정의는 한 곳에 있어야 링크되기 때문 (Day 1·3)','fsm.c 에 두면 에러','필요 없다'],a:1,w:'다음 주엔 이 정의가 사라지고 gpio.h 의 한 줄이 실제 주소가 됩니다.',an:'7교시 뼈대'},
+  {p:'"./logger" 를 인자 없이 실행했을 때 올바른 동작은?',o:['temps.txt 를 기본으로 연다','usage 를 stderr 에 출력하고 종료 코드 1','세그폴트','빈 결과 출력'],a:1,w:'argc 검사 + 종료 코드. 제출 체크리스트의 첫 항목입니다.',an:'8교시 체크리스트'},
+ ]},
+ {t:'8교시 · 4일 정리',anim:'D4-8 4일 지도',qs:[
+  {p:'gcc 한 줄 뒤의 네 단계와 "undefined reference" 가 나는 단계는?',o:['전처리→컴파일→어셈블→링크, 컴파일','전처리→컴파일→어셈블→링크, 링크','컴파일→링크→실행, 실행','전처리→링크, 전처리'],a:1,w:'Day 1. 선언은 있는데 정의를 못 찾은 것. 오늘 main.c 에 GPIO_OUT 정의가 있는 이유와 연결.',an:'Day 1 · D4-8'},
+  {p:'배열을 함수에 넘길 때 길이를 같이 넘기는 이유와, 그 원리가 오늘 어디에 쓰였습니까?',o:['문법 규칙 — 쓰인 곳 없음','감쇠로 길이가 사라지기 때문 — fwrite(p, size, n, fp) 의 인자 형태가 그것','속도 — fseek','C 표준 — assert'],a:1,w:'Day 2 → Day 3 qsort → Day 4 fwrite/fread. 같은 모양이 세 번 나왔습니다.',an:'D4-8 · 배열 감쇠'},
+  {p:'구조체를 파일에 통째로 쓸 때 Day 3 의 어떤 개념이 문제가 됩니까?',o:['함수 포인터','패딩·정렬과 엔디안 — 다른 장치에서 안 읽힘','매크로','상태 머신'],a:1,w:'D4-8 지도에서 "구조체·패딩 → 텍스트 vs 바이너리" 화살표.',an:'D4-8 · 구조체·패딩'},
+  {p:'Day 1 의 static 지역 변수와 Day 4 의 링 버퍼 구조체의 관계는?',o:['무관','static 배열이 함수 하나에 묶인 상태였다면, 구조체 + 포인터 인자는 여러 개 만들고 테스트할 수 있는 같은 아이디어의 확장','static 이 더 낫다','링 버퍼는 malloc 필수'],a:1,w:'D4-8 지도 "값 전달·static → 링 버퍼".',an:'D4-8 · 링 버퍼'},
+  {p:'다음 주 ESP32 에서 오늘 코드 중 바뀌는 것은?',o:['전부 다시 짠다','gpio.h 의 GPIO_OUT 한 줄이 실제 주소로, main 이 setup/loop 로 — 나머지 모듈은 그대로','링 버퍼만','상태 머신만'],a:1,w:'하드웨어 의존을 한 줄에 가둔 것이 4일 내내 강조한 구조입니다.',an:'8교시 여섯 문장 6'},
+  {p:'임베디드로 가져갈 것으로 4일 자료가 꼽은 것이 아닌 것은?',o:['고정폭 타입과 바이트 조립','volatile 레지스터와 콜백','링 버퍼와 반환값 에러 규약','realloc 으로 동적 확장'],a:3,w:'realloc 은 MCU 에서 위험합니다(단편화·실패). 고정 메모리(링 버퍼)가 답.',an:'8교시 여섯 문장 5'},
+  {p:'Day 2 valgrind 와 Day 4 ASan 의 공통 목적은?',o:['속도 측정','메모리 오류(배열 밖·해제 후 사용·누수)를 실행 시점에 잡아 줄 번호를 알려주는 것','컴파일 경고','코드 정리'],a:1,w:'컴파일러가 못 잡는 것을 실행 시점 도구가 잡습니다. 논리 버그는 gdb·테스트.',an:'D4-8 · gdb·assert·ASan'},
+  {p:'9/14 파트 평가의 실습 부분은 어떤 형태라고 예고되었습니까?',o:['새 언어','오늘 종합 프로젝트의 변형','Python 재시험','필답만'],a:1,w:'4일치 워크시트와 복습 퀴즈 4종을 먼저 다시 푸는 것이 준비 순서.',an:'8교시 정리'},
+  {p:'4일 동안 -Wall -Wextra 를 항상 켜라고 한 이유를 가장 잘 설명한 것은?',o:['형식','=/==, signed 비교, 미사용 변수, fall-through, 감쇠 sizeof 등 실제 버그 대부분이 경고로 먼저 나타나기 때문','컴파일이 빨라져서','C 표준 요구'],a:1,w:'경고 0 개가 매일 제출 조건이었던 이유입니다.',an:'Day 1 · 8교시'},
+  {p:'"함수 이름은 주소" 라는 Day 3 문장이 오늘 어디에 쓰였습니까?',o:['fopen','상태 머신 테이블 TABLE[st](avg) — 그리고 gdb print TABLE[cur] 로 그 주소를 확인','링 버퍼','CSV'],a:1,w:'D4-8 "함수 포인터 → 상태 머신 → gdb·assert·ASan" 경로.',an:'D4-8 · 함수 포인터'},
+ ]},
+];
+
+let tab=0;const ans=Q.map(s=>s.qs.map(()=>null));const graded=Q.map(()=>false);
+function hash(s){let h=5381;for(const c of s)h=((h<<5)+h+c.charCodeAt(0))>>>0;return h.toString(16).padStart(8,'0').slice(-4);}
+function codeFor(name,t,score){return `${t}${'ABCDEFGHIJK'[10-score]||'K'}-${hash(`${name.trim()}|${t}|${score}|c-day4`)}`;}
+function scoreOf(i){return ans[i].filter((a,k)=>a===Q[i].qs[k].a).length;}
+function strip(h){const d=document.createElement('div');d.innerHTML=h;return d.textContent;}
+function renderTabs(){$('#tabs').innerHTML=Q.map((s,i)=>{const n=ans[i].filter(a=>a!==null).length;return `<button class="${i===tab?'active':''} ${graded[i]?'graded':''}" data-i="${i}">${i+1}교시<span class="s">${graded[i]?scoreOf(i)+'/10':n+'/10'}</span></button>`;}).join('');$('#tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{tab=+b.dataset.i;render();window.scrollTo({top:0});});}
+function render(){renderTabs();const s=Q[tab];const g=graded[tab];
+  $('#sheet').innerHTML=`<div class="head"><span class="t">${s.t}</span><span class="a">🎬 ${s.anim}</span></div>`+s.qs.map((q,k)=>{const a=ans[tab][k];
+    return `<div class="q ${g&&a===null?'unans':''}"><div class="n">문항 ${k+1}</div><div class="p">${q.p}</div>${q.c?`<pre class="qc">${q.c}</pre>`:``}<div class="opts">${q.o.map((o,j)=>{let cls='';if(g){if(j===q.a)cls='ok';else if(j===a)cls='bad';}else if(j===a)cls='sel';return `<button class="opt ${cls}" data-k="${k}" data-j="${j}" ${g?'disabled':''}>${'①②③④'[j]} ${o}</button>`;}).join('')}</div>${g?`<div class="fb ${a===q.a?'ok':'bad'}">${a===null?'미응답. ':(a===q.a?'정답. ':'오답. ')}${q.w}<span class="anim">확인: ${q.an}</span></div>`:''}</div>`;}).join('');
+  $('#sheet').querySelectorAll('.opt').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,j=+b.dataset.j;ans[tab][k]=(ans[tab][k]===j?null:j);render();});
+  $('#gradeBtn').disabled=g;$('#gradeBtn').textContent=g?'채점 완료':'채점하기';
+  const nm=$('#name').value;
+  if(g){const sc=scoreOf(tab);$('#rscore').textContent=`${sc}/10`;if(nm.trim()){$('#rcode').textContent=codeFor(nm,tab+1,sc);$('#rhint').textContent='결과 코드';}else{$('#rcode').textContent='—';$('#rhint').textContent='이름을 입력하면 결과 코드가 나옵니다.';}}
+  else{$('#rcode').textContent='—';$('#rscore').textContent='';const n=ans[tab].filter(a=>a!==null).length;$('#rhint').textContent=`${tab+1}교시: ${n}/10 골랐습니다. 채점하기를 누르면 잠깁니다.`;}
+}
+$('#gradeBtn').onclick=()=>{const n=ans[tab].filter(a=>a!==null).length;if(n<10&&!confirm(`아직 ${10-n}문항을 고르지 않았습니다. 그래도 채점할까요? (미응답은 오답 처리)`))return;graded[tab]=true;render();};
+$('#name').addEventListener('input',render);
+
+/* ── 제출 대화상자 ── */
+let lastHtml='',lastText='';
+function buildReport(){
+  const nm=$('#name').value.trim()||'(이름 없음)';const ds=new Date().toLocaleString('ko-KR');
+  let h=`<h3>C 언어 Day 4 개념 워크시트 — 오답 정리</h3><div class="meta">${nm} · ${ds}</div>`;
+  let t=`C 언어 Day 4 개념 워크시트 — 오답 정리\n이름: ${nm}\n일시: ${ds}\n\n`;
+  let any=false;
+  Q.forEach((s,i)=>{if(!graded[i])return;
+    const wrong=s.qs.map((q,k)=>({q,k,a:ans[i][k]})).filter(x=>x.a!==x.q.a);
+    h+=`<div class="sec">${s.t}</div>`;t+=`### ${s.t}\n`;
+    if(!wrong.length){h+=`<div class="ok" style="margin:4px 0 8px">오답 없음</div>`;t+=`오답 없음\n\n`;return;}
+    any=true;
+    h+=`<table><tr><th>#</th><th>문항</th><th>내 답</th><th>정답</th></tr>`;t+=`| # | 문항 | 내 답 | 정답 |\n|---|---|---|---|\n`;
+    wrong.forEach(({q,k,a})=>{const my=a===null?'미응답':'①②③④'[a]+' '+strip(q.o[a]);const co='①②③④'[q.a]+' '+strip(q.o[q.a]);const qt=strip(q.p).replace(/\s+/g,' ').slice(0,70);
+      h+=`<tr><td class="r">${k+1}</td><td>${qt}</td><td class="bad">${my}</td><td class="ok">${co}</td></tr>`;
+      t+=`| ${k+1} | ${qt.replace(/\|/g,'/')} | ${my.replace(/\|/g,'/')} | ${co.replace(/\|/g,'/')} |\n`;});
+    h+=`</table>`;t+=`\n`;});
+  const notGraded=Q.map((s,i)=>graded[i]?null:i+1).filter(x=>x);
+  if(notGraded.length){h+=`<div class="meta" style="margin-top:10px">미채점: ${notGraded.join(', ')}교시</div>`;t+=`미채점: ${notGraded.join(', ')}교시\n`;}
+  lastHtml=h;lastText=t;return h;
+}
+$('#submitBtn').onclick=()=>{if(!graded.some(x=>x)){alert('먼저 한 교시 이상 채점하기를 눌러 주세요.');return;}$('#dgBody').innerHTML=buildReport();$('#toast').textContent='';$('#dlg').showModal();};
+$('#closeBtn').onclick=()=>$('#dlg').close();
+function copyRich(html,text){
+  // 1) copy 이벤트에 두 형식을 직접 실어 보내기 (사용자 클릭 안에서 동기 실행 — file:// 에서도 동작)
+  let done=false;
+  const onCopy=e=>{e.clipboardData.setData('text/html',html);e.clipboardData.setData('text/plain',text);e.preventDefault();done=true;};
+  document.addEventListener('copy',onCopy);
+  try{
+    const body=$('#dgBody');const sel=window.getSelection();const range=document.createRange();range.selectNodeContents(body);sel.removeAllRanges();sel.addRange(range);
+    document.execCommand('copy');
+    sel.removeAllRanges();
+  }catch(e){}
+  document.removeEventListener('copy',onCopy);
+  return done;
+}
+$('#captureBtn').onclick=async()=>{
+  const htmlDoc=`<meta charset="utf-8">`+lastHtml.replace(/ class="[^"]*"/g,'').replace(/<table>/g,'<table border="1" style="border-collapse:collapse">');
+  if(copyRich(htmlDoc,lastText)){$('#toast').textContent='복사됨 — 노션 페이지에서 Ctrl+V 로 붙여 넣으세요.';return;}
+  // 2) 비동기 Clipboard API
+  try{
+    if(navigator.clipboard&&window.ClipboardItem){
+      await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([htmlDoc],{type:'text/html'}),'text/plain':new Blob([lastText],{type:'text/plain'})})]);
+    }else{await navigator.clipboard.writeText(lastText);}
+    $('#toast').textContent='복사됨 — 노션 페이지에서 Ctrl+V 로 붙여 넣으세요.';return;
+  }catch(e){}
+  // 3) 최종: 텍스트 영역 선택 복사
+  try{
+    const ta=document.createElement('textarea');ta.value=lastText;ta.style.position='fixed';ta.style.opacity='0';$('#dlg').appendChild(ta);ta.focus();ta.select();
+    const ok=document.execCommand('copy');ta.remove();
+    $('#toast').textContent=ok?'텍스트(마크다운 표)로 복사됨 — 노션에서 Ctrl+V.':'복사 실패 — 대화상자 내용을 드래그해 Ctrl+C 로 복사하세요.';
+  }catch(e){$('#toast').textContent='복사 실패 — 대화상자 내용을 드래그해 Ctrl+C 로 복사하세요.';}
+};
+render();
+</script>
+</body>
+</html>
