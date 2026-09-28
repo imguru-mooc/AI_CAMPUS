@@ -872,81 +872,537 @@ pop 37 pop 25 pop 25 pop 25
 <p class="goal-title"><strong>학습 목표</strong></p>
 <ul>
 <li>gdb 로 중단점을 걸고 한 줄씩 실행하며 변수를 본다</li>
-<li>Day 3 예제 7-3 의 "조용한 버그"를 gdb 로 찾는다</li>
+<li>조건부 중단점·watch·스택 이동·메모리 보기로 경고도 크래시도 없는 버그를 찾는다</li>
 <li><code>assert</code> 와 AddressSanitizer 로 버그를 일찍 터뜨린다</li>
 </ul>
-<p class="anim">🎬 <strong>D4-5 gdb 스텝 시뮬레이터</strong> — break / next / print / bt 를 눌러 보며 스택과 변수 관찰</p>
-<h3 id="5-1-gdb" class="ex">▶ 예제 5-1 · gdb 다섯 명령</h3>
-<div class="hl"><pre><span></span><code>gcc<span class="w"> </span>-Wall<span class="w"> </span>-Wextra<span class="w"> </span>-g<span class="w"> </span>-O0<span class="w"> </span>fsm_bug.c<span class="w"> </span>-o<span class="w"> </span>fsm_bug<span class="w">      </span><span class="c1"># -g: 줄 번호·변수 이름, -O0: 코드 순서 유지</span>
-gdb<span class="w"> </span>./fsm_bug
+<p class="anim">🎬 <strong>D4-5 gdb 스텝 시뮬레이터</strong> — break / run / next / print / bt 의 흐름을 먼저 눈으로 (예시는 Day 3 상태 머신)</p>
+<h3 class="ex">▶ 예제 5-0 · 첫 gdb — avg.c 로 다섯 명령 익히기</h3>
+<p><strong>16줄짜리 파일 하나</strong>로 명령을 먼저 손에 익힙니다. 네 온도의 평균은 25.50 이어야 하는데 다른 값이 나옵니다. 코드를 눈으로 찾지 말고 gdb 로 찾으세요.</p>
+<p><code>avg.c</code></p>
+<div class="hl"><pre><span></span><code><span class="cm">/* avg.c — gdb 첫 연습: 평균이 25.50 이어야 하는데 다른 값이 나온다 */</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="kt">double</span><span class="w"> </span><span class="nf">average</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">sum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">n</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span>
+<span class="w">        </span><span class="n">sum</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="p">(</span><span class="kt">double</span><span class="p">)</span><span class="n">sum</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">n</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">t</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">24</span><span class="p">,</span><span class="w"> </span><span class="mi">26</span><span class="p">,</span><span class="w"> </span><span class="mi">25</span><span class="p">,</span><span class="w"> </span><span class="mi">27</span><span class="p">};</span>
+<span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">avg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">average</span><span class="p">(</span><span class="n">t</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">);</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;avg = %.2f</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">avg</span><span class="p">);</span><span class="w">     </span><span class="cm">/* 기대: 25.50 */</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
 </code></pre></div>
 
-<div class="hl"><pre><span></span><code>(gdb) break fsm_step          # 함수 진입에 중단점        (b 로 줄임)
-(gdb) run &lt; temps.txt         # 실행 (표준 입력 리다이렉션도 됨)
-Breakpoint 1, fsm_step (cur=ST_IDLE, t=25) at fsm.c:14
-(gdb) print cur               # 변수 보기                  (p)
-$1 = ST_IDLE
-(gdb) print TABLE[cur]        # 테이블에서 무엇이 나오나
-$2 = (Handler) 0x5555555551a9 &lt;on_idle&gt;
-(gdb) next                    # 한 줄 실행, 함수는 건너뜀   (n)   / step (s) 은 함수 안으로
-(gdb) bt                      # 호출 스택                   (backtrace)
-#0  fsm_step (cur=ST_IDLE, t=25) at fsm.c:15
-#1  0x... in main () at main.c:31
-(gdb) continue                # 다음 중단점까지            (c)
-Breakpoint 1, fsm_step (cur=ST_HEAT, t=19) at fsm.c:14
-(gdb) print TABLE[cur]
-$3 = (Handler) 0x5555555551f2 &lt;on_cool&gt;       ← !!! HEAT 인데 on_cool
+<div class="hl"><pre><span></span><code>gcc<span class="w"> </span>-Wall<span class="w"> </span>-Wextra<span class="w"> </span>-g<span class="w"> </span>-O0<span class="w"> </span>avg.c<span class="w"> </span>-o<span class="w"> </span>avg<span class="w">      </span><span class="c1"># 경고 0</span>
+./avg<span class="w">                                      </span><span class="c1"># → avg = 19.50   ← 틀렸다. 어디서?</span>
+gdb<span class="w"> </span>-q<span class="w"> </span>./avg
+</code></pre></div>
+
+<p>한 단계씩 따라 치세요. <code>←</code> 뒤는 설명입니다 (입력하지 않음).</p>
+<div class="hl"><pre><span></span><code>(gdb) break average                ← ① 함수 이름에 중단점
+Breakpoint 1 at 0x1151: file avg.c, line 5.
+(gdb) run                          ← ② 실행 → 중단점에서 멈춤
+Breakpoint 1, average (a=0x7fffffffe1f0, n=4) at avg.c:5
+5           int sum = 0;
+(gdb) print n                      ← ③ 인자 확인
+$1 = 4
+(gdb) print a[0]@n                 ← 포인터가 가리키는 배열을 n 개 보기
+$2 = {24, 26, 25, 27}              ← 데이터는 정상
+(gdb) next                         ← ④ 한 줄 실행
+6           for (int i = 1; i &lt; n; i++)
+(gdb) next
+7               sum += a[i];
+(gdb) print i
+$3 = 1                             ← !!! 첫 반복인데 i 가 1 — a[0] = 24 를 건너뛴다
+(gdb) bt                           ← ⑤ 지금 어디서 불렸나
+#0  average (a=0x7fffffffe1f0, n=4) at avg.c:7
+#1  0x0000555555555199 in main () at avg.c:13
+(gdb) finish                       ← 이 함수를 끝까지 실행하고 반환값 보기
+Run till exit from #0  average (a=0x7fffffffe1f0, n=4) at avg.c:7
+0x0000555555555199 in main () at avg.c:13
+13          double avg = average(t, 4);
+Value returned is $4 = 19.5        ← (26 + 25 + 27) / 4 = 19.5 — 24 가 빠졌다
 (gdb) quit
 </code></pre></div>
 
-<p>Day 3 예제 7-3 의 버그(<code>TABLE = { on_idle, on_cool, on_heat, on_alert }</code>)는 컴파일 경고도 없고 죽지도 않습니다. <strong>"HEAT 상태에서 무슨 함수가 불리는가"</strong> 를 실행 중에 보는 것이 유일한 방법이고, gdb 두 번째 중단점에서 <code>print TABLE[cur]</code> 한 줄이 그것을 보여줍니다.</p>
+<p>원인은 6번째 줄 <code>int i = 1</code> 입니다. <code>int i = 0</code> 으로 고치고 다시 빌드하면 <code>avg = 25.50</code>. 주소값(<code>0x7fff…</code>, <code>0x5555…</code>)은 실행마다 다르니 무시하세요.</p>
 <table>
 <thead>
 <tr>
+<th>이 예제에서 쓴 명령</th>
+<th>확인한 것</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>break average</code> · <code>run</code></td>
+<td>의심 가는 함수 입구에서 멈추기</td>
+</tr>
+<tr>
+<td><code>print n</code> · <code>print a[0]@n</code></td>
+<td>들어온 데이터가 맞는지 — 여기서 "입력은 정상" 을 확정</td>
+</tr>
+<tr>
+<td><code>next</code> · <code>print i</code></td>
+<td>한 줄씩 가며 변수가 예상과 다른 첫 순간 찾기</td>
+</tr>
+<tr>
+<td><code>bt</code></td>
+<td>누가 이 함수를 불렀는지 (세그폴트 때 가장 먼저)</td>
+</tr>
+<tr>
+<td><code>finish</code></td>
+<td>함수 끝까지 돌리고 반환값 확인</td>
+</tr>
+</tbody>
+</table>
+<p><strong>▶ 해 보기 — watch 로 "합계가 언제 바뀌나" 보기</strong></p>
+<p>같은 버그를 다른 방법으로 찾습니다. <code>sum</code> 이 바뀔 때마다 자동으로 멈추게 하세요.</p>
+<div class="hl"><pre><span></span><code>(gdb) break average
+(gdb) run
+(gdb) next                 ← sum = 0 까지 실행
+(gdb) watch sum
+(gdb) continue             ← 무엇이 나올지 예측한 뒤 실행
+(gdb) continue
+</code></pre></div>
+
+<details><summary class="lock">🔒 결과 보기</summary>
+
+
+<div class="hl"><pre><span></span><code>Hardware watchpoint 2: sum
+(gdb) continue
+Hardware watchpoint 2: sum
+Old value = 0
+New value = 26             ← 첫 번째로 더해진 값이 24 가 아니라 26
+(gdb) continue
+Old value = 26
+New value = 51
+</code></pre></div>
+
+
+
+`watch` 는 "누가 이 값을 바꿨지?" 를 찾을 때 씁니다. 중단점을 어디 걸지 모를 때, 값이 바뀌는 순간에 멈춰 줍니다. Day 2 오버플로처럼 **엉뚱한 변수가 조용히 바뀌는** 버그에 특히 강합니다.
+</details>
+
+<p>이제 원인이 여러 개인 파일로 명령을 넓힙니다 — 예제 5-1.</p><h3 id="5-1-gdb-gdb_labc" class="ex">▶ 예제 5-1 · gdb 실험실 — gdb_lab.c 하나로 명령 넓히기</h3>
+<p>예제 5-0 의 다섯 명령만으로는 "어디에 중단점을 걸어야 할지 모르는" 버그를 잡기 어렵습니다. 이 파일에는 <strong>증상 3개, 원인 2개</strong>가 숨어 있고, 원인마다 잡기 좋은 명령이 다릅니다. 실습 A~G 를 순서대로 따라 치며 명령을 넓히세요.</p>
+<p><code>gdb_lab.c</code> (59줄 — 실습 중 줄 번호가 중요하니 <code>cat -n gdb_lab.c</code> 를 옆 창에 띄워 두세요)</p>
+<div class="hl"><pre><span></span><code><span class="cm">/* gdb_lab.c — Day 4 5교시 gdb 실험실</span>
+<span class="cm"> * 빌드: gcc -Wall -Wextra -g -O0 gdb_lab.c -o gdb_lab      (경고 0)</span>
+<span class="cm"> * 기대 출력: ESP32-S level=1 t=25.24 flags=0x40</span>
+<span class="cm"> * 실제 출력: 세 군데가 틀린다. 원인은 두 개. 코드를 눈으로 찾지 말고 gdb 로 찾을 것.</span>
+<span class="cm"> */</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdint.h&gt;</span>
+
+<span class="cp">#define FLAG_ONLINE (1u &lt;&lt; 6)</span>
+<span class="cp">#define FLAG_ALARM  (1u &lt;&lt; 5)</span>
+<span class="cp">#define N 10</span>
+
+<span class="k">typedef</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">char</span><span class="w">    </span><span class="n">name</span><span class="p">[</span><span class="mi">8</span><span class="p">];</span>
+<span class="w">    </span><span class="kt">int</span><span class="w">     </span><span class="n">level</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">double</span><span class="w">  </span><span class="n">t</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">uint8_t</span><span class="w"> </span><span class="n">flags</span><span class="p">;</span>
+<span class="p">}</span><span class="w"> </span><span class="n">Node</span><span class="p">;</span>
+
+<span class="k">static</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">GAIN</span><span class="p">[</span><span class="n">N</span><span class="p">]</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">10.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">};</span>
+<span class="k">static</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">OFFSET</span><span class="p">[</span><span class="n">N</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mf">0.2</span><span class="p">,</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w"> </span><span class="mf">0.2</span><span class="p">};</span>
+
+<span class="k">static</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">set_name</span><span class="p">(</span><span class="n">Node</span><span class="w"> </span><span class="o">*</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">s</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="sc">&#39;\0&#39;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">n</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+<span class="w">        </span><span class="n">i</span><span class="o">++</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="n">n</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="sc">&#39;\0&#39;</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="nf">calibrate</span><span class="p">(</span><span class="kt">double</span><span class="w"> </span><span class="n">raw</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">raw</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">GAIN</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">OFFSET</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">c</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">static</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="nf">sum_rec</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="o">*</span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="mf">0.0</span><span class="p">;</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">a</span><span class="p">[</span><span class="n">n</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">sum_rec</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">raw</span><span class="p">[</span><span class="n">N</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mf">25.0</span><span class="p">,</span><span class="w"> </span><span class="mf">25.2</span><span class="p">,</span><span class="w"> </span><span class="mf">24.9</span><span class="p">,</span><span class="w"> </span><span class="mf">25.1</span><span class="p">,</span><span class="w"> </span><span class="mf">25.3</span><span class="p">,</span><span class="w"> </span><span class="mf">25.0</span><span class="p">,</span><span class="w"> </span><span class="mf">24.8</span><span class="p">,</span><span class="w"> </span><span class="mf">25.2</span><span class="p">,</span><span class="w"> </span><span class="mf">25.1</span><span class="p">,</span><span class="w"> </span><span class="mf">24.8</span><span class="p">};</span>
+<span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">cal</span><span class="p">[</span><span class="n">N</span><span class="p">];</span>
+<span class="w">    </span><span class="n">Node</span><span class="w"> </span><span class="n">node</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+
+<span class="w">    </span><span class="n">node</span><span class="p">.</span><span class="n">level</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">    </span><span class="n">node</span><span class="p">.</span><span class="n">flags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">FLAG_ONLINE</span><span class="p">;</span>
+<span class="w">    </span><span class="n">set_name</span><span class="p">(</span><span class="o">&amp;</span><span class="n">node</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;ESP32-SENSOR&quot;</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">N</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span>
+<span class="w">        </span><span class="n">cal</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">calibrate</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="n">i</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">node</span><span class="p">.</span><span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sum_rec</span><span class="p">(</span><span class="n">cal</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">N</span><span class="p">;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">node</span><span class="p">.</span><span class="n">t</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mf">30.0</span><span class="p">)</span><span class="w"> </span><span class="n">node</span><span class="p">.</span><span class="n">flags</span><span class="w"> </span><span class="o">|=</span><span class="w"> </span><span class="n">FLAG_ALARM</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s level=%d t=%.2f flags=0x%02X</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">node</span><span class="p">.</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">node</span><span class="p">.</span><span class="n">level</span><span class="p">,</span><span class="w"> </span><span class="n">node</span><span class="p">.</span><span class="n">t</span><span class="p">,</span><span class="w"> </span><span class="n">node</span><span class="p">.</span><span class="n">flags</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="hl"><pre><span></span><code>gcc<span class="w"> </span>-Wall<span class="w"> </span>-Wextra<span class="w"> </span>-g<span class="w"> </span>-O0<span class="w"> </span>gdb_lab.c<span class="w"> </span>-o<span class="w"> </span>gdb_lab<span class="w">      </span><span class="c1"># 경고 0</span>
+./gdb_lab
+<span class="c1"># → ESP32-SENSOR level=1380930382 t=47.56 flags=0x60</span>
+</code></pre></div>
+
+<table>
+<thead>
+<tr>
+<th></th>
+<th>기대</th>
+<th>실제</th>
+<th>어떤 명령으로 찾나</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>증상 ①</td>
+<td><code>level=1</code></td>
+<td><code>level=1380930382</code></td>
+<td>실습 C (메모리 보기) → 실습 E (<code>watch</code>)</td>
+</tr>
+<tr>
+<td>증상 ②</td>
+<td><code>t=25.24</code></td>
+<td><code>t=47.56</code></td>
+<td>실습 C (배열 보기) → 실습 D (조건부 중단점)</td>
+</tr>
+<tr>
+<td>증상 ③</td>
+<td><code>flags=0x40</code></td>
+<td><code>flags=0x60</code></td>
+<td>실습 G (<code>set var</code> 로 실험)</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>주소값(<code>0x7fff…</code>, <code>0x5555…</code>)은 실행마다 다릅니다. 이름·줄 번호·값만 보세요. 몇몇 줄 표시 형식은 gdb 버전에 따라 조금 다를 수 있습니다.</p>
+</blockquote>
+<h4 id="a-list-break-tbreak-info-breakpoints-start">실습 A · 둘러보기 — list, break 파일:줄, tbreak, info breakpoints, start</h4>
+<div class="hl"><pre><span></span><code>$ gdb -q ./gdb_lab
+(gdb) list calibrate                ← 함수 주변 10줄
+27              i++;
+28          }
+29          n-&gt;name[i] = &#39;\0&#39;;
+30      }
+31
+32      static double calibrate(double raw, int i) {
+33          double c = raw * GAIN[i] + OFFSET[i];
+34          return c;
+35      }
+36
+(gdb) break gdb_lab.c:49            ← 파일:줄 에 중단점 (함수 이름 대신)
+Breakpoint 1 at 0x...: file gdb_lab.c, line 49.
+(gdb) tbreak sum_rec                ← 한 번 멈추면 사라지는 중단점
+Temporary breakpoint 2 at 0x...: file gdb_lab.c, line 38.
+(gdb) info breakpoints              ← 지금 걸린 중단점 목록
+Num     Type           Disp Enb Address            What
+1       breakpoint     keep y   0x00005555555552c9 in main at gdb_lab.c:49
+2       breakpoint     del  y   0x0000555555555237 in sum_rec at gdb_lab.c:38
+(gdb) disable 2                     ← 끄기 (목록엔 남음, Enb = n)
+(gdb) delete 2                      ← 지우기
+(gdb) start                         ← tbreak main + run 을 한 번에
+Temporary breakpoint 3 at 0x...: file gdb_lab.c, line 43.
+Temporary breakpoint 3, main () at gdb_lab.c:43
+43          double raw[N] = {25.0, 25.2, 24.9, 25.1, 25.3, 25.0, 24.8, 25.2, 25.1, 24.8};
+(gdb) continue
+Breakpoint 1, main () at gdb_lab.c:49
+49          set_name(&amp;node, &quot;ESP32-SENSOR&quot;);
+</code></pre></div>
+
+<h4 id="b-step-info-args-info-locals-finish-until">실습 B · 호출 따라가기 — step, info args, info locals, finish, until</h4>
+<p>실습 A 에서 49줄에 멈춘 상태에서 이어갑니다.</p>
+<div class="hl"><pre><span></span><code>(gdb) print node                    ← 호출 전 상태 기록
+$1 = {name = &quot;\000\000\000\000\000\000\000&quot;, level = 1, t = 0, flags = 64 &#39;@&#39;}
+(gdb) step                          ← next 와 달리 함수 안으로 들어간다
+set_name (n=0x7fffffffe0d0, s=0x555555556004 &quot;ESP32-SENSOR&quot;) at gdb_lab.c:24
+24          int i = 0;
+(gdb) info args                     ← 이 함수의 인자 전부
+n = 0x7fffffffe0d0
+s = 0x555555556004 &quot;ESP32-SENSOR&quot;
+(gdb) next
+25          while (s[i] != &#39;\0&#39;) {
+(gdb) info locals                   ← 이 함수의 지역 변수 전부
+i = 0
+(gdb) finish                        ← 이 함수를 끝까지 실행하고 호출한 곳으로
+Run till exit from #0  set_name (...) at gdb_lab.c:25
+main () at gdb_lab.c:51
+51          for (int i = 0; i &lt; N; i++)
+(gdb) until 54                      ← 루프 10바퀴를 한 번에 지나 54줄까지
+main () at gdb_lab.c:54
+54          node.t = sum_rec(cal, N) / N;
+</code></pre></div>
+
+<p><code>next</code> 를 20번 치는 대신 <code>until 줄번호</code> 한 번. <code>finish</code> 는 "이 함수 안은 더 볼 필요 없다" 일 때.</p>
+<h4 id="c-print-ptype-x">실습 C · 값 보는 법 — print 형식, ptype, 배열, x (메모리)</h4>
+<p>54줄에 멈춘 상태에서 이어갑니다. <strong>증상 ①·② 의 단서가 여기서 나옵니다.</strong></p>
+<div class="hl"><pre><span></span><code>(gdb) print node
+$2 = {name = &quot;ESP32-SE&quot;, level = 1380930382, t = 0, flags = 64 &#39;@&#39;}   ← level 이 1 이 아니다!
+(gdb) print/x node.level            ← /x 16진, /t 2진, /d 10진, /c 문자
+$3 = 0x524f534e
+(gdb) x/16xb &amp;node                  ← node 주소부터 16바이트를 16진(x) 바이트(b) 단위로
+0x7fffffffe0d0: 0x45    0x53    0x50    0x33    0x32    0x2d    0x53    0x45
+0x7fffffffe0d8: 0x4e    0x53    0x4f    0x52    0x00    0x00    0x00    0x00
+(gdb) x/s node.name                 ← 그 주소를 문자열로
+0x7fffffffe0d0: &quot;ESP32-SENSOR&quot;
+(gdb) ptype Node                    ← 타입 구조 보기
+type = struct {
+    char name[8];
+    int level;
+    double t;
+    uint8_t flags;
+}
+(gdb) print sizeof(Node)
+$4 = 32
+(gdb) print/t node.flags
+$5 = 1000000                        ← 비트 6 = FLAG_ONLINE
+(gdb) print cal                     ← 배열 전체
+$6 = {25.199999999999999, 25.399999999999999, 25.099999999999998, 25.300000000000001, 25.5, 25.199999999999999, 248.19999999999999, 25.399999999999999, 25.300000000000001, 25}
+(gdb) print cal[6]@2                ← 6번부터 2개
+$7 = {248.19999999999999, 25.399999999999999}
+</code></pre></div>
+
+<details><summary class="lock">🔒 확인 질문 — x/16xb 의 두 번째 줄 앞 4바이트 0x4e 0x53 0x4f 0x52 는 무엇이고, 왜 level 자리에 있나?</summary>
+
+ASCII 로 'N' 'S' 'O' 'R' — "ESP32-SENSOR" 의 9~12번째 글자입니다. name 은 8칸(0x…d0~d7)인데 12글자 + '\0' 이 복사되어 바로 뒤 level(0x…d8~db)을 덮었습니다. 리틀 엔디안이라 level = 0x524f534e. Day 2 4교시 오버플로 그대로입니다. **어느 코드가 썼는지**는 실습 E 의 watch 로 확정합니다.
+
+`cal[6]` 만 248 이라는 것도 보였습니다. 10개뿐이라 눈에 띄지만, 1000개라면? → 실습 D.
+</details>
+
+<h4 id="d">실습 D · 조건부 중단점 — "이상할 때만" 멈추기</h4>
+<div class="hl"><pre><span></span><code>(gdb) delete                        ← 중단점 전부 지우기
+(gdb) break gdb_lab.c:34 if c &gt; 30  ← c 가 계산된 뒤(34줄), 30 을 넘을 때만 멈춤
+Breakpoint 4 at 0x...: file gdb_lab.c, line 34.
+(gdb) run
+Start it from the beginning? (y or n) y
+Breakpoint 4, calibrate (raw=24.800000000000001, i=6) at gdb_lab.c:34
+34          return c;                ← 10번 호출 중 i=6 에서 딱 한 번 멈췄다
+(gdb) print c
+$8 = 248.19999999999999
+(gdb) print GAIN[i]
+$9 = 10
+(gdb) print GAIN
+$10 = {1, 1, 1, 1, 1, 1, 10, 1, 1, 1}   ← 6번만 10 — 보정표 오타
+</code></pre></div>
+
+<p>반복이 1000번이어도 <code>break … if 조건</code> 이면 한 번에 도착합니다. 이미 걸린 중단점에 조건을 붙이려면 <code>condition 4 c &gt; 30</code>, 처음 N번은 건너뛰려면 <code>ignore 4 N</code>. 조건식에는 <strong>그 줄에서 보이는 변수</strong>만 쓸 수 있어 <code>c</code> 가 계산된 뒤인 34줄에 걸었습니다.</p>
+<h4 id="e-watch">실습 E · watch — "누가 이 값을 바꿨지?"</h4>
+<div class="hl"><pre><span></span><code>(gdb) delete
+(gdb) break 47
+(gdb) run
+Start it from the beginning? (y or n) y
+Breakpoint 5, main () at gdb_lab.c:47
+47          node.level = 1;
+(gdb) watch node.level              ← 이 값이 바뀌는 순간 멈춰라
+Hardware watchpoint 6: node.level
+(gdb) continue
+Hardware watchpoint 6: node.level
+
+Old value = 0
+New value = 1                       ← 47줄: 의도한 변경
+main () at gdb_lab.c:48
+48          node.flags = FLAG_ONLINE;
+(gdb) continue
+Hardware watchpoint 6: node.level
+
+Old value = 1
+New value = 78                      ← 의도하지 않은 변경! 78 = 0x4e = &#39;N&#39;
+set_name (n=0x7fffffffe0d0, s=0x555555556004 &quot;ESP32-SENSOR&quot;) at gdb_lab.c:27
+27              i++;
+(gdb) print i
+$11 = 8                             ← name[8] 에 썼다 — name 은 [0]~[7] 까지
+(gdb) bt
+#0  set_name (n=0x7fffffffe0d0, s=0x555555556004 &quot;ESP32-SENSOR&quot;) at gdb_lab.c:27
+#1  0x00005555555552d8 in main () at gdb_lab.c:49
+</code></pre></div>
+
+<p><code>watch</code> 는 멈춘 <strong>직후의 줄</strong>(27줄 <code>i++</code>)을 보여줍니다. 값을 바꾼 것은 그 바로 앞 26줄 <code>n-&gt;name[i] = s[i]</code>. 중단점을 어디 걸지 모를 때 가장 강력한 명령입니다.</p>
+<h4 id="f-bt-frame-up-down">실습 F · 스택 오르내리기 — bt, frame, up, down</h4>
+<p><code>sum_rec</code> 는 자기 자신을 부릅니다(재귀). 가장 깊은 곳에서 멈춰 스택을 봅니다.</p>
+<div class="hl"><pre><span></span><code>(gdb) delete
+(gdb) break sum_rec if n == 0
+(gdb) run
+Start it from the beginning? (y or n) y
+Breakpoint 7, sum_rec (a=0x7fffffffe100, n=0) at gdb_lab.c:38
+38          if (n == 0) return 0.0;
+(gdb) bt                            ← 12층: sum_rec 11개 + main
+#0  sum_rec (a=0x7fffffffe100, n=0) at gdb_lab.c:38
+#1  0x0000555555555265 in sum_rec (a=0x7fffffffe100, n=1) at gdb_lab.c:39
+#2  0x0000555555555265 in sum_rec (a=0x7fffffffe100, n=2) at gdb_lab.c:39
+...
+#10 0x0000555555555265 in sum_rec (a=0x7fffffffe100, n=10) at gdb_lab.c:39
+#11 0x0000555555555345 in main () at gdb_lab.c:54
+(gdb) bt 3                          ← 위에서 3층만
+#0  sum_rec (a=0x7fffffffe100, n=0) at gdb_lab.c:38
+#1  0x0000555555555265 in sum_rec (a=0x7fffffffe100, n=1) at gdb_lab.c:39
+#2  0x0000555555555265 in sum_rec (a=0x7fffffffe100, n=2) at gdb_lab.c:39
+(More stack frames follow...)
+(gdb) frame 7                       ← 7번 층으로 이동 — 그 층의 변수가 보인다
+#7  0x0000555555555265 in sum_rec (a=0x7fffffffe100, n=7) at gdb_lab.c:39
+39          return a[n - 1] + sum_rec(a, n - 1);
+(gdb) print a[n - 1]
+$12 = 248.19999999999999            ← 이 층이 더할 값
+(gdb) up                            ← 한 층 위 = 나를 부른 쪽 (n=8)
+#8  0x0000555555555265 in sum_rec (a=0x7fffffffe100, n=8) at gdb_lab.c:39
+(gdb) down 2                        ← 두 층 아래 (n=6)
+#6  0x0000555555555265 in sum_rec (a=0x7fffffffe100, n=6) at gdb_lab.c:39
+(gdb) frame 0
+(gdb) finish                        ← 가장 깊은 호출이 돌려주는 값
+Run till exit from #0  sum_rec (a=0x7fffffffe100, n=0) at gdb_lab.c:38
+0x0000555555555265 in sum_rec (a=0x7fffffffe100, n=1) at gdb_lab.c:39
+39          return a[n - 1] + sum_rec(a, n - 1);
+Value returned is $13 = 0
+</code></pre></div>
+
+<p>층 번호 = 그 층의 <code>n</code> 인 것이 보이나요? Day 1 7교시 스택 프레임 애니메이션(D1-7)을 실제 프로그램에서 본 것입니다. <code>frame</code>/<code>up</code>/<code>down</code> 은 <strong>실행을 옮기지 않고 보는 위치만</strong> 옮깁니다.</p>
+<h4 id="g-display-call-set-var">실습 G · 실행 중 바꾸기 — display, call, set var</h4>
+<p>"여기를 고치면 결과가 맞을까?" 를 <strong>다시 컴파일하지 않고</strong> 실험합니다.</p>
+<div class="hl"><pre><span></span><code>(gdb) delete
+(gdb) break 55
+(gdb) run
+Start it from the beginning? (y or n) y
+Breakpoint 8, main () at gdb_lab.c:55
+55          if (node.t &gt; 30.0) node.flags |= FLAG_ALARM;
+(gdb) display node.t                ← 멈출 때마다 자동으로 보여줘
+1: node.t = 47.559999999999995
+(gdb) display/x node.flags
+2: /x node.flags = 0x40
+(gdb) call calibrate(24.8, 6)       ← 프로그램의 함수를 직접 호출
+$14 = 248.19999999999999
+(gdb) call sum_rec(cal, 3)          ← 앞 3개 합만
+$15 = 75.699999999999989
+(gdb) set var node.t = 25.24        ← 값을 바꿔서 &quot;보정이 맞았다면?&quot;
+(gdb) next
+57          printf(&quot;%s level=%d t=%.2f flags=0x%02X\n&quot;, node.name, node.level, node.t, node.flags);
+1: node.t = 25.239999999999998
+2: /x node.flags = 0x40             ← ALARM 이 켜지지 않았다 → 증상 ③ 은 ② 의 결과
+(gdb) continue
+ESP32-SENSOR level=1380930382 t=25.24 flags=0x40
+[Inferior 1 (process 4321) exited normally]
+</code></pre></div>
+
+<p><code>set var</code> 로 t 를 바로잡자 flags 도 0x40 이 됐습니다. 즉 <strong>증상 ③ 은 독립 버그가 아니라 ② 의 결과</strong> — 원인은 두 개입니다. <code>undisplay</code> 로 자동 표시를 끕니다.</p>
+<h4 id="_1" class="fill">▶ 과제 · 원인 두 개를 고치고 기대 출력 만들기</h4>
+<p>gdb 로 찾은 두 원인을 소스에서 고쳐 <code>ESP32-S level=1 t=25.24 flags=0x40</code> 을 만드세요. name 은 8칸이므로 7글자만 남는 것이 정답입니다.</p>
+<details><summary class="lock">🔒 정답 보기</summary>
+
+
+<div class="hl"><pre><span></span><code><span class="c1">// 원인 ① (실습 C·E) — set_name 이 길이를 검사하지 않음</span>
+<span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="sc">&#39;\0&#39;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="k">sizeof</span><span class="w"> </span><span class="n">n</span><span class="o">-&gt;</span><span class="n">name</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="c1">// 원인 ② (실습 C·D) — 보정표 6번 오타</span>
+<span class="k">static</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">GAIN</span><span class="p">[</span><span class="n">N</span><span class="p">]</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">};</span>
+</code></pre></div>
+
+
+
+<div class="hl"><pre><span></span><code>gcc<span class="w"> </span>-Wall<span class="w"> </span>-Wextra<span class="w"> </span>-g<span class="w"> </span>-O0<span class="w"> </span>gdb_lab.c<span class="w"> </span>-o<span class="w"> </span>gdb_lab<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>./gdb_lab
+<span class="c1"># → ESP32-S level=1 t=25.24 flags=0x40</span>
+</code></pre></div>
+
+
+증상 ③ (flags 0x60) 은 ② 를 고치면 저절로 사라집니다. 원인 ① 은 Day 2 의 `snprintf(n->name, sizeof n->name, "%s", s)` 로 고쳐도 됩니다.
+</details>
+
+<h4 id="gdb">gdb 명령 한 장 정리</h4>
+<table>
+<thead>
+<tr>
+<th>하고 싶은 것</th>
 <th>명령</th>
-<th>뜻</th>
 <th>줄임</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>break 위치</code></td>
-<td>함수 이름 또는 파일:줄 에 중단점</td>
-<td><code>b</code></td>
+<td>소스 보기</td>
+<td><code>list 함수</code> · <code>list 22,30</code></td>
+<td><code>l</code></td>
 </tr>
 <tr>
-<td><code>run [인자]</code></td>
-<td>실행 시작</td>
-<td><code>r</code></td>
+<td>중단점</td>
+<td><code>break 함수</code> · <code>break 파일:줄</code> · <code>tbreak …</code> (한 번만)</td>
+<td><code>b</code> · <code>tb</code></td>
 </tr>
 <tr>
-<td><code>next</code> / <code>step</code></td>
-<td>한 줄 (함수 건너뜀 / 함수 안으로)</td>
-<td><code>n</code> / <code>s</code></td>
+<td>조건부 중단점</td>
+<td><code>break 34 if c &gt; 30</code> · <code>condition N 식</code> · <code>ignore N 횟수</code></td>
+<td></td>
 </tr>
 <tr>
-<td><code>print 식</code></td>
-<td>값 보기. <code>p/x</code> 16진, <code>p *p</code> 역참조, <code>p arr[0]@5</code> 배열 5개</td>
+<td>중단점 관리</td>
+<td><code>info breakpoints</code> · <code>disable N</code> · <code>enable N</code> · <code>delete [N]</code></td>
+<td><code>i b</code> · <code>d</code></td>
+</tr>
+<tr>
+<td>실행</td>
+<td><code>run [인자] [&lt; 파일]</code> · <code>start</code> · <code>continue</code></td>
+<td><code>r</code> · <code>c</code></td>
+</tr>
+<tr>
+<td>한 줄씩</td>
+<td><code>next</code> (건너뜀) · <code>step</code> (안으로) · <code>until 줄</code> · <code>finish</code></td>
+<td><code>n</code> · <code>s</code> · <code>u</code> · <code>fin</code></td>
+</tr>
+<tr>
+<td>값 보기</td>
+<td><code>print 식</code> · <code>p/x</code> <code>p/t</code> <code>p/c</code> · <code>p arr[i]@n</code> · <code>p *ptr</code></td>
 <td><code>p</code></td>
 </tr>
 <tr>
-<td><code>bt</code></td>
-<td>호출 스택 (세그폴트 직후 가장 먼저)</td>
+<td>타입·지역</td>
+<td><code>ptype 타입</code> · <code>info args</code> · <code>info locals</code></td>
 <td></td>
 </tr>
 <tr>
-<td><code>watch 변수</code></td>
-<td>값이 바뀌면 멈춤 — "누가 이걸 바꿨지?"</td>
+<td>메모리</td>
+<td><code>x/16xb 주소</code> · <code>x/s 주소</code> · <code>x/4dw 주소</code></td>
 <td></td>
 </tr>
 <tr>
-<td><code>continue</code> / <code>quit</code></td>
-<td>계속 / 종료</td>
-<td><code>c</code> / <code>q</code></td>
+<td>자동 표시</td>
+<td><code>display 식</code> · <code>undisplay N</code></td>
+<td></td>
+</tr>
+<tr>
+<td>값 감시</td>
+<td><code>watch 식</code> (바뀌면 멈춤)</td>
+<td></td>
+</tr>
+<tr>
+<td>스택</td>
+<td><code>bt</code> · <code>bt N</code> · <code>frame N</code> · <code>up</code> · <code>down</code></td>
+<td></td>
+</tr>
+<tr>
+<td>실행 중 조작</td>
+<td><code>set var 변수 = 값</code> · <code>call 함수(인자)</code></td>
+<td></td>
+</tr>
+<tr>
+<td>화면 분할</td>
+<td><code>gdb -tui ./app</code> 또는 <code>layout src</code> (소스 창 + 명령 창)</td>
+<td><code>Ctrl-x a</code></td>
+</tr>
+<tr>
+<td>끝내기</td>
+<td><code>quit</code> · 실행 중 멈추기 <code>Ctrl-C</code></td>
+<td><code>q</code></td>
 </tr>
 </tbody>
-</table>
-<h3 id="5-2-day-2-wildc" class="ex">▶ 예제 5-2 · 세그폴트 위치 찾기 — Day 2 wild.c 다시</h3>
+</table><h3 id="5-2-day-2-wildc" class="ex">▶ 예제 5-2 · 세그폴트 위치 찾기 — Day 2 wild.c 다시</h3>
 <div class="hl"><pre><span></span><code>gcc<span class="w"> </span>-g<span class="w"> </span>-O0<span class="w"> </span>wild.c<span class="w"> </span>-o<span class="w"> </span>wild
 gdb<span class="w"> </span>-batch<span class="w"> </span>-ex<span class="w"> </span>run<span class="w"> </span>-ex<span class="w"> </span>bt<span class="w"> </span>./wild
 <span class="c1"># Program received signal SIGSEGV, Segmentation fault.</span>
