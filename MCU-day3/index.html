@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCU 3일차 — 눈으로 보는 8가지 (디스플레이 · I2C · 모터)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EEF1F5;
+    --panel:#FFFFFF;
+    --ink:#1B2A41;
+    --ink-soft:#5B6B80;
+    --line:#C9D1DC;
+    --blue:#2457C5;
+    --blue-soft:#DCE6FA;
+    --red:#D6452E;
+    --red-soft:#FBE3DF;
+    --green:#178A67;
+    --green-soft:#DDF2EA;
+    --amber:#C98A12;
+    --amber-soft:#FBF0D3;
+    --mono:'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    --sans:'IBM Plex Sans KR', 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    --t:.35s;
+  }
+  @media (prefers-reduced-motion: reduce){ :root{ --t:0s; } *{ animation:none !important; transition:none !important; } }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; }
+  body{
+    font-family:var(--sans); color:var(--ink); background:var(--paper);
+    background-image:
+      linear-gradient(rgba(27,42,65,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(27,42,65,.045) 1px, transparent 1px);
+    background-size:24px 24px;
+    font-size:16px; line-height:1.55;
+  }
+  code, .mono{ font-family:var(--mono); }
+
+  .app{ display:grid; grid-template-columns:260px 1fr; min-height:100vh; }
+  nav{
+    background:var(--ink); color:#fff; padding:28px 20px;
+    position:sticky; top:0; height:100vh; overflow:auto;
+  }
+  nav h1{ font-size:15px; font-weight:500; margin:0 0 4px; letter-spacing:.01em; color:#AEBBD1; }
+  nav .day{ font-size:26px; font-weight:600; margin:0 0 26px; line-height:1.2; }
+  nav ol{ list-style:none; margin:0; padding:0; counter-reset:lesson; }
+  nav li{ margin:0; }
+  nav button{
+    all:unset; display:grid; grid-template-columns:32px 1fr; gap:10px; align-items:baseline;
+    width:100%; padding:9px 10px; border-radius:6px; cursor:pointer; font-size:14.5px; line-height:1.35;
+    color:#D9E1EC;
+  }
+  nav button::before{ counter-increment:lesson; content:counter(lesson) "교시"; font-family:var(--mono); font-size:11px; color:#8A9BB5; }
+  nav button:hover{ background:rgba(255,255,255,.07); }
+  nav button[aria-current="true"]{ background:var(--blue); color:#fff; }
+  nav button[aria-current="true"]::before{ color:#C9D8F7; }
+  nav button:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
+  nav .hint{ margin-top:28px; font-size:12.5px; color:#8A9BB5; line-height:1.5; }
+  nav .hint kbd{ font-family:var(--mono); background:rgba(255,255,255,.12); padding:1px 5px; border-radius:3px; }
+
+  main{ padding:36px 44px 80px; max-width:1100px; }
+  section.lesson{ display:none; }
+  section.lesson.active{ display:block; }
+  .lesson header{ margin-bottom:22px; }
+  .lesson h2{ font-size:30px; font-weight:600; margin:0 0 6px; line-height:1.25; }
+  .lesson header p{ margin:0; color:var(--ink-soft); font-size:16px; max-width:64ch; }
+
+  .stage{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:26px;
+    box-shadow:0 1px 0 rgba(27,42,65,.06);
+  }
+  .controls{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:20px; }
+  .controls label{ font-size:14px; color:var(--ink-soft); display:flex; align-items:center; gap:6px; }
+  button.btn{
+    font:inherit; font-size:14px; font-weight:500; padding:8px 14px; border-radius:6px; cursor:pointer;
+    border:1px solid var(--ink); background:var(--ink); color:#fff;
+  }
+  button.btn.secondary{ background:#fff; color:var(--ink); border-color:var(--line); }
+  button.btn:disabled{ opacity:.4; cursor:default; }
+  button.btn:focus-visible, select:focus-visible, input:focus-visible{ outline:2px solid var(--blue); outline-offset:2px; }
+  select, input[type=number], input[type=text]{
+    font:inherit; font-size:14px; padding:7px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink);
+  }
+  input[type=number], input[type=text]{ font-family:var(--mono); }
+  .toggle{ display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+  .toggle input{ position:absolute; opacity:0; width:0; height:0; }
+  .toggle .sw{ width:38px; height:22px; border-radius:11px; background:var(--line); position:relative; transition:background var(--t); }
+  .toggle .sw::after{ content:""; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition:transform var(--t); }
+  .toggle input:checked + .sw{ background:var(--blue); }
+  .toggle input:checked + .sw::after{ transform:translateX(16px); }
+  .toggle input:focus-visible + .sw{ outline:2px solid var(--blue); outline-offset:2px; }
+
+  .note{ margin-top:18px; padding:14px 16px; border-left:3px solid var(--blue); background:var(--blue-soft); border-radius:0 6px 6px 0; font-size:14.5px; }
+  .note.warn{ border-color:var(--red); background:var(--red-soft); }
+  .note.ok{ border-color:var(--green); background:var(--green-soft); }
+  .note code{ background:rgba(255,255,255,.7); padding:1px 5px; border-radius:3px; }
+
+  pre.code{
+    font-family:var(--mono); font-size:13.5px; background:#F6F8FB; border:1px solid var(--line); border-radius:6px;
+    padding:14px 16px; margin:0; overflow:auto; line-height:1.55; white-space:pre;
+  }
+  pre.code .dim{ color:#9AA7B8; }
+  pre.code .hi{ background:var(--amber-soft); }
+  pre.code .err{ background:var(--red-soft); color:var(--red); }
+
+    .readout{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-top:16px; }
+  .readout div{ padding:12px 14px; border:1px solid var(--line); border-radius:6px; background:#F6F8FB; }
+  .readout b{ display:block; font-size:12.5px; font-weight:500; color:var(--ink-soft); margin-bottom:2px; }
+  .readout span{ font-family:var(--mono); font-size:17px; font-weight:600; }
+  /* ---------- shared ---------- */
+  .mcell{ display:inline-flex; flex-direction:column; align-items:center; min-width:70px; border:2px solid var(--ink); border-radius:6px; background:#fff; overflow:hidden; transition:all var(--t); }
+  .mcell .a{ font-family:var(--mono); font-size:10px; color:var(--ink-soft); background:#F6F8FB; width:100%; text-align:center; padding:3px 4px; border-bottom:1px solid var(--line); }
+  .mcell .v{ font-family:var(--mono); font-size:20px; font-weight:600; padding:8px 6px; }
+  .mcell .n{ font-family:var(--mono); font-size:11px; color:var(--blue); padding:0 4px 6px; }
+  .mcell.hi{ border-color:var(--blue); background:var(--blue-soft); }
+  .mcell.bad{ border-color:var(--red); background:var(--red-soft); }
+  .mcell.ok{ border-color:var(--green); background:var(--green-soft); }
+  .mcell.dim{ opacity:.35; }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+  .lab{ font-size:12.5px; color:var(--ink-soft); margin:14px 0 6px; }
+  .term{ font-family:var(--mono); font-size:13.5px; background:var(--ink); color:#D9E1EC; padding:12px 16px; border-radius:6px; min-height:60px; white-space:pre-wrap; margin-top:16px; }
+  .term .r{ color:#FF9B8A; } .term .g{ color:#7FE0B8; } .term .y{ color:#FFD27F; } .term .c{ color:#8A9BB5; }
+  svg text{ font-family:var(--mono); }
+  .shake{ animation:shake .4s; } @keyframes shake{ 0%,100%{transform:none} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+  .pop-in{ animation:popin .3s ease-out; } @keyframes popin{ from{ transform:scale(.8); opacity:0; } }
+  .fade-out{ animation:fadeout .4s forwards; } @keyframes fadeout{ to{ opacity:0; transform:translateY(-8px); } }
+  .two{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:24px; }
+  .tabs2{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tabs2 button{ font:inherit; font-size:13px; padding:7px 12px; border-radius:6px; border:1px solid var(--line); background:#fff; cursor:pointer; }
+  .tabs2 button.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .fig svg, .plot svg{ width:100%; height:auto; background:#fff; border:1px solid var(--line); border-radius:6px; display:block; }
+  .fig text, .plot text{ font-size:11px; fill:var(--ink-soft); }
+  .bits{ display:flex; gap:3px; flex-wrap:wrap; }
+  .bits span, .bits button{ all:unset; box-sizing:border-box; width:30px; height:34px; border:1px solid var(--line); border-radius:4px; display:grid; place-items:center; font-family:var(--mono); font-size:13px; font-weight:600; background:#fff; cursor:default; }
+  .bits button{ cursor:pointer; }
+  .bits .one{ background:var(--blue-soft); border-color:var(--blue); }
+  .bits .hl{ outline:3px solid var(--amber); outline-offset:1px; }
+  .bits small{ display:block; font-size:9px; color:var(--ink-soft); font-weight:400; }
+  .bitcol{ display:flex; flex-direction:column; align-items:center; gap:2px; font-family:var(--mono); font-size:10px; color:var(--ink-soft); }
+  .seg{ cursor:pointer; transition:fill var(--t); }
+  .digits{ display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
+  .digits button{ font:inherit; font-family:var(--mono); padding:6px 10px; border:1px solid var(--line); background:#fff; border-radius:5px; cursor:pointer; }
+  .grid8{ display:grid; grid-template-columns:repeat(8,34px) 70px; gap:4px; align-items:center; }
+  .grid8 button{ all:unset; box-sizing:border-box; width:34px; height:34px; border-radius:50%; background:#3A2624; cursor:pointer; transition:background var(--t); }
+  .grid8 button.on{ background:#FF4B3A; box-shadow:0 0 8px #FF4B3A; }
+  .grid8 .rh{ font-family:var(--mono); font-size:12.5px; padding-left:6px; }
+  .grid8 .rh.scan{ color:var(--amber); font-weight:700; }
+  .grid8 .rowscan button{ outline:2px solid var(--amber); }
+  .coils{ position:relative; width:240px; height:240px; margin:auto; }
+  table.tt{ border-collapse:collapse; font-family:var(--mono); font-size:12.5px; width:100%; }
+  table.tt th, table.tt td{ border:1px solid var(--line); padding:5px 8px; text-align:center; }
+  table.tt th{ background:var(--paper); font-family:var(--sans); }
+  table.tt tr.hot td{ background:var(--blue-soft); font-weight:700; }
+  @media (max-width:900px){ .two{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav aria-label="교시 선택">
+    <h1>MCU 실습 · ESP32</h1>
+    <p class="day">3일차<br>눈으로 보는 8가지</p>
+    <ol id="navlist">
+      <li><button data-go="1" aria-current="true">세그먼트 비트맵</button></li>
+      <li><button data-go="2">시프트 · 래치</button></li>
+      <li><button data-go="3">멀티플렉싱</button></li>
+      <li><button data-go="4">매트릭스 편집기</button></li>
+      <li><button data-go="5">I2C 버스</button></li>
+      <li><button data-go="6">제어 바이트</button></li>
+      <li><button data-go="7">H-브리지</button></li>
+      <li><button data-go="8">스테퍼 시퀀스</button></li>
+    </ol>
+    <p class="hint">키보드 <kbd>←</kbd> <kbd>→</kbd> 로 교시 이동</p>
+  </nav>
+  <main>
+
+  <section class="lesson active" id="l1">
+    <header><h2>모양은 1바이트 — 세그먼트 비트맵</h2><p>세그먼트를 눌러 켜고 꺼 보세요. a = bit0, dp = bit7 로 바이트가 만들어집니다. 숫자 버튼은 DIGITS[] 표의 값입니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <div class="tabs2" id="s-type"><button class="on" data-t="cc">공통 음극 (CC)</button><button data-t="ca">공통 양극 (CA)</button></div>
+      </div>
+      <div class="two">
+        <div class="fig"><svg viewBox="0 0 260 300" id="s-svg"></svg></div>
+        <div>
+          <div class="lab" style="margin-top:0">비트 7 → 0 (dp g f e d c b a)</div>
+          <div class="bits" id="s-bits"></div>
+          <div class="readout"><div><b>pattern</b><span id="s-hex"></span></div><div><b>핀에 보낼 값</b><span id="s-out"></span></div></div>
+          <div class="digits" id="s-digits"></div>
+          <div class="term" id="s-term" style="min-height:46px"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l2">
+    <header><h2>74HC595 — 밀고(SH) 한 번에(ST)</h2><p>보낼 바이트를 정하고 한 단계씩 진행하세요. 클럭마다 한 칸씩 밀리고, 래치를 올릴 때만 출력 Q0~Q7 이 바뀝니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>보낼 값 <select id="h-val"><option value="63">0x3F (숫자 0)</option><option value="91">0x5B (숫자 2)</option><option value="128">0x80 (dp)</option><option value="1">0x01 (a)</option><option value="165">0xA5</option></select></label>
+        <div class="tabs2" id="h-order"><button class="on" data-o="msb">MSBFIRST</button><button data-o="lsb">LSBFIRST</button></div>
+        <button class="btn" id="h-next">다음 단계</button>
+        <button class="btn secondary" id="h-auto">자동</button>
+        <button class="btn secondary" id="h-reset">처음으로</button>
+      </div>
+      <div class="fig"><svg viewBox="0 0 860 300" id="h-svg"></svg></div>
+      <div class="term" id="h-term" style="min-height:46px"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l3">
+    <header><h2>한 번에 한 자리 — 잔상으로 네 자리</h2><p>갱신 속도를 낮추면 한 자리씩 켜지는 것이 보이고, 올리면 네 자리가 동시에 보입니다. 고스팅과 "loop 가 바쁨"도 켜 보세요.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>한 자리 머무는 시간 <input type="range" id="m-ms" min="0" max="100" value="60" style="width:220px"> <span class="mono" id="m-msv"></span></label>
+        <label>표시할 숫자 <input type="number" id="m-num" value="2026" min="0" max="9999" style="width:80px"></label>
+        <label class="toggle"><input type="checkbox" id="m-ghost"><span class="sw"></span>끄기 없이 바꾸기 (고스팅)</label>
+        <label class="toggle"><input type="checkbox" id="m-busy"><span class="sw"></span>loop 가 delay(100) — 타이머 없음</label>
+      </div>
+      <div class="fig"><svg viewBox="0 0 860 260" id="m-svg"></svg></div>
+      <div class="readout"><div><b>화면 전체 갱신</b><span id="m-hz"></span></div><div><b>지금 켜진 자리</b><span id="m-cur"></span></div><div><b>disp[]</b><span id="m-buf"></span></div></div>
+      <div class="note" id="m-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l4">
+    <header><h2>8바이트 = 8×8 그림</h2><p>점을 눌러 그림을 그리면 오른쪽에 행 바이트가 만들어집니다. [스캔] 은 한 행씩 켜는 순서, [스크롤] 은 비트 시프트입니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <button class="btn secondary" id="x-heart">하트</button>
+        <button class="btn secondary" id="x-clear">지우기</button>
+        <button class="btn" id="x-scan">스캔 느리게</button>
+        <button class="btn" id="x-scroll">스크롤 (H I)</button>
+        <button class="btn secondary" id="x-stop">정지</button>
+      </div>
+      <div class="two">
+        <div class="grid8" id="x-grid"></div>
+        <div><pre class="code" id="x-code" style="font-size:12.5px"></pre><div class="term" id="x-term" style="min-height:46px"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l5">
+    <header><h2>두 선, 주소로 부른다</h2><p>SCL 이 박자를 치고 SDA 에 비트가 실립니다. 주소를 부른 뒤 9번째 박자에 장치가 SDA 를 LOW 로 당기면 ACK(대답)입니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>부를 주소 <select id="i-addr"><option value="39">0x27 (LCD)</option><option value="72">0x48 (PCF8591)</option><option value="60">0x3C (없음)</option></select></label>
+        <button class="btn" id="i-send">한 번 보내기</button>
+        <button class="btn secondary" id="i-scan">스캐너 실행</button>
+      </div>
+      <div class="fig"><svg viewBox="0 0 860 230" id="i-svg"></svg></div>
+      <div class="bits" id="i-scanmap" style="margin-top:10px"></div>
+      <div class="term" id="i-term" style="min-height:66px"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l6">
+    <header><h2>데이터시트의 제어 바이트를 비트로 만든다</h2><p>비트를 눌러 PCF8591 제어 바이트를 만들어 보세요. 아래는 한 번 읽을 때 오가는 바이트 — 첫 번째 바이트가 왜 이전 값인지 확인합니다.</p></header>
+    <div class="stage">
+      <div class="two">
+        <div>
+          <div class="lab" style="margin-top:0">제어 바이트 (bit 7 → 0)</div>
+          <div class="bits" id="c-bits"></div>
+          <div class="readout"><div><b>제어 바이트</b><span id="c-hex"></span></div><div><b>의미</b><span id="c-mean" style="font-size:13px"></span></div></div>
+          <div class="term" id="c-code" style="min-height:60px"></div>
+        </div>
+        <div>
+          <div class="controls" style="margin-top:0">
+            <label>가변저항(AIN0) <input type="range" id="c-pot" min="0" max="255" value="128" style="width:160px"></label>
+            <button class="btn" id="c-read">pcf_read(0)</button>
+          </div>
+          <div class="fig"><svg viewBox="0 0 400 230" id="c-svg"></svg></div>
+          <div class="term" id="c-term" style="min-height:60px"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l7">
+    <header><h2>H-브리지 — 스위치 네 개로 방향 바꾸기</h2><p>IN1 · IN2 와 EN 의 PWM 을 바꿔 보세요. 전류가 모터를 지나는 방향이 바뀌면 회전 방향이 바뀝니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label class="toggle"><input type="checkbox" id="b-in1" checked><span class="sw"></span>IN1</label>
+        <label class="toggle"><input type="checkbox" id="b-in2"><span class="sw"></span>IN2</label>
+        <label>EN (PWM) <input type="range" id="b-pwm" min="0" max="255" value="180" style="width:200px"> <span class="mono" id="b-pwmv"></span></label>
+      </div>
+      <div class="two">
+        <div class="fig"><svg viewBox="0 0 420 300" id="b-svg"></svg></div>
+        <div>
+          <table class="tt" id="b-tt"></table>
+          <div class="term" id="b-term" style="min-height:46px;margin-top:12px"></div>
+          <div class="note" id="b-note"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l8">
+    <header><h2>코일 순서 표를 따라 한 칸씩</h2><p>한 스텝씩 넘겨 보세요. SEQ[phase] 의 켜진 비트가 켜진 코일이고, 회전자가 그쪽으로 끌려갑니다. 방향을 바꾸면 표를 거꾸로 읽습니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <button class="btn" id="p-step">한 스텝</button>
+        <button class="btn" id="p-run">연속</button>
+        <div class="tabs2" id="p-dir"><button class="on" data-d="1">+1 (정방향)</button><button data-d="-1">−1 (역방향)</button></div>
+        <label class="toggle"><input type="checkbox" id="p-full"><span class="sw"></span>풀스텝(4단계)</label>
+      </div>
+      <div class="two">
+        <div class="fig"><svg viewBox="0 0 320 300" id="p-svg"></svg></div>
+        <div><table class="tt" id="p-tt"></table><div class="term" id="p-term" style="min-height:46px;margin-top:12px"></div></div>
+      </div>
+    </div>
+  </section>
+
+  </main>
+</div>
+<script>
+(function(){
+  'use strict';
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+  const NS='http://www.w3.org/2000/svg';
+  const el=(n,a,t)=>{ const e=document.createElementNS(NS,n); for(const k in a) e.setAttribute(k,a[k]); if(t!==undefined) e.textContent=t; return e; };
+  const hex=(v,d=2)=>'0x'+v.toString(16).toUpperCase().padStart(d,'0');
+  const bin=(v,n=8)=>v.toString(2).padStart(n,'0');
+  let cur=1;
+  function go(n){ cur=Math.max(1,Math.min(8,n)); $$('.lesson').forEach(s=>s.classList.toggle('active',s.id==='l'+cur)); $$('#navlist button').forEach(b=>b.setAttribute('aria-current',b.dataset.go==cur?'true':'false')); location.hash='l'+cur; }
+  $$('#navlist button').forEach(b=>b.addEventListener('click',()=>go(+b.dataset.go)));
+  document.addEventListener('keydown',e=>{ if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName))return; if(e.key==='ArrowRight')go(cur+1); if(e.key==='ArrowLeft')go(cur-1); });
+  if(/^#l[1-8]$/.test(location.hash)) go(+location.hash[2]);
+  const DIG=[0x3F,0x06,0x5B,0x4F,0x66,0x6D,0x7D,0x07,0x7F,0x6F];
+  // segment geometry (x,y,w,h) for a 1-digit in box
+  function segShapes(ox,oy,s){ // returns list of [name, points]
+    const W=100*s,H=180*s,t=16*s; const L=ox, T=oy;
+    const hz=(x,y)=>`${x+t/2},${y} ${x+W-t/2},${y} ${x+W-t},${y+t/2} ${x+W-t/2},${y+t} ${x+t/2},${y+t} ${x},${y+t/2}`.replace(/(\d+\.\d+)/g,m=>(+m).toFixed(1));
+    const vt=(x,y)=>`${x},${y+t/2} ${x+t/2},${y} ${x+t},${y+t/2} ${x+t},${y+H/2-t} ${x+t/2},${y+H/2-t/2} ${x},${y+H/2-t}`;
+    return [['a',hz(L+t/2,T)],['b',vt(L+W,T+t/2)],['c',vt(L+W,T+H/2)],['d',hz(L+t/2,T+H)],['e',vt(L,T+H/2)],['f',vt(L,T+t/2)],['g',hz(L+t/2,T+H/2)]];
+  }
+  function drawDigit(svg,ox,oy,s,pattern,onCol,offCol,click){
+    segShapes(ox,oy,s).forEach(([n,pts],i)=>{ const on=(pattern>>i)&1; const p=el('polygon',{points:pts,fill:on?onCol:offCol,class:'seg'}); if(click) p.addEventListener('click',()=>click(i)); svg.appendChild(p); });
+    const on=(pattern>>7)&1; const c=el('circle',{cx:ox+(100+34)*s,cy:oy+(180+10)*s,r:9*s,fill:on?onCol:offCol,class:'seg'}); if(click) c.addEventListener('click',()=>click(7)); svg.appendChild(c);
+  }
+
+  /* 1 */
+  let sPat=0x3F, sCA=false;
+  const SN=['a','b','c','d','e','f','g','dp'];
+  function sDraw(){
+    const S=$('#s-svg'); S.innerHTML='';
+    S.appendChild(el('rect',{x:20,y:10,width:220,height:280,rx:10,fill:'#1F1F1F'}));
+    drawDigit(S,60,40,1.1,sPat,'#FF3B2F','#3A2624',i=>{ sPat^=(1<<i); sDraw(); });
+    ['a','b','c','d','e','f','g'].forEach((n,i)=>{ const pos=[[118,34],[196,92],[196,186],[118,262],[44,186],[44,92],[118,146]][i]; S.appendChild(el('text',{x:pos[0],y:pos[1],fill:'#9AA7B8'},n)); });
+    $('#s-bits').innerHTML=[7,6,5,4,3,2,1,0].map(i=>`<div class="bitcol"><button class="${(sPat>>i)&1?'one':''}" data-i="${i}">${(sPat>>i)&1}</button>${SN[i]}</div>`).join('');
+    $$('#s-bits button').forEach(b=>b.addEventListener('click',()=>{ sPat^=(1<<+b.dataset.i); sDraw(); }));
+    const out=sCA?(~sPat)&0xFF:sPat;
+    $('#s-hex').textContent=hex(sPat)+'  ('+bin(sPat)+')'; $('#s-out').textContent=hex(out)+(sCA?'  = ~pattern':'');
+    const d=DIG.indexOf(sPat);
+    $('#s-term').innerHTML=`seg_show(${hex(sPat)});  <span class="c">// ${d>=0?'DIGITS['+d+']':'직접 만든 모양'}</span>\n<span class="g">for i: digitalWrite(SEG_PINS[i], (${hex(out)} >> i) & 1)  ${sCA?'// CA: LOW 가 켜짐':''}</span>`;
+  }
+  $('#s-digits').innerHTML=DIG.map((v,i)=>`<button data-v="${v}">${i}</button>`).join('')+'<button data-v="0">끄기</button><button data-v="255">전부</button>';
+  $$('#s-digits button').forEach(b=>b.addEventListener('click',()=>{ sPat=+b.dataset.v; sDraw(); }));
+  $$('#s-type button').forEach(b=>b.addEventListener('click',()=>{ $$('#s-type button').forEach(x=>x.classList.toggle('on',x===b)); sCA=b.dataset.t==='ca'; sDraw(); }));
+  sDraw();
+
+  /* 2 595 */
+  let hStep=0, hReg=0, hOut=0, hT=null;
+  function hBits(){ const v=+$('#h-val').value, msb=$('#h-order .on').dataset.o==='msb'; return [...Array(8)].map((_,k)=>(v>>(msb?7-k:k))&1); }
+  function hDraw(){
+    const S=$('#h-svg'); S.innerHTML=''; const bits=hBits(); const n=Math.min(hStep,8);
+    S.appendChild(el('text',{x:20,y:24},'보낼 순서 (DS 에 올릴 비트)'));
+    bits.forEach((b,k)=>{ const x=20+k*34; S.appendChild(el('rect',{x,y:32,width:30,height:30,rx:4,fill:k<n?'#EEF1F5':(k===n&&hStep<8?'#FBF0D3':'#fff'),stroke:k===n&&hStep<8?'#C98A12':'#C9D1DC'})); S.appendChild(el('text',{x:x+11,y:52,fill:'#1B2A41'},b)); });
+    S.appendChild(el('text',{x:320,y:24},'시프트 레지스터 (SH_CP 마다 →)'));
+    for(let i=0;i<8;i++){ const x=320+i*62, b=(hReg>>i)&1; S.appendChild(el('rect',{x,y:32,width:56,height:44,rx:5,fill:b?'#DCE6FA':'#fff',stroke:'#2457C5'})); S.appendChild(el('text',{x:x+6,y:48},'S'+i)); S.appendChild(el('text',{x:x+24,y:68,fill:'#1B2A41'},b)); }
+    S.appendChild(el('text',{x:320,y:112},'출력 래치 Q0~Q7 (ST_CP ↑ 일 때만 복사)'));
+    for(let i=0;i<8;i++){ const x=320+i*62, b=(hOut>>i)&1; S.appendChild(el('rect',{x,y:120,width:56,height:44,rx:5,fill:b?'#FF4B3A':'#3A2624'})); S.appendChild(el('text',{x:x+6,y:136,fill:'#fff'},'Q'+i)); S.appendChild(el('text',{x:x+24,y:156,fill:'#fff'},['a','b','c','d','e','f','g','dp'][i])); }
+    // timing
+    const tx=k=>60+k*44; S.appendChild(el('text',{x:10,y:205},'DS')); S.appendChild(el('text',{x:10,y:240},'SH')); S.appendChild(el('text',{x:10,y:275},'ST'));
+    let dsd='M40,215'; bits.forEach((b,k)=>{ if(k<n){ dsd+=` L${tx(k)},${b?195:215} L${tx(k)+44},${b?195:215}`; } }); S.appendChild(el('path',{d:dsd,fill:'none',stroke:'#F07B1F','stroke-width':2}));
+    let shd='M40,250'; for(let k=0;k<n;k++){ shd+=` L${tx(k)+20},250 L${tx(k)+20},228 L${tx(k)+32},228 L${tx(k)+32},250`; } S.appendChild(el('path',{d:shd+` L${tx(8)+40},250`,fill:'none',stroke:'#E8C21A','stroke-width':2}));
+    const latched=hStep>=9; S.appendChild(el('path',{d:latched?`M40,285 L${tx(8)+10},285 L${tx(8)+10},263 L${tx(8)+40},263`:`M40,285 L${tx(8)+40},285`,fill:'none',stroke:'#7A8494','stroke-width':2}));
+    const msb=$('#h-order .on').dataset.o==='msb';
+    const T=$('#h-term');
+    if(hStep===0) T.innerHTML='<span class="c">// digitalWrite(PIN_ST, LOW);  → [다음 단계]</span>';
+    else if(hStep<=8) T.innerHTML=`digitalWrite(PIN_DS, ${bits[hStep-1]});  digitalWrite(PIN_SH, HIGH); digitalWrite(PIN_SH, LOW);\n<span class="c">// ${hStep}번째 클럭: 레지스터가 한 칸 밀리고 S0 에 ${bits[hStep-1]} — 출력 Q 는 아직 그대로</span>`;
+    else { const v=+$('#h-val').value; T.innerHTML=`digitalWrite(PIN_ST, HIGH);  <span class="g">// 래치! Q0~Q7 = ${hex(hOut)} 동시에 바뀜</span>\n<span class="c">${hOut===v?'// 보낸 값과 같다 — '+(msb?'MSB 먼저 보내면 bit7 이 맨 끝(Q7)까지 밀려간다':''):'// 보낸 '+hex(v)+' 과 비트 순서가 뒤집혔다 — LSBFIRST 는 배선도 반대여야 같은 모양'}</span>`; }
+    $('#h-next').disabled=hStep>=9;
+  }
+  function hNext(){ if(hStep<8){ const b=hBits()[hStep]; hReg=((hReg<<1)|b)&0xFF; hStep++; } else if(hStep===8){ let v=0; for(let i=0;i<8;i++){ v|=((hReg>>i)&1)<<i; } hOut=v; hStep=9; } hDraw(); }
+  // register shifting: S0 receives new bit, previous shift to S1 … so Q_i = S_i; with MSB first bit7 ends at S7 → Q7. correct.
+  $('#h-next').addEventListener('click',hNext);
+  $('#h-reset').addEventListener('click',()=>{ clearInterval(hT); hT=null; hStep=0; hReg=0; hDraw(); });
+  $('#h-auto').addEventListener('click',()=>{ clearInterval(hT); hStep=0; hReg=0; hT=setInterval(()=>{ if(hStep>=9){ clearInterval(hT); hT=null; return; } hNext(); },450); });
+  $('#h-val').addEventListener('change',()=>{ hStep=0; hReg=0; hDraw(); });
+  $$('#h-order button').forEach(b=>b.addEventListener('click',()=>{ $$('#h-order button').forEach(x=>x.classList.toggle('on',x===b)); hStep=0; hReg=0; hDraw(); }));
+  hDraw();
+
+  /* 3 mux */
+  let mCur=0, mLast=0, mBusyUntil=0, mPrev=-1;
+  const mSvg=$('#m-svg');
+  function mMs(){ const v=+$('#m-ms').value; return Math.round(Math.pow(10, 2.6 - v/100*2.6)); } // 400ms .. 1ms
+  function mDisp(){ let n=Math.max(0,Math.min(9999,+$('#m-num').value||0)); const d=[]; for(let k=3;k>=0;k--){ d[k]=DIG[n%10]; n=Math.floor(n/10); } return d; }
+  function mFrame(now){
+    requestAnimationFrame(mFrame); if(cur!==3) return;
+    const ms=mMs(), busy=$('#m-busy').checked, ghost=$('#m-ghost').checked; const disp=mDisp();
+    const step = busy ? (ms+100) : ms;
+    if(now-mLast>=step){ mPrev=mCur; mCur=(mCur+1)%4; mLast=now; }
+    const fast = ms<=5 && !busy;
+    mSvg.innerHTML=''; mSvg.appendChild(el('rect',{x:120,y:20,width:620,height:220,rx:10,fill:'#1F1F1F'}));
+    for(let k=0;k<4;k++){
+      let pat = disp[k], col='#FF3B2F', off='#3A2624';
+      let on = fast ? true : (k===mCur);
+      let p = on ? pat : 0;
+      if(fast){ col='#FF5A4F'; }
+      if(ghost && !on && k===mCur+1-1) {}
+      drawDigit(mSvg,160+k*150,40,0.95,p,col,off);
+      if(ghost && (k===(mCur+1)%4)) drawDigit(mSvg,160+k*150,40,0.95,disp[mCur],'rgba(255,59,47,.28)','rgba(0,0,0,0)');
+      mSvg.appendChild(el('text',{x:205+k*150,y:250,fill:on&&!fast?'#C98A12':'#9AA7B8'},'D'+(k+1)));
+    }
+    const hz = 1000/(step*4);
+    $('#m-msv').textContent=ms+' ms'; $('#m-hz').textContent=hz.toFixed(hz<10?1:0)+' Hz'; $('#m-cur').textContent=fast?'(너무 빨라 모두 켜진 것처럼)':'D'+(mCur+1);
+    $('#m-buf').textContent=disp.map(v=>hex(v)).join(' ');
+    const n=$('#m-note');
+    if(busy){ n.className='note warn'; n.innerHTML='loop 에서 멀티플렉싱하면서 delay(100) — 한 자리가 100ms 씩 켜져 <b>깜빡입니다</b>. 타이머 인터럽트로 옮기면 loop 가 쉬어도 화면은 돕니다.'; }
+    else if(ghost){ n.className='note warn'; n.innerHTML='이전 자리를 끄지 않고 모양을 바꾸면 <b>다음 자리에 이전 숫자가 희미하게</b> 겹칩니다. 끄기 → 모양 바꾸기 → 켜기.'; }
+    else if(hz<50){ n.className='note'; n.innerHTML=`전체 갱신 ${hz.toFixed(1)}Hz — 50Hz 아래라 한 자리씩 켜지는 것이 보입니다. 속도를 올려 보세요.`; }
+    else { n.className='note ok'; n.innerHTML=`전체 갱신 ${hz.toFixed(0)}Hz — 한 순간에는 한 자리만 켜져 있지만 잔상으로 네 자리가 동시에 보입니다.`; }
+  }
+  requestAnimationFrame(mFrame);
+
+  /* 4 matrix */
+  let X=[0x00,0x66,0xFF,0xFF,0x7E,0x3C,0x18,0x00], xScan=-1, xT=null;
+  const HEART=[0x00,0x66,0xFF,0xFF,0x7E,0x3C,0x18,0x00], FH=[0x00,0x66,0x66,0x7E,0x66,0x66,0x66,0x00], FI=[0x00,0x3C,0x18,0x18,0x18,0x18,0x3C,0x00];
+  function xDraw(){
+    const G=$('#x-grid'); G.innerHTML='';
+    for(let r=0;r<8;r++){ for(let c=0;c<8;c++){ const b=document.createElement('button'); const on=(X[r]>>(7-c))&1; const lit = xScan<0 ? on : (r===xScan && on); b.className=lit?'on':''; if(r===xScan) b.style.outline='2px solid #C98A12'; b.setAttribute('aria-label',`${r}행 ${c}열`); b.addEventListener('click',()=>{ X[r]^=(0x80>>c); xDraw(); }); G.appendChild(b); }
+      const h=document.createElement('span'); h.className='rh'+(r===xScan?' scan':''); h.textContent=hex(X[r]); G.appendChild(h); }
+    $('#x-code').textContent='uint8_t img[8] = {\n'+X.map((v,i)=>`    0b${bin(v)},   // ${hex(v)}  행 ${i}`).join('\n')+'\n};';
+  }
+  function xStop(){ clearInterval(xT); xT=null; xScan=-1; xDraw(); }
+  $('#x-heart').addEventListener('click',()=>{ xStop(); X=HEART.slice(); xDraw(); $('#x-term').innerHTML='<span class="c">// 점 하나 켜기: img[y] |= 0x80 >> x;   끄기: img[y] &= ~(0x80 >> x);</span>'; });
+  $('#x-clear').addEventListener('click',()=>{ xStop(); X=Array(8).fill(0); xDraw(); });
+  $('#x-stop').addEventListener('click',xStop);
+  $('#x-scan').addEventListener('click',()=>{ clearInterval(xT); xScan=0; xT=setInterval(()=>{ xScan=(xScan+1)%8; xDraw(); $('#x-term').innerHTML=`onTimer(): 행 ${(xScan+7)%8} 끄기 → write595(~img[${xScan}] = ${hex((~X[xScan])&0xFF)}) → 행 ${xScan} 켜기\n<span class="c">// 실제로는 1.5ms 마다 — 8행 12ms, 약 83Hz 라 모든 점이 동시에 보인다</span>`; },500); });
+  $('#x-scroll').addEventListener('click',()=>{ clearInterval(xT); xScan=-1; let sh=0; xT=setInterval(()=>{ for(let r=0;r<8;r++){ const line=(FH[r]<<8)|FI[r]; X[r]=((line<<sh)>>8)&0xFF; } $('#x-term').innerHTML=`shift = ${sh}:  img[r] = ((FONT_H[r] &lt;&lt; 8 | FONT_I[r]) &lt;&lt; ${sh}) &gt;&gt; 8;\n<span class="c">// 16비트 띠를 왼쪽으로 ${sh}칸 밀고 위 8비트 창만 본다</span>`; xDraw(); sh=(sh+1)%9; },350); });
+  xDraw();
+
+  /* 5 i2c */
+  const PRESENT=[0x27,0x48];
+  function iDraw(addr, ackPhase){
+    const S=$('#i-svg'); S.innerHTML=''; const bitsA=[...Array(7)].map((_,k)=>(addr>>(6-k))&1); const ack=PRESENT.includes(addr);
+    const seq=[{t:'S',v:null},...bitsA.map((b,k)=>({t:'A'+(6-k),v:b})),{t:'W',v:0},{t:'ACK',v:ack?0:1},{t:'P',v:null}];
+    const X0=70, dx=66;
+    S.appendChild(el('text',{x:10,y:70},'SCL')); S.appendChild(el('text',{x:10,y:150},'SDA'));
+    let scl='M50,60', sda='M50,140';
+    seq.forEach((s,k)=>{ const x=X0+k*dx; if(k<=ackPhase){
+      if(s.t==='S'){ scl+=` L${x+dx},60`; sda+=` L${x+20},140 L${x+30},170 L${x+dx},170`; }
+      else if(s.t==='P'){ scl+=` L${x+dx},60`; sda+=` L${x+20},170 L${x+30},140 L${x+dx},140`; }
+      else { scl+=` L${x+10},60 L${x+10},90 L${x+30},90 L${x+30},60 L${x+dx},60`.replace(/ L(\d+),60 L\1,90/,' L$1,60 L$1,90'); const y=s.v?140:170; sda+=` L${x},${y} L${x+dx},${y}`; }
+      const lab = s.t==='ACK'?(ack?'ACK':'NACK'):(s.t.startsWith('A')?s.t.replace('A','A'):s.t);
+      S.appendChild(el('rect',{x:x+2,y:182,width:dx-4,height:30,rx:4,fill:s.t==='ACK'?(ack?'#DDF3EA':'#FBE3DF'):(s.t==='W'?'#FBF0D3':(s.v===null?'#EEF1F5':'#DCE6FA'))}));
+      S.appendChild(el('text',{x:x+8,y:201,fill:'#1B2A41'},lab+(s.v!==null&&s.t!=='ACK'?'='+s.v:'')));
+    }});
+    // SCL low pulses: simpler draw as square pulses
+    S.appendChild(el('path',{d:scl.replace(/ L(\d+),90/g,' L$1,90'),fill:'none',stroke:'#E8C21A','stroke-width':2.5}));
+    S.appendChild(el('path',{d:sda,fill:'none',stroke:'#2F6FE0','stroke-width':2.5}));
+    S.appendChild(el('text',{x:70,y:24},`주소 ${hex(addr)} = ${bin(addr,7)} + W(0)  → 장치 ${ack?'응답':'없음'}`));
+  }
+  let iT=null;
+  $('#i-send').addEventListener('click',()=>{ clearInterval(iT); const a=+$('#i-addr').value; let ph=0; iT=setInterval(()=>{ iDraw(a,ph); ph++; if(ph>10){ clearInterval(iT); const ok=PRESENT.includes(a); $('#i-term').innerHTML=`Wire.beginTransmission(${hex(a)});\nuint8_t err = Wire.endTransmission();  ${ok?'<span class="g">// → 0 (ACK) 장치가 대답</span>':'<span class="r">// → 2 (NACK) 그 주소에 장치 없음</span>'}`; } },220); });
+  function iScanGrid(done){ $('#i-scanmap').innerHTML=[...Array(127)].map((_,i)=>i===0?'':`<span class="${i<=done&&PRESENT.includes(i)?'one':''} ${i===done?'hl':''}" title="${hex(i)}" style="width:26px;height:22px;font-size:9px">${i.toString(16).toUpperCase()}</span>`).join(''); }
+  $('#i-scan').addEventListener('click',()=>{ clearInterval(iT); let a=1; const found=[]; iT=setInterval(()=>{ iScanGrid(a); if(PRESENT.includes(a)) found.push(hex(a)); $('#i-term').innerHTML=`for (addr = 1; addr &lt; 127; addr++) … 지금 ${hex(a)}\n<span class="g">${found.map(f=>'발견: '+f).join('\n')}</span>`; a+=1; if(a>126){ clearInterval(iT); $('#i-term').innerHTML+=`\n<span class="y">총 ${found.length}개</span>`; } },25); });
+  iDraw(0x27,-1); iScanGrid(0); $('#i-term').innerHTML='<span class="c">// [한 번 보내기] 또는 [스캐너 실행]</span>';
+
+  /* 6 pcf control byte */
+  let cByte=0x40, pcfPrev=0, pcfLastCh=-1;
+  const CB=[['0','항상 0'],['DAC','AOUT 켜기'],['M1','입력 방식'],['M0','입력 방식'],['0','항상 0'],['AI','자동 증가'],['C1','채널'],['C0','채널']];
+  function cDraw(){
+    $('#c-bits').innerHTML=CB.map((d,k)=>{ const i=7-k, b=(cByte>>i)&1, fixed=d[0]==='0'; return `<div class="bitcol">${fixed?`<span>${b}</span>`:`<button class="${b?'one':''}" data-i="${i}">${b}</button>`}${d[0]}<small>${d[1]}</small></div>`; }).join('');
+    $$('#c-bits button').forEach(b=>b.addEventListener('click',()=>{ cByte^=(1<<+b.dataset.i); cDraw(); }));
+    const ch=cByte&3, dac=(cByte>>6)&1, mode=(cByte>>4)&3, ai=(cByte>>2)&1;
+    $('#c-hex').textContent=hex(cByte)+'  ('+bin(cByte)+')';
+    $('#c-mean').textContent=`AIN${ch} 읽기 · DAC ${dac?'켜짐':'꺼짐'} · ${['단일 4채널','차동 3채널','혼합','차동 2채널'][mode]}${ai?' · 자동 증가':''}`;
+    $('#c-code').innerHTML=`Wire.write(0x40 | (ch &amp; 0x03));  <span class="c">// ch=${ch} → ${hex(0x40|ch)}</span>\n${dac?'':'<span class="r">// DAC 비트가 0 → AOUT 이 0V (예제 6-4 함정)</span>'}`;
+  }
+  $$('#c-bits').forEach(()=>{}); cDraw();
+  function cRead(){
+    const pot=+$('#c-pot').value; const ch=cByte&3;
+    const newVal = ch===0 ? pot : [0,0,137,212][ch];
+    const first = pcfLastCh<0 ? 0x80 : pcfPrev;
+    const S=$('#c-svg'); S.innerHTML='';
+    const rows=[['ESP32 → PCF', 'START · 0x48+W · ACK', '#EEF1F5'],['ESP32 → PCF', 'control '+hex(cByte)+' · ACK · STOP', '#DCE6FA'],['ESP32 → PCF', 'START · 0x48+R · ACK', '#EEF1F5'],['PCF → ESP32', '1번째: '+first+' (이전 변환) — 버림', '#FBE3DF'],['PCF → ESP32', '2번째: '+newVal+' (지금 AIN'+ch+')', '#DDF3EA']];
+    rows.forEach((r,i)=>{ const y=10+i*44; S.appendChild(el('rect',{x:10,y,width:380,height:38,rx:5,fill:r[2]})); S.appendChild(el('text',{x:20,y:y+16},r[0])); S.appendChild(el('text',{x:20,y:y+32,fill:'#1B2A41'},r[1])); });
+    $('#c-term').innerHTML=`Wire.requestFrom(0x48, 2);\nWire.read();            <span class="c">// ${first} — 요청을 받는 순간 변환을 시작하므로 첫 바이트는 지난번 값</span>\nreturn Wire.read();     <span class="g">// ${newVal}</span>`;
+    pcfPrev=newVal; pcfLastCh=ch;
+  }
+  $('#c-read').addEventListener('click',cRead); cRead();
+
+  /* 7 H-bridge */
+  let bAng=0, bLast=0;
+  function bState(){ const a=$('#b-in1').checked, b=$('#b-in2').checked, p=+$('#b-pwm').value; let dir=0, mode='자유 정지'; if(a&&!b){dir=1;mode='정방향';} else if(!a&&b){dir=-1;mode='역방향';} else if(a&&b){mode='브레이크';} return {a,b,p,dir,mode}; }
+  function bDraw(){
+    const st=bState(); const S=$('#b-svg'); S.innerHTML='';
+    $('#b-pwmv').textContent=st.p+' ('+Math.round(st.p/2.55)+'%)';
+    S.appendChild(el('line',{x1:60,y1:30,x2:360,y2:30,stroke:'#E0862A','stroke-width':4})); S.appendChild(el('text',{x:190,y:22},'5V (VS)'));
+    S.appendChild(el('line',{x1:60,y1:270,x2:360,y2:270,stroke:'#1B2A41','stroke-width':4})); S.appendChild(el('text',{x:196,y:292},'GND'));
+    const sw=[[90,80,'S1',st.a],[330,80,'S3',st.b],[90,210,'S2',!st.a],[330,210,'S4',!st.b]];
+    [[90,30,90,120],[330,30,330,120],[90,180,90,270],[330,180,330,270]].forEach(l=>S.appendChild(el('line',{x1:l[0],y1:l[1],x2:l[2],y2:l[3],stroke:'#9AA7B8','stroke-width':3})));
+    sw.forEach(([x,y,n,on])=>{ S.appendChild(el('rect',{x:x-26,y:y-20,width:52,height:40,rx:6,fill:on?'#DDF3EA':'#F6F8FB',stroke:on?'#178A67':'#C9D1DC','stroke-width':2})); S.appendChild(el('text',{x:x-10,y:y+4,fill:'#1B2A41'},n+(on?' ON':''))); });
+    S.appendChild(el('line',{x1:90,y1:150,x2:170,y2:150,stroke:'#9AA7B8','stroke-width':3})); S.appendChild(el('line',{x1:250,y1:150,x2:330,y2:150,stroke:'#9AA7B8','stroke-width':3}));
+    S.appendChild(el('circle',{cx:210,cy:150,r:40,fill:'#607D8B'})); S.appendChild(el('text',{x:198,y:120,fill:'#fff'},'M'));
+    S.appendChild(el('line',{x1:210,y1:150,x2:210+30*Math.cos(bAng),y2:150+30*Math.sin(bAng),stroke:'#fff','stroke-width':6,'stroke-linecap':'round'}));
+    S.appendChild(el('text',{x:48,y:154},'OUT1')); S.appendChild(el('text',{x:334,y:154},'OUT2'));
+    if(st.dir!==0 && st.p>0){ const path= st.dir>0 ? 'M90,40 L90,150 L170,150 M250,150 L330,150 L330,260' : 'M330,40 L330,150 L250,150 M170,150 L90,150 L90,260';
+      S.appendChild(el('path',{d:path,fill:'none',stroke:'#D6452E','stroke-width':4,'stroke-dasharray':'8 6',opacity:0.4+st.p/425})); }
+    $('#b-tt').innerHTML='<tr><th>IN1</th><th>IN2</th><th>모터</th></tr>'+[['1','0','정방향'],['0','1','역방향'],['0','0','자유 정지'],['1','1','브레이크']].map(r=>`<tr class="${r[2]===st.mode?'hot':''}"><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('');
+    const speed = st.dir*st.p;
+    $('#b-term').innerHTML=`motor_set(${speed});\n<span class="c">// IN1=${+st.a} IN2=${+st.b} · ledcWrite(EN, ${st.p}) → ${st.mode}</span>`;
+    const n=$('#b-note'); if(st.dir!==0 && st.p>0 && st.p<80){ n.className='note warn'; n.innerHTML='duty 가 너무 낮으면 윙 소리만 나고 돌지 않습니다 — 모터마다 최소 구동값이 있습니다.'; } else if(st.mode==='브레이크'){ n.className='note'; n.innerHTML='양쪽 단자가 같은 전압 — 모터가 만드는 전기가 스스로를 막아 <b>빨리 멈춥니다</b>.'; } else if(st.mode==='자유 정지'){ n.className='note'; n.innerHTML='전류가 끊겨 관성으로 천천히 멈춥니다. 방향을 바꾸기 전에는 이 상태를 거칩니다.'; } else { n.className='note ok'; n.innerHTML='전류가 모터를 '+(st.dir>0?'OUT1 → OUT2':'OUT2 → OUT1')+' 방향으로 지나갑니다. 방향을 바꾸면 회전이 반대가 됩니다.'; }
+  }
+  function bLoop(now){ requestAnimationFrame(bLoop); if(cur!==7) return; const st=bState(); const dt=(now-bLast)/1000; bLast=now; if(st.dir!==0 && st.p>=80) bAng+=st.dir*st.p/255*8*Math.min(dt,0.05); bDraw(); }
+  ['#b-in1','#b-in2','#b-pwm'].forEach(s=>$(s).addEventListener('input',bDraw));
+  requestAnimationFrame(bLoop); bDraw();
+
+  /* 8 stepper */
+  const SEQ8=[0b0001,0b0011,0b0010,0b0110,0b0100,0b1100,0b1000,0b1001], SEQ4=[0b0001,0b0010,0b0100,0b1000];
+  let pPh=0, pDir=1, pT=null, pAng=0;
+  function pSeq(){ return $('#p-full').checked?SEQ4:SEQ8; }
+  function pDraw(){
+    const seq=pSeq(), v=seq[pPh%seq.length]; const S=$('#p-svg'); S.innerHTML='';
+    const cx=160, cy=150; const pos=[[cx,cy-105,'IN1 (A)'],[cx+105,cy,'IN2 (B)'],[cx,cy+105,'IN3 (C)'],[cx-105,cy,'IN4 (D)']];
+    pos.forEach(([x,y,l],i)=>{ const on=(v>>i)&1; S.appendChild(el('rect',{x:x-28,y:y-18,width:56,height:36,rx:6,fill:on?'#2457C5':'#E3E7EE'})); S.appendChild(el('text',{x:x-22,y:y+4,fill:on?'#fff':'#5B6B80'},l)); });
+    // target angle: average of active coils
+    let sx=0, sy=0; pos.forEach(([x,y],i)=>{ if((v>>i)&1){ sx+=x-cx; sy+=y-cy; } }); const target=Math.atan2(sy,sx);
+    pAng=target;
+    S.appendChild(el('circle',{cx,cy,r:52,fill:'#546E7A'}));
+    S.appendChild(el('line',{x1:cx,y1:cy,x2:cx+46*Math.cos(pAng),y2:cy+46*Math.sin(pAng),stroke:'#FF4B3A','stroke-width':10,'stroke-linecap':'round'}));
+    S.appendChild(el('text',{x:cx-16,y:cy+4,fill:'#fff'},'N'));
+    $('#p-tt').innerHTML='<tr><th>phase</th><th>SEQ</th><th>IN4 IN3 IN2 IN1</th></tr>'+seq.map((s,i)=>`<tr class="${i===pPh%seq.length?'hot':''}"><td>${i}</td><td>${'0b'+bin(s,4)}</td><td>${bin(s,4).split('').join('   ')}</td></tr>`).join('');
+  }
+  function pStep(){ const n=pSeq().length; const old=pPh; pPh=(pPh+pDir+n)%n; pDraw(); $('#p-term').innerHTML=`phase = (${old} + ${pDir} + ${n}) % ${n} = ${pPh};\n<span class="c">// ${pDir<0&&old===0?'-1 이 아니라 '+(n-1)+' — "+'+n+'" 덕분에 음수가 되지 않는다':'SEQ['+pPh+'] 의 켜진 비트 = 켜진 코일'}${$('#p-full').checked?' · 풀스텝: 코일 1개씩, 한 스텝이 반스텝의 2배':''}</span>`; }
+  $('#p-step').addEventListener('click',pStep);
+  $('#p-run').addEventListener('click',()=>{ if(pT){ clearInterval(pT); pT=null; $('#p-run').textContent='연속'; } else { pT=setInterval(pStep,300); $('#p-run').textContent='정지'; } });
+  $$('#p-dir button').forEach(b=>b.addEventListener('click',()=>{ $$('#p-dir button').forEach(x=>x.classList.toggle('on',x===b)); pDir=+b.dataset.d; }));
+  $('#p-full').addEventListener('change',()=>{ pPh=0; pDraw(); });
+  pDraw();
+})();
+</script>
+</body>
+</html>
