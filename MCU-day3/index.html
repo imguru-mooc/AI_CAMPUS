@@ -154,6 +154,13 @@
   table.tt th, table.tt td{ border:1px solid var(--line); padding:5px 8px; text-align:center; }
   table.tt th{ background:var(--paper); font-family:var(--sans); }
   table.tt tr.hot td{ background:var(--blue-soft); font-weight:700; }
+  .subtabs{ display:flex; gap:6px; margin:0 0 14px; flex-wrap:wrap; }
+  .subtabs button{ font:inherit; font-size:13.5px; padding:8px 14px; border-radius:6px; border:1px solid var(--line); background:#fff; cursor:pointer; }
+  .subtabs button.on{ background:var(--blue); color:#fff; border-color:var(--blue); }
+  .pane:not(.on){ display:none !important; }
+  .lcdq{ display:flex; gap:4px; flex-wrap:wrap; margin-top:8px; }
+  .lcdq span{ font-family:var(--mono); font-size:12px; padding:3px 7px; border-radius:4px; border:1px solid var(--line); background:#fff; }
+  .lcdq span.cmd{ background:var(--amber-soft); } .lcdq span.now{ outline:2px solid var(--blue); } .lcdq span.done{ opacity:.45; }
   @media (max-width:900px){ .two{ grid-template-columns:1fr; } }
 </style>
 </head>
@@ -167,8 +174,8 @@
       <li><button data-go="2">시프트 · 래치</button></li>
       <li><button data-go="3">멀티플렉싱</button></li>
       <li><button data-go="4">매트릭스 편집기</button></li>
-      <li><button data-go="5">I2C 버스</button></li>
-      <li><button data-go="6">제어 바이트</button></li>
+      <li><button data-go="5">LCD 4비트 전송</button></li>
+      <li><button data-go="6">I2C · 제어 바이트</button></li>
       <li><button data-go="7">H-브리지</button></li>
       <li><button data-go="8">스테퍼 시퀀스</button></li>
     </ol>
@@ -243,10 +250,35 @@
   </section>
 
   <section class="lesson" id="l5">
-    <header><h2>두 선, 주소로 부른다</h2><p>SCL 이 박자를 치고 SDA 에 비트가 실립니다. 주소를 부른 뒤 9번째 박자에 장치가 SDA 를 LOW 로 당기면 ACK(대답)입니다.</p></header>
+    <header><h2>LCD 1602A — 한 글자를 4비트씩 두 번</h2><p>글자를 보내 보세요. RS 로 "명령/글자"를 정하고, D4~D7 에 위 4비트를 올린 뒤 E 를 내리면 LCD 가 읽고, 이어서 아래 4비트를 같은 방법으로 보냅니다.</p></header>
     <div class="stage">
       <div class="controls">
-        <label>부를 주소 <select id="i-addr"><option value="39">0x27 (LCD)</option><option value="72">0x48 (PCF8591)</option><option value="60">0x3C (없음)</option></select></label>
+        <label>보낼 글자 <input type="text" id="c5-text" value="Hi ESP32" maxlength="16" style="width:140px;font-family:var(--mono)"></label>
+        <label>setCursor(<select id="c5-col"><option>0</option><option>2</option><option selected>4</option><option>8</option></select>, <select id="c5-row"><option>0</option><option selected>1</option></select>)</label>
+        <button class="btn" id="c5-next">다음 (4비트 한 번)</button>
+        <button class="btn secondary" id="c5-auto">자동</button>
+        <button class="btn secondary" id="c5-reset">처음으로</button>
+        <label class="toggle"><input type="checkbox" id="c5-rw" checked><span class="sw"></span>RW → GND</label>
+      </div>
+      <div class="fig"><svg viewBox="0 0 860 150" id="c5-lcd"></svg></div>
+      <div class="lcdq" id="c5-queue"></div>
+      <div class="two" style="margin-top:12px">
+        <div class="fig"><svg viewBox="0 0 420 220" id="c5-wave"></svg></div>
+        <div>
+          <div class="readout" style="margin-top:0"><div><b>지금 보내는 바이트</b><span id="c5-byte"></span></div><div><b>RS</b><span id="c5-rs"></span></div><div><b>이번 4비트</b><span id="c5-nib"></span></div></div>
+          <div class="term" id="c5-term" style="min-height:70px"></div>
+          <div class="note" id="c5-note"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l6">
+    <header><h2>I2C 두 선 · 데이터시트의 제어 바이트</h2><p>첫 탭은 주소 · ACK 가 SDA · SCL 에 흐르는 모습과 스캐너, 둘째 탭은 PCF8591 제어 바이트를 비트로 만들고 한 번 읽을 때 오가는 바이트입니다.</p></header>
+    <div class="subtabs" data-tabs="l6"><button class="on" data-p="l6-i2c">I2C 버스 · 스캐너</button><button data-p="l6-cb">PCF8591 제어 바이트</button></div>
+    <div class="stage pane on" id="l6-i2c">
+      <div class="controls">
+        <label>부를 주소 <select id="i-addr"><option value="72">0x48 (PCF8591)</option><option value="73">0x49 (없음)</option><option value="39">0x27 (백팩 LCD 주소 — 오늘은 없음)</option></select></label>
         <button class="btn" id="i-send">한 번 보내기</button>
         <button class="btn secondary" id="i-scan">스캐너 실행</button>
       </div>
@@ -254,11 +286,7 @@
       <div class="bits" id="i-scanmap" style="margin-top:10px"></div>
       <div class="term" id="i-term" style="min-height:66px"></div>
     </div>
-  </section>
-
-  <section class="lesson" id="l6">
-    <header><h2>데이터시트의 제어 바이트를 비트로 만든다</h2><p>비트를 눌러 PCF8591 제어 바이트를 만들어 보세요. 아래는 한 번 읽을 때 오가는 바이트 — 첫 번째 바이트가 왜 이전 값인지 확인합니다.</p></header>
-    <div class="stage">
+    <div class="stage pane" id="l6-cb">
       <div class="two">
         <div>
           <div class="lab" style="margin-top:0">제어 바이트 (bit 7 → 0)</div>
@@ -443,8 +471,59 @@
   $('#x-scroll').addEventListener('click',()=>{ clearInterval(xT); xScan=-1; let sh=0; xT=setInterval(()=>{ for(let r=0;r<8;r++){ const line=(FH[r]<<8)|FI[r]; X[r]=((line<<sh)>>8)&0xFF; } $('#x-term').innerHTML=`shift = ${sh}:  img[r] = ((FONT_H[r] &lt;&lt; 8 | FONT_I[r]) &lt;&lt; ${sh}) &gt;&gt; 8;\n<span class="c">// 16비트 띠를 왼쪽으로 ${sh}칸 밀고 위 8비트 창만 본다</span>`; xDraw(); sh=(sh+1)%9; },350); });
   xDraw();
 
+
+  /* sub tabs */
+  $$('.subtabs').forEach(t=>{ $$('button',t).forEach(b=>b.addEventListener('click',()=>{ $$('button',t).forEach(x=>x.classList.toggle('on',x===b)); const sec=t.closest('section'); $$('.pane',sec).forEach(p=>p.classList.toggle('on',p.id===b.dataset.p)); })); });
+
+  /* 5 LCD 4-bit */
+  let lq=[], li=0, lnib=0, lT=null, ddram={}, cursorAddr=0;
+  function lBuild(){
+    const txt=$('#c5-text').value||'Hi', col=+$('#c5-col').value, row=+$('#c5-row').value;
+    lq=[{rs:0,b:0x01,t:'clear()'},{rs:0,b:0x80|(0x00),t:'setCursor(0,0)'}];
+    'LCD'.split('').forEach(ch=>lq.push({rs:1,b:ch.charCodeAt(0),t:`'${ch}'`}));
+    const addr=(row?0x40:0)+col; lq.push({rs:0,b:0x80|addr,t:`setCursor(${col},${row})`});
+    txt.slice(0,16-col).split('').forEach(ch=>lq.push({rs:1,b:ch.charCodeAt(0)&0xFF,t:`'${ch}'`}));
+    li=0; lnib=0; ddram={}; cursorAddr=0;
+  }
+  function lApply(it){ if(it.rs===0){ if(it.b===0x01){ ddram={}; cursorAddr=0; } else if(it.b&0x80){ cursorAddr=it.b&0x7F; } } else { ddram[cursorAddr]=String.fromCharCode(it.b); cursorAddr++; } }
+  function lDraw(){
+    const S=$('#c5-lcd'); S.innerHTML='';
+    S.appendChild(el('rect',{x:10,y:6,width:840,height:138,rx:8,fill:'#2E7D32'}));
+    S.appendChild(el('rect',{x:40,y:24,width:780,height:102,rx:4,fill:'#2B3F9E'}));
+    for(let r=0;r<2;r++) for(let c=0;c<16;c++){ const addr=(r?0x40:0)+c, x=52+c*47.5, y=32+r*46; const cur=addr===cursorAddr;
+      S.appendChild(el('rect',{x,y,width:42,height:40,rx:2,fill:cur?'#3D55C4':'#34489F',stroke:cur?'#FFD27A':'none','stroke-width':2}));
+      if(ddram[addr]) S.appendChild(el('text',{x:x+21,y:y+29,'font-size':'26','font-family':'monospace',fill:'#E8F0FF','text-anchor':'middle'},ddram[addr]));
+      S.appendChild(el('text',{x:x+2,y:y+10,'font-size':'7',fill:'#8FA2E6'},addr.toString(16).toUpperCase().padStart(2,'0'))); }
+    $('#c5-queue').innerHTML=lq.map((it,i)=>`<span class="${it.rs?'':'cmd'} ${i===li?'now':''} ${i<li?'done':''}">${it.t}</span>`).join('');
+    const it=lq[li]; const W=$('#c5-wave'); W.innerHTML='';
+    const lanes=[['RS',30],['E',62],['D7',100],['D6',130],['D5',160],['D4',190]];
+    lanes.forEach(([n,y])=>{ W.appendChild(el('text',{x:6,y:y+4},n)); });
+    if(it){ const hi=it.b>>4, lo=it.b&15; const X0=40, seg=180;
+      const lvl=(v,y)=>v?y-12:y+8;
+      let d=`M${X0},${lvl(it.rs,30)} L${X0+2*seg},${lvl(it.rs,30)}`; W.appendChild(el('path',{d,fill:'none',stroke:'#E0559A','stroke-width':2.5}));
+      for(let k=0;k<2;k++){ const x=X0+k*seg; const show=k<lnib||(k===lnib); const ed=`M${x},70 L${x+60},70 L${x+60},50 L${x+120},50 L${x+120},70 L${x+seg},70`; W.appendChild(el('path',{d:ed,fill:'none',stroke:'#8A4FD8','stroke-width':2.5,opacity:k<=lnib?1:.25}));
+        const nib=k?lo:hi; [3,2,1,0].forEach((bit,j)=>{ const v=(nib>>bit)&1, y=lanes[2+j][1]; W.appendChild(el('path',{d:`M${x},${lvl(v,y)} L${x+seg},${lvl(v,y)}`,fill:'none',stroke:'#2F6FE0','stroke-width':2.5,opacity:k<=lnib?1:.25})); if(k<=lnib) W.appendChild(el('text',{x:x+seg/2-4,y:y+4,fill:'#1B2A41'},v)); });
+        W.appendChild(el('text',{x:x+60,y:14},k?'아래 4비트':'위 4비트')); if(k<=lnib) W.appendChild(el('text',{x:x+118,y:88,fill:'#8A4FD8'},'↓ 읽음')); }
+      $('#c5-byte').textContent=`${it.t} = 0x${it.b.toString(16).toUpperCase().padStart(2,'0')} (${it.b.toString(2).padStart(8,'0')})`;
+      $('#c5-rs').textContent=it.rs?'1 — 글자 데이터':'0 — 명령';
+      $('#c5-nib').textContent=(lnib?'아래 ':'위 ')+((lnib?it.b&15:it.b>>4).toString(2).padStart(4,'0'))+' → D7 D6 D5 D4';
+      $('#c5-term').innerHTML=it.rs?`lcd.print(${it.t});\n<span class="c">// RS=1 · 0x${it.b.toString(16).toUpperCase()} 을 두 번(${(it.b>>4).toString(2).padStart(4,'0')} → ${(it.b&15).toString(2).padStart(4,'0')}) 에 나눠 보냄 — 글자는 커서 자리에 쓰이고 커서는 한 칸 오른쪽</span>`
+        :`lcd.${it.t};\n<span class="c">// RS=0 명령 · ${it.b===1?'0x01 = 화면 지우기 (느림, 약 2ms)':'0x80 | 주소 — 윗줄 00~0F, 아랫줄 40~4F'}</span>`;
+    } else { $('#c5-byte').textContent='—'; $('#c5-rs').textContent='—'; $('#c5-nib').textContent='—'; $('#c5-term').innerHTML='<span class="g">모두 보냈습니다 — [처음으로]</span>'; }
+    const n=$('#c5-note');
+    if(!$('#c5-rw').checked){ n.className='note warn'; n.innerHTML='RW 를 GND 에서 빼면 LCD 가 <b>읽기 상태</b>가 될 수 있고, 그때 D4~D7 에 <b>5V</b> 를 내보내 ESP32 핀이 위험합니다. RW 는 항상 GND.'; }
+    else { n.className='note'; n.innerHTML='한 글자 = 8비트를 <b>4비트 × 2번</b>. 데이터선을 4개만 써서 GPIO 는 RS · E · D4~D7 여섯 개면 됩니다. 아랫줄은 주소가 0x40 부터라 setCursor(c, 1) 은 명령 0x80 | (0x40 + c).'; }
+  }
+  function lStep(){ const it=lq[li]; if(!it) return false; if(lnib===0){ lnib=1; } else { lApply(it); li++; lnib=0; } lDraw(); return true; }
+  $('#c5-next').addEventListener('click',lStep);
+  $('#c5-auto').addEventListener('click',()=>{ clearInterval(lT); lT=setInterval(()=>{ if(!lStep()){ clearInterval(lT); lT=null; } },260); });
+  $('#c5-reset').addEventListener('click',()=>{ clearInterval(lT); lBuild(); lDraw(); });
+  ['#c5-text','#c5-col','#c5-row'].forEach(q=>$(q).addEventListener('change',()=>{ clearInterval(lT); lBuild(); lDraw(); }));
+  $('#c5-rw').addEventListener('change',lDraw);
+  lBuild(); lDraw();
+
   /* 5 i2c */
-  const PRESENT=[0x27,0x48];
+  const PRESENT=[0x48];
   function iDraw(addr, ackPhase){
     const S=$('#i-svg'); S.innerHTML=''; const bitsA=[...Array(7)].map((_,k)=>(addr>>(6-k))&1); const ack=PRESENT.includes(addr);
     const seq=[{t:'S',v:null},...bitsA.map((b,k)=>({t:'A'+(6-k),v:b})),{t:'W',v:0},{t:'ACK',v:ack?0:1},{t:'P',v:null}];
@@ -468,7 +547,7 @@
   $('#i-send').addEventListener('click',()=>{ clearInterval(iT); const a=+$('#i-addr').value; let ph=0; iT=setInterval(()=>{ iDraw(a,ph); ph++; if(ph>10){ clearInterval(iT); const ok=PRESENT.includes(a); $('#i-term').innerHTML=`Wire.beginTransmission(${hex(a)});\nuint8_t err = Wire.endTransmission();  ${ok?'<span class="g">// → 0 (ACK) 장치가 대답</span>':'<span class="r">// → 2 (NACK) 그 주소에 장치 없음</span>'}`; } },220); });
   function iScanGrid(done){ $('#i-scanmap').innerHTML=[...Array(127)].map((_,i)=>i===0?'':`<span class="${i<=done&&PRESENT.includes(i)?'one':''} ${i===done?'hl':''}" title="${hex(i)}" style="width:26px;height:22px;font-size:9px">${i.toString(16).toUpperCase()}</span>`).join(''); }
   $('#i-scan').addEventListener('click',()=>{ clearInterval(iT); let a=1; const found=[]; iT=setInterval(()=>{ iScanGrid(a); if(PRESENT.includes(a)) found.push(hex(a)); $('#i-term').innerHTML=`for (addr = 1; addr &lt; 127; addr++) … 지금 ${hex(a)}\n<span class="g">${found.map(f=>'발견: '+f).join('\n')}</span>`; a+=1; if(a>126){ clearInterval(iT); $('#i-term').innerHTML+=`\n<span class="y">총 ${found.length}개</span>`; } },25); });
-  iDraw(0x27,-1); iScanGrid(0); $('#i-term').innerHTML='<span class="c">// [한 번 보내기] 또는 [스캐너 실행]</span>';
+  iDraw(0x48,-1); iScanGrid(0); $('#i-term').innerHTML='<span class="c">// [한 번 보내기] 또는 [스캐너 실행]</span>';
 
   /* 6 pcf control byte */
   let cByte=0x40, pcfPrev=0, pcfLastCh=-1;
