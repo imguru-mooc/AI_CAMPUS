@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCU Day 4 개념 워크시트 — FreeRTOS · LittleFS · Wi-Fi · 디버깅</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:900px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.primary{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700;padding:9px 18px;font-size:14px}
+  button.submit{background:#3a2e12;border-color:var(--amber);color:var(--amber);font-weight:700;padding:9px 18px;font-size:14px}
+  button:disabled{opacity:.45;cursor:default}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  input[type=text]{background:#0a0f1c;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:14px}
+  .tabs{display:flex;flex-wrap:wrap;gap:6px}
+  .tabs button .s{font-family:var(--mono);font-size:11px;color:var(--dim);margin-left:6px}
+  .tabs button.graded .s{color:var(--green)}
+  .head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .head .t{color:var(--amber);font-size:17px}
+  .head .a{font-size:13px;color:var(--teal);font-family:var(--mono)}
+  .q{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#0e1628}
+  .q.unans{border-color:#5a3a1a}
+  .q .n{font-family:var(--mono);color:var(--dim);font-size:12px}
+  .q .p{margin:4px 0 10px;font-size:15px}
+  .q .p code,.opt code,.fb code,td code{font-family:var(--mono);color:var(--blue);background:#0a0f1c;padding:1px 5px;border-radius:4px}
+  .q pre.qc{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:6px;padding:10px 12px;margin:4px 0 12px;font-size:13.5px;line-height:1.5;white-space:pre;overflow-x:auto;color:#dbe4f3}
+  .q pre{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin:6px 0 10px;font-size:14px;white-space:pre;overflow-x:auto}
+  .opts{display:grid;gap:6px}
+  .opt{text-align:left;padding:8px 12px;font-size:14px;font-family:inherit}
+  .opt.sel{border-color:var(--amber);background:#1f1a0c}
+  .opt.ok{border-color:var(--green);color:var(--green);background:#0d2216}
+  .opt.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .opt:disabled{cursor:default;opacity:.9}
+  .fb{margin-top:8px;font-size:13px;color:var(--dim);border-left:3px solid var(--line);padding-left:10px}
+  .fb.ok{border-left-color:var(--green)}.fb.bad{border-left-color:var(--red)}
+  .fb .anim{color:var(--teal);font-family:var(--mono);font-size:12px;display:block;margin-top:3px}
+  .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  .code{font-family:var(--mono);font-size:20px;color:var(--amber);letter-spacing:1px}
+  .score{font-family:var(--mono);color:var(--green);font-size:16px}
+  .hint{color:var(--dim);font-size:13px}
+  details{color:var(--dim);font-size:13px}
+  details summary{cursor:pointer;color:var(--dim)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  /* dialog */
+  dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:0;max-width:820px;width:92vw;max-height:88vh}
+  dialog::backdrop{background:#000a}
+  .dg{padding:18px 20px}
+  .dg h3{color:var(--amber);margin:0 0 4px;font-size:20px}
+  .dg .meta{color:var(--dim);font-size:13px;margin-bottom:12px;font-family:var(--mono)}
+  .dg .sec{margin:14px 0 6px;color:var(--teal);font-weight:700;font-size:14px}
+  .dg table{width:100%;border-collapse:collapse;font-size:13px}
+  .dg th{text-align:left;color:var(--dim);font-weight:600;padding:5px 8px;border-bottom:1px solid var(--line);font-size:12px}
+  .dg td{padding:5px 8px;border-bottom:1px solid #16203a;vertical-align:top}
+  .dg td.r{font-family:var(--mono)}
+  .dg .ok{color:var(--green)}.dg .bad{color:var(--red)}.dg .none{color:var(--dim)}
+  .dg .sum{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0;font-family:var(--mono)}
+  .dgbar{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:10px 20px;display:flex;gap:8px;justify-content:flex-end;align-items:center}
+  .toast{color:var(--green);font-size:13px;margin-right:auto}
+  .body{overflow:auto;max-height:calc(88vh - 60px)}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>MCU Day 4 개념 워크시트</h1>
+  <p class="sub">FreeRTOS · LittleFS · Wi-Fi · 디버깅 · 8교시 × 10문항. 🎬 표시는 index.html 의 애니메이션 번호입니다. 답을 고른 뒤 아래 <b style="color:var(--teal)">채점하기</b>를 누르면 정오·해설과 결과 코드가 나타납니다. 채점 전에는 답을 바꿀 수 있고, 채점 후에는 잠깁니다. 모든 교시를 마치면 <b style="color:var(--amber)">제출</b>로 오답 정리를 열고, <b>캡처</b>로 복사해 노션에 붙여 넣으세요.</p>
+
+  <div class="panel">
+    <div class="row"><label style="color:var(--dim);font-size:13px">이름 <input type="text" id="name" placeholder="홍길동"></label><span class="hint">이름은 결과 코드 계산에만 쓰이며 저장되지 않습니다.</span></div>
+  </div>
+  <div class="panel"><h2>교시</h2><div class="tabs" id="tabs"></div></div>
+  <div class="panel" id="sheet"></div>
+  <div class="panel">
+    <div class="actions">
+      <button class="primary" id="gradeBtn">채점하기</button>
+      <span class="code" id="rcode">—</span><span class="score" id="rscore"></span><span class="hint" id="rhint"></span>
+      <button class="submit" id="submitBtn" style="margin-left:auto">제출</button>
+    </div>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <div class="body"><div class="dg" id="dgBody"></div></div>
+  <div class="dgbar"><span class="toast" id="toast"></span><button id="captureBtn" class="primary">📋 캡처 (노션용 복사)</button><button id="closeBtn">닫기</button></div>
+</dialog>
+
+<script>
+const $=s=>document.querySelector(s);
+const Q=[{"t": "1교시 · FreeRTOS 태스크", "anim": "D4-1 스케줄러 타임라인", "qs": [{"p": "Arduino-ESP32 에서 setup() 과 loop() 를 실행하는 것은 무엇입니까?", "o": ["loopTask 라는 FreeRTOS 태스크", "main() 함수 안의 while 문", "1ms 마다 도는 하드웨어 타이머 ISR", "Wi-Fi 를 처리하는 시스템 태스크"], "a": 0, "w": "Day 1 2교시 — app_main 이 loopTask 를 만들고 그 안에서 setup · loop 를 부릅니다.", "an": "1교시 설명"}, {"p": "태스크 함수 안의 vTaskDelay(pdMS_TO_TICKS(300)) 의 의미는 무엇입니까?", "o": ["300ms 동안 CPU 를 붙잡고 바쁘게 기다린다", "300 틱이 지나면 ESP32 를 재부팅한다", "300ms 재우고 CPU 를 다른 태스크에 넘긴다", "태스크 우선순위를 300 으로 바꾼다"], "a": 2, "w": "잠든 태스크는 CPU 를 쓰지 않습니다.", "an": "D4-1 · 막대와 idle"}, {"p": "ESP32 에서 xTaskCreatePinnedToCore 의 스택 크기 2048 의 단위는 무엇입니까?", "o": ["워드(4바이트)", "틱(tick)", "킬로바이트", "바이트"], "a": 3, "w": "표준 FreeRTOS 는 워드 단위지만 ESP-IDF 는 바이트 단위입니다.", "an": "1교시 예제 1-1 표"}, {"p": "xTaskCreatePinnedToCore 의 마지막 인자 1 은 무엇을 뜻합니까?", "o": ["태스크 우선순위", "실행할 코어 번호", "스택 크기(KB)", "만들 태스크 개수"], "a": 1, "w": "코어 0 은 Wi-Fi · BT 가 주로 쓰고, 코어 1 은 loopTask 가 쓰는 코어입니다.", "an": "1교시 예제 1-1"}, {"p": "우선순위 2 인 태스크가 vTaskDelay 없이 무한 루프를 돌면 같은 코어의 우선순위 1 태스크는 어떻게 됩니까?", "o": ["실행 기회를 얻지 못하고 굶는다", "두 태스크가 번갈아 실행된다", "낮은 태스크가 오히려 빨라진다", "다른 코어로 자동으로 옮겨 간다"], "a": 0, "w": "스케줄러는 준비된 태스크 중 우선순위가 가장 높은 것을 실행합니다.", "an": "D4-1 · 쉬지 않는 태스크"}, {"p": "uxTaskGetStackHighWaterMark(h) 가 알려 주는 것은 무엇입니까?", "o": ["지금 이 순간의 스택 사용량", "시스템 전체의 힙 여유 크기", "스택이 가장 찼을 때 남은 여유", "태스크가 지금까지 실행된 횟수"], "a": 2, "w": "수백 바이트 이하로 떨어지면 스택을 늘립니다.", "an": "1교시 예제 1-2"}, {"p": "태스크 함수가 끝에 도달해 return 하면 어떻게 됩니까?", "o": ["태스크만 조용히 끝나고 나머지는 계속 돈다", "태스크가 처음부터 다시 실행된다", "loop() 로 돌아가 이어서 실행한다", "오류 · 재부팅 — 루프나 vTaskDelete 로"], "a": 3, "w": "FreeRTOS 태스크는 반환하면 안 됩니다.", "an": "1교시 예제 1-3"}, {"p": "빈칸 1-1 에서 void *param 을 원래 타입으로 바꾸는 코드는 무엇입니까?", "o": ["blink_cfg_t cfg = *(blink_cfg_t)param;", "blink_cfg_t *cfg = (blink_cfg_t *)param;", "blink_cfg_t *cfg = &amp;((void *)param)-&gt;pin;", "int *cfg = (int *)param-&gt;period_ms;"], "a": 1, "w": "void * 는 \"아무 타입의 주소\" — 형변환해 씁니다 (C 과정 Day 3).", "an": "1교시 빈칸 1-1"}, {"p": "태스크 매개변수로 setup() 의 지역 변수 주소를 넘기면 안 되는 이유는 무엇입니까?", "o": ["setup 이 끝나면 사라진 메모리가 되어서", "매개변수 타입이 서로 달라서", "지역 변수는 태스크에 넘기기엔 너무 커서", "FreeRTOS 규칙이 주소 전달을 금지해서"], "a": 0, "w": "전역 또는 static 변수의 주소를 넘깁니다.", "an": "1교시 예제 1-3"}, {"p": "loop() 에 할 일이 없을 때 loopTask 를 영원히 재우는 코드는 무엇입니까?", "o": ["while (1) { /* 빈 루프 */ }", "delay(0);  // 계속 호출", "vTaskDelay(portMAX_DELAY);", "return;  // loop 종료"], "a": 2, "w": "while(1); 은 CPU 를 붙잡아 같은 코어의 다른 태스크를 굶깁니다.", "an": "1교시 빈칸 1-1"}]}, {"t": "2교시 · 큐와 뮤텍스", "anim": "D4-2 큐 · 뮤텍스", "qs": [{"p": "xQueueCreate(8, sizeof(sample_t)) 가 만드는 것은 무엇입니까?", "o": ["sample_t 8바이트짜리 버퍼", "8ms 마다 도는 타이머", "sample_t 를 쓰는 태스크 8개", "sample_t 를 8개 담는 큐"], "a": 3, "w": "칸 수와 한 칸의 크기를 정합니다.", "an": "2교시 예제 2-1"}, {"p": "xQueueSend(q, &amp;s, 0) 에 대한 설명으로 옳은 것은 무엇입니까?", "o": ["s 의 주소(포인터)가 큐에 들어간다", "s 의 내용이 복사되고, 가득 차면 실패", "s 를 보낸 뒤 큐를 모두 비워 버린다", "큐에 숫자 0 을 한 칸 보낸다"], "a": 1, "w": "값 복사라서 보내는 쪽 지역 변수가 사라져도 안전합니다.", "an": "D4-2 · 버림"}, {"p": "xQueueReceive(q, &amp;s, portMAX_DELAY) 는 큐가 비어 있으면 어떻게 합니까?", "o": ["데이터가 올 때까지 잠들어 기다린다", "즉시 0 을 돌려준다", "큐가 비었으니 ESP32 를 재부팅한다", "이전에 받은 값을 다시 돌려준다"], "a": 0, "w": "폴링 대신 기다림 — 태스크 구조의 장점입니다.", "an": "2교시 예제 2-1"}, {"p": "생산자가 100ms, 소비자가 300ms 마다 동작하고 큐가 8칸입니다. 시간이 지나면 어떻게 됩니까?", "o": ["생산과 소비의 균형이 맞는다", "소비자 태스크가 멈춰 버린다", "큐가 가득 차 데이터가 버려진다", "큐가 자동으로 두 배 커진다"], "a": 2, "w": "소비를 빠르게 하거나 생산을 줄이거나 칸을 늘립니다.", "an": "D4-2 · 속도 슬라이더"}, {"p": "두 태스크가 다른 코어에서 Serial.print 를 여러 번 나눠 호출할 때 생기는 문제는 무엇입니까?", "o": ["출력 속도가 느려진다", "아무 문제도 없다", "ESP32 가 재부팅된다", "한 줄의 조각이 섞인다"], "a": 3, "w": "뮤텍스로 한 태스크가 한 줄을 다 쓸 때까지 잠급니다.", "an": "D4-2 · 뮤텍스 끄기"}, {"p": "뮤텍스 사용 순서로 옳은 것은 무엇입니까?", "o": ["Give → 사용 → Take", "Take → 사용 → Give", "Take → 사용 (Give 없음)", "Create → Give → Give"], "a": 1, "w": "잡고(Take), 쓰고, 반드시 돌려준다(Give).", "an": "2교시 예제 2-2"}, {"p": "xSemaphoreTake 이후 중간에 return 해서 Give 를 빠뜨리면 어떻게 됩니까?", "o": ["다른 태스크가 영원히 대기", "잠시 뒤 자동으로 풀린다", "ESP32 가 즉시 재부팅된다", "실행 속도만 조금 느려진다"], "a": 0, "w": "잠금과 해제는 항상 짝으로 — 모든 return 경로를 확인합니다.", "an": "2교시 예제 2-3"}, {"p": "큐를 만들기 전에 그 큐를 쓰는 태스크를 생성하면 어떤 일이 생길 수 있습니까?", "o": ["아무 문제 없이 정상 동작", "큐가 자동으로 생성됨", "NULL 큐에 접근해 재부팅", "태스크가 큐를 기다림"], "a": 2, "w": "\"큐 · 뮤텍스 먼저, 태스크 나중\" 순서.", "an": "2교시 예제 2-3"}, {"p": "태스크 A 는 뮤텍스 M1 → M2 순으로, 태스크 B 는 M2 → M1 순으로 잠급니다. 생길 수 있는 문제는 무엇입니까?", "o": ["경쟁 상태 (race condition)", "스택 부족 (stack overflow)", "큐 가득 참 (queue full)", "교착 상태 (deadlock)"], "a": 3, "w": "잠그는 순서를 모든 태스크에서 같게 합니다.", "an": "2교시 예제 2-3"}, {"p": "Day 1 의 portENTER_CRITICAL 과 뮤텍스의 차이로 옳은 것은 무엇입니까?", "o": ["두 방법은 이름만 다르고 완전히 같다", "critical 은 아주 짧게, 뮤텍스는 길어도", "뮤텍스가 critical 보다 더 짧게 쓴다", "critical 은 태스크에서 쓸 수 없다"], "a": 1, "w": "critical 구간 안에서 printf 같은 긴 일은 금지.", "an": "2교시 예제 2-2 설명"}]}, {"t": "3교시 · ISR 알림 · 소프트웨어 타이머", "anim": "D4-3 ISR 은 짧게", "qs": [{"p": "ISR 안에서 태스크를 깨울 때 쓰는 함수는 무엇입니까?", "o": ["vTaskNotifyGiveFromISR", "xTaskNotifyGive", "vTaskDelayFromISR", "xQueueReceiveFromISR"], "a": 0, "w": "ISR 에서는 이름이 FromISR 로 끝나는 함수만 씁니다.", "an": "3교시 예제 3-1"}, {"p": "ISR 은 알림만 보내고 실제 일은 태스크가 하는 구조를 무엇이라 합니까?", "o": ["폴링 (polling)", "멀티플렉싱 (multiplex)", "지연 처리 (deferred)", "히스테리시스 (hysteresis)"], "a": 2, "w": "ISR 을 짧게 유지해 다른 인터럽트 · 태스크를 막지 않습니다.", "an": "D4-3 · 아래 흐름"}, {"p": "ISR 에서 Serial.printf 와 delay 로 600ms 동안 일하면 어떻게 됩니까?", "o": ["아무 문제 없이 정상 동작", "ISR 이 두 번 실행된다", "ISR 이 더 빨리 끝난다", "그동안 다른 일이 막힌다"], "a": 3, "w": "긴 일은 태스크의 몫입니다.", "an": "D4-3 · 위 흐름"}, {"p": "portYIELD_FROM_ISR(woken) 의 역할은 무엇입니까?", "o": ["ISR 을 한 번 더 실행한다", "더 급한 태스크로 바로 전환", "깨운 태스크를 삭제한다", "소프트웨어 타이머를 시작한다"], "a": 1, "w": "woken 은 vTaskNotifyGiveFromISR 가 채워 줍니다.", "an": "3교시 예제 3-1"}, {"p": "ulTaskNotifyTake(pdTRUE, portMAX_DELAY) 가 돌려주는 값은 무엇입니까?", "o": ["쌓인 알림 개수", "항상 1", "태스크 핸들", "경과 시간(ms)"], "a": 0, "w": "pdFALSE 면 1 만 뺍니다.", "an": "3교시 빈칸 3-1"}, {"p": "attachInterrupt 를 태스크 생성보다 먼저 하면 어떤 위험이 있습니까?", "o": ["특별한 위험은 없다", "버튼이 전혀 눌리지 않는다", "NULL 핸들에 알림 → 재부팅", "같은 태스크가 두 개 생긴다"], "a": 2, "w": "태스크 먼저, 인터럽트 나중.", "an": "3교시 예제 3-1 · 3-3"}, {"p": "xTimerCreate(\"blink\", pdMS_TO_TICKS(500), pdTRUE, NULL, onBlink) 에서 pdTRUE 의 의미는 무엇입니까?", "o": ["한 번만 실행 (원샷)", "높은 우선순위로 실행", "만들자마자 즉시 시작", "주기마다 반복 실행"], "a": 3, "w": "pdFALSE 면 한 번 실행 후 멈춥니다(원샷).", "an": "3교시 예제 3-2"}, {"p": "소프트웨어 타이머 콜백에서 vTaskDelay 를 쓰면 안 되는 이유는 무엇입니까?", "o": ["콜백 안에서는 컴파일 에러가 나서", "다른 소프트웨어 타이머가 밀려서", "ESP32 가 워치독으로 즉시 재부팅돼서", "콜백을 부른 타이머가 스스로 삭제돼서"], "a": 1, "w": "콜백은 짧게 — 긴 일은 태스크로.", "an": "3교시 예제 3-3"}, {"p": "Day 3 하드웨어 타이머와 비교한 소프트웨어 타이머의 특징은 무엇입니까?", "o": ["ms 단위, 콜백이 태스크에서 불림", "µs 단위의 높은 정밀도를 가진다", "ISR 안에서 직접 실행된다", "한 개만 만들 수 있다"], "a": 0, "w": "µs 정밀도가 필요하면 하드웨어 타이머, 깜빡임 같은 주기 작업은 소프트웨어 타이머.", "an": "3교시 예제 3-2 표"}, {"p": "ISR 에 IRAM_ATTR 를 붙이는 이유는 무엇입니까?", "o": ["ISR 실행 속도만 높이려고", "인터럽트 우선순위를 높이려고", "Flash 작업 중에도 실행되게", "Arduino 인터럽트 규칙이라서"], "a": 2, "w": "Day 1 6교시 규칙이 그대로입니다.", "an": "3교시 예제 3-3"}]}, {"t": "4교시 · LittleFS", "anim": "D4-4 파일 쓰기", "qs": [{"p": "LittleFS 에 저장한 파일의 특징은 무엇입니까?", "o": ["전원이 꺼지면 사라진다", "USB 로 연결된 PC 에 저장된다", "외부 SD 카드에 저장된다", "전원이 꺼져도 Flash 에 남는다"], "a": 3, "w": "4MB Flash 중 약 1.5MB 파일 영역을 씁니다.", "an": "4교시 설명"}, {"p": "LittleFS.begin(true) 의 true 의 의미는 무엇입니까?", "o": ["읽기 전용으로 연다", "처음이면 포맷한다", "디버그 메시지를 출력한다", "파일을 암호화해 저장한다"], "a": 1, "w": "처음 실행 때 몇 초 걸릴 수 있습니다.", "an": "4교시 예제 4-1"}, {"p": "로그 파일을 열 때 FILE_WRITE 를 쓰면 어떻게 됩니까?", "o": ["기존 내용이 지워진다", "파일 끝에 이어서 쓴다", "읽기 전용으로만 열린다", "오류가 나서 열리지 않는다"], "a": 0, "w": "로그는 FILE_APPEND(\"a\").", "an": "D4-4 · FILE_WRITE"}, {"p": "f.printf(...) 후 close() 없이 전원이 꺼지면 어떤 일이 생길 수 있습니까?", "o": ["모두 안전하게 저장된다", "파일 시스템 전체가 지워진다", "마지막 부분이 유실될 수 있다", "재부팅 후 자동으로 복구된다"], "a": 2, "w": "중요한 기록은 쓰고 바로 close.", "an": "D4-4 · 전원 끊기"}, {"p": "Partition Scheme 을 \"No FS\" 가 들어간 방식으로 고르면 어떻게 됩니까?", "o": ["파일 접근 속도가 빨라진다", "아무 문제 없이 동작한다", "파일 영역이 두 배로 커진다", "LittleFS 마운트에 실패한다"], "a": 3, "w": "Default 4MB with spiffs 를 씁니다(LittleFS 가 이 영역 사용).", "an": "준비 · 파티션 확인"}, {"p": "새 스케치를 업로드하면 LittleFS 의 파일은 어떻게 됩니까?", "o": ["모두 지워진다", "그대로 남는다", "절반만 남는다", "암호화된다"], "a": 1, "w": "지우려면 LittleFS.remove 또는 format.", "an": "4교시 예제 4-3"}, {"p": "100ms 마다 한 줄씩 영원히 기록하는 설계의 문제는 무엇입니까?", "o": ["Flash 쓰기 수명 · 용량 소진", "아무 문제가 없는 좋은 설계다", "RAM 이 부족해져 멈춰 버린다", "Wi-Fi 연결이 자꾸 끊어진다"], "a": 0, "w": "모아서 쓰거나 주기를 늘리고, 오래된 로그를 정리합니다.", "an": "D4-4 · 블록 쓰기"}, {"p": "파일 경로로 옳은 것은 무엇입니까?", "o": ["log.csv", "C:\\log.csv", "\"/log.csv\"", "~/log.csv"], "a": 2, "w": "LittleFS 경로는 / 로 시작합니다.", "an": "4교시 예제 4-3"}, {"p": "빈칸 4-1 에서 파일 끝까지 한 바이트씩 읽는 반복 조건은 무엇입니까?", "o": ["f.size() &gt; 0", "f.name() != NULL", "f.close() == 0", "f.available()"], "a": 3, "w": "남은 바이트가 있는 동안 read().", "an": "4교시 빈칸 4-1"}, {"p": "LittleFS.open 이 실패했을 때 올바른 처리는 무엇입니까?", "o": ["그대로 f.printf 로 쓴다", "if (!f) 로 검사하고 처리", "ESP32 를 재부팅한다", "실패를 무시하고 넘어간다"], "a": 1, "w": "C 의 fopen 이 NULL 을 돌려주는 것과 같습니다.", "an": "4교시 예제 4-2"}]}, {"t": "5교시 · Wi-Fi · 시간 · AP", "anim": "D4-5 Wi-Fi 상태", "qs": [{"p": "ESP-32U 모듈로 Wi-Fi 실습을 할 때 반드시 필요한 것은 무엇입니까?", "o": ["U.FL 외부 안테나", "5V 외부 전원 어댑터", "로그용 microSD 카드", "1602 LCD 화면 모듈"], "a": 0, "w": "U 모델은 기판 안테나가 없습니다. USB 를 뽑고 수직으로 딸깍.", "an": "5교시 안테나 그림"}, {"p": "ESP32 가 연결할 수 있는 Wi-Fi 대역은 무엇입니까?", "o": ["5GHz 만", "2.4GHz 만", "2.4 · 5GHz 둘 다", "6GHz 만"], "a": 1, "w": "5GHz 공유기 이름은 스캔에도 보이지 않습니다.", "an": "D4-5 · 2.4GHz 토글"}, {"p": "Wi-Fi 연결 대기 while 문에 타임아웃이 없을 때의 문제는 무엇입니까?", "o": ["오히려 더 빨리 연결된다", "곧바로 재부팅된다", "실패하면 영원히 기다린다", "아무 문제가 없다"], "a": 2, "w": "일정 시간 뒤 false 를 돌려 원인을 출력하거나 AP 모드로 전환합니다.", "an": "D4-5 · 타임아웃 끄기"}, {"p": "RSSI 값 중 신호가 가장 좋은 것은 무엇입니까?", "o": ["-85 dBm", "-72 dBm", "-95 dBm", "-48 dBm"], "a": 3, "w": "0 에 가까울수록 좋습니다. -80 이하는 안테나 · 거리 확인.", "an": "5교시 예제 5-1 표"}, {"p": "WiFi.setAutoReconnect(true) 의 역할은 무엇입니까?", "o": ["IP 주소를 고정한다", "끊기면 자동으로 다시 연결", "전력 절약 모드를 켠다", "비밀번호를 Flash 에 저장"], "a": 1, "w": "상태가 바뀔 때만 로그를 남기면 끊김을 추적할 수 있습니다.", "an": "5교시 예제 5-1"}, {"p": "configTime(9 * 3600, 0, \"pool.ntp.org\") 의 9 * 3600 은 무엇입니까?", "o": ["UTC+9 초 단위 오프셋", "연결 타임아웃(초)", "NTP 서버 포트 번호", "시간 재시도 횟수"], "a": 0, "w": "두 번째 인자는 서머타임 오프셋(한국 0).", "an": "5교시 예제 5-2"}, {"p": "NTP 시간 받기가 AP 모드에서 동작하지 않는 이유는 무엇입니까?", "o": ["AP 모드는 2.4GHz 가 아니라서", "NTP 는 5GHz 에서만 되어서", "AP 모드는 인터넷에 닿지 않아서", "ESP32 에 내부 시계가 없어서"], "a": 2, "w": "NTP 는 인터넷이 필요합니다(핫스팟은 가능).", "an": "5교시 예제 5-2"}, {"p": "AP 모드에서 ESP32 의 기본 주소는 무엇입니까?", "o": ["192.168.0.1", "192.168.4.1", "10.0.0.1", "127.0.0.1"], "a": 1, "w": "스마트폰을 ESP32-XXXX 에 연결한 뒤 이 주소로 접속합니다.", "an": "5교시 예제 5-3"}, {"p": "WiFi.softAP(\"ESP32-A\", \"1234\") 로 AP 가 만들어지지 않았습니다. 이유는 무엇입니까?", "o": ["AP 이름이 너무 짧아서", "안테나가 빠져 있어서", "2.4GHz 대역이라서", "비밀번호가 8자 미만"], "a": 3, "w": "WPA2 비밀번호는 8자 이상.", "an": "5교시 예제 5-4"}, {"p": "Wi-Fi 를 켠 상태에서 아날로그 센서를 GPIO25 에 연결했더니 값을 읽을 수 없습니다. 이유는 무엇입니까?", "o": ["GPIO25 는 출력 전용 핀이라서", "ADC2 라 Wi-Fi 와 함께 못 써서", "아날로그 센서는 5V 가 필요해서", "외부 안테나 신호가 간섭해서"], "a": 1, "w": "아날로그는 ADC1(32~39). Day 2 1교시.", "an": "5교시 예제 5-4"}]}, {"t": "6교시 · 웹 서버", "anim": "D4-6 HTTP 요청 · 응답", "qs": [{"p": "server.on(\"/api\", handleApi) 가 하는 일은 무엇입니까?", "o": ["/api 요청이 오면 부를 함수로 등록", "handleApi 를 지금 바로 실행한다", "LittleFS 에 /api 파일을 만든다", "/api 라는 Wi-Fi 에 연결한다"], "a": 0, "w": "경로 → 함수 포인터 표를 만드는 것입니다(Day 2 센서 표와 같은 설계).", "an": "D4-6 · 경로 표"}, {"p": "loop() 에서 server.handleClient() 를 부르는 이유는 무엇입니까?", "o": ["서버를 처음 시작하려고", "LED 상태를 갱신하려고", "들어온 요청을 처리하려고", "Wi-Fi 를 다시 연결하려고"], "a": 2, "w": "loop 에 긴 delay 가 있으면 응답이 그만큼 늦어집니다.", "an": "6교시 예제 6-1 · 6-3"}, {"p": "스마트폰에서 ESP32 웹 페이지가 열리지 않습니다. 가장 먼저 확인할 것은 무엇입니까?", "o": ["LED 가 무슨 색으로 켜졌는지", "태스크 스택 크기가 충분한지", "시리얼 모니터 속도가 맞는지", "스마트폰과 같은 Wi-Fi 망인지"], "a": 3, "w": "시리얼에 찍힌 IP 를 같은 망에서 입력합니다.", "an": "6교시 예제 6-3"}, {"p": "/led?pin=25&amp;on=1 에서 server.arg(\"pin\") 이 돌려주는 값은 무엇입니까?", "o": ["25 (int 정수)", "\"25\" (String 문자열)", "\"on\" (다음 인자 이름)", "1 (on 의 값)"], "a": 1, "w": "쿼리 인자는 문자열입니다.", "an": "6교시 빈칸 6-1"}, {"p": "handleLed 에서 pin 값을 허용 목록(25, 26)으로 검사하는 이유는 무엇입니까?", "o": ["URL 로 아무 핀이나 조작 못하게", "요청 처리 속도를 높이려고", "LED 에 과전류가 흐르지 않게", "WebServer 라이브러리 규칙이라서"], "a": 0, "w": "외부 입력은 항상 검사 — 403 Forbidden.", "an": "D4-6 · /led?pin=2"}, {"p": "요청에 필요한 인자가 빠졌을 때 돌려주기에 알맞은 HTTP 상태 코드는 무엇입니까?", "o": ["200", "400", "404", "500"], "a": 1, "w": "200 성공 · 400 잘못된 요청 · 403 금지 · 404 없음.", "an": "6교시 빈칸 6-1"}, {"p": "/api 가 {\"pot\":2041} 같은 JSON 을 돌려주는 이유는 무엇입니까?", "o": ["사람이 눈으로 읽기 가장 좋아서", "HTML 보다 전송 크기가 커서", "fetch 가 값만 쉽게 꺼내 쓰도록", "WebServer 규칙이라서"], "a": 2, "w": "페이지는 한 번만 받고, 값은 1초마다 /api 로 갱신합니다.", "an": "6교시 예제 6-2"}, {"p": "R\"HTML( … )HTML\" 문법의 장점은 무엇입니까?", "o": ["HTML 을 자동으로 압축해 준다", "페이지 전송 속도를 높여 준다", "HTML 내용을 암호화해 보낸다", "HTML 을 이스케이프 없이 쓴다"], "a": 3, "w": "C++11 원시 문자열 리터럴입니다.", "an": "6교시 예제 6-2"}, {"p": "웹 페이지의 한국어가 깨져 보입니다. 빠진 것은 무엇입니까?", "o": ["&lt;title&gt;ESP32&lt;/title&gt; 태그", "&lt;meta charset=\"utf-8\"&gt;", "server.begin() 호출", "Content-Length 헤더"], "a": 1, "w": "Arduino 소스는 UTF-8 이므로 브라우저에 알려 줍니다.", "an": "6교시 예제 6-3"}, {"p": "핸들러 안에서 DHT 를 여러 번 읽는 등 오래 걸리는 일을 할 때의 문제와 개선으로 옳은 것은 무엇입니까?", "o": ["다른 요청이 기다린다 — 미리 읽기", "아무 문제가 없다 — 그대로 둔다", "ESP32 가 워치독으로 재부팅된다", "브라우저에 항상 404 가 응답된다"], "a": 0, "w": "8교시 구조: taskSensor 가 읽고 handleApi 는 latest 를 복사해 전송.", "an": "6교시 예제 6-3"}]}, {"t": "7교시 · 디버깅", "anim": "D4-7 크래시 로그 해독", "qs": [{"p": "로그 매크로에서 __FILE__ 과 __LINE__ 이 채워 주는 것은 무엇입니까?", "o": ["현재 시각과 날짜 정보", "실행 중인 태스크 이름", "소스 파일 이름과 줄", "남은 힙 크기(바이트)"], "a": 2, "w": "전처리기가 컴파일 때 채웁니다 (C 과정 Day 1).", "an": "7교시 예제 7-1"}, {"p": "매크로를 do { … } while (0) 으로 감싸는 이유는 무엇입니까?", "o": ["안의 코드를 한 번 반복하려고", "디버그 빌드에서만 쓰려고", "매크로 실행 속도를 높이려고", "if · else 안에서도 안전하게"], "a": 3, "w": "세미콜론과 if-else 가 꼬이지 않습니다.", "an": "7교시 예제 7-1"}, {"p": "Guru Meditation Error 의 StoreProhibited 와 EXCVADDR: 0x00000000 이 뜻하는 것은 무엇입니까?", "o": ["태스크 스택이 부족하다", "NULL 포인터에 값을 썼다", "전원 전압이 떨어졌다", "Wi-Fi 연결이 끊겼다"], "a": 1, "w": "LoadProhibited 는 읽기. 0 근처 주소면 NULL.", "an": "D4-7 · NULL 포인터"}, {"p": "크래시 메시지의 Backtrace 는 무엇입니까?", "o": ["호출 경로 — 소스 줄로 바꾼다", "크래시 순간의 CPU 레지스터 값", "지난번 재부팅 원인 코드 번호", "크래시 순간의 힙 사용 정보"], "a": 0, "w": "첫 주소가 가장 안쪽 함수입니다.", "an": "7교시 예제 7-2 표"}, {"p": "\"Stack canary watchpoint triggered (A)\" 의 원인과 해결로 옳은 것은 무엇입니까?", "o": ["NULL 포인터 — NULL 검사를 추가", "Wi-Fi 끊김 — 자동 재연결 설정", "태스크 A 스택 부족 — 스택 늘리기", "전원 부족 — 외부 5V 전원 연결"], "a": 2, "w": "괄호 안이 넘친 태스크의 이름입니다.", "an": "D4-7 · 스택 부족"}, {"p": "\"Brownout detector was triggered\" 로 재부팅될 때 의심할 것은 무엇입니까?", "o": ["코드 속 NULL 포인터 접근", "LittleFS 파일 시스템 손상", "태스크 스택 크기 부족", "전원 — 모터 · 케이블 · 허브"], "a": 3, "w": "코드가 아니라 전압 문제입니다.", "an": "D4-7 · 전압 강하"}, {"p": "esp_reset_reason() 이 ESP_RST_PANIC 을 돌려주었습니다. 의미는 무엇입니까?", "o": ["전원을 처음 켰다", "지난번 크래시로 재부팅됐다", "사용자가 EN 버튼을 눌렀다", "딥슬립에서 깨어났다"], "a": 1, "w": "부팅 때 원인을 로그로 남기면 가끔 생기는 재부팅을 추적할 수 있습니다.", "an": "7교시 예제 7-2"}, {"p": "ESP.getFreeHeap() 값이 시간이 지나며 계속 줄어듭니다. 의심할 것은 무엇입니까?", "o": ["메모리 누수 (free 누락)", "태스크 스택 크기 부족", "Wi-Fi 신호 세기 약화", "전원 전압의 순간 강하"], "a": 0, "w": "최저값을 기록하는 감시 태스크가 도움이 됩니다.", "an": "7교시 예제 7-3"}, {"p": "find_box() 처럼 \"못 찾으면 NULL\" 을 돌려주는 함수를 쓸 때의 원칙은 무엇입니까?", "o": ["결과를 바로 사용한다", "함수를 두 번 호출한다", "받자마자 NULL 검사한다", "static 으로 선언한다"], "a": 2, "w": "fopen · malloc · strchr · LittleFS.open 모두 같은 규칙.", "an": "7교시 빈칸 7-1"}, {"p": "디버깅할 때 가장 좋은 습관은 무엇입니까?", "o": ["여러 곳을 한꺼번에 고친다", "코드를 처음부터 새로 짠다", "될 때까지 재부팅을 반복한다", "하나씩 바꾸고 결과를 기록한다"], "a": 3, "w": "잘 되던 마지막 상태로 돌아가 조금씩 더하는 것이 가장 빠릅니다.", "an": "7교시 예제 7-4"}]}, {"t": "8교시 · IoT 환경 모니터", "anim": "D4-8 시스템 구조", "qs": [{"p": "종합 과제에서 taskSensor 와 taskLogger 사이에 큐를 둔 이유는 무엇입니까?", "o": ["센서 읽기 속도를 늦추려고", "쓰기가 느려도 읽기 주기 유지", "사용 가능한 메모리를 늘리려고", "FreeRTOS 규칙이 요구해서"], "a": 1, "w": "생산자 · 소비자 구조 (2교시).", "an": "D4-8 · 큐"}, {"p": "latest 구조체와 /log.csv 파일 접근을 뮤텍스로 보호하는 이유는 무엇입니까?", "o": ["여러 태스크가 동시에 접근해서", "접근 속도를 빠르게 하려고", "로그 파일을 암호화하려고", "Wi-Fi 연결을 안전하게 보호하려고"], "a": 0, "w": "여러 태스크가 쓰는 것은 한 번에 하나만.", "an": "8교시 구조도"}, {"p": "handleApi 에서 뮤텍스를 잡은 채 latest 를 지역 변수로 복사하고 바로 해제하는 이유는 무엇입니까?", "o": ["뮤텍스 사용 규칙이라서", "지역 변수 복사가 빨라서", "잠금 구간을 짧게 하려고", "JSON 형식이 요구해서"], "a": 2, "w": "뮤텍스는 짧게 잡습니다.", "an": "8교시 정답 8-A"}, {"p": "버튼 처리를 ISR 에서 직접 하지 않고 taskButton 으로 넘긴 이유는 무엇입니까?", "o": ["버튼 반응 속도가 느려서", "Arduino 인터럽트 규칙이라서", "LED 는 ISR 안에서 켜지지 않아서", "파일 · 뮤텍스는 ISR 에서 못 써서"], "a": 3, "w": "지연 처리 (3교시).", "an": "D4-8 · 버튼"}, {"p": "경보 LED 를 30°C 에서 켜고 29°C 미만에서 끄는 이유는 무엇입니까?", "o": ["DHT11 센서 오차를 보정하려고", "30°C 근처에서 깜빡이지 않게", "LED 전력 소모를 줄이려고", "Arduino 규칙이라서"], "a": 1, "w": "Day 2 5교시.", "an": "8교시 정답 8-A"}, {"p": "Wi-Fi 연결에 실패하면 AP 모드로 전환하게 한 설계의 장점은 무엇입니까?", "o": ["공유기 없이도 접속 가능", "웹 통신 속도가 빨라진다", "접속 보안이 더 강해진다", "전력 소모가 크게 줄어든다"], "a": 0, "w": "실패를 처리하는 경로가 있는 시스템이 좋은 시스템입니다.", "an": "8교시 종합 과제"}, {"p": "/log.csv 경로의 handleLog 에서 server.streamFile 을 쓰는 이유는 무엇입니까?", "o": ["다운로드한 뒤 파일을 지우려고", "파일을 암호화해 안전하게 보내려고", "RAM 에 다 올리지 않고 보내려고", "파일을 압축해 빠르게 보내려고"], "a": 2, "w": "큰 문자열을 만들면 힙이 부족해질 수 있습니다.", "an": "8교시 종합 과제"}, {"p": "setup() 에서 큐 · 뮤텍스를 만든 뒤 태스크를 만들고, 마지막에 attachInterrupt 를 하는 순서의 이유는 무엇입니까?", "o": ["Arduino setup 작성 규칙이라서", "태스크 메모리를 아끼려고", "부팅 속도를 조금이라도 높이려고", "준비 전 NULL 접근을 막으려고"], "a": 3, "w": "2교시 · 3교시 함정의 종합.", "an": "8교시 종합 과제"}, {"p": "웹 핸들러가 DHT 를 직접 읽지 않고 latest 를 보내는 구조의 장점은 무엇입니까?", "o": ["DHT11 센서의 응답이 더 빨라진다", "센서를 과하게 안 읽고 빠르다", "로그 파일 크기가 작아진다", "WebServer 규칙이라서"], "a": 1, "w": "읽기는 태스크가 정해진 주기로, 웹은 보내기만.", "an": "6교시 예제 6-3 · 8교시"}, {"p": "4일 과정 전체를 한 문장으로 요약한 것으로 가장 알맞은 것은 무엇입니까?", "o": ["구조체 · 함수로 다루고 태스크로 나눈다", "MCU 는 결국 작은 PC 와 같은 장치다", "AI 가 하드웨어 제어를 모두 대신해 준다", "라이브러리만 잘 고르면 모두 해결된다"], "a": 0, "w": "Day 1 핀 · Day 2 센서 · Day 3 표시 · 통신 · 모터 · Day 4 태스크 · 파일 · 웹.", "an": "8교시 4일 과정 정리"}]}];
+let tab=0;const ans=Q.map(s=>s.qs.map(()=>null));const graded=Q.map(()=>false);
+function hash(s){let h=5381;for(const c of s)h=((h<<5)+h+c.charCodeAt(0))>>>0;return h.toString(16).padStart(8,'0').slice(-4);}
+function codeFor(name,t,score){return `${t}${'ABCDEFGHIJK'[10-score]||'K'}-${hash(`${name.trim()}|${t}|${score}|mcu-day4`)}`;}
+function scoreOf(i){return ans[i].filter((a,k)=>a===Q[i].qs[k].a).length;}
+function strip(h){const d=document.createElement('div');d.innerHTML=h;return d.textContent;}
+function renderTabs(){$('#tabs').innerHTML=Q.map((s,i)=>{const n=ans[i].filter(a=>a!==null).length;return `<button class="${i===tab?'active':''} ${graded[i]?'graded':''}" data-i="${i}">${i+1}교시<span class="s">${graded[i]?scoreOf(i)+'/10':n+'/10'}</span></button>`;}).join('');$('#tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{tab=+b.dataset.i;render();window.scrollTo({top:0});});}
+function render(){renderTabs();const s=Q[tab];const g=graded[tab];
+  $('#sheet').innerHTML=`<div class="head"><span class="t">${s.t}</span><span class="a">🎬 ${s.anim}</span></div>`+s.qs.map((q,k)=>{const a=ans[tab][k];
+    return `<div class="q ${g&&a===null?'unans':''}"><div class="n">문항 ${k+1}</div><div class="p">${q.p}</div>${q.c?`<pre class="qc">${q.c}</pre>`:``}<div class="opts">${q.o.map((o,j)=>{let cls='';if(g){if(j===q.a)cls='ok';else if(j===a)cls='bad';}else if(j===a)cls='sel';return `<button class="opt ${cls}" data-k="${k}" data-j="${j}" ${g?'disabled':''}>${'①②③④'[j]} ${o}</button>`;}).join('')}</div>${g?`<div class="fb ${a===q.a?'ok':'bad'}">${a===null?'미응답. ':(a===q.a?'정답. ':'오답. ')}${q.w}<span class="anim">확인: ${q.an}</span></div>`:''}</div>`;}).join('');
+  $('#sheet').querySelectorAll('.opt').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,j=+b.dataset.j;ans[tab][k]=(ans[tab][k]===j?null:j);render();});
+  $('#gradeBtn').disabled=g;$('#gradeBtn').textContent=g?'채점 완료':'채점하기';
+  const nm=$('#name').value;
+  if(g){const sc=scoreOf(tab);$('#rscore').textContent=`${sc}/10`;if(nm.trim()){$('#rcode').textContent=codeFor(nm,tab+1,sc);$('#rhint').textContent='결과 코드';}else{$('#rcode').textContent='—';$('#rhint').textContent='이름을 입력하면 결과 코드가 나옵니다.';}}
+  else{$('#rcode').textContent='—';$('#rscore').textContent='';const n=ans[tab].filter(a=>a!==null).length;$('#rhint').textContent=`${tab+1}교시: ${n}/10 골랐습니다. 채점하기를 누르면 잠깁니다.`;}
+}
+$('#gradeBtn').onclick=()=>{const n=ans[tab].filter(a=>a!==null).length;if(n<10&&!confirm(`아직 ${10-n}문항을 고르지 않았습니다. 그래도 채점할까요? (미응답은 오답 처리)`))return;graded[tab]=true;render();};
+$('#name').addEventListener('input',render);
+
+/* ── 제출 대화상자 ── */
+let lastHtml='',lastText='';
+function buildReport(){
+  const nm=$('#name').value.trim()||'(이름 없음)';const ds=new Date().toLocaleString('ko-KR');
+  let h=`<h3>MCU Day 4 개념 워크시트 — 오답 정리</h3><div class="meta">${nm} · ${ds}</div>`;
+  let t=`MCU Day 4 개념 워크시트 — 오답 정리\n이름: ${nm}\n일시: ${ds}\n\n`;
+  let any=false;
+  Q.forEach((s,i)=>{if(!graded[i])return;
+    const wrong=s.qs.map((q,k)=>({q,k,a:ans[i][k]})).filter(x=>x.a!==x.q.a);
+    h+=`<div class="sec">${s.t}</div>`;t+=`### ${s.t}\n`;
+    if(!wrong.length){h+=`<div class="ok" style="margin:4px 0 8px">오답 없음</div>`;t+=`오답 없음\n\n`;return;}
+    any=true;
+    h+=`<table><tr><th>#</th><th>문항</th><th>내 답</th><th>정답</th></tr>`;t+=`| # | 문항 | 내 답 | 정답 |\n|---|---|---|---|\n`;
+    wrong.forEach(({q,k,a})=>{const my=a===null?'미응답':'①②③④'[a]+' '+strip(q.o[a]);const co='①②③④'[q.a]+' '+strip(q.o[q.a]);const qt=strip(q.p).replace(/\s+/g,' ').slice(0,70);
+      h+=`<tr><td class="r">${k+1}</td><td>${qt}</td><td class="bad">${my}</td><td class="ok">${co}</td></tr>`;
+      t+=`| ${k+1} | ${qt.replace(/\|/g,'/')} | ${my.replace(/\|/g,'/')} | ${co.replace(/\|/g,'/')} |\n`;});
+    h+=`</table>`;t+=`\n`;});
+  const notGraded=Q.map((s,i)=>graded[i]?null:i+1).filter(x=>x);
+  if(notGraded.length){h+=`<div class="meta" style="margin-top:10px">미채점: ${notGraded.join(', ')}교시</div>`;t+=`미채점: ${notGraded.join(', ')}교시\n`;}
+  lastHtml=h;lastText=t;return h;
+}
+$('#submitBtn').onclick=()=>{if(!graded.some(x=>x)){alert('먼저 한 교시 이상 채점하기를 눌러 주세요.');return;}$('#dgBody').innerHTML=buildReport();$('#toast').textContent='';$('#dlg').showModal();};
+$('#closeBtn').onclick=()=>$('#dlg').close();
+function copyRich(html,text){
+  // 1) copy 이벤트에 두 형식을 직접 실어 보내기 (사용자 클릭 안에서 동기 실행 — file:// 에서도 동작)
+  let done=false;
+  const onCopy=e=>{e.clipboardData.setData('text/html',html);e.clipboardData.setData('text/plain',text);e.preventDefault();done=true;};
+  document.addEventListener('copy',onCopy);
+  try{
+    const body=$('#dgBody');const sel=window.getSelection();const range=document.createRange();range.selectNodeContents(body);sel.removeAllRanges();sel.addRange(range);
+    document.execCommand('copy');
+    sel.removeAllRanges();
+  }catch(e){}
+  document.removeEventListener('copy',onCopy);
+  return done;
+}
+$('#captureBtn').onclick=async()=>{
+  const htmlDoc=`<meta charset="utf-8">`+lastHtml.replace(/ class="[^"]*"/g,'').replace(/<table>/g,'<table border="1" style="border-collapse:collapse">');
+  if(copyRich(htmlDoc,lastText)){$('#toast').textContent='복사됨 — 노션 페이지에서 Ctrl+V 로 붙여 넣으세요.';return;}
+  // 2) 비동기 Clipboard API
+  try{
+    if(navigator.clipboard&&window.ClipboardItem){
+      await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([htmlDoc],{type:'text/html'}),'text/plain':new Blob([lastText],{type:'text/plain'})})]);
+    }else{await navigator.clipboard.writeText(lastText);}
+    $('#toast').textContent='복사됨 — 노션 페이지에서 Ctrl+V 로 붙여 넣으세요.';return;
+  }catch(e){}
+  // 3) 최종: 텍스트 영역 선택 복사
+  try{
+    const ta=document.createElement('textarea');ta.value=lastText;ta.style.position='fixed';ta.style.opacity='0';$('#dlg').appendChild(ta);ta.focus();ta.select();
+    const ok=document.execCommand('copy');ta.remove();
+    $('#toast').textContent=ok?'텍스트(마크다운 표)로 복사됨 — 노션에서 Ctrl+V.':'복사 실패 — 대화상자 내용을 드래그해 Ctrl+C 로 복사하세요.';
+  }catch(e){$('#toast').textContent='복사 실패 — 대화상자 내용을 드래그해 Ctrl+C 로 복사하세요.';}
+};
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCU 4일차 — 눈으로 보는 8가지 (FreeRTOS · 파일 · Wi-Fi · 디버깅)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EEF1F5;
+    --panel:#FFFFFF;
+    --ink:#1B2A41;
+    --ink-soft:#5B6B80;
+    --line:#C9D1DC;
+    --blue:#2457C5;
+    --blue-soft:#DCE6FA;
+    --red:#D6452E;
+    --red-soft:#FBE3DF;
+    --green:#178A67;
+    --green-soft:#DDF2EA;
+    --amber:#C98A12;
+    --amber-soft:#FBF0D3;
+    --mono:'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    --sans:'IBM Plex Sans KR', 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    --t:.35s;
+  }
+  @media (prefers-reduced-motion: reduce){ :root{ --t:0s; } *{ animation:none !important; transition:none !important; } }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; }
+  body{
+    font-family:var(--sans); color:var(--ink); background:var(--paper);
+    background-image:
+      linear-gradient(rgba(27,42,65,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(27,42,65,.045) 1px, transparent 1px);
+    background-size:24px 24px;
+    font-size:16px; line-height:1.55;
+  }
+  code, .mono{ font-family:var(--mono); }
+
+  .app{ display:grid; grid-template-columns:260px 1fr; min-height:100vh; }
+  nav{
+    background:var(--ink); color:#fff; padding:28px 20px;
+    position:sticky; top:0; height:100vh; overflow:auto;
+  }
+  nav h1{ font-size:15px; font-weight:500; margin:0 0 4px; letter-spacing:.01em; color:#AEBBD1; }
+  nav .day{ font-size:26px; font-weight:600; margin:0 0 26px; line-height:1.2; }
+  nav ol{ list-style:none; margin:0; padding:0; counter-reset:lesson; }
+  nav li{ margin:0; }
+  nav button{
+    all:unset; display:grid; grid-template-columns:32px 1fr; gap:10px; align-items:baseline;
+    width:100%; padding:9px 10px; border-radius:6px; cursor:pointer; font-size:14.5px; line-height:1.35;
+    color:#D9E1EC;
+  }
+  nav button::before{ counter-increment:lesson; content:counter(lesson) "교시"; font-family:var(--mono); font-size:11px; color:#8A9BB5; }
+  nav button:hover{ background:rgba(255,255,255,.07); }
+  nav button[aria-current="true"]{ background:var(--blue); color:#fff; }
+  nav button[aria-current="true"]::before{ color:#C9D8F7; }
+  nav button:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
+  nav .hint{ margin-top:28px; font-size:12.5px; color:#8A9BB5; line-height:1.5; }
+  nav .hint kbd{ font-family:var(--mono); background:rgba(255,255,255,.12); padding:1px 5px; border-radius:3px; }
+
+  main{ padding:36px 44px 80px; max-width:1100px; }
+  section.lesson{ display:none; }
+  section.lesson.active{ display:block; }
+  .lesson header{ margin-bottom:22px; }
+  .lesson h2{ font-size:30px; font-weight:600; margin:0 0 6px; line-height:1.25; }
+  .lesson header p{ margin:0; color:var(--ink-soft); font-size:16px; max-width:64ch; }
+
+  .stage{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:26px;
+    box-shadow:0 1px 0 rgba(27,42,65,.06);
+  }
+  .controls{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:20px; }
+  .controls label{ font-size:14px; color:var(--ink-soft); display:flex; align-items:center; gap:6px; }
+  button.btn{
+    font:inherit; font-size:14px; font-weight:500; padding:8px 14px; border-radius:6px; cursor:pointer;
+    border:1px solid var(--ink); background:var(--ink); color:#fff;
+  }
+  button.btn.secondary{ background:#fff; color:var(--ink); border-color:var(--line); }
+  button.btn:disabled{ opacity:.4; cursor:default; }
+  button.btn:focus-visible, select:focus-visible, input:focus-visible{ outline:2px solid var(--blue); outline-offset:2px; }
+  select, input[type=number], input[type=text]{
+    font:inherit; font-size:14px; padding:7px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink);
+  }
+  input[type=number], input[type=text]{ font-family:var(--mono); }
+  .toggle{ display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+  .toggle input{ position:absolute; opacity:0; width:0; height:0; }
+  .toggle .sw{ width:38px; height:22px; border-radius:11px; background:var(--line); position:relative; transition:background var(--t); }
+  .toggle .sw::after{ content:""; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition:transform var(--t); }
+  .toggle input:checked + .sw{ background:var(--blue); }
+  .toggle input:checked + .sw::after{ transform:translateX(16px); }
+  .toggle input:focus-visible + .sw{ outline:2px solid var(--blue); outline-offset:2px; }
+
+  .note{ margin-top:18px; padding:14px 16px; border-left:3px solid var(--blue); background:var(--blue-soft); border-radius:0 6px 6px 0; font-size:14.5px; }
+  .note.warn{ border-color:var(--red); background:var(--red-soft); }
+  .note.ok{ border-color:var(--green); background:var(--green-soft); }
+  .note code{ background:rgba(255,255,255,.7); padding:1px 5px; border-radius:3px; }
+
+  pre.code{
+    font-family:var(--mono); font-size:13.5px; background:#F6F8FB; border:1px solid var(--line); border-radius:6px;
+    padding:14px 16px; margin:0; overflow:auto; line-height:1.55; white-space:pre;
+  }
+  pre.code .dim{ color:#9AA7B8; }
+  pre.code .hi{ background:var(--amber-soft); }
+  pre.code .err{ background:var(--red-soft); color:var(--red); }
+
+    .readout{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-top:16px; }
+  .readout div{ padding:12px 14px; border:1px solid var(--line); border-radius:6px; background:#F6F8FB; }
+  .readout b{ display:block; font-size:12.5px; font-weight:500; color:var(--ink-soft); margin-bottom:2px; }
+  .readout span{ font-family:var(--mono); font-size:17px; font-weight:600; }
+  /* ---------- shared ---------- */
+  .mcell{ display:inline-flex; flex-direction:column; align-items:center; min-width:70px; border:2px solid var(--ink); border-radius:6px; background:#fff; overflow:hidden; transition:all var(--t); }
+  .mcell .a{ font-family:var(--mono); font-size:10px; color:var(--ink-soft); background:#F6F8FB; width:100%; text-align:center; padding:3px 4px; border-bottom:1px solid var(--line); }
+  .mcell .v{ font-family:var(--mono); font-size:20px; font-weight:600; padding:8px 6px; }
+  .mcell .n{ font-family:var(--mono); font-size:11px; color:var(--blue); padding:0 4px 6px; }
+  .mcell.hi{ border-color:var(--blue); background:var(--blue-soft); }
+  .mcell.bad{ border-color:var(--red); background:var(--red-soft); }
+  .mcell.ok{ border-color:var(--green); background:var(--green-soft); }
+  .mcell.dim{ opacity:.35; }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+  .lab{ font-size:12.5px; color:var(--ink-soft); margin:14px 0 6px; }
+  .term{ font-family:var(--mono); font-size:13.5px; background:var(--ink); color:#D9E1EC; padding:12px 16px; border-radius:6px; min-height:60px; white-space:pre-wrap; margin-top:16px; }
+  .term .r{ color:#FF9B8A; } .term .g{ color:#7FE0B8; } .term .y{ color:#FFD27F; } .term .c{ color:#8A9BB5; }
+  svg text{ font-family:var(--mono); }
+  .shake{ animation:shake .4s; } @keyframes shake{ 0%,100%{transform:none} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+  .pop-in{ animation:popin .3s ease-out; } @keyframes popin{ from{ transform:scale(.8); opacity:0; } }
+  .fade-out{ animation:fadeout .4s forwards; } @keyframes fadeout{ to{ opacity:0; transform:translateY(-8px); } }
+  .two{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:24px; }
+  .tabs2{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tabs2 button{ font:inherit; font-size:13px; padding:7px 12px; border-radius:6px; border:1px solid var(--line); background:#fff; cursor:pointer; }
+  .tabs2 button.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .fig svg{ width:100%; height:auto; background:#fff; border:1px solid var(--line); border-radius:6px; display:block; }
+  .fig text{ font-size:11px; fill:var(--ink-soft); }
+  .qslots{ display:flex; gap:6px; margin:10px 0; }
+  .qslots span{ flex:1; height:46px; border:2px solid var(--line); border-radius:6px; display:grid; place-items:center; font-family:var(--mono); font-size:13px; background:#fff; transition:all var(--t); }
+  .qslots span.full{ background:var(--blue-soft); border-color:var(--blue); }
+  .fs{ display:grid; grid-template-columns:repeat(16,1fr); gap:3px; }
+  .fs span{ height:22px; border-radius:3px; background:#EEF1F5; transition:background var(--t); }
+  .fs span.used{ background:#8FB0EA; } .fs span.dirty{ background:var(--amber); } .fs span.hot{ outline:2px solid var(--red); }
+  .crash{ font-family:var(--mono); font-size:12.5px; background:#0E1726; color:#D9E1EC; border-radius:8px; padding:12px 14px; line-height:1.7; }
+  .crash span.ln{ display:block; cursor:pointer; border-radius:3px; padding:0 4px; }
+  .crash span.ln:hover{ background:#22324A; } .crash span.ln.on{ background:#3A2A10; color:#FFD27A; }
+  .flow{ position:relative; }
+  table.rt{ border-collapse:collapse; width:100%; font-family:var(--mono); font-size:12.5px; }
+  table.rt th, table.rt td{ border:1px solid var(--line); padding:6px 8px; text-align:left; }
+  table.rt th{ background:var(--paper); font-family:var(--sans); }
+  table.rt tr.hot td{ background:var(--blue-soft); font-weight:700; }
+  @media (max-width:900px){ .two{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav aria-label="교시 선택">
+    <h1>MCU 실습 · ESP32</h1>
+    <p class="day">4일차<br>눈으로 보는 8가지</p>
+    <ol id="navlist">
+      <li><button data-go="1" aria-current="true">스케줄러 타임라인</button></li>
+      <li><button data-go="2">큐 · 뮤텍스</button></li>
+      <li><button data-go="3">ISR 은 짧게</button></li>
+      <li><button data-go="4">파일 쓰기</button></li>
+      <li><button data-go="5">Wi-Fi 상태</button></li>
+      <li><button data-go="6">HTTP 요청 · 응답</button></li>
+      <li><button data-go="7">크래시 로그 해독</button></li>
+      <li><button data-go="8">시스템 구조</button></li>
+    </ol>
+    <p class="hint">키보드 <kbd>←</kbd> <kbd>→</kbd> 로 교시 이동</p>
+  </nav>
+  <main>
+
+  <section class="lesson active" id="l1">
+    <header><h2>누가 언제 CPU 를 쓰나 — 스케줄러</h2><p>태스크는 일하고(색 막대) vTaskDelay 로 잠듭니다. "쉬지 않는 태스크"를 켜면 같은 코어의 낮은 우선순위 태스크가 굶습니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <button class="btn" id="k-play">재생</button>
+        <label class="toggle"><input type="checkbox" id="k-busy"><span class="sw"></span>red 태스크에 vTaskDelay 없음 (우선순위 2)</label>
+        <label class="toggle"><input type="checkbox" id="k-core0"><span class="sw"></span>green 을 코어 0 으로</label>
+      </div>
+      <div class="fig"><svg viewBox="0 0 860 260" id="k-svg"></svg></div>
+      <div class="note" id="k-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l2">
+    <header><h2>큐는 값을 복사해 건네고, 뮤텍스는 한 번에 한 명</h2><p>생산 · 소비 속도를 바꿔 큐가 차고 비는 모습을 보세요. 아래는 두 태스크가 Serial 에 동시에 쓸 때입니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>생산 주기 <input type="range" id="q-prod" min="50" max="800" value="200" style="width:140px"> <span class="mono" id="q-prodv"></span></label>
+        <label>소비 주기 <input type="range" id="q-cons" min="50" max="800" value="300" style="width:140px"> <span class="mono" id="q-consv"></span></label>
+        <button class="btn" id="q-play">재생</button>
+      </div>
+      <div class="qslots" id="q-slots"></div>
+      <div class="readout"><div><b>큐에 있음</b><span id="q-cnt"></span></div><div><b>보냄</b><span id="q-sent"></span></div><div><b>받음</b><span id="q-recv"></span></div><div><b>버림 (가득)</b><span id="q-drop"></span></div></div>
+      <div class="controls" style="margin-top:14px">
+        <label class="toggle"><input type="checkbox" id="q-mutex" checked><span class="sw"></span>뮤텍스 사용</label>
+        <button class="btn secondary" id="q-print">두 태스크가 동시에 출력</button>
+      </div>
+      <div class="term" id="q-term" style="min-height:90px"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l3">
+    <header><h2>ISR 은 알리기만, 일은 태스크가</h2><p>버튼을 눌러 보세요. 위는 ISR 이 긴 일을 직접 할 때, 아래는 ISR 이 알림만 보내고 태스크가 처리할 때입니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <button class="btn" id="n-press">버튼 누르기</button>
+        <button class="btn secondary" id="n-reset">지우기</button>
+      </div>
+      <div class="fig"><svg viewBox="0 0 860 300" id="n-svg"></svg></div>
+      <div class="term" id="n-term" style="min-height:46px"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l4">
+    <header><h2>open → write → close</h2><p>로그 한 줄을 쓰면 먼저 RAM 버퍼에 쌓이고, close(또는 버퍼가 차면) Flash 블록에 기록됩니다. close 전에 전원이 꺼지면?</p></header>
+    <div class="stage">
+      <div class="controls">
+        <div class="tabs2" id="f-mode"><button class="on" data-m="a">FILE_APPEND</button><button data-m="w">FILE_WRITE</button></div>
+        <button class="btn" id="f-open">open</button>
+        <button class="btn" id="f-write">한 줄 쓰기</button>
+        <button class="btn" id="f-close">close</button>
+        <button class="btn secondary" id="f-power">⚡ 전원 끊기 · 재부팅</button>
+      </div>
+      <div class="two">
+        <div>
+          <div class="lab" style="margin-top:0">RAM 버퍼 (아직 Flash 에 없음)</div>
+          <div class="term" id="f-buf" style="min-height:70px"></div>
+          <div class="lab">Flash — /log.csv</div>
+          <div class="term" id="f-file" style="min-height:110px"></div>
+        </div>
+        <div>
+          <div class="lab" style="margin-top:0">Flash 블록 (파일 영역 일부) — 쓴 횟수에 따라 닳는다</div>
+          <div class="fs" id="f-blocks"></div>
+          <div class="readout"><div><b>파일 크기</b><span id="f-size"></span></div><div><b>총 블록 쓰기</b><span id="f-wear"></span></div></div>
+          <div class="note" id="f-note"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l5">
+    <header><h2>WiFi.status() 가 바뀌는 과정</h2><p>안테나 · 거리 · 비밀번호를 바꾸고 연결해 보세요. 타임아웃이 없으면 실패할 때 영원히 기다립니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label class="toggle"><input type="checkbox" id="w-ant" checked><span class="sw"></span>외부 안테나 연결</label>
+        <label>공유기까지 거리 <input type="range" id="w-dist" min="1" max="30" value="5" style="width:160px"> <span class="mono" id="w-distv"></span></label>
+        <label class="toggle"><input type="checkbox" id="w-pw" checked><span class="sw"></span>비밀번호 맞음</label>
+        <label class="toggle"><input type="checkbox" id="w-24" checked><span class="sw"></span>2.4GHz</label>
+        <label class="toggle"><input type="checkbox" id="w-to" checked><span class="sw"></span>타임아웃 15초</label>
+        <button class="btn" id="w-go">연결</button>
+      </div>
+      <div class="fig"><svg viewBox="0 0 860 220" id="w-svg"></svg></div>
+      <div class="readout"><div><b>RSSI (예상)</b><span id="w-rssi"></span></div><div><b>status()</b><span id="w-st"></span></div><div><b>경과</b><span id="w-t"></span></div></div>
+      <div class="term" id="w-term" style="min-height:66px"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l6">
+    <header><h2>요청 → 경로 표 → 처리 함수 → 응답</h2><p>브라우저 주소를 골라 보내 보세요. server.on() 으로 만든 표에서 경로를 찾아 함수를 부르고, 없으면 onNotFound 가 404 를 보냅니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <div class="tabs2" id="h-url"><button class="on" data-u="/">/</button><button data-u="/api">/api</button><button data-u="/led?pin=25&amp;on=1">/led?pin=25&amp;on=1</button><button data-u="/led?pin=2&amp;on=1">/led?pin=2&amp;on=1</button><button data-u="/led">/led</button><button data-u="/abc">/abc</button></div>
+        <button class="btn" id="h-send">보내기</button>
+      </div>
+      <div class="two">
+        <div>
+          <div class="lab" style="margin-top:0">요청 (브라우저 → ESP32)</div>
+          <div class="term" id="h-req" style="min-height:70px"></div>
+          <div class="lab">경로 표 (server.on)</div>
+          <table class="rt" id="h-rt"></table>
+        </div>
+        <div>
+          <div class="lab" style="margin-top:0">응답 (ESP32 → 브라우저)</div>
+          <div class="term" id="h-res" style="min-height:120px"></div>
+          <div class="fig" style="margin-top:10px"><svg viewBox="0 0 400 110" id="h-led"></svg></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l7">
+    <header><h2>크래시 메시지는 원인을 말한다</h2><p>시나리오를 고르고, 메시지의 각 줄을 눌러 의미를 확인하세요.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <div class="tabs2" id="c-case"><button class="on" data-c="null">NULL 포인터</button><button data-c="stack">스택 부족</button><button data-c="wdt">쉬지 않는 태스크</button><button data-c="brown">전압 강하</button></div>
+      </div>
+      <div class="two">
+        <div class="crash" id="c-log"></div>
+        <div><div class="note" id="c-exp" style="margin-top:0"></div><div class="term" id="c-code" style="min-height:90px"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l8">
+    <header><h2>IoT 환경 모니터 — 데이터가 흐르는 길</h2><p>재생하면 센서 값이 큐를 거쳐 로거로, 파일과 공유 구조체로, 웹 요청에 응답으로 흘러갑니다. 버튼 이벤트도 눌러 보세요.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <button class="btn" id="s-play">재생</button>
+        <button class="btn secondary" id="s-btn">버튼 누름</button>
+        <button class="btn secondary" id="s-web">스마트폰이 /api 요청</button>
+        <label>온도 <input type="range" id="s-temp" min="20" max="35" value="26" step="0.5" style="width:140px"> <span class="mono" id="s-tempv"></span></label>
+      </div>
+      <div class="fig"><svg viewBox="0 0 860 330" id="s-svg"></svg></div>
+      <div class="term" id="s-term" style="min-height:90px"></div>
+    </div>
+  </section>
+
+  </main>
+</div>
+<script>
+(function(){
+  'use strict';
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+  const NS='http://www.w3.org/2000/svg';
+  const el=(n,a,t)=>{ const e=document.createElementNS(NS,n); for(const k in a) e.setAttribute(k,a[k]); if(t!==undefined) e.textContent=t; return e; };
+  let cur=1;
+  function go(n){ cur=Math.max(1,Math.min(8,n)); $$('.lesson').forEach(s=>s.classList.toggle('active',s.id==='l'+cur)); $$('#navlist button').forEach(b=>b.setAttribute('aria-current',b.dataset.go==cur?'true':'false')); location.hash='l'+cur; }
+  $$('#navlist button').forEach(b=>b.addEventListener('click',()=>go(+b.dataset.go)));
+  document.addEventListener('keydown',e=>{ if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName))return; if(e.key==='ArrowRight')go(cur+1); if(e.key==='ArrowLeft')go(cur-1); });
+  if(/^#l[1-8]$/.test(location.hash)) go(+location.hash[2]);
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+
+  /* 1 scheduler */
+  let kT=null, kt=0;
+  function kSim(){
+    const busy=$('#k-busy').checked, g0=$('#k-core0').checked; const T=60; // 60 slots of 50ms = 3s
+    const tasks=[{n:'red',pr:busy?2:1,core:1,run:1,sleep:busy?0:5,col:'#D6452E'},{n:'green',pr:1,core:g0?0:1,run:1,sleep:19,col:'#1E9E5A'},{n:'loopTask',pr:1,core:1,run:1,sleep:39,col:'#2457C5'},{n:'Wi-Fi 등',pr:5,core:0,run:1,sleep:7,col:'#8A4FD8'}];
+    const rows={0:[],1:[]}; const state=tasks.map(()=>({wake:0,left:0,ran:0}));
+    for(let t=0;t<T;t++){
+      for(const c of [0,1]){
+        const ready=tasks.map((k,i)=>({k,i})).filter(o=>o.k.core===c && state[o.i].wake<=t);
+        ready.sort((a,b)=>b.k.pr-a.k.pr || (state[a.i].ran-state[b.i].ran));
+        if(ready.length){ const o=ready[0]; rows[c].push(o.i); state[o.i].ran++; if(o.k.sleep>0) state[o.i].wake=t+1+o.k.sleep; } else rows[c].push(-1);
+      }
+    }
+    return {tasks,rows,T};
+  }
+  function kDraw(upto){
+    const {tasks,rows,T}=kSim(); const S=$('#k-svg'); S.innerHTML=''; const X=t=>110+t*12.2;
+    S.appendChild(el('text',{x:10,y:70},'코어 0')); S.appendChild(el('text',{x:10,y:150},'코어 1'));
+    [0,1].forEach((c,ci)=>{ const y=ci?120:40; S.appendChild(el('rect',{x:110,y,width:T*12.2,height:44,fill:'#F6F8FB',stroke:'#E3E7EE'}));
+      rows[c].forEach((i,t)=>{ if(t>upto) return; if(i<0){ S.appendChild(el('rect',{x:X(t),y:y+18,width:11,height:8,fill:'#E3E7EE'})); } else S.appendChild(el('rect',{x:X(t),y:y+4,width:11,height:36,rx:2,fill:tasks[i].col})); }); });
+    for(let s=0;s<=3;s++){ S.appendChild(el('line',{x1:X(s*20),x2:X(s*20),y1:30,y2:170,stroke:'#C9D1DC','stroke-dasharray':'3 3'})); S.appendChild(el('text',{x:X(s*20)-8,y:186},s+'s')); }
+    tasks.forEach((k,i)=>{ const lx=110+(i%2)*330, ly=200+Math.floor(i/2)*22; S.appendChild(el('rect',{x:lx,y:ly,width:14,height:14,rx:3,fill:k.col})); S.appendChild(el('text',{x:lx+20,y:ly+12},`${k.n} (우선순위 ${k.pr}, 코어 ${k.core})`)); });
+    S.appendChild(el('text',{x:680,y:212},'회색 = idle'));
+    const cnt=i=>rows[tasks[i].core].slice(0,upto+1).filter(x=>x===i).length;
+    const n=$('#k-note'); const busy=$('#k-busy').checked, g0=$('#k-core0').checked;
+    if(busy && !g0){ n.className='note warn'; n.innerHTML=`red 가 쉬지 않고 우선순위도 높아 코어 1 을 독차지 — green · loopTask 가 <b>한 번도 못 돈다</b> (green ${cnt(1)}번, loop ${cnt(2)}번). vTaskDelay 가 없으면 이렇게 됩니다.`; }
+    else if(busy && g0){ n.className='note'; n.innerHTML=`green 은 코어 0 으로 옮겨 살아났지만 loopTask 는 여전히 굶습니다(${cnt(2)}번). 코어를 옮기는 것은 해결책이 아니라 <b>vTaskDelay 가 해결책</b>입니다.`; }
+    else { n.className='note ok'; n.innerHTML='모든 태스크가 일하고 잠들기 때문에 대부분 시간은 idle(회색) — CPU 가 남습니다. 잠든 동안 다른 태스크가 돕니다.'; }
+  }
+  $('#k-play').addEventListener('click',()=>{ clearInterval(kT); kt=0; kT=setInterval(()=>{ kDraw(kt); kt++; if(kt>=60){ clearInterval(kT); } },45); });
+  ['#k-busy','#k-core0'].forEach(s=>$(s).addEventListener('change',()=>kDraw(59)));
+  kDraw(59);
+
+  /* 2 queue + mutex */
+  let Q=[], qSent=0, qRecv=0, qDrop=0, qPT=null, qCT=null, qv=0;
+  function qDraw(){ $('#q-slots').innerHTML=[...Array(8)].map((_,i)=>`<span class="${i<Q.length?'full':''}">${i<Q.length?Q[i]:''}</span>`).join(''); $('#q-cnt').textContent=Q.length+' / 8'; $('#q-sent').textContent=qSent; $('#q-recv').textContent=qRecv; $('#q-drop').textContent=qDrop; $('#q-prodv').textContent=$('#q-prod').value+'ms'; $('#q-consv').textContent=$('#q-cons').value+'ms'; }
+  function qStart(){ clearInterval(qPT); clearInterval(qCT);
+    qPT=setInterval(()=>{ qv=2000+Math.round(Math.random()*400); if(Q.length<8){ Q.push(qv); qSent++; } else qDrop++; qDraw(); }, +$('#q-prod').value);
+    qCT=setInterval(()=>{ if(Q.length){ Q.shift(); qRecv++; qDraw(); } }, +$('#q-cons').value); }
+  $('#q-play').addEventListener('click',()=>{ if(qPT){ clearInterval(qPT); clearInterval(qCT); qPT=null; $('#q-play').textContent='재생'; } else { qStart(); $('#q-play').textContent='정지'; } });
+  ['#q-prod','#q-cons'].forEach(s=>$(s).addEventListener('input',()=>{ qDraw(); if(qPT) qStart(); }));
+  $('#q-print').addEventListener('click',()=>{
+    const a=['[','POT','] ','pot=2041'], b=['[','DHT','] ','temp=24.0'];
+    let out;
+    if($('#q-mutex').checked){ out=`<span class="g">${a.join('')}</span>\n<span class="y">${b.join('')}</span>\n<span class="c">// 뮤텍스: 한 태스크가 네 번의 print 를 모두 마친 뒤에 다른 태스크가 시작</span>`; }
+    else { let s=''; for(let i=0;i<4;i++){ s+=`<span class="g">${esc(a[i])}</span>`; if(i===1) s+=`<span class="y">${esc(b[0]+b[1])}</span>`; if(i===2) s+=`<span class="y">${esc(b[2])}</span>`; } s+=`<span class="y">${esc(b[3])}</span>`; out=s+'\n<span class="r">// 두 코어가 동시에 print — 한 줄이 여러 조각이라 중간에 섞인다</span>'; }
+    $('#q-term').innerHTML=out;
+  });
+  qDraw();
+
+  /* 3 ISR */
+  let nEvents=[], nT0=performance.now(), nRAF=null;
+  function nDraw(now){
+    nRAF=requestAnimationFrame(nDraw); if(cur!==3) return;
+    const t=(now-nT0)/1000; const S=$('#n-svg'); S.innerHTML=''; const W=740, X=s=>100+((s - Math.max(0,t-6))/6)*W;
+    [['ISR 에서 직접 (나쁨)',30],['ISR → 알림 → 태스크 (좋음)',170]].forEach(([l,y])=>{ S.appendChild(el('text',{x:10,y:y-8,'font-weight':'700',fill:'#1B2A41'},l)); });
+    const lanes=[['ISR',40],['다른 일',80],['ISR',180],['worker',220],['다른 일',260]];
+    lanes.forEach(([l,y])=>{ S.appendChild(el('text',{x:10,y:y+18},l)); S.appendChild(el('rect',{x:100,y,width:W,height:28,fill:'#F6F8FB'})); });
+    // background work: periodic small blocks
+    for(let s=Math.floor(Math.max(0,t-6)*5)/5;s<t;s+=0.2){ [80,260].forEach(y=>{ const blocked = y===80 && nEvents.some(e=>s>=e && s<e+0.6); S.appendChild(el('rect',{x:X(s),y:y+4,width:Math.max(2,0.08/6*W),height:20,fill:blocked?'#FBE3DF':'#2457C5'})); }); }
+    nEvents.forEach(e=>{ if(e<t-6) return;
+      S.appendChild(el('rect',{x:X(e),y:44,width:0.6/6*W,height:20,fill:'#D6452E'})); S.appendChild(el('text',{x:X(e)+4,y:58,fill:'#fff'},'Serial·delay'));
+      S.appendChild(el('rect',{x:X(e),y:184,width:4,height:20,fill:'#D6452E'}));
+      if(t>e+0.02){ S.appendChild(el('line',{x1:X(e)+4,y1:204,x2:X(e+0.02),y2:224,stroke:'#C98A12','stroke-width':2})); S.appendChild(el('rect',{x:X(e+0.02),y:224,width:0.5/6*W,height:20,fill:'#1E9E5A'})); S.appendChild(el('text',{x:X(e+0.02)+4,y:238,fill:'#fff'},'처리')); }
+    });
+    S.appendChild(el('text',{x:700,y:296},'← 6초 창'));
+  }
+  nRAF=requestAnimationFrame(nDraw);
+  $('#n-press').addEventListener('click',()=>{ const t=(performance.now()-nT0)/1000; nEvents.push(t); $('#n-term').innerHTML=`위: ISR 이 600ms 동안 printf · delay — 그동안 <span class="r">다른 일이 멈춤</span> (분홍)\n아래: vTaskNotifyGiveFromISR → <span class="g">수 µs 만에 ISR 종료</span>, worker 가 ulTaskNotifyTake 에서 깨어나 처리 — 다른 일은 계속`; });
+  $('#n-reset').addEventListener('click',()=>{ nEvents=[]; nT0=performance.now(); $('#n-term').innerHTML=''; });
+
+  /* 4 file */
+  let fOpen=false, fBuf=[], fFile=['ms,temp,pot'], fBlocks=Array(48).fill(0), fWear=0, fLine=0;
+  function fDraw(msg,cls){ $('#f-buf').innerHTML=fBuf.length?fBuf.map(l=>`<span class="y">${l}</span>`).join('\n'):'<span class="c">// 비어 있음</span>'; $('#f-file').innerHTML=fFile.map(l=>`<span class="g">${l}</span>`).join('\n');
+    $('#f-blocks').innerHTML=fBlocks.map((w,i)=>`<span class="${w>0?(w>3?'dirty':'used'):''}" title="${w}회"></span>`).join('');
+    $('#f-size').textContent=fFile.join('\n').length+1+' B'; $('#f-wear').textContent=fWear+'회';
+    if(msg){ const n=$('#f-note'); n.className='note '+(cls||''); n.innerHTML=msg; } }
+  function fFlush(){ if(!fBuf.length) return; fFile=fFile.concat(fBuf); fBuf=[]; const i=Math.floor(Math.random()*48); fBlocks[i]++; fBlocks[(i+7)%48]++; fWear+=2; }
+  $('#f-open').addEventListener('click',()=>{ const m=$('#f-mode .on').dataset.m; if(fOpen) return; fOpen=true; if(m==='w'){ fFile=[]; fDraw('<b>FILE_WRITE</b> 로 열자마자 기존 내용이 <b>사라졌습니다</b>. 로그는 FILE_APPEND.','warn'); } else fDraw('LittleFS.open("/log.csv", FILE_APPEND) — 파일 끝에 이어 쓸 준비','ok'); });
+  $('#f-write').addEventListener('click',()=>{ if(!fOpen){ fDraw('열지 않은 파일에는 쓸 수 없습니다 — open 이 실패하면 f 는 false. <b>if (!f) return;</b>','warn'); return; } fLine++; fBuf.push(`${1000+fLine*5000},${(24+Math.random()).toFixed(1)},${2000+Math.floor(Math.random()*100)}`); if(fBuf.length>=4){ fFlush(); fDraw('버퍼가 차서 Flash 에 기록됨 — 블록 쓰기 횟수 증가',''); } else fDraw('f.printf(...) — 아직 RAM 버퍼에만 있습니다',''); });
+  $('#f-close').addEventListener('click',()=>{ if(!fOpen) return; fFlush(); fOpen=false; fDraw('f.close() — 남은 버퍼가 Flash 에 기록되고 파일이 닫혔습니다. 이제 전원이 꺼져도 안전.','ok'); });
+  $('#f-power').addEventListener('click',()=>{ const lost=fBuf.length; fBuf=[]; fOpen=false; fDraw(lost?`전원이 꺼져 <b>${lost}줄이 사라졌습니다</b> — close 전에 버퍼에만 있었기 때문. 중요한 기록은 쓰고 바로 close.`:'재부팅 — Flash 의 파일은 그대로 남아 있습니다. (새 스케치를 업로드해도 남음)', lost?'warn':'ok'); });
+  $$('#f-mode button').forEach(b=>b.addEventListener('click',()=>{ $$('#f-mode button').forEach(x=>x.classList.toggle('on',x===b)); }));
+  fDraw('open → 한 줄 쓰기 몇 번 → close 또는 ⚡ 를 눌러 비교해 보세요.');
+
+  /* 5 wifi */
+  let wT=null;
+  function wRssi(){ const d=+$('#w-dist').value, ant=$('#w-ant').checked; return Math.round(-35 - 20*Math.log10(d) - (ant?0:28)); }
+  function wScene(st){ const S=$('#w-svg'); S.innerHTML=''; const d=+$('#w-dist').value, r=wRssi();
+    S.appendChild(el('rect',{x:40,y:80,width:90,height:60,rx:6,fill:'#1B2A41'})); S.appendChild(el('text',{x:58,y:115,fill:'#fff'},'ESP32'));
+    if($('#w-ant').checked){ S.appendChild(el('rect',{x:120,y:40,width:8,height:44,rx:4,fill:'#222'})); }
+    const ax=150+d*20; S.appendChild(el('rect',{x:ax,y:80,width:90,height:50,rx:6,fill:'#546E7A'})); S.appendChild(el('text',{x:ax+10,y:110,fill:'#fff'},'공유기'));
+    const q=Math.max(0,Math.min(1,(r+90)/50)); for(let i=1;i<=4;i++){ S.appendChild(el('path',{d:`M${ax-10},${105-i*12} a${i*12},${i*12} 0 0 0 0,${i*24}`,fill:'none',stroke:q*4>=i?'#1E9E5A':'#E3E7EE','stroke-width':3})); }
+    S.appendChild(el('text',{x:40,y:180},`RSSI ${r} dBm — ${r>-60?'좋음':r>-75?'보통':'나쁨'}`)); S.appendChild(el('text',{x:40,y:200},st||''));
+    $('#w-distv').textContent=d+' m'; $('#w-rssi').textContent=r+' dBm'; }
+  function wGo(){ clearInterval(wT); const r=wRssi(), pw=$('#w-pw').checked, g24=$('#w-24').checked, to=$('#w-to').checked; let t=0; const lines=['WiFi.mode(WIFI_STA);','WiFi.begin(SSID, PASS);'];
+    const ok = pw && g24 && r>-82; const need = 1.5 + Math.max(0,(-r-50))/10;
+    wT=setInterval(()=>{ t+=0.25; let st='WL_DISCONNECTED (6)';
+      if(ok && t>=need){ st='WL_CONNECTED (3)'; clearInterval(wT); lines.push(`<span class="g">연결됨  IP 192.168.0.23  RSSI ${r} dBm</span>`); }
+      else if(!g24 && t>=1){ st='WL_NO_SSID_AVAIL (1)'; }
+      else if(!pw && t>=2){ st='WL_CONNECT_FAILED (4) / DISCONNECTED'; }
+      if(st!=='WL_CONNECTED (3)' && to && t>=15){ clearInterval(wT); lines.push('<span class="r">타임아웃 — return false; → 원인 출력 또는 AP 모드로 전환</span>'); }
+      if(!to && t>=15 && st!=='WL_CONNECTED (3)'){ lines[2]='<span class="r">while (status != WL_CONNECTED) 가 끝나지 않는다 … (타임아웃 없음)</span>'; if(t>=20) clearInterval(wT); }
+      $('#w-st').textContent=st; $('#w-t').textContent=t.toFixed(2)+' s';
+      $('#w-term').innerHTML=lines.join('\n')+(st==='WL_CONNECTED (3)'?'':'\n'+'.'.repeat(Math.min(60,Math.floor(t*4))));
+      wScene(!g24?'5GHz 공유기는 ESP32 에 보이지 않는다':(!pw?'비밀번호가 틀리면 인증 실패를 반복':(r<=-82?'신호가 너무 약하다 — 안테나 · 거리':'')));
+    },100); }
+  ['#w-ant','#w-dist','#w-pw','#w-24','#w-to'].forEach(s=>$(s).addEventListener('input',()=>wScene()));
+  $('#w-go').addEventListener('click',wGo); wScene();
+
+  /* 6 http */
+  const ROUTES=[['/','handleRoot','200 text/html'],['/api','handleApi','200 application/json'],['/led','handleLed','200 / 400 / 403'],['(없음)','handleNotFound','404']];
+  let ledOn={25:false,26:false};
+  function hLed(){ const S=$('#h-led'); S.innerHTML=''; [25,26].forEach((p,i)=>{ S.appendChild(el('circle',{cx:80+i*160,cy:50,r:24,fill:ledOn[p]?(p===25?'#FF4B3A':'#2FD38F'):'#3A2624'})); S.appendChild(el('text',{x:60+i*160,y:96},'GPIO'+p)); }); }
+  function hSend(){ const u=$('#h-url .on').dataset.u; const [path,qs]=u.split('?'); const args={}; (qs||'').split('&').filter(Boolean).forEach(kv=>{ const [k,v]=kv.split('='); args[k]=v; });
+    const idx=ROUTES.findIndex(r=>r[0]===path); const hit=idx<0?3:idx;
+    $('#h-rt').innerHTML='<tr><th>경로</th><th>함수</th><th>응답</th></tr>'+ROUTES.map((r,i)=>`<tr class="${i===hit?'hot':''}"><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('');
+    $('#h-req').innerHTML=`GET ${esc(u)} HTTP/1.1\nHost: 192.168.0.23\n<span class="c">${qs?'// 쿼리 인자: '+Object.entries(args).map(([k,v])=>k+'='+v).join(', '):'// 쿼리 인자 없음'}</span>`;
+    let res;
+    if(path==='/') res='<span class="g">HTTP/1.1 200 OK\nContent-Type: text/html</span>\n\n&lt;h1&gt;ESP32 제어&lt;/h1&gt; … &lt;script&gt;fetch(\'/api\')…';
+    else if(path==='/api') res=`<span class="g">HTTP/1.1 200 OK\nContent-Type: application/json</span>\n\n{"pot":${2000+Math.floor(Math.random()*100)}}`;
+    else if(path==='/led'){ if(!('pin' in args)||!('on' in args)) res='<span class="r">HTTP/1.1 400 Bad Request</span>\n\npin, on 필요\n<span class="c">// if (!server.hasArg("pin") …) — 입력 검사</span>';
+      else if(args.pin!=='25'&&args.pin!=='26') res='<span class="r">HTTP/1.1 403 Forbidden</span>\n\n허용되지 않은 핀\n<span class="c">// 누구나 GPIO 2 (부트 핀)를 건드리지 못하게 — 허용 목록</span>';
+      else { ledOn[+args.pin]=args.on==='1'; res=`<span class="g">HTTP/1.1 200 OK</span>\n\nOK\n<span class="c">// digitalWrite(${args.pin}, ${args.on==='1'?'HIGH':'LOW'})</span>`; } }
+    else res='<span class="r">HTTP/1.1 404 Not Found</span>\n\nNot found\n<span class="c">// server.onNotFound(handleNotFound)</span>';
+    $('#h-res').innerHTML=res; hLed(); }
+  $$('#h-url button').forEach(b=>b.addEventListener('click',()=>{ $$('#h-url button').forEach(x=>x.classList.toggle('on',x===b)); hSend(); }));
+  $('#h-send').addEventListener('click',hSend); hSend();
+
+  /* 7 crash */
+  const CASES={
+    null:{log:["Guru Meditation Error: Core  1 panic'ed (StoreProhibited). Exception was unhandled.","Core  1 register dump:","PC      : 0x400d1a2b  PS      : 0x00060030  A0      : 0x800d2f4c","EXCVADDR: 0x00000000  LBEG    : 0x4000c2e0  LEND    : 0x4000c2f6","Backtrace: 0x400d1a28:0x3ffb2270 0x400d2f49:0x3ffb2290 0x40088a1d:0x3ffb22b0","Rebooting...","지난 재부팅 원인: 크래시(패닉)"],
+      exp:["StoreProhibited = 쓰면 안 되는 주소에 썼다. 읽기였다면 LoadProhibited.","아래는 CPU 레지스터 값 — 대부분은 볼 필요 없다.","PC = 크래시 순간 실행 중이던 명령의 주소.","EXCVADDR = 문제의 주소. 0x00000000 → NULL 포인터! (0x00000004 면 NULL 구조체의 두 번째 멤버)","Backtrace = 호출 경로. 첫 주소가 가장 안쪽. addr2line 으로 소스 줄로 바꾸면 loop() at crash_demo.ino:32","패닉 후 자동 재부팅.","esp_reset_reason() == ESP_RST_PANIC"],
+      code:"box_t *b = find_box(7);\n<span class=\"r\">b->value = 42;          // b == NULL</span>\n<span class=\"g\">if (b == NULL) { LOGE(\"없음\"); return; }</span>"},
+    stack:{log:["Guru Meditation Error: Core  1 panic'ed (Unhandled debug exception).","Debug exception reason: Stack canary watchpoint triggered (A)","Core  1 register dump:","PC      : 0x40088e5c  PS      : 0x00060536","Backtrace: 0x40088e59:0x3ffb1e40 0x400d1b3a:0x3ffb2100","Rebooting..."],
+      exp:["디버그 예외 — 하드웨어 감시점이 걸렸다.","Stack canary = 스택 끝에 놓은 '카나리아' 값이 덮였다 → 태스크 'A' 의 스택이 넘쳤다. 괄호 안이 태스크 이름!","레지스터 덤프.","PC.","Backtrace — 큰 지역 배열을 쓴 함수가 보인다.","재부팅."],
+      code:"xTaskCreatePinnedToCore(taskA, \"A\", <span class=\"r\">2048</span>, …);\nchar big[<span class=\"r\">3000</span>];     // 스택보다 큼\n<span class=\"g\">// 스택을 늘리거나 static char big[3000];</span>"},
+    wdt:{log:["E (12034) task_wdt: Task watchdog got triggered. The following tasks did not reset the watchdog in time:","E (12034) task_wdt:  - IDLE0 (CPU 0)","E (12034) task_wdt: Tasks currently running:","E (12034) task_wdt: CPU 0: busy","E (12034) task_wdt: CPU 1: loopTask","(설정에 따라 여기서 재부팅 → ESP_RST_TASK_WDT)"],
+      exp:["태스크 워치독 — 정해진 시간(약 5초) 안에 확인 신호가 없었다.","IDLE0 = 코어 0 의 idle 태스크가 오랫동안 한 번도 실행되지 못했다 → 누군가 코어 0 을 독차지.","지금 실행 중인 태스크 목록.","범인: 'busy' 태스크가 코어 0 에서 쉬지 않는다.","코어 1 은 정상.","Arduino 설정에 따라 경고만 찍히거나 재부팅된다."],
+      code:"void taskBusy(void *p) {\n    for (;;) { work(); <span class=\"r\">/* vTaskDelay 없음 */</span> }\n}\n<span class=\"g\">for (;;) { work(); vTaskDelay(pdMS_TO_TICKS(10)); }</span>"},
+    brown:{log:["Brownout detector was triggered","","ets Jun  8 2016 00:22:57","rst:0xc (SW_CPU_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)","지난 재부팅 원인: 전압 강하"],
+      exp:["공급 전압이 순간적으로 떨어졌다 — 코드 문제가 아니라 전원 문제.","","ROM 부트 메시지 — 다시 시작하고 있다.","리셋 정보.","esp_reset_reason() == ESP_RST_BROWNOUT"],
+      code:"<span class=\"r\">// 모터 · 서보 시작 전류, 긴 USB 케이블, USB 허브, Wi-Fi 송신 순간</span>\n<span class=\"g\">// 모터는 천천히 가속 · 외부 5V(GND 공통) · 짧고 좋은 케이블 · PC 본체 포트</span>"},
+  };
+  let cCase='null';
+  function cDraw(sel){ const c=CASES[cCase]; $('#c-log').innerHTML=c.log.map((l,i)=>`<span class="ln ${i===sel?'on':''}" data-i="${i}">${esc(l)||'&nbsp;'}</span>`).join('');
+    $$('#c-log .ln').forEach(s=>s.addEventListener('click',()=>cDraw(+s.dataset.i)));
+    $('#c-exp').innerHTML= sel>=0 ? c.exp[sel] : '메시지의 줄을 눌러 보세요.'; $('#c-code').innerHTML=c.code; }
+  $$('#c-case button').forEach(b=>b.addEventListener('click',()=>{ $$('#c-case button').forEach(x=>x.classList.toggle('on',x===b)); cCase=b.dataset.c; cDraw(-1); }));
+  cDraw(0);
+
+  /* 8 system */
+  let sT=null, sTok=[], sQ=[], sLatest={temp:null,pot:0}, sLines=['<span class="c">// [재생]</span>'], sAlarm=false, sLog=0, sLed=false, sLockBy='';
+  const NODES={sensor:[80,70,'taskSensor'],queue:[270,70,'큐 (8칸)'],logger:[460,70,'taskLogger'],file:[680,40,'/log.csv'],latest:[680,140,'latest (뮤텍스)'],web:[460,250,'loop: WebServer'],phone:[720,250,'스마트폰'],btn:[80,250,'버튼 ISR → taskButton'],led:[270,170,'LED 빨강 · 초록']};
+  function sDraw(){ const S=$('#s-svg'); S.innerHTML='';
+    const E=[['sensor','queue'],['queue','logger'],['logger','file'],['logger','latest'],['logger','led'],['latest','web'],['web','phone'],['btn','led'],['btn','file'],['web','file']];
+    E.forEach(([a,b])=>{ const A=NODES[a],B=NODES[b]; S.appendChild(el('line',{x1:A[0]+60,y1:A[1]+20,x2:B[0]+60,y2:B[1]+20,stroke:'#C9D1DC','stroke-width':2})); });
+    Object.entries(NODES).forEach(([k,[x,y,l]])=>{ const lock = (k==='latest'||k==='file') && sLockBy; S.appendChild(el('rect',{x,y,width:120,height:40,rx:8,fill:k==='queue'?'#DCE6FA':(k==='led'?(sAlarm?'#FBE3DF':'#F6F8FB'):'#fff'),stroke:lock?'#C98A12':'#1B2A41','stroke-width':lock?3:1.5})); S.appendChild(el('text',{x:x+8,y:y+24,fill:'#1B2A41'},l)); });
+    for(let i=0;i<sQ.length;i++) S.appendChild(el('rect',{x:275+i*13,y:98,width:10,height:8,fill:'#2457C5'}));
+    sTok.forEach(t=>{ const A=NODES[t.a],B=NODES[t.b]; const x=A[0]+60+(B[0]-A[0])*t.p, y=A[1]+20+(B[1]-A[1])*t.p; S.appendChild(el('circle',{cx:x,cy:y,r:8,fill:t.c})); });
+    S.appendChild(el('text',{x:10,y:320},`latest: ${sLatest.temp===null?'—':sLatest.temp+'°C'} · pot ${sLatest.pot} · 로그 ${sLog}줄 · 경보 ${sAlarm?'ON':'OFF'} · 초록 LED ${sLed?'ON':'OFF'}${sLockBy?' · 뮤텍스: '+sLockBy:''}`));
+    $('#s-term').innerHTML=sLines.slice(-5).join('\n'); $('#s-tempv').textContent=$('#s-temp').value+'°C'; }
+  function tok(a,b,c,done){ sTok.push({a,b,c,p:0,done}); }
+  function step(){ sTok.forEach(t=>t.p+=0.08); const fin=sTok.filter(t=>t.p>=1); sTok=sTok.filter(t=>t.p<1); fin.forEach(t=>t.done&&t.done()); sDraw(); }
+  function produce(){ const temp=+$('#s-temp').value, pot=2000+Math.floor(Math.random()*80); tok('sensor','queue','#1E9E5A',()=>{ if(sQ.length<8){ sQ.push({temp,pot}); sLines.push(`taskSensor: xQueueSend {temp:${temp}, pot:${pot}}`); } else sLines.push('<span class="r">큐 가득 — 버림</span>'); tok('queue','logger','#1E9E5A',()=>{ const r=sQ.shift(); if(!r) return; sLockBy='taskLogger'; sLatest=r; sLog++; sLines.push(`taskLogger: 🔒 latest = r · /log.csv += "${Math.floor(performance.now())},${r.temp},${r.pot}" · 🔓`);
+      if(!sAlarm&&r.temp>=30){ sAlarm=true; sLines.push('<span class="r">경보 ON (30°C 이상) — 빨강 LED</span>'); } else if(sAlarm&&r.temp<29){ sAlarm=false; sLines.push('<span class="g">경보 OFF (29°C 미만)</span>'); }
+      tok('logger','file','#8A4FD8'); tok('logger','latest','#8A4FD8',()=>{ sLockBy=''; }); if(sAlarm) tok('logger','led','#D6452E'); }); }); }
+  $('#s-play').addEventListener('click',()=>{ if(sT){ clearInterval(sT.a); clearInterval(sT.b); sT=null; $('#s-play').textContent='재생'; } else { produce(); sT={a:setInterval(produce,2000), b:setInterval(step,40)}; $('#s-play').textContent='정지'; } });
+  $('#s-btn').addEventListener('click',()=>{ if(!sT){ sT={a:null,b:setInterval(step,40)}; } sLines.push('onButton(): vTaskNotifyGiveFromISR → taskButton 깨움'); tok('btn','led','#C98A12',()=>{ sLed=!sLed; }); tok('btn','file','#C98A12',()=>{ sLog++; sLines.push('taskButton: 🔒 /log.csv += "…,BUTTON," 🔓'); }); });
+  $('#s-web').addEventListener('click',()=>{ if(!sT){ sT={a:null,b:setInterval(step,40)}; } tok('phone','web','#2457C5',()=>{ tok('latest','web','#2457C5',()=>{ sLines.push(`handleApi(): 🔒 복사 🔓 → {"temp":${sLatest.temp??0},"pot":${sLatest.pot}}`); tok('web','phone','#2457C5'); }); }); });
+  $('#s-temp').addEventListener('input',sDraw);
+  sDraw();
+})();
+</script>
+</body>
+</html>
