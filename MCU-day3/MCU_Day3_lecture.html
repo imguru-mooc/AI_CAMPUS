@@ -189,7 +189,7 @@ h3.guide{color:var(--ink);background:var(--paper);padding:10px 14px;border-radiu
 <nav>
 <p class="sup">MCU 실습(ESP32) · 3/4</p>
 <p class="ttl">디스플레이<br>I2C · 모터</p>
-<ol id="nav"><li><a href="#intro"><span class="n">시작</span>사용법 · 준비</a></li><li><a href="#sec1"><span class="n">1교시</span>7-Segment — 비트맵으로 숫자 그리기</a></li><li><a href="#sec2"><span class="n">2교시</span>74HC595 — 선 3개로 출력 8개</a></li><li><a href="#sec3"><span class="n">3교시</span>4자리 7-Segment — 멀티플렉싱과 타이머</a></li><li><a href="#sec4"><span class="n">4교시</span>8×8 도트 매트릭스 — 2차원 비트맵</a></li><li><a href="#sec5"><span class="n">5교시</span>1602A LCD — 병렬 4비트 연결</a></li><li><a href="#sec6"><span class="n">6교시</span>I2C 와 PCF8591 — 라이브러리 없이 직접</a></li><li><a href="#sec7"><span class="n">7교시</span>DC 모터(L293D)와 릴레이</a></li><li><a href="#sec8"><span class="n">8교시</span>스테퍼 모터 · 미니 프로젝트 · 정리</a></li></ol>
+<ol id="nav"><li><a href="#intro"><span class="n">시작</span>사용법 · 준비</a></li><li><a href="#sec1"><span class="n">1교시</span>7-Segment — 비트맵으로 숫자 그리기</a></li><li><a href="#sec2"><span class="n">2교시</span>74HC595 — 선 3개로 출력 8개</a></li><li><a href="#sec3"><span class="n">3교시</span>4자리 7-Segment — 멀티플렉싱과 타이머</a></li><li><a href="#sec4"><span class="n">4교시</span>8×8 도트 매트릭스 — 2차원 비트맵</a></li><li><a href="#sec5"><span class="n">5교시</span>1602A LCD — 병렬 4비트 연결</a></li><li><a href="#sec6"><span class="n">6교시</span>I2C 와 PCF8591 — 라이브러리 없이 직접</a></li><li><a href="#sec7"><span class="n">7교시</span>DC 모터 — L293D 와 릴레이</a></li><li><a href="#sec8"><span class="n">8교시</span>스테퍼 모터 · 미니 프로젝트 · 정리</a></li></ol>
 <div class="tools">
 <button id="openAll">🔒 정답 모두 펼치기</button>
 <button id="closeAll">정답 모두 접기</button>
@@ -243,7 +243,7 @@ h3.guide{color:var(--ink);background:var(--paper);padding:10px 14px;border-radiu
 </tr>
 <tr>
 <td>7</td>
-<td>DC 모터(L293D)와 릴레이</td>
+<td>DC 모터 — L293D 와 릴레이</td>
 <td>D3-7 H-브리지</td>
 </tr>
 <tr>
@@ -303,8 +303,8 @@ h3.guide{color:var(--ink);background:var(--paper);padding:10px 14px;border-radiu
 </tr>
 <tr>
 <td>릴레이 모듈</td>
-<td>작은 신호로 큰 스위치</td>
-<td><strong>접점에 220V 를 연결하지 않는다</strong></td>
+<td>작은 신호로 큰 스위치 (COM · NO · NC)</td>
+<td>접점에는 <strong>5V 이하만</strong> — 220V 절대 금지 · 작은 드라이버 필요</td>
 </tr>
 <tr>
 <td>ULN2003 + 28BYJ-48</td>
@@ -317,6 +317,151 @@ h3.guide{color:var(--ink);background:var(--paper);padding:10px 14px;border-radiu
 <blockquote>
 <p><strong>IC 꽂는 법</strong> — 74HC595 · L293D 같은 DIP IC 는 <strong>반달 홈(또는 점)이 있는 쪽이 1번 핀</strong>입니다. 홈을 <strong>왼쪽</strong>으로 두면 아래 줄 왼쪽부터 1, 2, 3 … 8번, 위 줄 오른쪽부터 9 … 16번입니다(반시계 방향). 가운데 홈을 건너 양쪽 다리가 서로 연결되지 않게 꽂고, 다리가 휘지 않게 수직으로 누릅니다.</p>
 </blockquote>
+<h3>🧰 키트(Keyestudio KS3014) 부품 대조 — 오늘은 키트 부품만 쓴다</h3>
+<table>
+<thead>
+<tr>
+<th>오늘 쓰는 부품</th>
+<th>키트 수량</th>
+<th>오늘 최대 사용</th>
+<th>쓰는 교시</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 Digit 7-Segment</td>
+<td>1</td>
+<td>1</td>
+<td>1 · 2</td>
+</tr>
+<tr>
+<td>4 Digit 7-Segment</td>
+<td>1</td>
+<td>1</td>
+<td>3</td>
+</tr>
+<tr>
+<td>74HC595N</td>
+<td><strong>1</strong></td>
+<td>1</td>
+<td>2 · 3 · 4</td>
+</tr>
+<tr>
+<td>8×8 LED Dot Matrix</td>
+<td>1</td>
+<td>1</td>
+<td>4</td>
+</tr>
+<tr>
+<td>1602 LCD Display</td>
+<td>1</td>
+<td>1</td>
+<td>5 · 6 · 8</td>
+</tr>
+<tr>
+<td>10kΩ Potentiometer</td>
+<td><strong>1</strong></td>
+<td>1 (LCD 대비)</td>
+<td>5 · 6 · 8</td>
+</tr>
+<tr>
+<td>A/D Converter Module (PCF8591)</td>
+<td>1</td>
+<td>1</td>
+<td>6</td>
+</tr>
+<tr>
+<td>Photoresistor</td>
+<td>3</td>
+<td>1</td>
+<td>5 · 6</td>
+</tr>
+<tr>
+<td>L293D Chip</td>
+<td>1</td>
+<td>1</td>
+<td>7 · 8</td>
+</tr>
+<tr>
+<td>Motor + Fan (팬 날개)</td>
+<td>1 + 1</td>
+<td>1</td>
+<td>7 · 8</td>
+</tr>
+<tr>
+<td>Relay Module</td>
+<td>1</td>
+<td>1</td>
+<td>7</td>
+</tr>
+<tr>
+<td>Water Pump + Water Pipe</td>
+<td>1 + 1</td>
+<td>1 (선택 도전)</td>
+<td>7</td>
+</tr>
+<tr>
+<td>5V Stepper Motor + Driver Board</td>
+<td>1 + 1</td>
+<td>1</td>
+<td>8</td>
+</tr>
+<tr>
+<td>Temperature and Humidity Sensor (DHT11)</td>
+<td>1</td>
+<td>1</td>
+<td>8</td>
+</tr>
+<tr>
+<td>Button</td>
+<td>4</td>
+<td>1</td>
+<td>7</td>
+</tr>
+<tr>
+<td>LED 빨강 · 초록</td>
+<td>10 · 5</td>
+<td>1 · 1</td>
+<td>7</td>
+</tr>
+<tr>
+<td>220Ω 저항</td>
+<td>10</td>
+<td><strong>8</strong> (3 · 4교시)</td>
+<td>1 ~ 8</td>
+</tr>
+<tr>
+<td>10kΩ 저항</td>
+<td>10</td>
+<td>1</td>
+<td>5 · 6</td>
+</tr>
+<tr>
+<td>Male to Female Dupont Wire</td>
+<td><strong>20</strong></td>
+<td><strong>18</strong> (8교시)</td>
+<td>전체</td>
+</tr>
+<tr>
+<td>Jumper Wires (M-M)</td>
+<td>30</td>
+<td>18 (8교시)</td>
+<td>전체</td>
+</tr>
+<tr>
+<td>830-Hole Breadboard · Screwdriver</td>
+<td>1 · 1</td>
+<td>1 · 1</td>
+<td>전체 · 7(나사 단자)</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>74HC595 가 1개</strong>라서 오늘은 595 를 한 개만 씁니다. 여러 개를 잇는 방법(Q7')은 개념으로만 다룹니다.</li>
+<li><strong>가변저항이 1개</strong>라서 5교시부터는 LCD 대비에 쓰고, 센서 값은 조도 센서(포토레지스터)로 만듭니다.</li>
+<li><strong>M-F 선은 20개</strong>입니다. 교시가 바뀔 때 쓰지 않는 선은 바로 빼서 다음 교시에 다시 씁니다.</li>
+<li>키트에 <strong>없는</strong> 다이오드 · 커패시터 · 외부 전원은 오늘 쓰지 않습니다. GPIO Extension Board · 40-Pin Wire 는 Raspberry Pi 용이라 ESP32 실습에서는 쓰지 않습니다.</li>
+</ul>
 <h3 class="guide">🛠 따라하기 · LiquidCrystal 라이브러리 확인 (5교시 전)</h3>
 <ol>
 <li><strong>라이브러리 매니저</strong> 를 엽니다.</li>
@@ -1478,7 +1623,7 @@ h3.guide{color:var(--ink);background:var(--paper);padding:10px 14px;border-radiu
 <span class="p">}</span>
 </code></pre></div>
 
-<p>1교시는 GPIO 8개, 지금은 <strong>3개</strong>입니다. 595 를 Q7' → 다음 595 DS 로 이으면 <strong>같은 3개로 16, 24 … 개</strong>를 제어합니다(3교시 4자리, 4교시 매트릭스에서 활용).</p>
+<p>1교시는 GPIO 8개, 지금은 <strong>3개</strong>입니다. 595 를 Q7' → 다음 595 DS 로 이으면 <strong>같은 3개로 16, 24 … 개</strong>를 제어할 수 있습니다. 키트에는 595 가 1개라 오늘은 개념만 알아 두고, 3교시(4자리)와 4교시(매트릭스)는 <strong>595 1개 + GPIO 몇 개</strong>로 해결합니다.</p>
 <h3>▶ 예제 2-3 · ⚠ 함정</h3>
 <table>
 <thead>
@@ -4778,11 +4923,11 @@ h3.guide{color:var(--ink);background:var(--paper);padding:10px 14px;border-radiu
 </ol>
 </details>
 
-</section><section id="sec7" class="lesson"><header class="sec-head"><span class="period">7교시</span><h1>DC 모터(L293D)와 릴레이</h1><span class="time">16:00–16:50</span></header>
+</section><section id="sec7" class="lesson"><header class="sec-head"><span class="period">7교시</span><h1>DC 모터 — L293D 와 릴레이</h1><span class="time">16:00–16:50</span></header>
 <p><strong>학습 목표</strong>
 - 모터를 GPIO 에 직접 연결하면 안 되는 이유와 H-브리지의 원리를 설명한다
 - IN1 · IN2 로 방향, EN 의 PWM 으로 속도를 제어한다
-- 릴레이로 큰 부하를 켜고 끄는 원리와 안전 규칙을 안다</p>
+- 릴레이로 DC 모터를 단계적으로 제어하고(접점 확인 → 켜고 끄기 → 비상 정지), L293D 와의 역할 차이를 설명한다</p>
 <p class="anim">🎬 <strong>D3-7 H-브리지</strong> — IN1 · IN2 · PWM 을 바꾸며 전류 경로와 모터 회전 방향 · 속도 확인</p>
 <figure class="wiring"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 736" width="1100" style="max-width:100%;height:auto;background:#fff" role="img" aria-label="7교시 배선 — L293D 로 DC 모터 + 릴레이" font-family="'IBM Plex Sans KR','Malgun Gothic',sans-serif">
 <g transform="translate(0,14)"><rect x="300" y="160" width="761" height="322" rx="10" fill="#F4F4EE" stroke="#C9C9BE" stroke-width="2"/>
@@ -4936,7 +5081,7 @@ h3.guide{color:var(--ink);background:var(--paper);padding:10px 14px;border-radiu
 </svg></figure>
 <blockquote>
 <p><strong>모터는 절대 GPIO 에 직접 연결하지 않습니다.</strong> 모터는 수백 mA 가 필요하고(GPIO 는 20mA), 멈출 때 <strong>역전압</strong>이 생깁니다. L293D 는 ESP32 의 작은 신호를 받아 <strong>5V 전원의 큰 전류를 대신 흘려 주는</strong> 드라이버이며, 역전압 보호 다이오드도 들어 있습니다.</p>
-<p><strong>USB 5V 로 모터를 돌리면</strong> 시작 순간 전압이 떨어져 ESP32 가 리셋될 수 있습니다(<code>Brownout detector was triggered</code>). 그러면 모터를 천천히 가속하거나(예제 7-2), 강사가 외부 5V 전원을 연결합니다(GND 는 공통).</p>
+<p><strong>USB 5V 로 모터를 돌리면</strong> 시작 순간 전압이 떨어져 ESP32 가 리셋될 수 있습니다(<code>Brownout detector was triggered</code>). 키트에는 외부 전원이 없으므로 <strong>모터를 천천히 가속</strong>하고(예제 7-2), <strong>PC 본체의 USB 포트</strong>와 짧은 케이블을 씁니다. 모터 축에 키트의 <strong>팬 날개(Fan)</strong> 를 끼우면 회전 방향 · 속도가 잘 보입니다 — 도는 날개에 손가락을 대지 않습니다.</p>
 </blockquote>
 <table>
 <thead>
@@ -5364,8 +5509,44 @@ h3.guide{color:var(--ink);background:var(--paper);padding:10px 14px;border-radiu
 </code></pre></div>
 
 <p>속도를 <strong>부호 있는 정수 하나</strong>로 표현하면(양수 = 정방향, 음수 = 역방향) 호출하는 쪽이 간단해집니다. <code>ramp_to</code> 는 현재 속도를 <strong>포인터로 받아 갱신</strong>합니다. 모터는 duty 가 너무 낮으면(약 80 이하) 윙 소리만 나고 돌지 않습니다 — 최소 구동값을 실험으로 찾아 보세요.</p>
-<h3>▶ 예제 7-3 · 릴레이 — 작은 신호로 큰 스위치</h3>
-<figure class="wiring"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 670" width="1100" style="max-width:100%;height:auto;background:#fff" role="img" aria-label="예제 7-3 배선 — 릴레이" font-family="'IBM Plex Sans KR','Malgun Gothic',sans-serif">
+<h3>▶ 실습 7-3 · 릴레이로 DC 모터 제어 — 4단계</h3>
+<p>릴레이는 <strong>전자석으로 금속 접점을 움직이는 스위치</strong>입니다. ESP32 는 코일 쪽(S · + · −)만 다루고, 접점 쪽(COM · NO · NC)은 <strong>ESP32 와 전기적으로 분리된 별도의 회로</strong>입니다. 모듈에는 코일을 구동하는 트랜지스터와 역전압 다이오드가 들어 있습니다.</p>
+<table>
+<thead>
+<tr>
+<th>단자</th>
+<th>뜻</th>
+<th>코일 OFF</th>
+<th>코일 ON</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>COM</strong></td>
+<td>공통 — 전원을 넣는 쪽</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>NO</strong> (Normally Open)</td>
+<td>평소 열림</td>
+<td>끊김</td>
+<td><strong>COM 과 연결</strong></td>
+</tr>
+<tr>
+<td><strong>NC</strong> (Normally Closed)</td>
+<td>평소 닫힘</td>
+<td><strong>COM 과 연결</strong></td>
+<td>끊김</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>⚠ <strong>이 과정에서 릴레이 접점에는 5V 이하만</strong> 연결합니다. 콘센트 전원(220V)은 감전 · 화재 위험이 있어 <strong>절대 금지</strong>입니다. 단자 순서(NO · COM · NC)는 모듈마다 다를 수 있으니 <strong>기판 인쇄로 확인</strong>합니다. 나사 단자는 드라이버로 풀고 점퍼선 끝을 넣은 뒤 조입니다.</p>
+</blockquote>
+<p>단계마다 <strong>앞 단계가 동작해야 다음 단계</strong>로 넘어갑니다. 한 번에 한 가지만 새로 연결합니다.</p>
+<h4>① 릴레이 단독 — 딸깍 소리와 극성 확인</h4>
+<figure class="wiring"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 670" width="1100" style="max-width:100%;height:auto;background:#fff" role="img" aria-label="실습 7-3 ① 배선 — 릴레이 단독 (딸깍 · 모듈 LED)" font-family="'IBM Plex Sans KR','Malgun Gothic',sans-serif">
 <g transform="translate(0,14)"><rect x="300" y="160" width="761" height="322" rx="10" fill="#F4F4EE" stroke="#C9C9BE" stroke-width="2"/>
 <rect x="308" y="316.0" width="745" height="10" rx="3" fill="#DDDDD2"/>
 <line x1="314" x2="1047" y1="173" y2="173" stroke="#D6452E" stroke-width="2"/>
@@ -5499,15 +5680,207 @@ h3.guide{color:var(--ink);background:var(--paper);padding:10px 14px;border-radiu
 <text x="330" y="626" font-size="12" fill="#1B2A41" font-family="monospace">GPIO13 → j22 (S)</text>
 <rect x="695" y="618" width="22" height="8" rx="3" fill="#E0862A"/>
 <text x="725" y="626" font-size="12" fill="#1B2A41" font-family="monospace">j23 (+) → 5V · j24 (−) → GND</text>
-<text x="300" y="16" font-size="15" font-weight="700" fill="#1B2A41">예제 7-3 배선 — 릴레이</text>
+<text x="300" y="16" font-size="15" font-weight="700" fill="#1B2A41">실습 7-3 ① 배선 — 릴레이 단독 (딸깍 · 모듈 LED)</text>
 <text x="560" y="16" font-size="11.5" fill="#5B6B80"> </text>
 <text x="1061" y="16" font-size="11.5" fill="#5B6B80" text-anchor="end">진한 부분만 이 예제에서 씁니다 · 흐린 부품은 꽂혀 있어도 무관</text>
-<text x="1061" y="34" font-size="11.5" font-weight="700" fill="#D6452E" text-anchor="end">릴레이 접점에 220V 를 연결하지 않는다</text></g>
+<text x="1061" y="34" font-size="11.5" font-weight="700" fill="#D6452E" text-anchor="end">릴레이 접점에 220V 를 연결하지 않는다 — 오늘은 5V 이하만</text></g>
 </svg></figure>
-<p>릴레이는 <strong>전자석으로 금속 접점을 움직이는 스위치</strong>입니다. ESP32 와 부하(램프, 펌프)가 <strong>전기적으로 분리</strong>됩니다. 모듈에는 코일을 구동하는 트랜지스터와 역전압 다이오드가 들어 있습니다.</p>
-<p><code>relay.ino</code></p>
+<p><code>relay_basic.ino</code></p>
 <div class="hl"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">PIN_RELAY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">13</span><span class="p">;</span>
 <span class="k">const</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="n">ACTIVE_LOW</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span><span class="w">               </span><span class="c1">// 모듈에 따라 LOW 에서 켜진다</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">relay_set</span><span class="p">(</span><span class="kt">bool</span><span class="w"> </span><span class="n">on</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">digitalWrite</span><span class="p">(</span><span class="n">PIN_RELAY</span><span class="p">,</span><span class="w"> </span><span class="n">ACTIVE_LOW</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="o">!</span><span class="n">on</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">on</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">setup</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">Serial</span><span class="p">.</span><span class="n">begin</span><span class="p">(</span><span class="mi">115200</span><span class="p">);</span>
+<span class="w">    </span><span class="n">pinMode</span><span class="p">(</span><span class="n">PIN_RELAY</span><span class="p">,</span><span class="w"> </span><span class="n">OUTPUT</span><span class="p">);</span>
+<span class="w">    </span><span class="n">relay_set</span><span class="p">(</span><span class="nb">false</span><span class="p">);</span>
+<span class="w">    </span><span class="n">Serial</span><span class="p">.</span><span class="n">println</span><span class="p">(</span><span class="s">&quot;1 = ON, 0 = OFF&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">loop</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">Serial</span><span class="p">.</span><span class="n">available</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">char</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Serial</span><span class="p">.</span><span class="n">read</span><span class="p">();</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">c</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="sc">&#39;1&#39;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">relay_set</span><span class="p">(</span><span class="nb">true</span><span class="p">);</span><span class="w">  </span><span class="n">Serial</span><span class="p">.</span><span class="n">println</span><span class="p">(</span><span class="s">&quot;ON&quot;</span><span class="p">);</span><span class="w">  </span><span class="p">}</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">c</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="sc">&#39;0&#39;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">relay_set</span><span class="p">(</span><span class="nb">false</span><span class="p">);</span><span class="w"> </span><span class="n">Serial</span><span class="p">.</span><span class="n">println</span><span class="p">(</span><span class="s">&quot;OFF&quot;</span><span class="p">);</span><span class="w"> </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+<span class="c1">// → 1 을 보내면 딸깍 소리와 함께 모듈 LED 가 켜진다</span>
+</code></pre></div>
+
+<p><strong>확인:</strong> 업로드 직후(아직 아무것도 보내지 않았는데) 이미 딸깍 켜진다면 <strong>LOW 에서 켜지는 모듈</strong>입니다. <code>ACTIVE_LOW</code> 를 <code>true</code> 로 바꾸고 다시 올립니다. 코일 전원(+)은 <strong>5V</strong> — 3V3 에 연결하면 딸깍이 약하거나 켜지지 않습니다.</p>
+<h4>② 접점 확인 — NO · NC 에 LED 두 개</h4>
+<figure class="wiring"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 711" width="1100" style="max-width:100%;height:auto;background:#fff" role="img" aria-label="릴레이 ② 배선 — 접점 확인: NO 빨강 · NC 초록" font-family="'IBM Plex Sans KR','Malgun Gothic',sans-serif">
+<g transform="translate(0,14)"><rect x="300" y="160" width="761" height="322" rx="10" fill="#F4F4EE" stroke="#C9C9BE" stroke-width="2"/>
+<rect x="308" y="316.0" width="745" height="10" rx="3" fill="#DDDDD2"/>
+<line x1="314" x2="1047" y1="173" y2="173" stroke="#D6452E" stroke-width="2"/>
+<text x="306" y="186" font-size="11" fill="#D6452E" font-weight="700">+</text>
+<line x1="314" x2="1047" y1="208" y2="208" stroke="#2457C5" stroke-width="2"/>
+<text x="306" y="203" font-size="11" fill="#2457C5" font-weight="700">-</text>
+<line x1="314" x2="1047" y1="434" y2="434" stroke="#2457C5" stroke-width="2"/>
+<text x="306" y="447" font-size="11" fill="#2457C5" font-weight="700">-</text>
+<line x1="314" x2="1047" y1="469" y2="469" stroke="#D6452E" stroke-width="2"/>
+<text x="306" y="464" font-size="11" fill="#D6452E" font-weight="700">+</text>
+<defs><pattern id="g8" x="315.5" y="227.5" width="17" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r80" x="315.5" y="173.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r81" x="315.5" y="190.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r82" x="315.5" y="434.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r83" x="315.5" y="451.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern></defs>
+<rect x="315.5" y="227.5" width="714" height="85" fill="url(#g8)"/>
+<rect x="315.5" y="329.5" width="714" height="85" fill="url(#g8)"/>
+<rect x="315.5" y="173.5" width="714" height="17" fill="url(#r80)"/>
+<rect x="315.5" y="190.5" width="714" height="17" fill="url(#r81)"/>
+<rect x="315.5" y="434.5" width="714" height="17" fill="url(#r82)"/>
+<rect x="315.5" y="451.5" width="714" height="17" fill="url(#r83)"/>
+<text x="310" y="240" font-size="10" fill="#5B6B80" font-family="monospace">a</text>
+<text x="310" y="257" font-size="10" fill="#5B6B80" font-family="monospace">b</text>
+<text x="310" y="274" font-size="10" fill="#5B6B80" font-family="monospace">c</text>
+<text x="310" y="291" font-size="10" fill="#5B6B80" font-family="monospace">d</text>
+<text x="310" y="308" font-size="10" fill="#5B6B80" font-family="monospace">e</text>
+<text x="310" y="342" font-size="10" fill="#5B6B80" font-family="monospace">f</text>
+<text x="310" y="359" font-size="10" fill="#5B6B80" font-family="monospace">g</text>
+<text x="310" y="376" font-size="10" fill="#5B6B80" font-family="monospace">h</text>
+<text x="310" y="393" font-size="10" fill="#5B6B80" font-family="monospace">i</text>
+<text x="310" y="410" font-size="10" fill="#5B6B80" font-family="monospace">j</text>
+<text x="324" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">1</text>
+<text x="324" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">1</text>
+<text x="392" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">5</text>
+<text x="392" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">5</text>
+<text x="477" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">10</text>
+<text x="477" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">10</text>
+<text x="562" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">15</text>
+<text x="562" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">15</text>
+<text x="647" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">20</text>
+<text x="647" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">20</text>
+<text x="732" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">25</text>
+<text x="732" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">25</text>
+<text x="817" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">30</text>
+<text x="817" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">30</text>
+<text x="902" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">35</text>
+<text x="902" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">35</text>
+<text x="987" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">40</text>
+<text x="987" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">40</text>
+<rect x="30" y="110" width="190" height="459" rx="8" fill="#1B2A41"/>
+<rect x="70" y="128" width="110" height="150" rx="3" fill="#B8BEC6" stroke="#9EA4AC"/>
+<text x="125.0" y="190" font-size="15" font-weight="700" fill="#1B2A41" text-anchor="middle" font-family="monospace">ESP-32U</text>
+<rect x="108.0" y="360" width="34" height="34" fill="#0E1726" stroke="#3E5170"/>
+<text x="125.0" y="408" font-size="9" fill="#AEBBD1" text-anchor="middle" font-family="monospace">CP2102</text>
+<rect x="101.0" y="539" width="48" height="30" fill="#9EA4AC"/>
+<text x="125.0" y="558" font-size="10" fill="#1B2A41" text-anchor="middle" font-family="monospace">USB</text>
+<text x="78" y="529" font-size="10" fill="#fff" font-family="monospace">EN</text>
+<text x="148" y="529" font-size="10" fill="#fff" font-family="monospace">Boot</text>
+<circle cx="44" cy="138" r="5" fill="#C9D1DC"/><circle cx="206" cy="138" r="5" fill="#C9D1DC"/>
+<text x="54" y="142" font-size="10" fill="#fff" font-family="monospace">3V3</text>
+<text x="196" y="142" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">GND</text>
+<circle cx="44" cy="159" r="5" fill="#C9D1DC"/><circle cx="206" cy="159" r="5" fill="#C9D1DC"/>
+<text x="54" y="163" font-size="10" fill="#fff" font-family="monospace">EN</text>
+<text x="196" y="163" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">23</text>
+<circle cx="44" cy="180" r="5" fill="#C9D1DC"/><circle cx="206" cy="180" r="5" fill="#C9D1DC"/>
+<text x="54" y="184" font-size="10" fill="#fff" font-family="monospace">VP</text>
+<text x="196" y="184" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">22</text>
+<circle cx="44" cy="201" r="5" fill="#C9D1DC"/><circle cx="206" cy="201" r="5" fill="#C9D1DC"/>
+<text x="54" y="205" font-size="10" fill="#fff" font-family="monospace">VN</text>
+<text x="196" y="205" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">TX</text>
+<circle cx="44" cy="222" r="5" fill="#C9D1DC"/><circle cx="206" cy="222" r="5" fill="#C9D1DC"/>
+<text x="54" y="226" font-size="10" fill="#fff" font-family="monospace">34</text>
+<text x="196" y="226" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">RX</text>
+<circle cx="44" cy="243" r="5" fill="#C9D1DC"/><circle cx="206" cy="243" r="5" fill="#C9D1DC"/>
+<text x="54" y="247" font-size="10" fill="#fff" font-family="monospace">35</text>
+<text x="196" y="247" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">21</text>
+<circle cx="44" cy="264" r="5" fill="#C9D1DC"/><circle cx="206" cy="264" r="5" fill="#C9D1DC"/>
+<text x="54" y="268" font-size="10" fill="#fff" font-family="monospace">32</text>
+<text x="196" y="268" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">GND</text>
+<circle cx="44" cy="285" r="5" fill="#C9D1DC"/><circle cx="206" cy="285" r="5" fill="#C9D1DC"/>
+<text x="54" y="289" font-size="10" fill="#fff" font-family="monospace">33</text>
+<text x="196" y="289" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">19</text>
+<circle cx="44" cy="306" r="5" fill="#C9D1DC"/><circle cx="206" cy="306" r="5" fill="#C9D1DC"/>
+<text x="54" y="310" font-size="10" fill="#fff" font-family="monospace">25</text>
+<text x="196" y="310" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">18</text>
+<circle cx="44" cy="327" r="5" fill="#C9D1DC"/><circle cx="206" cy="327" r="5" fill="#C9D1DC"/>
+<text x="54" y="331" font-size="10" fill="#fff" font-family="monospace">26</text>
+<text x="196" y="331" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">5</text>
+<circle cx="44" cy="348" r="5" fill="#C9D1DC"/><circle cx="206" cy="348" r="5" fill="#C9D1DC"/>
+<text x="54" y="352" font-size="10" fill="#fff" font-family="monospace">27</text>
+<text x="196" y="352" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">17</text>
+<circle cx="44" cy="369" r="5" fill="#C9D1DC"/><circle cx="206" cy="369" r="5" fill="#C9D1DC"/>
+<text x="54" y="373" font-size="10" fill="#fff" font-family="monospace">14</text>
+<text x="196" y="373" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">16</text>
+<circle cx="44" cy="390" r="5" fill="#C9D1DC"/><circle cx="206" cy="390" r="5" fill="#C9D1DC"/>
+<text x="54" y="394" font-size="10" fill="#fff" font-family="monospace">12</text>
+<text x="196" y="394" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">4</text>
+<circle cx="44" cy="411" r="5" fill="#C9D1DC"/><circle cx="206" cy="411" r="5" fill="#C9D1DC"/>
+<text x="54" y="415" font-size="10" fill="#fff" font-family="monospace">GND</text>
+<text x="196" y="415" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">0</text>
+<circle cx="44" cy="432" r="5" fill="#C9D1DC"/><circle cx="206" cy="432" r="5" fill="#C9D1DC"/>
+<text x="54" y="436" font-size="10" fill="#fff" font-family="monospace">13</text>
+<text x="196" y="436" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">2</text>
+<circle cx="44" cy="453" r="5" fill="#C9D1DC"/><circle cx="206" cy="453" r="5" fill="#C9D1DC"/>
+<text x="54" y="457" font-size="10" fill="#fff" font-family="monospace">D2</text>
+<text x="196" y="457" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">15</text>
+<circle cx="44" cy="474" r="5" fill="#C9D1DC"/><circle cx="206" cy="474" r="5" fill="#C9D1DC"/>
+<text x="54" y="478" font-size="10" fill="#fff" font-family="monospace">D3</text>
+<text x="196" y="478" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">D1</text>
+<circle cx="44" cy="495" r="5" fill="#C9D1DC"/><circle cx="206" cy="495" r="5" fill="#C9D1DC"/>
+<text x="54" y="499" font-size="10" fill="#fff" font-family="monospace">CMD</text>
+<text x="196" y="499" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">D0</text>
+<circle cx="44" cy="516" r="5" fill="#C9D1DC"/><circle cx="206" cy="516" r="5" fill="#C9D1DC"/>
+<text x="54" y="520" font-size="10" fill="#fff" font-family="monospace">5V</text>
+<text x="196" y="520" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">CLK</text>
+<path d="M44.0,138.0 L30.0,138.0 L30.0,104.0 L324.0,104.0 L324.0,182.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M44.0,138.0 L30.0,138.0 L30.0,104.0 L324.0,104.0 L324.0,182.0" fill="none" stroke="#D6452E" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="44" cy="138" r="4.2" fill="#D6452E" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="324" cy="182" r="4.2" fill="#D6452E" stroke="#000" stroke-opacity=".35" stroke-width="1"/>
+<path d="M206.0,138.0 L292.0,138.0 L292.0,199.0 L341.0,199.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M206.0,138.0 L292.0,138.0 L292.0,199.0 L341.0,199.0" fill="none" stroke="#222222" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="206" cy="138" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="341" cy="199" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/>
+<path d="M206.0,264.0 L282.0,264.0 L282.0,443.0 L324.0,443.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M206.0,264.0 L282.0,264.0 L282.0,443.0 L324.0,443.0" fill="none" stroke="#222222" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="206" cy="264" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="324" cy="443" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/>
+<path d="M44.0,516.0 L94.0,516.0 L94.0,528.0 L272.0,528.0 L272.0,460.0 L341.0,460.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M44.0,516.0 L94.0,516.0 L94.0,528.0 L272.0,528.0 L272.0,460.0 L341.0,460.0" fill="none" stroke="#E0862A" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="44" cy="516" r="4.2" fill="#E0862A" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="341" cy="460" r="4.2" fill="#E0862A" stroke="#000" stroke-opacity=".35" stroke-width="1"/>
+<g opacity="1"><rect x="673" y="364" width="50" height="33" rx="3" fill="#1565C0" stroke="#000" stroke-opacity=".4"/><text x="698.0" y="384.5" font-size="9" font-weight="700" fill="#fff" text-anchor="middle"></text><circle cx="681" cy="372" r="4.2" fill="#C9C9C9" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="698" cy="372" r="4.2" fill="#C9C9C9" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="715" cy="372" r="4.2" fill="#C9C9C9" stroke="#000" stroke-opacity=".35" stroke-width="1"/><text x="681" y="393" font-size="8" fill="#1B2A41" text-anchor="middle" font-weight="700" font-family="monospace">S</text><text x="698" y="393" font-size="8" fill="#1B2A41" text-anchor="middle" font-weight="700" font-family="monospace">+</text><text x="715" y="393" font-size="8" fill="#1B2A41" text-anchor="middle" font-weight="700" font-family="monospace">-</text><path d="M698.0,406.0 L698.0,460.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.0" stroke-linejoin="round" stroke-linecap="round"/><path d="M698.0,406.0 L698.0,460.0" fill="none" stroke="#E0862A" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="698" cy="406" r="4.2" fill="#E0862A" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="698" cy="460" r="4.2" fill="#E0862A" stroke="#000" stroke-opacity=".35" stroke-width="1"/><path d="M715.0,406.0 L715.0,443.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.0" stroke-linejoin="round" stroke-linecap="round"/><path d="M715.0,406.0 L715.0,443.0" fill="none" stroke="#222222" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="715" cy="406" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="715" cy="443" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/></g>
+<g opacity="1"><line x1="817" y1="304" x2="817" y2="338" stroke="#9A9A9A" stroke-width="2.4"/>
+<rect x="811.5" y="310.0" width="11" height="22" rx="4.5" fill="#E7D3A6" stroke="#B89A5E"/>
+<rect x="811.5" y="314.0" width="11" height="2.6" fill="#C0392B"/>
+<rect x="811.5" y="319.0" width="11" height="2.6" fill="#C0392B"/>
+<rect x="811.5" y="324.0" width="11" height="2.6" fill="#6B3E1E"/>
+<circle cx="817" cy="304" r="4.2" fill="#9A9A9A" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="817" cy="338" r="4.2" fill="#9A9A9A" stroke="#000" stroke-opacity=".35" stroke-width="1"/><line x1="817" y1="355" x2="822.5" y2="381" stroke="#9A9A9A" stroke-width="2.4"/>
+<line x1="834" y1="355" x2="828.5" y2="381" stroke="#9A9A9A" stroke-width="2.4"/>
+<circle cx="825.5" cy="389" r="11" fill="#FF4B3A" stroke="#000" stroke-opacity=".35"/>
+<circle cx="822.5" cy="386" r="3.5" fill="#fff" opacity=".55"/>
+<circle cx="817" cy="355" r="4.2" fill="#9A9A9A" stroke="#000" stroke-opacity=".35" stroke-width="1"/>
+<circle cx="834" cy="355" r="4.2" fill="#9A9A9A" stroke="#000" stroke-opacity=".35" stroke-width="1"/>
+<text x="815" y="349" font-size="11" font-weight="700" fill="#D6452E" text-anchor="end">+</text><path d="M834.0,406.0 L834.0,443.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.0" stroke-linejoin="round" stroke-linecap="round"/><path d="M834.0,406.0 L834.0,443.0" fill="none" stroke="#222222" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="834" cy="406" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="834" cy="443" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/><line x1="902" y1="304" x2="902" y2="338" stroke="#9A9A9A" stroke-width="2.4"/>
+<rect x="896.5" y="310.0" width="11" height="22" rx="4.5" fill="#E7D3A6" stroke="#B89A5E"/>
+<rect x="896.5" y="314.0" width="11" height="2.6" fill="#C0392B"/>
+<rect x="896.5" y="319.0" width="11" height="2.6" fill="#C0392B"/>
+<rect x="896.5" y="324.0" width="11" height="2.6" fill="#6B3E1E"/>
+<circle cx="902" cy="304" r="4.2" fill="#9A9A9A" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="902" cy="338" r="4.2" fill="#9A9A9A" stroke="#000" stroke-opacity=".35" stroke-width="1"/><line x1="902" y1="355" x2="907.5" y2="381" stroke="#9A9A9A" stroke-width="2.4"/>
+<line x1="919" y1="355" x2="913.5" y2="381" stroke="#9A9A9A" stroke-width="2.4"/>
+<circle cx="910.5" cy="389" r="11" fill="#2FD38F" stroke="#000" stroke-opacity=".35"/>
+<circle cx="907.5" cy="386" r="3.5" fill="#fff" opacity=".55"/>
+<circle cx="902" cy="355" r="4.2" fill="#9A9A9A" stroke="#000" stroke-opacity=".35" stroke-width="1"/>
+<circle cx="919" cy="355" r="4.2" fill="#9A9A9A" stroke="#000" stroke-opacity=".35" stroke-width="1"/>
+<text x="900" y="349" font-size="11" font-weight="700" fill="#D6452E" text-anchor="end">+</text><path d="M919.0,406.0 L919.0,443.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.0" stroke-linejoin="round" stroke-linecap="round"/><path d="M919.0,406.0 L919.0,443.0" fill="none" stroke="#222222" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="919" cy="406" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="919" cy="443" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/></g>
+<g opacity="1"><rect x="802.0" y="86" width="132" height="44" rx="5" fill="#1565C0" stroke="#0D3C7A"/><text x="868" y="124" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">릴레이 접점 (나사 단자)</text><rect x="815" y="90" width="26" height="18" rx="2" fill="#2E7D32" stroke="#1B5E20"/><circle cx="828" cy="99" r="5" fill="#BFC5CC" stroke="#555"/><line x1="825" y1="99" x2="831" y2="99" stroke="#333" stroke-width="1.5"/><text x="828" y="117" font-size="9" fill="#FFE082" text-anchor="middle" font-weight="700" font-family="monospace">NO</text><rect x="855" y="90" width="26" height="18" rx="2" fill="#2E7D32" stroke="#1B5E20"/><circle cx="868" cy="99" r="5" fill="#BFC5CC" stroke="#555"/><line x1="865" y1="99" x2="871" y2="99" stroke="#333" stroke-width="1.5"/><text x="868" y="117" font-size="9" fill="#FFE082" text-anchor="middle" font-weight="700" font-family="monospace">COM</text><rect x="895" y="90" width="26" height="18" rx="2" fill="#2E7D32" stroke="#1B5E20"/><circle cx="908" cy="99" r="5" fill="#BFC5CC" stroke="#555"/><line x1="905" y1="99" x2="911" y2="99" stroke="#333" stroke-width="1.5"/><text x="908" y="117" font-size="9" fill="#FFE082" text-anchor="middle" font-weight="700" font-family="monospace">NC</text><path d="M828.0,108.0 L828.0,140.0 L817.0,140.0 L817.0,236.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="5.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M828.0,108.0 L828.0,140.0 L817.0,140.0 L817.0,236.0" fill="none" stroke="#C0392B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="828" cy="108" r="4.2" fill="#C0392B" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="817" cy="236" r="4.2" fill="#C0392B" stroke="#000" stroke-opacity=".35" stroke-width="1"/><path d="M868.0,108.0 L868.0,146.0 L953.0,146.0 L953.0,182.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="5.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M868.0,108.0 L868.0,146.0 L953.0,146.0 L953.0,182.0" fill="none" stroke="#D6452E" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="868" cy="108" r="4.2" fill="#D6452E" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="953" cy="182" r="4.2" fill="#D6452E" stroke="#000" stroke-opacity=".35" stroke-width="1"/><path d="M908.0,108.0 L908.0,152.0 L902.0,152.0 L902.0,236.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="5.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M908.0,108.0 L908.0,152.0 L902.0,152.0 L902.0,236.0" fill="none" stroke="#1E9E5A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="908" cy="108" r="4.2" fill="#1E9E5A" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="902" cy="236" r="4.2" fill="#1E9E5A" stroke="#000" stroke-opacity=".35" stroke-width="1"/></g>
+<g opacity="1"><path d="M44.0,432.0 L32.0,432.0 L32.0,588.0 L681.0,588.0 L681.0,406.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="7.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M44.0,432.0 L32.0,432.0 L32.0,588.0 L681.0,588.0 L681.0,406.0" fill="none" stroke="#E0559A" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="44" cy="432" r="4.2" fill="#E0559A" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="681" cy="406" r="4.2" fill="#E0559A" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="44" cy="432" r="6.5" fill="none" stroke="#E0559A" stroke-width="2.5"/></g>
+<text x="698.0" y="496" font-size="12" font-weight="700" fill="#1B2A41" text-anchor="middle" opacity="1">릴레이 모듈</text>
+<text x="825.5" y="496" font-size="12" font-weight="700" fill="#1B2A41" text-anchor="middle" opacity="1">빨강 (NO)</text>
+<text x="910.5" y="496" font-size="12" font-weight="700" fill="#1B2A41" text-anchor="middle" opacity="1">초록 (NC)</text>
+<text x="1067" y="186" font-size="11" font-weight="700" fill="#D6452E">3V3</text>
+<text x="1067" y="203" font-size="11" font-weight="700" fill="#2457C5">GND</text>
+<text x="1067" y="447" font-size="11" font-weight="700" fill="#2457C5">GND</text>
+<text x="1067" y="464" font-size="11" font-weight="700" fill="#E0862A">5V</text>
+<rect x="300" y="615" width="22" height="8" rx="3" fill="#E0559A"/>
+<text x="330" y="623" font-size="12" fill="#1B2A41" font-family="monospace">GPIO13 → j22 (S)</text>
+<rect x="695" y="615" width="22" height="8" rx="3" fill="#E0862A"/>
+<text x="725" y="623" font-size="12" fill="#1B2A41" font-family="monospace">j23 (+) → 5V · j24 (−) → GND</text>
+<rect x="300" y="637" width="22" height="8" rx="3" fill="#C0392B"/>
+<text x="330" y="645" font-size="12" fill="#1B2A41" font-family="monospace">NO → a30 · 220Ω · 빨강 LED · j31 → GND</text>
+<rect x="695" y="637" width="22" height="8" rx="3" fill="#1E9E5A"/>
+<text x="725" y="645" font-size="12" fill="#1B2A41" font-family="monospace">NC → a35 · 220Ω · 초록 LED · j36 → GND</text>
+<rect x="300" y="659" width="22" height="8" rx="3" fill="#D6452E"/>
+<text x="330" y="667" font-size="12" fill="#1B2A41" font-family="monospace">COM → 3V3 (위 빨강 레일)</text>
+<rect x="695" y="659" width="22" height="8" rx="3" fill="#9A9A9A"/>
+<text x="725" y="667" font-size="12" fill="#1B2A41" font-family="monospace">단자 순서는 모듈 인쇄로 확인</text>
+<text x="300" y="16" font-size="15" font-weight="700" fill="#1B2A41">릴레이 ② 배선 — 접점 확인: NO 빨강 · NC 초록</text>
+<text x="560" y="16" font-size="11.5" fill="#5B6B80"> </text>
+<text x="1061" y="16" font-size="11.5" fill="#5B6B80" text-anchor="end">COM ← 3V3 · NO → 220Ω → 빨강 LED · NC → 220Ω → 초록 LED</text></g>
+</svg></figure>
+<p>접점이 어떻게 바뀌는지 <strong>눈으로</strong> 봅니다. COM 에 3V3 를 넣고, NO 쪽에 빨강 LED, NC 쪽에 초록 LED 를 (각각 220Ω 을 거쳐) 연결합니다.</p>
+<p><code>relay_contacts.ino</code></p>
+<div class="hl"><pre><span></span><code><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">PIN_RELAY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">13</span><span class="p">;</span>
+<span class="k">const</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="n">ACTIVE_LOW</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span><span class="w">               </span><span class="c1">// ① 에서 확인한 값</span>
 
 <span class="kt">void</span><span class="w"> </span><span class="nf">relay_set</span><span class="p">(</span><span class="kt">bool</span><span class="w"> </span><span class="n">on</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="n">digitalWrite</span><span class="p">(</span><span class="n">PIN_RELAY</span><span class="p">,</span><span class="w"> </span><span class="n">ACTIVE_LOW</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="o">!</span><span class="n">on</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">on</span><span class="p">);</span>
@@ -5520,16 +5893,539 @@ h3.guide{color:var(--ink);background:var(--paper);padding:10px 14px;border-radiu
 <span class="p">}</span>
 
 <span class="kt">void</span><span class="w"> </span><span class="nf">loop</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">Serial</span><span class="p">.</span><span class="n">available</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="kt">char</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Serial</span><span class="p">.</span><span class="n">read</span><span class="p">();</span>
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">c</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="sc">&#39;1&#39;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">relay_set</span><span class="p">(</span><span class="nb">true</span><span class="p">);</span><span class="w">  </span><span class="n">Serial</span><span class="p">.</span><span class="n">println</span><span class="p">(</span><span class="s">&quot;ON&quot;</span><span class="p">);</span><span class="w">  </span><span class="p">}</span>
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">c</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="sc">&#39;0&#39;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">relay_set</span><span class="p">(</span><span class="nb">false</span><span class="p">);</span><span class="w"> </span><span class="n">Serial</span><span class="p">.</span><span class="n">println</span><span class="p">(</span><span class="s">&quot;OFF&quot;</span><span class="p">);</span><span class="w"> </span><span class="p">}</span>
-<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="n">relay_set</span><span class="p">(</span><span class="nb">true</span><span class="p">);</span>
+<span class="w">    </span><span class="n">Serial</span><span class="p">.</span><span class="n">println</span><span class="p">(</span><span class="s">&quot;코일 ON  → COM–NO 연결 → 빨강&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="n">delay</span><span class="p">(</span><span class="mi">1500</span><span class="p">);</span>
+<span class="w">    </span><span class="n">relay_set</span><span class="p">(</span><span class="nb">false</span><span class="p">);</span>
+<span class="w">    </span><span class="n">Serial</span><span class="p">.</span><span class="n">println</span><span class="p">(</span><span class="s">&quot;코일 OFF → COM–NC 연결 → 초록&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="n">delay</span><span class="p">(</span><span class="mi">1500</span><span class="p">);</span>
 <span class="p">}</span>
-<span class="c1">// → 시리얼 모니터에서 1 / 0 을 보내면 딸깍 소리와 함께 모듈 LED 가 켜지고 꺼진다</span>
 </code></pre></div>
 
-<p>접점 단자는 <strong>COM</strong>(공통), <strong>NO</strong>(평소 열림 — 켜면 COM 과 연결), <strong>NC</strong>(평소 닫힘)입니다. 실습에서는 <strong>접점에 아무것도 연결하지 않고</strong> 소리와 LED 로만 확인합니다.</p>
+<table>
+<thead>
+<tr>
+<th>코일</th>
+<th>딸깍</th>
+<th>빨강 (NO)</th>
+<th>초록 (NC)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OFF</td>
+<td>—</td>
+<td>꺼짐</td>
+<td><strong>켜짐</strong></td>
+</tr>
+<tr>
+<td>ON</td>
+<td>딸깍</td>
+<td><strong>켜짐</strong></td>
+<td>꺼짐</td>
+</tr>
+</tbody>
+</table>
+<p>두 LED 가 <strong>동시에 켜지는 순간이 없습니다</strong> — 접점 하나가 NO 와 NC 사이를 오가기 때문입니다. 반대로 켜지면 NO · NC 를 바꿔 꽂은 것입니다. <strong>USB 를 뽑으면 초록이 꺼지는 이유</strong>도 생각해 보세요(COM 의 3V3 도 함께 사라짐).</p>
+<h4>③ 릴레이로 DC 모터 켜고 끄기 — 버튼 토글</h4>
+<figure class="wiring"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 742" width="1100" style="max-width:100%;height:auto;background:#fff" role="img" aria-label="릴레이 ③ 배선 — 릴레이로 DC 모터 켜고 끄기 (버튼 GPIO4)" font-family="'IBM Plex Sans KR','Malgun Gothic',sans-serif">
+<g transform="translate(0,14)"><rect x="300" y="160" width="761" height="322" rx="10" fill="#F4F4EE" stroke="#C9C9BE" stroke-width="2"/>
+<rect x="308" y="316.0" width="745" height="10" rx="3" fill="#DDDDD2"/>
+<line x1="314" x2="1047" y1="173" y2="173" stroke="#D6452E" stroke-width="2"/>
+<text x="306" y="186" font-size="11" fill="#D6452E" font-weight="700">+</text>
+<line x1="314" x2="1047" y1="208" y2="208" stroke="#2457C5" stroke-width="2"/>
+<text x="306" y="203" font-size="11" fill="#2457C5" font-weight="700">-</text>
+<line x1="314" x2="1047" y1="434" y2="434" stroke="#2457C5" stroke-width="2"/>
+<text x="306" y="447" font-size="11" fill="#2457C5" font-weight="700">-</text>
+<line x1="314" x2="1047" y1="469" y2="469" stroke="#D6452E" stroke-width="2"/>
+<text x="306" y="464" font-size="11" fill="#D6452E" font-weight="700">+</text>
+<defs><pattern id="g9" x="315.5" y="227.5" width="17" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r90" x="315.5" y="173.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r91" x="315.5" y="190.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r92" x="315.5" y="434.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r93" x="315.5" y="451.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern></defs>
+<rect x="315.5" y="227.5" width="714" height="85" fill="url(#g9)"/>
+<rect x="315.5" y="329.5" width="714" height="85" fill="url(#g9)"/>
+<rect x="315.5" y="173.5" width="714" height="17" fill="url(#r90)"/>
+<rect x="315.5" y="190.5" width="714" height="17" fill="url(#r91)"/>
+<rect x="315.5" y="434.5" width="714" height="17" fill="url(#r92)"/>
+<rect x="315.5" y="451.5" width="714" height="17" fill="url(#r93)"/>
+<text x="310" y="240" font-size="10" fill="#5B6B80" font-family="monospace">a</text>
+<text x="310" y="257" font-size="10" fill="#5B6B80" font-family="monospace">b</text>
+<text x="310" y="274" font-size="10" fill="#5B6B80" font-family="monospace">c</text>
+<text x="310" y="291" font-size="10" fill="#5B6B80" font-family="monospace">d</text>
+<text x="310" y="308" font-size="10" fill="#5B6B80" font-family="monospace">e</text>
+<text x="310" y="342" font-size="10" fill="#5B6B80" font-family="monospace">f</text>
+<text x="310" y="359" font-size="10" fill="#5B6B80" font-family="monospace">g</text>
+<text x="310" y="376" font-size="10" fill="#5B6B80" font-family="monospace">h</text>
+<text x="310" y="393" font-size="10" fill="#5B6B80" font-family="monospace">i</text>
+<text x="310" y="410" font-size="10" fill="#5B6B80" font-family="monospace">j</text>
+<text x="324" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">1</text>
+<text x="324" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">1</text>
+<text x="392" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">5</text>
+<text x="392" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">5</text>
+<text x="477" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">10</text>
+<text x="477" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">10</text>
+<text x="562" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">15</text>
+<text x="562" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">15</text>
+<text x="647" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">20</text>
+<text x="647" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">20</text>
+<text x="732" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">25</text>
+<text x="732" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">25</text>
+<text x="817" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">30</text>
+<text x="817" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">30</text>
+<text x="902" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">35</text>
+<text x="902" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">35</text>
+<text x="987" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">40</text>
+<text x="987" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">40</text>
+<rect x="30" y="110" width="190" height="459" rx="8" fill="#1B2A41"/>
+<rect x="70" y="128" width="110" height="150" rx="3" fill="#B8BEC6" stroke="#9EA4AC"/>
+<text x="125.0" y="190" font-size="15" font-weight="700" fill="#1B2A41" text-anchor="middle" font-family="monospace">ESP-32U</text>
+<rect x="108.0" y="360" width="34" height="34" fill="#0E1726" stroke="#3E5170"/>
+<text x="125.0" y="408" font-size="9" fill="#AEBBD1" text-anchor="middle" font-family="monospace">CP2102</text>
+<rect x="101.0" y="539" width="48" height="30" fill="#9EA4AC"/>
+<text x="125.0" y="558" font-size="10" fill="#1B2A41" text-anchor="middle" font-family="monospace">USB</text>
+<text x="78" y="529" font-size="10" fill="#fff" font-family="monospace">EN</text>
+<text x="148" y="529" font-size="10" fill="#fff" font-family="monospace">Boot</text>
+<circle cx="44" cy="138" r="5" fill="#C9D1DC"/><circle cx="206" cy="138" r="5" fill="#C9D1DC"/>
+<text x="54" y="142" font-size="10" fill="#fff" font-family="monospace">3V3</text>
+<text x="196" y="142" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">GND</text>
+<circle cx="44" cy="159" r="5" fill="#C9D1DC"/><circle cx="206" cy="159" r="5" fill="#C9D1DC"/>
+<text x="54" y="163" font-size="10" fill="#fff" font-family="monospace">EN</text>
+<text x="196" y="163" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">23</text>
+<circle cx="44" cy="180" r="5" fill="#C9D1DC"/><circle cx="206" cy="180" r="5" fill="#C9D1DC"/>
+<text x="54" y="184" font-size="10" fill="#fff" font-family="monospace">VP</text>
+<text x="196" y="184" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">22</text>
+<circle cx="44" cy="201" r="5" fill="#C9D1DC"/><circle cx="206" cy="201" r="5" fill="#C9D1DC"/>
+<text x="54" y="205" font-size="10" fill="#fff" font-family="monospace">VN</text>
+<text x="196" y="205" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">TX</text>
+<circle cx="44" cy="222" r="5" fill="#C9D1DC"/><circle cx="206" cy="222" r="5" fill="#C9D1DC"/>
+<text x="54" y="226" font-size="10" fill="#fff" font-family="monospace">34</text>
+<text x="196" y="226" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">RX</text>
+<circle cx="44" cy="243" r="5" fill="#C9D1DC"/><circle cx="206" cy="243" r="5" fill="#C9D1DC"/>
+<text x="54" y="247" font-size="10" fill="#fff" font-family="monospace">35</text>
+<text x="196" y="247" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">21</text>
+<circle cx="44" cy="264" r="5" fill="#C9D1DC"/><circle cx="206" cy="264" r="5" fill="#C9D1DC"/>
+<text x="54" y="268" font-size="10" fill="#fff" font-family="monospace">32</text>
+<text x="196" y="268" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">GND</text>
+<circle cx="44" cy="285" r="5" fill="#C9D1DC"/><circle cx="206" cy="285" r="5" fill="#C9D1DC"/>
+<text x="54" y="289" font-size="10" fill="#fff" font-family="monospace">33</text>
+<text x="196" y="289" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">19</text>
+<circle cx="44" cy="306" r="5" fill="#C9D1DC"/><circle cx="206" cy="306" r="5" fill="#C9D1DC"/>
+<text x="54" y="310" font-size="10" fill="#fff" font-family="monospace">25</text>
+<text x="196" y="310" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">18</text>
+<circle cx="44" cy="327" r="5" fill="#C9D1DC"/><circle cx="206" cy="327" r="5" fill="#C9D1DC"/>
+<text x="54" y="331" font-size="10" fill="#fff" font-family="monospace">26</text>
+<text x="196" y="331" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">5</text>
+<circle cx="44" cy="348" r="5" fill="#C9D1DC"/><circle cx="206" cy="348" r="5" fill="#C9D1DC"/>
+<text x="54" y="352" font-size="10" fill="#fff" font-family="monospace">27</text>
+<text x="196" y="352" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">17</text>
+<circle cx="44" cy="369" r="5" fill="#C9D1DC"/><circle cx="206" cy="369" r="5" fill="#C9D1DC"/>
+<text x="54" y="373" font-size="10" fill="#fff" font-family="monospace">14</text>
+<text x="196" y="373" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">16</text>
+<circle cx="44" cy="390" r="5" fill="#C9D1DC"/><circle cx="206" cy="390" r="5" fill="#C9D1DC"/>
+<text x="54" y="394" font-size="10" fill="#fff" font-family="monospace">12</text>
+<text x="196" y="394" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">4</text>
+<circle cx="44" cy="411" r="5" fill="#C9D1DC"/><circle cx="206" cy="411" r="5" fill="#C9D1DC"/>
+<text x="54" y="415" font-size="10" fill="#fff" font-family="monospace">GND</text>
+<text x="196" y="415" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">0</text>
+<circle cx="44" cy="432" r="5" fill="#C9D1DC"/><circle cx="206" cy="432" r="5" fill="#C9D1DC"/>
+<text x="54" y="436" font-size="10" fill="#fff" font-family="monospace">13</text>
+<text x="196" y="436" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">2</text>
+<circle cx="44" cy="453" r="5" fill="#C9D1DC"/><circle cx="206" cy="453" r="5" fill="#C9D1DC"/>
+<text x="54" y="457" font-size="10" fill="#fff" font-family="monospace">D2</text>
+<text x="196" y="457" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">15</text>
+<circle cx="44" cy="474" r="5" fill="#C9D1DC"/><circle cx="206" cy="474" r="5" fill="#C9D1DC"/>
+<text x="54" y="478" font-size="10" fill="#fff" font-family="monospace">D3</text>
+<text x="196" y="478" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">D1</text>
+<circle cx="44" cy="495" r="5" fill="#C9D1DC"/><circle cx="206" cy="495" r="5" fill="#C9D1DC"/>
+<text x="54" y="499" font-size="10" fill="#fff" font-family="monospace">CMD</text>
+<text x="196" y="499" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">D0</text>
+<circle cx="44" cy="516" r="5" fill="#C9D1DC"/><circle cx="206" cy="516" r="5" fill="#C9D1DC"/>
+<text x="54" y="520" font-size="10" fill="#fff" font-family="monospace">5V</text>
+<text x="196" y="520" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">CLK</text>
+<path d="M44.0,138.0 L30.0,138.0 L30.0,104.0 L324.0,104.0 L324.0,182.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M44.0,138.0 L30.0,138.0 L30.0,104.0 L324.0,104.0 L324.0,182.0" fill="none" stroke="#D6452E" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="44" cy="138" r="4.2" fill="#D6452E" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="324" cy="182" r="4.2" fill="#D6452E" stroke="#000" stroke-opacity=".35" stroke-width="1"/>
+<path d="M206.0,138.0 L292.0,138.0 L292.0,199.0 L341.0,199.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M206.0,138.0 L292.0,138.0 L292.0,199.0 L341.0,199.0" fill="none" stroke="#222222" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="206" cy="138" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="341" cy="199" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/>
+<path d="M206.0,264.0 L282.0,264.0 L282.0,443.0 L324.0,443.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M206.0,264.0 L282.0,264.0 L282.0,443.0 L324.0,443.0" fill="none" stroke="#222222" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="206" cy="264" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="324" cy="443" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/>
+<path d="M44.0,516.0 L94.0,516.0 L94.0,528.0 L272.0,528.0 L272.0,460.0 L341.0,460.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M44.0,516.0 L94.0,516.0 L94.0,528.0 L272.0,528.0 L272.0,460.0 L341.0,460.0" fill="none" stroke="#E0862A" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="44" cy="516" r="4.2" fill="#E0862A" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="341" cy="460" r="4.2" fill="#E0862A" stroke="#000" stroke-opacity=".35" stroke-width="1"/>
+<g opacity="1"><rect x="673" y="364" width="50" height="33" rx="3" fill="#1565C0" stroke="#000" stroke-opacity=".4"/><text x="698.0" y="384.5" font-size="9" font-weight="700" fill="#fff" text-anchor="middle"></text><circle cx="681" cy="372" r="4.2" fill="#C9C9C9" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="698" cy="372" r="4.2" fill="#C9C9C9" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="715" cy="372" r="4.2" fill="#C9C9C9" stroke="#000" stroke-opacity=".35" stroke-width="1"/><text x="681" y="393" font-size="8" fill="#1B2A41" text-anchor="middle" font-weight="700" font-family="monospace">S</text><text x="698" y="393" font-size="8" fill="#1B2A41" text-anchor="middle" font-weight="700" font-family="monospace">+</text><text x="715" y="393" font-size="8" fill="#1B2A41" text-anchor="middle" font-weight="700" font-family="monospace">-</text><path d="M698.0,406.0 L698.0,460.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.0" stroke-linejoin="round" stroke-linecap="round"/><path d="M698.0,406.0 L698.0,460.0" fill="none" stroke="#E0862A" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="698" cy="406" r="4.2" fill="#E0862A" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="698" cy="460" r="4.2" fill="#E0862A" stroke="#000" stroke-opacity=".35" stroke-width="1"/><path d="M715.0,406.0 L715.0,443.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.0" stroke-linejoin="round" stroke-linecap="round"/><path d="M715.0,406.0 L715.0,443.0" fill="none" stroke="#222222" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="715" cy="406" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="715" cy="443" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/></g>
+<g opacity="1"><rect x="556" y="298" width="46" height="46" rx="4" fill="#2B2E33" stroke="#000"/>
+<circle cx="579.0" cy="321.0" r="9" fill="#5B6B80" stroke="#111"/>
+<circle cx="562" cy="304" r="4.2" fill="#9A9A9A" stroke="#000" stroke-opacity=".35" stroke-width="1"/>
+<circle cx="562" cy="338" r="4.2" fill="#9A9A9A" stroke="#000" stroke-opacity=".35" stroke-width="1"/>
+<circle cx="596" cy="304" r="4.2" fill="#9A9A9A" stroke="#000" stroke-opacity=".35" stroke-width="1"/>
+<circle cx="596" cy="338" r="4.2" fill="#9A9A9A" stroke="#000" stroke-opacity=".35" stroke-width="1"/>
+<text x="579.0" y="496" font-size="12" fill="#1B2A41" text-anchor="middle" font-weight="700">버튼</text><path d="M596.0,406.0 L596.0,443.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.0" stroke-linejoin="round" stroke-linecap="round"/><path d="M596.0,406.0 L596.0,443.0" fill="none" stroke="#222222" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="596" cy="406" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="596" cy="443" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/></g>
+<g opacity="1"><rect x="683.0" y="518" width="132" height="44" rx="5" fill="#1565C0" stroke="#0D3C7A"/><text x="749" y="556" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">릴레이 접점 (나사 단자)</text><rect x="696" y="522" width="26" height="18" rx="2" fill="#2E7D32" stroke="#1B5E20"/><circle cx="709" cy="531" r="5" fill="#BFC5CC" stroke="#555"/><line x1="706" y1="531" x2="712" y2="531" stroke="#333" stroke-width="1.5"/><text x="709" y="549" font-size="9" fill="#FFE082" text-anchor="middle" font-weight="700" font-family="monospace">NO</text><rect x="736" y="522" width="26" height="18" rx="2" fill="#2E7D32" stroke="#1B5E20"/><circle cx="749" cy="531" r="5" fill="#BFC5CC" stroke="#555"/><line x1="746" y1="531" x2="752" y2="531" stroke="#333" stroke-width="1.5"/><text x="749" y="549" font-size="9" fill="#FFE082" text-anchor="middle" font-weight="700" font-family="monospace">COM</text><rect x="776" y="522" width="26" height="18" rx="2" fill="#2E7D32" stroke="#1B5E20"/><circle cx="789" cy="531" r="5" fill="#BFC5CC" stroke="#555"/><line x1="786" y1="531" x2="792" y2="531" stroke="#333" stroke-width="1.5"/><text x="789" y="549" font-size="9" fill="#FFE082" text-anchor="middle" font-weight="700" font-family="monospace">NC</text><path d="M749.0,522.0 L749.0,508.0 L783.0,508.0 L783.0,460.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="5.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M749.0,522.0 L749.0,508.0 L783.0,508.0 L783.0,460.0" fill="none" stroke="#E0862A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="749" cy="522" r="4.2" fill="#E0862A" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="783" cy="460" r="4.2" fill="#E0862A" stroke="#000" stroke-opacity=".35" stroke-width="1"/><path d="M709.0,540.0 L709.0,576.0 L889.0,576.0 L889.0,558.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="5.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M709.0,540.0 L709.0,576.0 L889.0,576.0 L889.0,558.0" fill="none" stroke="#C0392B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="709" cy="540" r="4.2" fill="#C0392B" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="889" cy="558" r="4.2" fill="#C0392B" stroke="#000" stroke-opacity=".35" stroke-width="1"/><path d="M949.0,520.0 L949.0,443.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="5.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M949.0,520.0 L949.0,443.0" fill="none" stroke="#222" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="949" cy="520" r="4.2" fill="#222" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="949" cy="443.0" r="4.2" fill="#222" stroke="#000" stroke-opacity=".35" stroke-width="1"/><rect x="874" y="520" width="90" height="38" rx="5" fill="#607D8B" stroke="#000"/><text x="919" y="543" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">DC 모터</text></g>
+<g opacity="1"><path d="M44.0,432.0 L32.0,432.0 L32.0,588.0 L681.0,588.0 L681.0,406.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="7.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M44.0,432.0 L32.0,432.0 L32.0,588.0 L681.0,588.0 L681.0,406.0" fill="none" stroke="#E0559A" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="44" cy="432" r="4.2" fill="#E0559A" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="681" cy="406" r="4.2" fill="#E0559A" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="44" cy="432" r="6.5" fill="none" stroke="#E0559A" stroke-width="2.5"/></g>
+<g opacity="1"><path d="M206.0,390.0 L244.0,390.0 L244.0,118.0 L562.0,118.0 L562.0,236.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="7.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M206.0,390.0 L244.0,390.0 L244.0,118.0 L562.0,118.0 L562.0,236.0" fill="none" stroke="#12A4B8" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="206" cy="390" r="4.2" fill="#12A4B8" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="562" cy="236" r="4.2" fill="#12A4B8" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="206" cy="390" r="6.5" fill="none" stroke="#12A4B8" stroke-width="2.5"/></g>
+<text x="698.0" y="496" font-size="12" font-weight="700" fill="#1B2A41" text-anchor="middle" opacity="1">릴레이 모듈</text>
+<text x="579" y="496" font-size="12" font-weight="700" fill="#1B2A41" text-anchor="middle" opacity="1">버튼</text>
+<text x="1067" y="186" font-size="11" font-weight="700" fill="#D6452E">3V3</text>
+<text x="1067" y="203" font-size="11" font-weight="700" fill="#2457C5">GND</text>
+<text x="1067" y="447" font-size="11" font-weight="700" fill="#2457C5">GND</text>
+<text x="1067" y="464" font-size="11" font-weight="700" fill="#E0862A">5V</text>
+<rect x="300" y="624" width="22" height="8" rx="3" fill="#E0559A"/>
+<text x="330" y="632" font-size="12" fill="#1B2A41" font-family="monospace">GPIO13 → j22 (S)</text>
+<rect x="695" y="624" width="22" height="8" rx="3" fill="#E0862A"/>
+<text x="725" y="632" font-size="12" fill="#1B2A41" font-family="monospace">j23 (+) → 5V · j24 (−) → GND</text>
+<rect x="300" y="646" width="22" height="8" rx="3" fill="#12A4B8"/>
+<text x="330" y="654" font-size="12" fill="#1B2A41" font-family="monospace">GPIO4 → a15 (버튼, 대각선 j17 → GND)</text>
+<rect x="695" y="646" width="22" height="8" rx="3" fill="#E0862A"/>
+<text x="725" y="654" font-size="12" fill="#1B2A41" font-family="monospace">COM → 5V (아래 주황 레일)</text>
+<rect x="300" y="668" width="22" height="8" rx="3" fill="#C0392B"/>
+<text x="330" y="676" font-size="12" fill="#1B2A41" font-family="monospace">NO → 모터 + (빨강 선)</text>
+<rect x="695" y="668" width="22" height="8" rx="3" fill="#222222"/>
+<text x="725" y="676" font-size="12" fill="#1B2A41" font-family="monospace">모터 − (검정 선) → GND 레일</text>
+<rect x="300" y="690" width="22" height="8" rx="3" fill="#9A9A9A"/>
+<text x="330" y="698" font-size="12" fill="#1B2A41" font-family="monospace">모터는 L293D 에서 빼서 연결 · 다이오드가 있으면 모터 양 끝에 역방향</text>
+<text x="300" y="16" font-size="15" font-weight="700" fill="#1B2A41">릴레이 ③ 배선 — 릴레이로 DC 모터 켜고 끄기 (버튼 GPIO4)</text>
+<text x="560" y="16" font-size="11.5" fill="#5B6B80"> </text>
+<text x="1061" y="16" font-size="11.5" fill="#5B6B80" text-anchor="end">COM ← 5V · NO → 모터 + · 모터 − → GND</text></g>
+</svg></figure>
+<p>LED 두 개를 빼고, 모터를 <strong>L293D 에서 빼서</strong> 릴레이에 연결합니다: <strong>COM ← 5V</strong>, <strong>NO → 모터 +</strong>, <strong>모터 − → GND</strong>. 버튼(GPIO4, Day 1 과 같은 대각선 연결)으로 켜고 끕니다.</p>
+<p><code>relay_motor.ino</code></p>
+<div class="hl"><pre><span></span><code><span class="k">typedef</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">pin</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">stable</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">last_raw</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">changed_at</span><span class="p">;</span>
+<span class="p">}</span><span class="w"> </span><span class="n">button_t</span><span class="p">;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">button_pressed</span><span class="p">(</span><span class="n">button_t</span><span class="w"> </span><span class="o">*</span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">            </span><span class="c1">// Day 1 5교시</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">raw</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">digitalRead</span><span class="p">(</span><span class="n">b</span><span class="o">-&gt;</span><span class="n">pin</span><span class="p">);</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">raw</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">b</span><span class="o">-&gt;</span><span class="n">last_raw</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">b</span><span class="o">-&gt;</span><span class="n">last_raw</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">raw</span><span class="p">;</span><span class="w"> </span><span class="n">b</span><span class="o">-&gt;</span><span class="n">changed_at</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">millis</span><span class="p">();</span><span class="w"> </span><span class="p">}</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">millis</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">b</span><span class="o">-&gt;</span><span class="n">changed_at</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">30</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">raw</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">b</span><span class="o">-&gt;</span><span class="n">stable</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">b</span><span class="o">-&gt;</span><span class="n">stable</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">raw</span><span class="p">;</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="p">(</span><span class="n">raw</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">LOW</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">PIN_RELAY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"> </span><span class="n">PIN_BTN</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
+<span class="k">const</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="n">ACTIVE_LOW</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
+<span class="k">const</span><span class="w"> </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">MIN_SWITCH_MS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1000</span><span class="p">;</span><span class="w">         </span><span class="c1">// 접점 보호 — 1초 안에 다시 바꾸지 않는다</span>
+
+<span class="n">button_t</span><span class="w"> </span><span class="n">btn</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="n">PIN_BTN</span><span class="p">,</span><span class="w"> </span><span class="n">HIGH</span><span class="p">,</span><span class="w"> </span><span class="n">HIGH</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">};</span>
+<span class="kt">bool</span><span class="w"> </span><span class="n">motor_on</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
+<span class="kt">uint32_t</span><span class="w"> </span><span class="n">last_switch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="kt">int</span><span class="w"> </span><span class="n">switch_count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">relay_set</span><span class="p">(</span><span class="kt">bool</span><span class="w"> </span><span class="n">on</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">digitalWrite</span><span class="p">(</span><span class="n">PIN_RELAY</span><span class="p">,</span><span class="w"> </span><span class="n">ACTIVE_LOW</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="o">!</span><span class="n">on</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">on</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">bool</span><span class="w"> </span><span class="nf">relay_request</span><span class="p">(</span><span class="kt">bool</span><span class="w"> </span><span class="n">on</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">                </span><span class="c1">// 요청이 받아들여지면 true</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">on</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">motor_on</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">switch_count</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">millis</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">last_switch</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">MIN_SWITCH_MS</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">   </span><span class="c1">// 첫 전환은 허용</span>
+<span class="w">        </span><span class="n">Serial</span><span class="p">.</span><span class="n">println</span><span class="p">(</span><span class="s">&quot;너무 빠름 — 무시&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="n">relay_set</span><span class="p">(</span><span class="n">on</span><span class="p">);</span>
+<span class="w">    </span><span class="n">motor_on</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">on</span><span class="p">;</span>
+<span class="w">    </span><span class="n">last_switch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">millis</span><span class="p">();</span>
+<span class="w">    </span><span class="n">switch_count</span><span class="o">++</span><span class="p">;</span>
+<span class="w">    </span><span class="n">Serial</span><span class="p">.</span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;모터 %s (전환 %d회)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">on</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="s">&quot;ON&quot;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="s">&quot;OFF&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">switch_count</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">setup</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">Serial</span><span class="p">.</span><span class="n">begin</span><span class="p">(</span><span class="mi">115200</span><span class="p">);</span>
+<span class="w">    </span><span class="n">pinMode</span><span class="p">(</span><span class="n">PIN_RELAY</span><span class="p">,</span><span class="w"> </span><span class="n">OUTPUT</span><span class="p">);</span>
+<span class="w">    </span><span class="n">pinMode</span><span class="p">(</span><span class="n">PIN_BTN</span><span class="p">,</span><span class="w"> </span><span class="n">INPUT_PULLUP</span><span class="p">);</span>
+<span class="w">    </span><span class="n">relay_set</span><span class="p">(</span><span class="nb">false</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">loop</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">button_pressed</span><span class="p">(</span><span class="o">&amp;</span><span class="n">btn</span><span class="p">))</span><span class="w"> </span><span class="n">relay_request</span><span class="p">(</span><span class="o">!</span><span class="n">motor_on</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="c1">// → 버튼을 누를 때마다 딸깍 · 모터가 최고 속도로 돌거나 멈춘다</span>
+<span class="c1">//   버튼을 빠르게 연타하면 &quot;너무 빠름 — 무시&quot;</span>
+</code></pre></div>
+
+<p>릴레이는 <strong>켜짐 · 꺼짐 두 가지뿐</strong>입니다. 속도 조절도, 방향 전환도 할 수 없고 모터는 항상 <strong>최고 속도</strong>로 돕니다. 접점은 수만~수십만 번 전환하면 닳기 때문에 <code>MIN_SWITCH_MS</code> 로 <strong>너무 자주 바꾸지 않게</strong> 막았습니다 — Day 2 히스테리시스와 같은 목적입니다.</p>
+<blockquote>
+<p>모터를 켜는 순간 ESP32 가 리셋되면(<code>Brownout</code>) USB 5V 가 순간적으로 떨어진 것입니다. 릴레이는 <strong>처음부터 최고 속도</strong>로 켜기 때문에 L293D 보다 이 현상이 잘 생깁니다. <strong>PC 본체 USB 포트</strong>를 쓰고, 팬 날개를 뺀 가벼운 상태로 먼저 확인합니다. 키트에는 역전압 보호용 다이오드가 없습니다 — 작은 모터라 ③ 은 그대로 해도 되지만, <strong>보호 다이오드가 들어 있는 L293D 를 거치는 ④ 방식</strong>이 더 안전한 구조입니다.</p>
+</blockquote>
+<h4>④ 릴레이 = 주전원(비상 정지) · L293D = 속도와 방향</h4>
+<figure class="wiring"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 791" width="1100" style="max-width:100%;height:auto;background:#fff" role="img" aria-label="릴레이 ④ 배선 — 릴레이 = 모터 주전원 · L293D = 속도 · 방향" font-family="'IBM Plex Sans KR','Malgun Gothic',sans-serif">
+<g transform="translate(0,14)"><rect x="300" y="160" width="761" height="322" rx="10" fill="#F4F4EE" stroke="#C9C9BE" stroke-width="2"/>
+<rect x="308" y="316.0" width="745" height="10" rx="3" fill="#DDDDD2"/>
+<line x1="314" x2="1047" y1="173" y2="173" stroke="#D6452E" stroke-width="2"/>
+<text x="306" y="186" font-size="11" fill="#D6452E" font-weight="700">+</text>
+<line x1="314" x2="1047" y1="208" y2="208" stroke="#2457C5" stroke-width="2"/>
+<text x="306" y="203" font-size="11" fill="#2457C5" font-weight="700">-</text>
+<line x1="314" x2="1047" y1="434" y2="434" stroke="#2457C5" stroke-width="2"/>
+<text x="306" y="447" font-size="11" fill="#2457C5" font-weight="700">-</text>
+<line x1="314" x2="1047" y1="469" y2="469" stroke="#D6452E" stroke-width="2"/>
+<text x="306" y="464" font-size="11" fill="#D6452E" font-weight="700">+</text>
+<defs><pattern id="g10" x="315.5" y="227.5" width="17" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r100" x="315.5" y="173.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r101" x="315.5" y="190.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r102" x="315.5" y="434.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r103" x="315.5" y="451.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern></defs>
+<rect x="315.5" y="227.5" width="714" height="85" fill="url(#g10)"/>
+<rect x="315.5" y="329.5" width="714" height="85" fill="url(#g10)"/>
+<rect x="315.5" y="173.5" width="714" height="17" fill="url(#r100)"/>
+<rect x="315.5" y="190.5" width="714" height="17" fill="url(#r101)"/>
+<rect x="315.5" y="434.5" width="714" height="17" fill="url(#r102)"/>
+<rect x="315.5" y="451.5" width="714" height="17" fill="url(#r103)"/>
+<text x="310" y="240" font-size="10" fill="#5B6B80" font-family="monospace">a</text>
+<text x="310" y="257" font-size="10" fill="#5B6B80" font-family="monospace">b</text>
+<text x="310" y="274" font-size="10" fill="#5B6B80" font-family="monospace">c</text>
+<text x="310" y="291" font-size="10" fill="#5B6B80" font-family="monospace">d</text>
+<text x="310" y="308" font-size="10" fill="#5B6B80" font-family="monospace">e</text>
+<text x="310" y="342" font-size="10" fill="#5B6B80" font-family="monospace">f</text>
+<text x="310" y="359" font-size="10" fill="#5B6B80" font-family="monospace">g</text>
+<text x="310" y="376" font-size="10" fill="#5B6B80" font-family="monospace">h</text>
+<text x="310" y="393" font-size="10" fill="#5B6B80" font-family="monospace">i</text>
+<text x="310" y="410" font-size="10" fill="#5B6B80" font-family="monospace">j</text>
+<text x="324" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">1</text>
+<text x="324" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">1</text>
+<text x="392" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">5</text>
+<text x="392" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">5</text>
+<text x="477" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">10</text>
+<text x="477" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">10</text>
+<text x="562" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">15</text>
+<text x="562" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">15</text>
+<text x="647" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">20</text>
+<text x="647" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">20</text>
+<text x="732" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">25</text>
+<text x="732" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">25</text>
+<text x="817" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">30</text>
+<text x="817" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">30</text>
+<text x="902" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">35</text>
+<text x="902" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">35</text>
+<text x="987" y="225" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">40</text>
+<text x="987" y="423" font-size="10" fill="#5B6B80" text-anchor="middle" font-family="monospace">40</text>
+<rect x="30" y="110" width="190" height="459" rx="8" fill="#1B2A41"/>
+<rect x="70" y="128" width="110" height="150" rx="3" fill="#B8BEC6" stroke="#9EA4AC"/>
+<text x="125.0" y="190" font-size="15" font-weight="700" fill="#1B2A41" text-anchor="middle" font-family="monospace">ESP-32U</text>
+<rect x="108.0" y="360" width="34" height="34" fill="#0E1726" stroke="#3E5170"/>
+<text x="125.0" y="408" font-size="9" fill="#AEBBD1" text-anchor="middle" font-family="monospace">CP2102</text>
+<rect x="101.0" y="539" width="48" height="30" fill="#9EA4AC"/>
+<text x="125.0" y="558" font-size="10" fill="#1B2A41" text-anchor="middle" font-family="monospace">USB</text>
+<text x="78" y="529" font-size="10" fill="#fff" font-family="monospace">EN</text>
+<text x="148" y="529" font-size="10" fill="#fff" font-family="monospace">Boot</text>
+<circle cx="44" cy="138" r="5" fill="#C9D1DC"/><circle cx="206" cy="138" r="5" fill="#C9D1DC"/>
+<text x="54" y="142" font-size="10" fill="#fff" font-family="monospace">3V3</text>
+<text x="196" y="142" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">GND</text>
+<circle cx="44" cy="159" r="5" fill="#C9D1DC"/><circle cx="206" cy="159" r="5" fill="#C9D1DC"/>
+<text x="54" y="163" font-size="10" fill="#fff" font-family="monospace">EN</text>
+<text x="196" y="163" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">23</text>
+<circle cx="44" cy="180" r="5" fill="#C9D1DC"/><circle cx="206" cy="180" r="5" fill="#C9D1DC"/>
+<text x="54" y="184" font-size="10" fill="#fff" font-family="monospace">VP</text>
+<text x="196" y="184" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">22</text>
+<circle cx="44" cy="201" r="5" fill="#C9D1DC"/><circle cx="206" cy="201" r="5" fill="#C9D1DC"/>
+<text x="54" y="205" font-size="10" fill="#fff" font-family="monospace">VN</text>
+<text x="196" y="205" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">TX</text>
+<circle cx="44" cy="222" r="5" fill="#C9D1DC"/><circle cx="206" cy="222" r="5" fill="#C9D1DC"/>
+<text x="54" y="226" font-size="10" fill="#fff" font-family="monospace">34</text>
+<text x="196" y="226" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">RX</text>
+<circle cx="44" cy="243" r="5" fill="#C9D1DC"/><circle cx="206" cy="243" r="5" fill="#C9D1DC"/>
+<text x="54" y="247" font-size="10" fill="#fff" font-family="monospace">35</text>
+<text x="196" y="247" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">21</text>
+<circle cx="44" cy="264" r="5" fill="#C9D1DC"/><circle cx="206" cy="264" r="5" fill="#C9D1DC"/>
+<text x="54" y="268" font-size="10" fill="#fff" font-family="monospace">32</text>
+<text x="196" y="268" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">GND</text>
+<circle cx="44" cy="285" r="5" fill="#C9D1DC"/><circle cx="206" cy="285" r="5" fill="#C9D1DC"/>
+<text x="54" y="289" font-size="10" fill="#fff" font-family="monospace">33</text>
+<text x="196" y="289" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">19</text>
+<circle cx="44" cy="306" r="5" fill="#C9D1DC"/><circle cx="206" cy="306" r="5" fill="#C9D1DC"/>
+<text x="54" y="310" font-size="10" fill="#fff" font-family="monospace">25</text>
+<text x="196" y="310" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">18</text>
+<circle cx="44" cy="327" r="5" fill="#C9D1DC"/><circle cx="206" cy="327" r="5" fill="#C9D1DC"/>
+<text x="54" y="331" font-size="10" fill="#fff" font-family="monospace">26</text>
+<text x="196" y="331" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">5</text>
+<circle cx="44" cy="348" r="5" fill="#C9D1DC"/><circle cx="206" cy="348" r="5" fill="#C9D1DC"/>
+<text x="54" y="352" font-size="10" fill="#fff" font-family="monospace">27</text>
+<text x="196" y="352" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">17</text>
+<circle cx="44" cy="369" r="5" fill="#C9D1DC"/><circle cx="206" cy="369" r="5" fill="#C9D1DC"/>
+<text x="54" y="373" font-size="10" fill="#fff" font-family="monospace">14</text>
+<text x="196" y="373" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">16</text>
+<circle cx="44" cy="390" r="5" fill="#C9D1DC"/><circle cx="206" cy="390" r="5" fill="#C9D1DC"/>
+<text x="54" y="394" font-size="10" fill="#fff" font-family="monospace">12</text>
+<text x="196" y="394" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">4</text>
+<circle cx="44" cy="411" r="5" fill="#C9D1DC"/><circle cx="206" cy="411" r="5" fill="#C9D1DC"/>
+<text x="54" y="415" font-size="10" fill="#fff" font-family="monospace">GND</text>
+<text x="196" y="415" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">0</text>
+<circle cx="44" cy="432" r="5" fill="#C9D1DC"/><circle cx="206" cy="432" r="5" fill="#C9D1DC"/>
+<text x="54" y="436" font-size="10" fill="#fff" font-family="monospace">13</text>
+<text x="196" y="436" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">2</text>
+<circle cx="44" cy="453" r="5" fill="#C9D1DC"/><circle cx="206" cy="453" r="5" fill="#C9D1DC"/>
+<text x="54" y="457" font-size="10" fill="#fff" font-family="monospace">D2</text>
+<text x="196" y="457" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">15</text>
+<circle cx="44" cy="474" r="5" fill="#C9D1DC"/><circle cx="206" cy="474" r="5" fill="#C9D1DC"/>
+<text x="54" y="478" font-size="10" fill="#fff" font-family="monospace">D3</text>
+<text x="196" y="478" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">D1</text>
+<circle cx="44" cy="495" r="5" fill="#C9D1DC"/><circle cx="206" cy="495" r="5" fill="#C9D1DC"/>
+<text x="54" y="499" font-size="10" fill="#fff" font-family="monospace">CMD</text>
+<text x="196" y="499" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">D0</text>
+<circle cx="44" cy="516" r="5" fill="#C9D1DC"/><circle cx="206" cy="516" r="5" fill="#C9D1DC"/>
+<text x="54" y="520" font-size="10" fill="#fff" font-family="monospace">5V</text>
+<text x="196" y="520" font-size="10" fill="#fff" text-anchor="end" font-family="monospace">CLK</text>
+<path d="M44.0,138.0 L30.0,138.0 L30.0,104.0 L324.0,104.0 L324.0,182.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M44.0,138.0 L30.0,138.0 L30.0,104.0 L324.0,104.0 L324.0,182.0" fill="none" stroke="#D6452E" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="44" cy="138" r="4.2" fill="#D6452E" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="324" cy="182" r="4.2" fill="#D6452E" stroke="#000" stroke-opacity=".35" stroke-width="1"/>
+<path d="M206.0,138.0 L292.0,138.0 L292.0,199.0 L341.0,199.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M206.0,138.0 L292.0,138.0 L292.0,199.0 L341.0,199.0" fill="none" stroke="#222222" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="206" cy="138" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="341" cy="199" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/>
+<path d="M206.0,264.0 L282.0,264.0 L282.0,443.0 L324.0,443.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M206.0,264.0 L282.0,264.0 L282.0,443.0 L324.0,443.0" fill="none" stroke="#222222" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="206" cy="264" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="324" cy="443" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/>
+<path d="M44.0,516.0 L94.0,516.0 L94.0,528.0 L272.0,528.0 L272.0,460.0 L341.0,460.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M44.0,516.0 L94.0,516.0 L94.0,528.0 L272.0,528.0 L272.0,460.0 L341.0,460.0" fill="none" stroke="#E0862A" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="44" cy="516" r="4.2" fill="#E0862A" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="341" cy="460" r="4.2" fill="#E0862A" stroke="#000" stroke-opacity=".35" stroke-width="1"/>
+<g opacity="1"><rect x="673" y="364" width="50" height="33" rx="3" fill="#1565C0" stroke="#000" stroke-opacity=".4"/><text x="698.0" y="384.5" font-size="9" font-weight="700" fill="#fff" text-anchor="middle"></text><circle cx="681" cy="372" r="4.2" fill="#C9C9C9" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="698" cy="372" r="4.2" fill="#C9C9C9" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="715" cy="372" r="4.2" fill="#C9C9C9" stroke="#000" stroke-opacity=".35" stroke-width="1"/><text x="681" y="393" font-size="8" fill="#1B2A41" text-anchor="middle" font-weight="700" font-family="monospace">S</text><text x="698" y="393" font-size="8" fill="#1B2A41" text-anchor="middle" font-weight="700" font-family="monospace">+</text><text x="715" y="393" font-size="8" fill="#1B2A41" text-anchor="middle" font-weight="700" font-family="monospace">-</text><path d="M698.0,406.0 L698.0,460.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.0" stroke-linejoin="round" stroke-linecap="round"/><path d="M698.0,406.0 L698.0,460.0" fill="none" stroke="#E0862A" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="698" cy="406" r="4.2" fill="#E0862A" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="698" cy="460" r="4.2" fill="#E0862A" stroke="#000" stroke-opacity=".35" stroke-width="1"/><path d="M715.0,406.0 L715.0,443.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.0" stroke-linejoin="round" stroke-linecap="round"/><path d="M715.0,406.0 L715.0,443.0" fill="none" stroke="#222222" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="715" cy="406" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="715" cy="443" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/></g>
+<g opacity="1"><rect x="384" y="298" width="135" height="46" rx="3" fill="#1F2328"/><path d="M384,315.0 a6,6 0 0 1 0,12" fill="#555"/><text x="451.5" y="325.0" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">L293D</text><circle cx="392" cy="304" r="4.2" fill="#BFC4CA" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="392" cy="338" r="4.2" fill="#BFC4CA" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="409" cy="304" r="4.2" fill="#BFC4CA" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="409" cy="338" r="4.2" fill="#BFC4CA" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="426" cy="304" r="4.2" fill="#BFC4CA" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="426" cy="338" r="4.2" fill="#BFC4CA" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="443" cy="304" r="4.2" fill="#BFC4CA" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="443" cy="338" r="4.2" fill="#BFC4CA" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="460" cy="304" r="4.2" fill="#BFC4CA" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="460" cy="338" r="4.2" fill="#BFC4CA" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="477" cy="304" r="4.2" fill="#BFC4CA" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="477" cy="338" r="4.2" fill="#BFC4CA" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="494" cy="304" r="4.2" fill="#BFC4CA" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="494" cy="338" r="4.2" fill="#BFC4CA" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="511" cy="304" r="4.2" fill="#BFC4CA" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="511" cy="338" r="4.2" fill="#BFC4CA" stroke="#000" stroke-opacity=".35" stroke-width="1"/><text x="392" y="285" font-size="8" fill="#1B2A41" text-anchor="middle" font-weight="700" font-family="monospace">VSS</text><text x="409" y="285" font-size="8" fill="#1B2A41" text-anchor="middle" font-weight="700" font-family="monospace">IN4</text><text x="426" y="285" font-size="8" fill="#1B2A41" text-anchor="middle" font-weight="700" font-family="monospace">OUT4</text><text x="443" y="285" font-size="8" fill="#1B2A41" text-anchor="middle" font-weight="700" font-family="monospace">GND</text><text x="460" y="285" font-size="8" fill="#1B2A41" text-anchor="middle" font-weight="700" font-family="monospace">GND</text><text x="477" y="285" font-size="8" fill="#1B2A41" text-anchor="middle" font-weight="700" font-family="monospace">OUT3</text><text x="494" y="285" font-size="8" fill="#1B2A41" text-anchor="middle" font-weight="700" font-family="monospace">IN3</text><text x="511" y="285" font-size="8" fill="#1B2A41" text-anchor="middle" font-weight="700" font-family="monospace">EN2</text><text x="392" y="365" font-size="8" fill="#1B2A41" text-anchor="middle" font-weight="700" font-family="monospace">EN1</text><text x="409" y="365" font-size="8" fill="#1B2A41" text-anchor="middle" font-weight="700" font-family="monospace">IN1</text><text x="426" y="365" font-size="8" fill="#1B2A41" text-anchor="middle" font-weight="700" font-family="monospace">OUT1</text><text x="443" y="365" font-size="8" fill="#1B2A41" text-anchor="middle" font-weight="700" font-family="monospace">GND</text><text x="460" y="365" font-size="8" fill="#1B2A41" text-anchor="middle" font-weight="700" font-family="monospace">GND</text><text x="477" y="365" font-size="8" fill="#1B2A41" text-anchor="middle" font-weight="700" font-family="monospace">OUT2</text><text x="494" y="365" font-size="8" fill="#1B2A41" text-anchor="middle" font-weight="700" font-family="monospace">IN2</text><text x="511" y="365" font-size="8" fill="#1B2A41" text-anchor="middle" font-weight="700" font-family="monospace">VS</text><path d="M443.0,406.0 L443.0,443.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.0" stroke-linejoin="round" stroke-linecap="round"/><path d="M443.0,406.0 L443.0,443.0" fill="none" stroke="#222222" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="443" cy="406" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="443" cy="443" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/><path d="M460.0,406.0 L460.0,443.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.0" stroke-linejoin="round" stroke-linecap="round"/><path d="M460.0,406.0 L460.0,443.0" fill="none" stroke="#222222" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="460" cy="406" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="460" cy="443" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/><path d="M443.0,236.0 L443.0,199.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.0" stroke-linejoin="round" stroke-linecap="round"/><path d="M443.0,236.0 L443.0,199.0" fill="none" stroke="#222222" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="443" cy="236" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="443" cy="199" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/><path d="M460.0,236.0 L460.0,199.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.0" stroke-linejoin="round" stroke-linecap="round"/><path d="M460.0,236.0 L460.0,199.0" fill="none" stroke="#222222" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="460" cy="236" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="460" cy="199" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/><path d="M392,253 C392,223 545,490 545,460" fill="none" stroke="#E0862A" stroke-width="3" stroke-linecap="round" opacity=".92"/><circle cx="392" cy="253" r="4.2" fill="#E0862A" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="545" cy="460" r="4.2" fill="#E0862A" stroke="#000" stroke-opacity=".35" stroke-width="1"/></g>
+<g opacity="1"><rect x="406.5" y="508" width="90" height="38" rx="5" fill="#607D8B" stroke="#000"/><text x="451.5" y="531.0" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">DC 모터</text><path d="M420.5,508.0 L420.5,492.0 L426.0,492.0 L426.0,389.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="5.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M420.5,508.0 L420.5,492.0 L426.0,492.0 L426.0,389.0" fill="none" stroke="#C0392B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="420.5" cy="508" r="4.2" fill="#C0392B" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="426" cy="389" r="4.2" fill="#C0392B" stroke="#000" stroke-opacity=".35" stroke-width="1"/><path d="M482.5,508.0 L482.5,489.0 L477.0,489.0 L477.0,389.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="5.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M482.5,508.0 L482.5,489.0 L477.0,489.0 L477.0,389.0" fill="none" stroke="#222" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="482.5" cy="508" r="4.2" fill="#222" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="477" cy="389" r="4.2" fill="#222" stroke="#000" stroke-opacity=".35" stroke-width="1"/></g>
+<g opacity="1"><rect x="556" y="298" width="46" height="46" rx="4" fill="#2B2E33" stroke="#000"/>
+<circle cx="579.0" cy="321.0" r="9" fill="#5B6B80" stroke="#111"/>
+<circle cx="562" cy="304" r="4.2" fill="#9A9A9A" stroke="#000" stroke-opacity=".35" stroke-width="1"/>
+<circle cx="562" cy="338" r="4.2" fill="#9A9A9A" stroke="#000" stroke-opacity=".35" stroke-width="1"/>
+<circle cx="596" cy="304" r="4.2" fill="#9A9A9A" stroke="#000" stroke-opacity=".35" stroke-width="1"/>
+<circle cx="596" cy="338" r="4.2" fill="#9A9A9A" stroke="#000" stroke-opacity=".35" stroke-width="1"/>
+<text x="579.0" y="496" font-size="12" fill="#1B2A41" text-anchor="middle" font-weight="700">버튼</text><path d="M596.0,406.0 L596.0,443.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="6.0" stroke-linejoin="round" stroke-linecap="round"/><path d="M596.0,406.0 L596.0,443.0" fill="none" stroke="#222222" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="596" cy="406" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="596" cy="443" r="4.2" fill="#222222" stroke="#000" stroke-opacity=".35" stroke-width="1"/></g>
+<g opacity="1"><rect x="717.0" y="518" width="132" height="44" rx="5" fill="#1565C0" stroke="#0D3C7A"/><text x="783" y="556" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">릴레이 접점 (나사 단자)</text><rect x="730" y="522" width="26" height="18" rx="2" fill="#2E7D32" stroke="#1B5E20"/><circle cx="743" cy="531" r="5" fill="#BFC5CC" stroke="#555"/><line x1="740" y1="531" x2="746" y2="531" stroke="#333" stroke-width="1.5"/><text x="743" y="549" font-size="9" fill="#FFE082" text-anchor="middle" font-weight="700" font-family="monospace">NO</text><rect x="770" y="522" width="26" height="18" rx="2" fill="#2E7D32" stroke="#1B5E20"/><circle cx="783" cy="531" r="5" fill="#BFC5CC" stroke="#555"/><line x1="780" y1="531" x2="786" y2="531" stroke="#333" stroke-width="1.5"/><text x="783" y="549" font-size="9" fill="#FFE082" text-anchor="middle" font-weight="700" font-family="monospace">COM</text><rect x="810" y="522" width="26" height="18" rx="2" fill="#2E7D32" stroke="#1B5E20"/><circle cx="823" cy="531" r="5" fill="#BFC5CC" stroke="#555"/><line x1="820" y1="531" x2="826" y2="531" stroke="#333" stroke-width="1.5"/><text x="823" y="549" font-size="9" fill="#FFE082" text-anchor="middle" font-weight="700" font-family="monospace">NC</text><path d="M783.0,522.0 L783.0,508.0 L817.0,508.0 L817.0,460.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="5.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M783.0,522.0 L783.0,508.0 L817.0,508.0 L817.0,460.0" fill="none" stroke="#E0862A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="783" cy="522" r="4.2" fill="#E0862A" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="817" cy="460" r="4.2" fill="#E0862A" stroke="#000" stroke-opacity=".35" stroke-width="1"/><path d="M743.0,522.0 L743.0,503.0 L511.0,503.0 L511.0,389.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="5.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M743.0,522.0 L743.0,503.0 L511.0,503.0 L511.0,389.0" fill="none" stroke="#8E24AA" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="743" cy="522" r="4.2" fill="#8E24AA" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="511" cy="389" r="4.2" fill="#8E24AA" stroke="#000" stroke-opacity=".35" stroke-width="1"/></g>
+<g opacity="1"><path d="M44.0,432.0 L32.0,432.0 L32.0,588.0 L681.0,588.0 L681.0,406.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="7.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M44.0,432.0 L32.0,432.0 L32.0,588.0 L681.0,588.0 L681.0,406.0" fill="none" stroke="#E0559A" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="44" cy="432" r="4.2" fill="#E0559A" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="681" cy="406" r="4.2" fill="#E0559A" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="44" cy="432" r="6.5" fill="none" stroke="#E0559A" stroke-width="2.5"/></g>
+<g opacity="1"><path d="M44.0,306.0 L29.0,306.0 L29.0,597.0 L392.0,597.0 L392.0,406.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="7.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M44.0,306.0 L29.0,306.0 L29.0,597.0 L392.0,597.0 L392.0,406.0" fill="none" stroke="#C0392B" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="44" cy="306" r="4.2" fill="#C0392B" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="392" cy="406" r="4.2" fill="#C0392B" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="44" cy="306" r="6.5" fill="none" stroke="#C0392B" stroke-width="2.5"/></g>
+<g opacity="1"><path d="M44.0,327.0 L26.0,327.0 L26.0,606.0 L409.0,606.0 L409.0,406.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="7.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M44.0,327.0 L26.0,327.0 L26.0,606.0 L409.0,606.0 L409.0,406.0" fill="none" stroke="#12A4B8" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="44" cy="327" r="4.2" fill="#12A4B8" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="409" cy="406" r="4.2" fill="#12A4B8" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="44" cy="327" r="6.5" fill="none" stroke="#12A4B8" stroke-width="2.5"/></g>
+<g opacity="1"><path d="M44.0,348.0 L23.0,348.0 L23.0,615.0 L494.0,615.0 L494.0,406.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="7.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M44.0,348.0 L23.0,348.0 L23.0,615.0 L494.0,615.0 L494.0,406.0" fill="none" stroke="#6B4A2B" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="44" cy="348" r="4.2" fill="#6B4A2B" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="494" cy="406" r="4.2" fill="#6B4A2B" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="44" cy="348" r="6.5" fill="none" stroke="#6B4A2B" stroke-width="2.5"/></g>
+<g opacity="1"><path d="M206.0,390.0 L244.0,390.0 L244.0,118.0 L562.0,118.0 L562.0,236.0" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="7.4" stroke-linejoin="round" stroke-linecap="round"/><path d="M206.0,390.0 L244.0,390.0 L244.0,118.0 L562.0,118.0 L562.0,236.0" fill="none" stroke="#12A4B8" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="206" cy="390" r="4.2" fill="#12A4B8" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="562" cy="236" r="4.2" fill="#12A4B8" stroke="#000" stroke-opacity=".35" stroke-width="1"/><circle cx="206" cy="390" r="6.5" fill="none" stroke="#12A4B8" stroke-width="2.5"/></g>
+<text x="698.0" y="496" font-size="12" font-weight="700" fill="#1B2A41" text-anchor="middle" opacity="1">릴레이 모듈</text>
+<text x="451.5" y="496" font-size="12" font-weight="700" fill="#1B2A41" text-anchor="middle" opacity="1">L293D</text>
+<text x="579" y="496" font-size="12" font-weight="700" fill="#1B2A41" text-anchor="middle" opacity="1">버튼</text>
+<text x="1067" y="186" font-size="11" font-weight="700" fill="#D6452E">3V3</text>
+<text x="1067" y="203" font-size="11" font-weight="700" fill="#2457C5">GND</text>
+<text x="1067" y="447" font-size="11" font-weight="700" fill="#2457C5">GND</text>
+<text x="1067" y="464" font-size="11" font-weight="700" fill="#E0862A">5V</text>
+<rect x="300" y="651" width="22" height="8" rx="3" fill="#E0559A"/>
+<text x="330" y="659" font-size="12" fill="#1B2A41" font-family="monospace">GPIO13 → j22 (S)</text>
+<rect x="695" y="651" width="22" height="8" rx="3" fill="#E0862A"/>
+<text x="725" y="659" font-size="12" fill="#1B2A41" font-family="monospace">j23 (+) → 5V · j24 (−) → GND</text>
+<rect x="300" y="673" width="22" height="8" rx="3" fill="#C0392B"/>
+<text x="330" y="681" font-size="12" fill="#1B2A41" font-family="monospace">GPIO25 → j5 EN1 · 26 → j6 IN1 · 27 → j11 IN2</text>
+<rect x="695" y="673" width="22" height="8" rx="3" fill="#E0862A"/>
+<text x="725" y="681" font-size="12" fill="#1B2A41" font-family="monospace">a5 VSS → 5V · j12 VS ← 릴레이 NO</text>
+<rect x="300" y="695" width="22" height="8" rx="3" fill="#222222"/>
+<text x="330" y="703" font-size="12" fill="#1B2A41" font-family="monospace">GND 4개 → GND</text>
+<rect x="695" y="695" width="22" height="8" rx="3" fill="#C0392B"/>
+<text x="725" y="703" font-size="12" fill="#1B2A41" font-family="monospace">OUT1(i7) · OUT2(i10) → 모터</text>
+<rect x="300" y="717" width="22" height="8" rx="3" fill="#12A4B8"/>
+<text x="330" y="725" font-size="12" fill="#1B2A41" font-family="monospace">GPIO4 → a15 · j17 → GND (비상 정지 버튼)</text>
+<rect x="695" y="717" width="22" height="8" rx="3" fill="#E0862A"/>
+<text x="725" y="725" font-size="12" fill="#1B2A41" font-family="monospace">COM → 5V</text>
+<rect x="300" y="739" width="22" height="8" rx="3" fill="#8E24AA"/>
+<text x="330" y="747" font-size="12" fill="#1B2A41" font-family="monospace">NO → i12 (L293D VS, 모터 전원)</text>
+<rect x="695" y="739" width="22" height="8" rx="3" fill="#9A9A9A"/>
+<text x="725" y="747" font-size="12" fill="#1B2A41" font-family="monospace">j12 → 5V 레일 점퍼는 뺀다</text>
+<text x="300" y="16" font-size="15" font-weight="700" fill="#1B2A41">릴레이 ④ 배선 — 릴레이 = 모터 주전원 · L293D = 속도 · 방향</text>
+<text x="560" y="16" font-size="11.5" fill="#5B6B80"> </text>
+<text x="1061" y="16" font-size="11.5" fill="#5B6B80" text-anchor="end">L293D VS(j12) 는 5V 레일이 아니라 릴레이 NO 에서 받는다</text></g>
+</svg></figure>
+<p>모터를 다시 L293D 에 연결하고, <strong>L293D 의 모터 전원 VS(8번, j12)</strong> 를 5V 레일이 아니라 <strong>릴레이 NO</strong> 에서 받게 합니다(j12 → 5V 레일 점퍼는 뺀다). 이제 릴레이는 <strong>모터 쪽 주전원 스위치</strong>, L293D 는 <strong>속도 · 방향</strong>을 맡습니다. 버튼은 <strong>시작 / 비상 정지</strong>입니다.</p>
+<p><code>relay_estop.ino</code></p>
+<div class="hl"><pre><span></span><code><span class="k">typedef</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">pin</span><span class="p">;</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">stable</span><span class="p">;</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">last_raw</span><span class="p">;</span><span class="w"> </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">changed_at</span><span class="p">;</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="n">button_t</span><span class="p">;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">button_pressed</span><span class="p">(</span><span class="n">button_t</span><span class="w"> </span><span class="o">*</span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">raw</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">digitalRead</span><span class="p">(</span><span class="n">b</span><span class="o">-&gt;</span><span class="n">pin</span><span class="p">);</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">raw</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">b</span><span class="o">-&gt;</span><span class="n">last_raw</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">b</span><span class="o">-&gt;</span><span class="n">last_raw</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">raw</span><span class="p">;</span><span class="w"> </span><span class="n">b</span><span class="o">-&gt;</span><span class="n">changed_at</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">millis</span><span class="p">();</span><span class="w"> </span><span class="p">}</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">millis</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">b</span><span class="o">-&gt;</span><span class="n">changed_at</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">30</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">raw</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">b</span><span class="o">-&gt;</span><span class="n">stable</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">b</span><span class="o">-&gt;</span><span class="n">stable</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">raw</span><span class="p">;</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="p">(</span><span class="n">raw</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">LOW</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">PIN_EN</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">25</span><span class="p">,</span><span class="w"> </span><span class="n">PIN_IN1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">26</span><span class="p">,</span><span class="w"> </span><span class="n">PIN_IN2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">27</span><span class="p">;</span>
+<span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">PIN_RELAY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"> </span><span class="n">PIN_BTN</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
+<span class="k">const</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="n">ACTIVE_LOW</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
+
+<span class="k">typedef</span><span class="w"> </span><span class="k">enum</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">ST_STOP</span><span class="p">,</span><span class="w"> </span><span class="n">ST_RUN</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="n">run_t</span><span class="p">;</span>
+<span class="n">run_t</span><span class="w"> </span><span class="n">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ST_STOP</span><span class="p">;</span>
+<span class="kt">int</span><span class="w"> </span><span class="n">speed</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="n">button_t</span><span class="w"> </span><span class="n">btn</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="n">PIN_BTN</span><span class="p">,</span><span class="w"> </span><span class="n">HIGH</span><span class="p">,</span><span class="w"> </span><span class="n">HIGH</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">};</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">relay_set</span><span class="p">(</span><span class="kt">bool</span><span class="w"> </span><span class="n">on</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">digitalWrite</span><span class="p">(</span><span class="n">PIN_RELAY</span><span class="p">,</span><span class="w"> </span><span class="n">ACTIVE_LOW</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="o">!</span><span class="n">on</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">on</span><span class="p">);</span><span class="w"> </span><span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">motor_set</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">s</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">                      </span><span class="c1">// 예제 7-2</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">s</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">255</span><span class="p">)</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">255</span><span class="p">;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">s</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">-255</span><span class="p">)</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">-255</span><span class="p">;</span>
+<span class="w">    </span><span class="n">digitalWrite</span><span class="p">(</span><span class="n">PIN_IN1</span><span class="p">,</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+<span class="w">    </span><span class="n">digitalWrite</span><span class="p">(</span><span class="n">PIN_IN2</span><span class="p">,</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+<span class="w">    </span><span class="n">ledcWrite</span><span class="p">(</span><span class="n">PIN_EN</span><span class="p">,</span><span class="w"> </span><span class="n">abs</span><span class="p">(</span><span class="n">s</span><span class="p">));</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">setup</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">Serial</span><span class="p">.</span><span class="n">begin</span><span class="p">(</span><span class="mi">115200</span><span class="p">);</span>
+<span class="w">    </span><span class="n">pinMode</span><span class="p">(</span><span class="n">PIN_IN1</span><span class="p">,</span><span class="w"> </span><span class="n">OUTPUT</span><span class="p">);</span><span class="w"> </span><span class="n">pinMode</span><span class="p">(</span><span class="n">PIN_IN2</span><span class="p">,</span><span class="w"> </span><span class="n">OUTPUT</span><span class="p">);</span>
+<span class="w">    </span><span class="n">pinMode</span><span class="p">(</span><span class="n">PIN_RELAY</span><span class="p">,</span><span class="w"> </span><span class="n">OUTPUT</span><span class="p">);</span><span class="w"> </span><span class="n">pinMode</span><span class="p">(</span><span class="n">PIN_BTN</span><span class="p">,</span><span class="w"> </span><span class="n">INPUT_PULLUP</span><span class="p">);</span>
+<span class="w">    </span><span class="n">ledcAttach</span><span class="p">(</span><span class="n">PIN_EN</span><span class="p">,</span><span class="w"> </span><span class="mi">20000</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="p">);</span>
+<span class="w">    </span><span class="n">motor_set</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+<span class="w">    </span><span class="n">relay_set</span><span class="p">(</span><span class="nb">false</span><span class="p">);</span><span class="w">                        </span><span class="c1">// 시작은 항상 주전원 차단</span>
+<span class="w">    </span><span class="n">Serial</span><span class="p">.</span><span class="n">println</span><span class="p">(</span><span class="s">&quot;버튼 = 시작 / 비상 정지&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">loop</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">button_pressed</span><span class="p">(</span><span class="o">&amp;</span><span class="n">btn</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">state</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">ST_RUN</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">               </span><span class="c1">// 비상 정지: 주전원부터 끊는다</span>
+<span class="w">            </span><span class="n">relay_set</span><span class="p">(</span><span class="nb">false</span><span class="p">);</span>
+<span class="w">            </span><span class="n">motor_set</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+<span class="w">            </span><span class="n">speed</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">            </span><span class="n">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ST_STOP</span><span class="p">;</span>
+<span class="w">            </span><span class="n">Serial</span><span class="p">.</span><span class="n">println</span><span class="p">(</span><span class="s">&quot;비상 정지 — 주전원 차단&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span><span class="w">                             </span><span class="c1">// 시작: 속도 0 에서 전원 → 천천히 가속</span>
+<span class="w">            </span><span class="n">motor_set</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+<span class="w">            </span><span class="n">relay_set</span><span class="p">(</span><span class="nb">true</span><span class="p">);</span>
+<span class="w">            </span><span class="n">delay</span><span class="p">(</span><span class="mi">100</span><span class="p">);</span><span class="w">                      </span><span class="c1">// 접점이 완전히 붙을 때까지</span>
+<span class="w">            </span><span class="n">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ST_RUN</span><span class="p">;</span>
+<span class="w">            </span><span class="n">Serial</span><span class="p">.</span><span class="n">println</span><span class="p">(</span><span class="s">&quot;주전원 ON — 가속&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">static</span><span class="w"> </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">t_ramp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">state</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">ST_RUN</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">speed</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">200</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">millis</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">t_ramp</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">20</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">t_ramp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">millis</span><span class="p">();</span>
+<span class="w">        </span><span class="n">speed</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
+<span class="w">        </span><span class="n">motor_set</span><span class="p">(</span><span class="n">speed</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>시작 순서:</strong> PWM 을 0 으로 둔 채 릴레이를 켜면 접점이 <strong>전류가 흐르지 않는 상태로</strong> 붙어 불꽃(아크)이 생기지 않고 접점이 오래갑니다. 그 뒤 L293D 로 천천히 가속합니다. <strong>정지 순서:</strong> 비상 정지는 안전이 먼저라 <strong>주전원부터 즉시</strong> 끊습니다 — 코드에 버그가 있어 PWM 이 계속 나와도 모터는 멈춥니다. 실제 기계의 비상 정지 버튼이 이 구조입니다.</p>
+<h4>⑥ 선택 도전 — 키트의 워터 펌프를 릴레이로</h4>
+<p>③ 과 같은 배선에서 <strong>모터 대신 키트의 Water Pump</strong> 를 연결합니다(빨강 선 → NO, 검정 선 → GND). 컵 두 개를 준비해 한 컵에 물을 담고 펌프를 <strong>완전히 잠기게</strong> 넣은 뒤, <strong>Water Pipe</strong> 끝을 빈 컵에 둡니다. 버튼을 누르면 물이 옮겨집니다.</p>
+<ul>
+<li>물컵은 브레드보드 · ESP32 에서 <strong>30cm 이상</strong> 떨어뜨리고, 선이 당겨져 컵이 넘어지지 않게 둡니다.</li>
+<li>펌프는 <strong>물에 잠긴 상태에서만</strong> 켭니다 — 물 없이 돌리면 고장 납니다. 한 번에 몇 초만 켭니다.</li>
+<li>코드는 ③ 그대로 쓰고, 도전으로 <strong>버튼을 누르고 있는 동안만 켜지게</strong> 바꾸거나 <strong>3초 뒤 자동으로 꺼지게</strong> 만들어 보세요(물 넘침 방지).</li>
+</ul>
+<h4>⑤ 정리 — L293D 와 릴레이는 역할이 다르다</h4>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>L293D (H-브리지)</th>
+<th>릴레이</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>할 수 있는 것</td>
+<td>속도(PWM) · 방향 · 브레이크</td>
+<td>켜기 · 끄기만</td>
+</tr>
+<tr>
+<td>전환 속도</td>
+<td>초당 수만 번 (20kHz PWM)</td>
+<td>초당 몇 번 — PWM 금지</td>
+</tr>
+<tr>
+<td>수명</td>
+<td>반도체 — 사실상 무제한</td>
+<td>기계 접점 — 전환 횟수만큼 닳음</td>
+</tr>
+<tr>
+<td>ESP32 와 전기적 분리</td>
+<td>없음 (GND 공통)</td>
+<td><strong>있음</strong> (접점은 별도 회로)</td>
+</tr>
+<tr>
+<td>소리</td>
+<td>없음</td>
+<td>딸깍</td>
+</tr>
+<tr>
+<td>어울리는 곳</td>
+<td>팬 속도, 바퀴, 방향 전환</td>
+<td>펌프 · 히터 · 램프 전원, <strong>비상 정지</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>도전 (선택):</strong> ③ 에서 모터가 켜져 있던 <strong>누적 시간</strong>을 초 단위로 세어 시리얼에 출력하세요. ④ 에서는 버튼을 <strong>2초 이상 길게 눌러야</strong> 시작하도록 바꿔 보세요(실수로 켜지지 않게).</p>
 <h3>▶ 예제 7-4 · ⚠ 함정</h3>
 <table>
 <thead>
@@ -5556,12 +6452,24 @@ h3.guide{color:var(--ink);background:var(--paper);padding:10px 14px;border-radiu
 <td>신호 기준이 달라 제멋대로 동작</td>
 </tr>
 <tr>
+<td>릴레이 NO · NC 를 바꿔 꽂음</td>
+<td>켜고 끄는 것이 <strong>반대로</strong> 동작 — ② 의 LED 로 확인</td>
+</tr>
+<tr>
+<td>릴레이 코일 + 를 3V3 에</td>
+<td>딸깍이 약하거나 켜지지 않음 → <strong>5V</strong></td>
+</tr>
+<tr>
+<td>버튼을 연타해 릴레이를 빠르게 전환</td>
+<td>접점 수명 단축 → 최소 전환 간격 (<code>MIN_SWITCH_MS</code>)</td>
+</tr>
+<tr>
 <td>릴레이 접점에 콘센트 전원 연결</td>
 <td><strong>감전 · 화재 위험 — 이 과정에서는 절대 금지</strong></td>
 </tr>
 <tr>
 <td>릴레이를 PWM 으로 빠르게</td>
-<td>접점이 떨리며 수명 단축 — 릴레이는 켜고 끄기만</td>
+<td>접점이 떨리며 수명 단축 — 속도는 L293D, 릴레이는 켜고 끄기만</td>
 </tr>
 </tbody>
 </table>
@@ -5601,6 +6509,29 @@ h3.guide{color:var(--ink);background:var(--paper);padding:10px 14px;border-radiu
 <li>NO</li>
 </ol>
 </details>
+<h4 id="b7-3" class="fill">✏️ 빈칸 채우기 7-3</h4>
+<p>실습 7-3 ③ 의 <code>relay_request</code> 를 완성합니다. 같은 상태 요청은 그대로 두고, 마지막 전환 뒤 1초가 안 지났으면 무시합니다.</p>
+<div class="hl"><pre><span></span><code><span class="kt">bool</span><span class="w"> </span><span class="nf">relay_request</span><span class="p">(</span><span class="kt">bool</span><span class="w"> </span><span class="n">on</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">on</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><input class="blank" data-q="b7-3" data-i="0" spellcheck="false" autocomplete="off"><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">switch_count</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">millis</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">last_switch</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><input class="blank" data-q="b7-3" data-i="1" spellcheck="false" autocomplete="off"><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
+<span class="w">    </span><span class="n">relay_set</span><span class="p">(</span><span class="n">on</span><span class="p">);</span>
+<span class="w">    </span><span class="n">motor_on</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">on</span><span class="p">;</span>
+<span class="w">    </span><span class="n">last_switch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><input class="blank" data-q="b7-3" data-i="2" spellcheck="false" autocomplete="off"><span class="p">;</span>
+<span class="w">    </span><span class="n">switch_count<input class="blank" data-q="b7-3" data-i="3" spellcheck="false" autocomplete="off"></span><span class="p">;</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="qbar"><button class="btn check" data-q="b7-3">확인</button><button class="btn clear" data-q="b7-3">지우기</button><span class="qres" id="res-b7-3"></span></div><details>
+<summary class="lock">🔒 정답 보기 7-3</summary>
+<div class="hl"><pre><span></span><code><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">on</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">motor_on</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">switch_count</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">millis</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">last_switch</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">MIN_SWITCH_MS</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
+<span class="w">    </span><span class="n">last_switch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">millis</span><span class="p">();</span>
+<span class="w">    </span><span class="n">switch_count</span><span class="o">++</span><span class="p">;</span>
+</code></pre></div>
+
+<p>시간 비교는 Day 1 부터 써 온 <strong>뺄셈 비교</strong>라 millis() 가 넘쳐도 맞습니다. <code>switch_count &gt; 0</code> 은 전원을 켠 직후의 <strong>첫 전환은 기다리지 않게</strong> 합니다.</p>
+</details>
 
 </section><section id="sec8" class="lesson"><header class="sec-head"><span class="period">8교시</span><h1>스테퍼 모터 · 미니 프로젝트 · 정리</h1><span class="time">17:00–17:50</span></header>
 <p><strong>학습 목표</strong>
@@ -5618,13 +6549,13 @@ h3.guide{color:var(--ink);background:var(--paper);padding:10px 14px;border-radiu
 <text x="306" y="447" font-size="11" fill="#2457C5" font-weight="700">-</text>
 <line x1="314" x2="1047" y1="469" y2="469" stroke="#D6452E" stroke-width="2"/>
 <text x="306" y="464" font-size="11" fill="#D6452E" font-weight="700">+</text>
-<defs><pattern id="g8" x="315.5" y="227.5" width="17" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r80" x="315.5" y="173.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r81" x="315.5" y="190.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r82" x="315.5" y="434.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r83" x="315.5" y="451.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern></defs>
-<rect x="315.5" y="227.5" width="714" height="85" fill="url(#g8)"/>
-<rect x="315.5" y="329.5" width="714" height="85" fill="url(#g8)"/>
-<rect x="315.5" y="173.5" width="714" height="17" fill="url(#r80)"/>
-<rect x="315.5" y="190.5" width="714" height="17" fill="url(#r81)"/>
-<rect x="315.5" y="434.5" width="714" height="17" fill="url(#r82)"/>
-<rect x="315.5" y="451.5" width="714" height="17" fill="url(#r83)"/>
+<defs><pattern id="g11" x="315.5" y="227.5" width="17" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r110" x="315.5" y="173.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r111" x="315.5" y="190.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r112" x="315.5" y="434.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r113" x="315.5" y="451.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern></defs>
+<rect x="315.5" y="227.5" width="714" height="85" fill="url(#g11)"/>
+<rect x="315.5" y="329.5" width="714" height="85" fill="url(#g11)"/>
+<rect x="315.5" y="173.5" width="714" height="17" fill="url(#r110)"/>
+<rect x="315.5" y="190.5" width="714" height="17" fill="url(#r111)"/>
+<rect x="315.5" y="434.5" width="714" height="17" fill="url(#r112)"/>
+<rect x="315.5" y="451.5" width="714" height="17" fill="url(#r113)"/>
 <text x="310" y="240" font-size="10" fill="#5B6B80" font-family="monospace">a</text>
 <text x="310" y="257" font-size="10" fill="#5B6B80" font-family="monospace">b</text>
 <text x="310" y="274" font-size="10" fill="#5B6B80" font-family="monospace">c</text>
@@ -5791,13 +6722,13 @@ h3.guide{color:var(--ink);background:var(--paper);padding:10px 14px;border-radiu
 <text x="306" y="447" font-size="11" fill="#2457C5" font-weight="700">-</text>
 <line x1="314" x2="1047" y1="469" y2="469" stroke="#D6452E" stroke-width="2"/>
 <text x="306" y="464" font-size="11" fill="#D6452E" font-weight="700">+</text>
-<defs><pattern id="g8" x="315.5" y="227.5" width="17" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r80" x="315.5" y="173.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r81" x="315.5" y="190.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r82" x="315.5" y="434.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r83" x="315.5" y="451.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern></defs>
-<rect x="315.5" y="227.5" width="714" height="85" fill="url(#g8)"/>
-<rect x="315.5" y="329.5" width="714" height="85" fill="url(#g8)"/>
-<rect x="315.5" y="173.5" width="714" height="17" fill="url(#r80)"/>
-<rect x="315.5" y="190.5" width="714" height="17" fill="url(#r81)"/>
-<rect x="315.5" y="434.5" width="714" height="17" fill="url(#r82)"/>
-<rect x="315.5" y="451.5" width="714" height="17" fill="url(#r83)"/>
+<defs><pattern id="g11" x="315.5" y="227.5" width="17" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r110" x="315.5" y="173.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r111" x="315.5" y="190.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r112" x="315.5" y="434.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r113" x="315.5" y="451.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern></defs>
+<rect x="315.5" y="227.5" width="714" height="85" fill="url(#g11)"/>
+<rect x="315.5" y="329.5" width="714" height="85" fill="url(#g11)"/>
+<rect x="315.5" y="173.5" width="714" height="17" fill="url(#r110)"/>
+<rect x="315.5" y="190.5" width="714" height="17" fill="url(#r111)"/>
+<rect x="315.5" y="434.5" width="714" height="17" fill="url(#r112)"/>
+<rect x="315.5" y="451.5" width="714" height="17" fill="url(#r113)"/>
 <text x="310" y="240" font-size="10" fill="#5B6B80" font-family="monospace">a</text>
 <text x="310" y="257" font-size="10" fill="#5B6B80" font-family="monospace">b</text>
 <text x="310" y="274" font-size="10" fill="#5B6B80" font-family="monospace">c</text>
@@ -5979,13 +6910,13 @@ h3.guide{color:var(--ink);background:var(--paper);padding:10px 14px;border-radiu
 <text x="306" y="447" font-size="11" fill="#2457C5" font-weight="700">-</text>
 <line x1="314" x2="1047" y1="469" y2="469" stroke="#D6452E" stroke-width="2"/>
 <text x="306" y="464" font-size="11" fill="#D6452E" font-weight="700">+</text>
-<defs><pattern id="g8" x="315.5" y="227.5" width="17" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r80" x="315.5" y="173.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r81" x="315.5" y="190.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r82" x="315.5" y="434.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r83" x="315.5" y="451.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern></defs>
-<rect x="315.5" y="227.5" width="714" height="85" fill="url(#g8)"/>
-<rect x="315.5" y="329.5" width="714" height="85" fill="url(#g8)"/>
-<rect x="315.5" y="173.5" width="714" height="17" fill="url(#r80)"/>
-<rect x="315.5" y="190.5" width="714" height="17" fill="url(#r81)"/>
-<rect x="315.5" y="434.5" width="714" height="17" fill="url(#r82)"/>
-<rect x="315.5" y="451.5" width="714" height="17" fill="url(#r83)"/>
+<defs><pattern id="g11" x="315.5" y="227.5" width="17" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r110" x="315.5" y="173.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r111" x="315.5" y="190.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r112" x="315.5" y="434.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern><pattern id="r113" x="315.5" y="451.5" width="102" height="17" patternUnits="userSpaceOnUse"><rect x="5.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="22.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="39.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="56.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/><rect x="73.9" y="5.9" width="5.2" height="5.2" rx="1" fill="#6F6F66"/></pattern></defs>
+<rect x="315.5" y="227.5" width="714" height="85" fill="url(#g11)"/>
+<rect x="315.5" y="329.5" width="714" height="85" fill="url(#g11)"/>
+<rect x="315.5" y="173.5" width="714" height="17" fill="url(#r110)"/>
+<rect x="315.5" y="190.5" width="714" height="17" fill="url(#r111)"/>
+<rect x="315.5" y="434.5" width="714" height="17" fill="url(#r112)"/>
+<rect x="315.5" y="451.5" width="714" height="17" fill="url(#r113)"/>
 <text x="310" y="240" font-size="10" fill="#5B6B80" font-family="monospace">a</text>
 <text x="310" y="257" font-size="10" fill="#5B6B80" font-family="monospace">b</text>
 <text x="310" y="274" font-size="10" fill="#5B6B80" font-family="monospace">c</text>
@@ -6167,6 +7098,9 @@ h3.guide{color:var(--ink);background:var(--paper);padding:10px 14px;border-radiu
 </tr>
 </tbody>
 </table>
+<blockquote>
+<p><strong>팬</strong> = 키트의 Motor 축에 <strong>Fan(팬 날개)</strong> 을 끼운 것입니다(7교시와 같은 L293D 연결). 환기구는 5V Stepper Motor 와 Driver Board(ULN2003), 온도는 DHT11 모듈, 표시는 1602 LCD — 모두 키트 부품입니다.</p>
+</blockquote>
 <p>닫힘으로 돌아가는 조건은 <strong>26°C 미만</strong>(히스테리시스, Day 2 5교시). 테스트할 때는 DHT11 을 손으로 감싸거나 입김을 붑니다.</p>
 <p><code>smart_vent.ino</code></p>
 <div class="hl"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;LiquidCrystal.h&gt;</span>
@@ -6306,7 +7240,7 @@ h3.guide{color:var(--ink);background:var(--paper);padding:10px 14px;border-radiu
   var io=new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ links.forEach(function(a){a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id)}); } }); },{rootMargin:'-20% 0px -70% 0px'});
   secs.forEach(function(s){ if(s) io.observe(s) });
 
-  var ANS={"b1-1": [[">>"], ["0x0F", "0xF", "15"], ["|="]], "p1-2": [["0"], ["7"], ["3F", "0x3F"], ["3V3", "3.3V", "VCC"], ["LOW"], ["~"]], "b2-1": [["0"], ["i"], ["HIGH", "1"], ["PIN_ST", "19"]], "p2-2": [["SH_CP", "SRCLK", "SHCP", "SH"], ["ST_CP", "RCLK", "STCP", "래치", "ST"], ["GND"], ["3V3"], ["Q7'", "Q7", "Q7’"]], "b3-1": [["0x00", "0", "0x0"], ["%"], ["/="]], "p3-2": [["멀티플렉싱", "다이내믹 구동", "multiplexing"], ["1000000", "1MHz"], ["volatile"], ["고스팅", "ghosting"], ["꺼서", "끄고", "꺼"]], "b4-1": [[">>"], ["|="], ["~"]], "p4-2": [["8"], ["행"], ["멀티플렉싱", "다이내믹 구동"], ["~"], ["<<"]], "b5-1": [["23"], ["17"], ["sizeof(buf)", "17"], ["0"]], "p5-2": [["4"], ["1"], ["RW", "R/W"], ["V0", "VO", "V 0"]], "b6-1": [["addr"], ["0x03", "3"], ["2"], ["read"]], "p6-2": [["SDA"], ["7"], ["0"], ["6"], ["이전", "지난번", "직전"]], "b7-1": [["-255"], [">"], ["abs"]], "p7-2": [["H-브리지", "H브리지", "H-bridge", "H 브리지"], ["브레이크", "brake", "제동"], ["EN", "EN1", "Enable"], ["NO"]]};
+  var ANS={"b7-3": [["motor_on"], ["MIN_SWITCH_MS", "1000"], ["millis()"], ["++", " ++", "+= 1", "+=1"]], "b1-1": [[">>"], ["0x0F", "0xF", "15"], ["|="]], "p1-2": [["0"], ["7"], ["3F", "0x3F"], ["3V3", "3.3V", "VCC"], ["LOW"], ["~"]], "b2-1": [["0"], ["i"], ["HIGH", "1"], ["PIN_ST", "19"]], "p2-2": [["SH_CP", "SRCLK", "SHCP", "SH"], ["ST_CP", "RCLK", "STCP", "래치", "ST"], ["GND"], ["3V3"], ["Q7'", "Q7", "Q7’"]], "b3-1": [["0x00", "0", "0x0"], ["%"], ["/="]], "p3-2": [["멀티플렉싱", "다이내믹 구동", "multiplexing"], ["1000000", "1MHz"], ["volatile"], ["고스팅", "ghosting"], ["꺼서", "끄고", "꺼"]], "b4-1": [[">>"], ["|="], ["~"]], "p4-2": [["8"], ["행"], ["멀티플렉싱", "다이내믹 구동"], ["~"], ["<<"]], "b5-1": [["23"], ["17"], ["sizeof(buf)", "17"], ["0"]], "p5-2": [["4"], ["1"], ["RW", "R/W"], ["V0", "VO", "V 0"]], "b6-1": [["addr"], ["0x03", "3"], ["2"], ["read"]], "p6-2": [["SDA"], ["7"], ["0"], ["6"], ["이전", "지난번", "직전"]], "b7-1": [["-255"], [">"], ["abs"]], "p7-2": [["H-브리지", "H브리지", "H-bridge", "H 브리지"], ["브레이크", "brake", "제동"], ["EN", "EN1", "Enable"], ["NO"]]};
   var KEY='mcu-day3-answers';
   var store={}; try{ store=JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){}
   var fields=[].slice.call(document.querySelectorAll('.blank'));
