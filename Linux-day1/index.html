@@ -1,0 +1,21 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Linux Day 1 애니메이션</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet"><style>
+:root{--bg:#0f141d;--panel:#161d2a;--panel2:#1c2535;--line:#2a3548;--ink:#e6ebf3;--muted:#8d9ab0;
+--cyan:#4fd1e8;--amber:#f5b942;--green:#5ad49a;--red:#ff6b6b;--violet:#a78bfa;
+--mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;--sans:'Noto Sans KR',system-ui,-apple-system,'Malgun Gothic',sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.7}
+a{color:var(--cyan)}
+code,pre,kbd{font-family:var(--mono)}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+.wrap{max-width:1100px;margin:0 auto;padding:40px 26px}
+.eyebrow{font-family:var(--mono);color:var(--cyan);font-size:.8rem}h1{margin:4px 0 6px;font-size:1.9rem}.lead{color:var(--muted);margin:0 0 26px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.card{display:flex;flex-direction:column;gap:6px;padding:18px;border:1px solid var(--line);border-radius:12px;background:var(--panel);text-decoration:none;color:var(--ink)}
+.card:hover{border-color:var(--amber)}.card .no{font-family:var(--mono);font-size:.74rem;color:var(--amber)}.card b{font-size:1.02rem}.card .d{color:var(--muted);font-size:.85rem;line-height:1.55}
+.links{display:flex;gap:10px;margin:0 0 26px;flex-wrap:wrap}.links a{padding:8px 14px;border:1px solid var(--line);border-radius:8px;text-decoration:none;font-size:.9rem}.links a.ws{background:var(--amber);color:#1a1405;border-color:var(--amber);font-weight:700}
+</style></head><body><div class="wrap"><div class="eyebrow">AI_CAMPUS · linux-day1</div><h1>Day 1 · 시스템 콜과 프로세스</h1>
+<p class="lead">각 장면은 "예측 먼저 → 단계 진행" 순서로 본다. 칩을 눌러 시나리오를 바꿀 수 있다.</p>
+<div class="links"><a class="ws" href="worksheet.html">개념 워크시트 (80문항)</a><a href="../lecture.html">강의 자료</a></div>
+<div class="grid"><a class="card" href="d1_1_make_rebuild.html"><span class="no">D1-1 · 3교시</span><b>make는 무엇을 다시 빌드하나</b><span class="d">make는 &quot;대상 파일이 재료보다 오래되었는가&quot;만 본다. 수정 시각(mtime)을 비교하는 과정을 따라가 보자.</span></a><a class="card" href="d1_2_mode_switch.html"><span class="no">D1-2 · 4교시</span><b>시스템 콜: 사용자 모드 ↔ 커널 모드</b><span class="d">write() 한 번이 CPU 모드를 바꿔 커널로 들어갔다 나오는 과정. 레지스터에 무엇이 실리는지 보자.</span></a><a class="card" href="d1_3_stdio_buffer.html"><span class="no">D1-3 · 4교시</span><b>printf 버퍼링: 줄 단위 vs 블록 단위</b><span class="d">같은 프로그램인데 터미널과 파이프에서 출력 순서가 달라진다. stdio 버퍼가 write를 언제 부르는지 보자.</span></a><a class="card" href="d1_4_errno.html"><span class="no">D1-4 · 5교시</span><b>실패는 어떻게 errno가 되나</b><span class="d">커널은 음수 에러 코드를 돌려주고, glibc가 그것을 -1과 errno로 바꿔 준다.</span></a><a class="card" href="d1_5_fork_return.html"><span class="no">D1-5 · 6교시</span><b>fork: 한 번 호출, 두 번 반환</b><span class="d">fork() 이후 같은 코드가 두 프로세스에서 이어진다. 반환값이 어떻게 갈림길이 되는지 보자.</span></a><a class="card" href="d1_6_exec_replace.html"><span class="no">D1-6 · 6교시</span><b>exec: 같은 PID, 다른 프로그램</b><span class="d">execvp는 새 프로세스를 만들지 않는다. 지금 프로세스의 내용물을 통째로 갈아 끼운다.</span></a><a class="card" href="d1_7_zombie_orphan.html"><span class="no">D1-7 · 7교시</span><b>좀비와 고아: 종료 상태는 누가 가져가나</b><span class="d">프로세스가 끝나도 종료 코드를 부모가 가져갈 때까지 프로세스 테이블에 남는다.</span></a><a class="card" href="d1_8_sigaction.html"><span class="no">D1-8 · 7교시</span><b>Ctrl+C가 핸들러에 도착하기까지</b><span class="d">시그널은 커널이 프로세스에 꽂아 두는 표시다. 프로세스가 커널에서 사용자 모드로 돌아갈 때 처리된다.</span></a></div></div></body></html>

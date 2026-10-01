@@ -1,0 +1,1251 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Linux Day 1 — 시스템 콜 · 프로세스</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet"><style>
+:root{--bg:#0f141d;--panel:#161d2a;--panel2:#1c2535;--line:#2a3548;--ink:#e6ebf3;--muted:#8d9ab0;
+--cyan:#4fd1e8;--amber:#f5b942;--green:#5ad49a;--red:#ff6b6b;--violet:#a78bfa;
+--mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;--sans:'Noto Sans KR',system-ui,-apple-system,'Malgun Gothic',sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.7}
+a{color:var(--cyan)}
+code,pre,kbd{font-family:var(--mono)}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+body{display:grid;grid-template-columns:260px minmax(0,1fr);min-height:100vh}
+nav{position:sticky;top:0;height:100vh;overflow:auto;padding:28px 18px;border-right:1px solid var(--line);background:#0c1119}
+nav .brand{font-family:var(--mono);color:var(--cyan);font-size:.8rem;letter-spacing:.04em}
+nav .day{font-size:1.4rem;font-weight:700;margin:4px 0 18px}
+nav a{display:block;color:var(--muted);text-decoration:none;font-size:.88rem;padding:6px 10px;border-radius:6px}
+nav a:hover{background:var(--panel);color:var(--ink)}
+nav .who{margin-top:22px;padding-top:16px;border-top:1px solid var(--line)}
+nav .who label{font-size:.8rem;color:var(--muted)}
+nav .who input{width:100%;margin-top:4px;padding:8px;background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:6px;font:inherit}
+main{max-width:900px;padding:40px 48px 140px}
+h1{font-size:2rem;line-height:1.3;margin:0 0 18px}
+h2{font-size:1.45rem;margin:64px 0 14px;padding-top:12px;color:var(--ink)}
+h2::before{content:"";display:block;width:36px;height:3px;background:var(--amber);margin-bottom:14px}
+h3{font-size:1.08rem;color:var(--cyan);margin:34px 0 10px}
+hr{border:0;border-top:1px solid var(--line);margin:48px 0}
+p,li{color:#d3dae6}
+strong{color:var(--ink)}
+:not(pre)>code{background:var(--panel2);border:1px solid var(--line);padding:1px 6px;border-radius:5px;font-size:.88em;color:#ffd58a}
+pre{position:relative;background:#0a0e15;border:1px solid var(--line);border-radius:10px;padding:18px 18px 16px;overflow:auto;font-size:.84rem;line-height:1.6}
+pre::after{content:attr(data-lang);position:absolute;top:8px;right:64px;font-family:var(--mono);font-size:.68rem;color:var(--muted)}
+pre code{color:#cfe3ff}
+pre[data-lang=text] code{color:#b8f0c8}
+.copy{position:absolute;top:6px;right:8px;background:var(--panel2);color:var(--muted);border:1px solid var(--line);border-radius:5px;font-size:.72rem;padding:2px 8px;cursor:pointer}
+.copy:hover{color:var(--ink)}
+.tbl{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--panel2);color:var(--cyan);font-weight:600}
+td{background:var(--panel)}
+.note{margin:16px 0;padding:12px 16px;background:#1d1a10;border:1px solid #4a3d18;border-radius:8px}
+.note p{margin:4px 0;color:#f0dfb4}
+.check-h{color:var(--amber)}
+ol.check{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 16px 16px 40px}
+ol.check li{margin:8px 0}
+input.blank{font-family:var(--mono);font-size:.9rem;width:9em;padding:3px 8px;margin:0 3px;background:#0a0e15;color:var(--amber);border:none;border-bottom:2px solid var(--amber);border-radius:4px 4px 0 0}
+input.blank.ok{border-color:var(--green);color:var(--green)}
+input.blank.ng{border-color:var(--red);color:var(--red)}
+.bar{position:fixed;left:260px;right:0;bottom:0;display:flex;gap:12px;align-items:center;padding:12px 48px;background:rgba(12,17,25,.96);border-top:1px solid var(--line)}
+.bar button{font:inherit;font-weight:600;padding:8px 18px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);cursor:pointer}
+.bar button.primary{background:var(--amber);color:#1a1405;border-color:var(--amber)}
+.bar .score{font-family:var(--mono);color:var(--muted)}
+.bar .score b{color:var(--amber);font-size:1.1rem}
+@media (max-width:860px){body{display:block}nav{position:static;height:auto}main{padding:24px 18px 140px}.bar{left:0;padding:10px 16px}}
+</style></head><body>
+<nav><div class="brand">AI_CAMPUS · linux-day1</div><div class="day">Day 1</div><a href="#s0">1교시 · 오리엔테이션과 환경 점검</a><a href="#s1">2교시 · Shell 필수 (압축)</a><a href="#s2">3교시 · Makefile과 측정 스크립트</a><a href="#s3">4교시 · 시스템 콜과 커널 경계</a><a href="#s4">5교시 · 에러 처리와 /proc</a><a href="#s5">6교시 · 프로세스 생성</a><a href="#s6">7교시 · 좀비 · 고아 · 시그널</a><a href="#s7">8교시 · 종합 실습 — myshell 만들기</a><a href="#s8">오늘 정리</a>
+<div class="who"><label for="nm">이름</label><input id="nm" placeholder="홍길동"></div></nav>
+<main><h1>Linux &amp; Shell Day 1 — Shell 필수 · 시스템 콜 · 프로세스</h1>
+<blockquote class="note">
+<p><strong>오늘의 도착점:</strong> <code>strace</code>로 시스템 콜을 관찰하고, fork → exec → wait를 반복하는 미니 셸 <code>myshell</code>을 C로 만든다.</p>
+<p>실습 폴더: <code>~/linux-course/day1/</code> · 예제 소스: <code>src/</code> · 빈칸은 직접 입력 후 <strong>채점</strong> 버튼으로 확인</p>
+</blockquote>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>교시</th>
+<th>주제</th>
+<th>결과물</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>오리엔테이션 · 환경 점검</td>
+<td><code>check_env.sh</code> 실행 결과</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Shell 필수</td>
+<td>명령 기록 <code>shell_notes.txt</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Makefile · 측정 스크립트</td>
+<td><code>make</code>, <code>run.sh</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>시스템 콜과 커널 경계</td>
+<td><code>01</code>, <code>02</code> 예제</td>
+</tr>
+<tr>
+<td>5</td>
+<td>에러 처리와 /proc</td>
+<td><code>03</code>, <code>04</code> 예제</td>
+</tr>
+<tr>
+<td>6</td>
+<td>프로세스 생성</td>
+<td><code>05</code>, <code>06</code> 예제</td>
+</tr>
+<tr>
+<td>7</td>
+<td>좀비 · 고아 · 시그널</td>
+<td><code>07</code>, <code>08</code>, <code>09</code> 예제</td>
+</tr>
+<tr>
+<td>8</td>
+<td>종합 실습</td>
+<td><code>myshell.c</code></td>
+</tr>
+</tbody>
+</table></div>
+<hr/>
+<h2 id="s0">1교시 · 오리엔테이션과 환경 점검</h2>
+<h3>1-1. 이 과목에서 하는 일</h3>
+<p>운영체제 활용 과목에서는 스케줄러·메모리·파일시스템이 <strong>어떻게 동작하는지</strong> 애니메이션으로 봤다. 이 과목에서는 같은 동작을 <strong>C 프로그램으로 직접 일으키고 숫자로 측정</strong>한다.</p>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>Day</th>
+<th>주제</th>
+<th>대표 결과물</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>시스템 콜 · 프로세스</td>
+<td><code>myshell.c</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>스케줄링</td>
+<td><code>jitter.c</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>메모리</td>
+<td><code>memlab.c</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>파일시스템 · sysfs</td>
+<td><code>sysmon.c</code>, <code>mysysfs.ko</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>쓰레드 · 동기화</td>
+<td><code>edge_pipeline.c</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 class="check-h">1-2. 내 환경 확인하기</h3>
+<p>터미널을 열고(<code>Ctrl+Alt+T</code>) 아래를 따라 한다.</p>
+<pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">uname -r              # 커널 버전
+lsb_release -a        # Ubuntu 버전
+nproc                 # CPU 코어 수
+</code></pre>
+<p><strong>기대 출력 예시 (Ubuntu 24.04)</strong></p>
+<pre data-lang="text"><button class="copy" type="button">복사</button><code class="language-text">6.8.0-45-generic
+Description:    Ubuntu 24.04.1 LTS
+4
+</code></pre>
+<h3>1-3. 개발 도구 설치</h3>
+<pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">sudo apt update
+sudo apt install -y build-essential gdb strace valgrind stress-ng \
+     linux-tools-$(uname -r) linux-headers-$(uname -r) mokutil
+</code></pre>
+<h3>1-4. 실습 폴더와 환경 점검 스크립트</h3>
+<pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">mkdir -p ~/linux-course/day1
+cd ~/linux-course/day1
+# 강사가 안내한 주소에서 src 폴더를 내려받은 뒤
+cd src
+bash check_env.sh
+</code></pre>
+<p><code>[WARN]</code>이 나온 항목은 손을 들어 보조강사에게 알린다. 특히 <strong>코어 수 1개</strong>(VM의 vCPU 부족)와 <strong>sudo 권한 없음</strong>은 Day 2 이전에 반드시 해결해야 한다.</p>
+<p><strong><code>src/check_env.sh</code></strong></p>
+<pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">#!/bin/bash
+# check_env.sh — Linux &amp; Shell Day 1 실습 환경 점검
+# 사용법: bash check_env.sh
+
+ok()   { printf "  [ OK ] %s\n" "$*"; }
+warn() { printf "  [WARN] %s\n" "$*"; }
+
+echo "== 1. 운영체제와 커널 =="
+. /etc/os-release
+ok "배포판 : $PRETTY_NAME"
+ok "커널   : $(uname -r) ($(uname -m))"
+
+echo "== 2. CPU와 가상화 =="
+CORES=$(nproc)
+if [ "$CORES" -ge 2 ]; then ok "코어 수 : $CORES"; else warn "코어 수 : $CORES (2개 이상 권장 — VM이면 vCPU를 늘리세요)"; fi
+VIRT=$(systemd-detect-virt 2&gt;/dev/null || echo none)
+ok "가상화 : $VIRT"
+if grep -qi microsoft /proc/version; then warn "WSL 환경 — Day 4 커널 모듈 실습은 대체 과제로 진행"; fi
+
+echo "== 3. Secure Boot =="
+if command -v mokutil &gt;/dev/null 2&gt;&amp;1; then
+    ok "$(mokutil --sb-state 2&gt;/dev/null || echo '확인 불가')"
+else
+    warn "mokutil 없음 (sudo apt install mokutil)"
+fi
+
+echo "== 4. sudo 권한 =="
+if sudo -n true 2&gt;/dev/null; then ok "sudo 사용 가능(비밀번호 캐시됨)"
+elif id -nG | grep -qw sudo; then ok "sudo 그룹 소속"
+else warn "sudo 권한 없음 — 강사에게 알려주세요"; fi
+
+echo "== 5. 필수 도구 =="
+for t in gcc make gdb strace valgrind perf stress-ng; do
+    if command -v "$t" &gt;/dev/null 2&gt;&amp;1; then ok "$t"; else warn "$t 없음"; fi
+done
+echo
+echo "설치 명령: sudo apt install build-essential gdb strace valgrind stress-ng linux-tools-\$(uname -r) linux-headers-\$(uname -r)"
+</code></pre>
+<h3 class="check-h">✅ 1교시 확인</h3>
+<ol class="check">
+<li>현재 실행 중인 커널 버전을 출력하는 명령은 <code>uname <input class="blank" data-i="1" autocomplete="off" spellcheck="false" aria-label="빈칸 1"></code> 이다.</li>
+<li>CPU 코어 수를 숫자 하나로 출력하는 명령은 <input class="blank" data-i="2" autocomplete="off" spellcheck="false" aria-label="빈칸 2"> 이다.</li>
+<li>Ubuntu 패키지를 설치하는 명령은 <code>sudo <input class="blank" data-i="3" autocomplete="off" spellcheck="false" aria-label="빈칸 3"> install 패키지명</code> 이다.</li>
+</ol>
+<hr/>
+<h2 id="s1">2교시 · Shell 필수 (압축)</h2>
+<p>이 과목에서 Shell은 <strong>C 프로그램을 빌드·실행·측정하는 도구</strong>로만 쓴다. 아래 명령만 손에 익히면 충분하다.</p>
+<h3 class="check-h">2-1. 이동과 확인</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>명령</th>
+<th>의미</th>
+<th>예</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pwd</code></td>
+<td>현재 위치 출력</td>
+<td><code>pwd</code></td>
+</tr>
+<tr>
+<td><code>cd</code></td>
+<td>디렉터리 이동</td>
+<td><code>cd ~/linux-course</code>, <code>cd ..</code>, <code>cd -</code></td>
+</tr>
+<tr>
+<td><code>ls -l</code></td>
+<td>자세히 목록 보기</td>
+<td><code>ls -la /proc/self</code></td>
+</tr>
+<tr>
+<td><code>cat</code> / <code>less</code></td>
+<td>파일 내용 보기</td>
+<td><code>cat /proc/cpuinfo</code>, <code>less /var/log/syslog</code></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>절대 경로는 <code>/</code>로 시작한다: <code>/home/user/linux-course</code></li>
+<li>상대 경로는 현재 위치 기준이다: <code>../day2</code></li>
+<li><code>~</code> 는 내 홈 디렉터리, <code>.</code> 은 현재, <code>..</code> 은 상위 디렉터리</li>
+</ul>
+<h3>2-2. 파일 조작</h3>
+<pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">mkdir -p test/a/b        # 중간 디렉터리까지 한 번에
+touch test/hello.c       # 빈 파일 생성
+cp test/hello.c test/a/  # 복사
+mv test/hello.c test/main.c   # 이름 변경(이동)
+rm -r test               # 디렉터리째 삭제 — 되돌릴 수 없음!
+</code></pre>
+<h3>2-3. 권한</h3>
+<pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">ls -l run.sh
+# -rw-r--r-- 1 user user 512 Oct  2 09:10 run.sh
+chmod +x run.sh
+ls -l run.sh
+# -rwxr-xr-x 1 user user 512 Oct  2 09:10 run.sh
+./run.sh                 # 이제 실행 가능
+</code></pre>
+<p><code>rwx</code> 세 묶음은 차례대로 <strong>소유자 · 그룹 · 그 외</strong>의 권한이다. 실행 권한이 없으면 <code>./run.sh</code>는 <code>Permission denied</code>가 난다.</p>
+<h3>2-4. 리다이렉션과 파이프</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>기호</th>
+<th>의미</th>
+<th>예</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&gt;</code></td>
+<td>출력을 파일로(덮어쓰기)</td>
+<td><code>./a.out &gt; out.txt</code></td>
+</tr>
+<tr>
+<td><code>&gt;&gt;</code></td>
+<td>출력을 파일 끝에 추가</td>
+<td><code>date &gt;&gt; log.txt</code></td>
+</tr>
+<tr>
+<td><code>2&gt;</code></td>
+<td>에러 출력만 파일로</td>
+<td><code>./a.out 2&gt; err.txt</code></td>
+</tr>
+<tr>
+<td><code>2&gt;&amp;1</code></td>
+<td>에러를 표준 출력과 같은 곳으로</td>
+<td><code>make &gt; build.log 2&gt;&amp;1</code></td>
+</tr>
+<tr>
+<td><code>|</code></td>
+<td>앞 명령의 출력을 뒤 명령의 입력으로</td>
+<td><code>ps aux | grep bash</code></td>
+</tr>
+</tbody>
+</table></div>
+<pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">grep processor /proc/cpuinfo | wc -l    # 코어 수 세기
+ps aux | grep -v grep | grep bash       # bash 프로세스 찾기
+</code></pre>
+<h3>2-5. 백그라운드 실행</h3>
+<pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">sleep 30 &amp;      # 끝에 &amp; → 백그라운드에서 실행, 프롬프트 즉시 복귀
+jobs            # 내 백그라운드 작업 목록
+echo $!         # 방금 백그라운드로 띄운 프로세스의 PID
+kill %1         # 1번 작업 종료
+</code></pre>
+<h3 class="check-h">✅ 2교시 확인</h3>
+<ol class="check">
+<li>실행 권한을 추가하는 명령은 <code>chmod <input class="blank" data-i="4" autocomplete="off" spellcheck="false" aria-label="빈칸 4"> run.sh</code> 이다.</li>
+<li>표준 출력과 에러 출력을 모두 <code>log.txt</code>로 보내려면 <code>make &gt; log.txt <input class="blank" data-i="5" autocomplete="off" spellcheck="false" aria-label="빈칸 5"></code> 라고 쓴다.</li>
+<li>앞 명령의 출력을 뒤 명령의 입력으로 연결하는 기호는 <input class="blank" data-i="6" autocomplete="off" spellcheck="false" aria-label="빈칸 6"> 이다.</li>
+<li>방금 백그라운드로 실행한 프로세스의 PID가 저장된 변수는 <input class="blank" data-i="7" autocomplete="off" spellcheck="false" aria-label="빈칸 7"> 이다.</li>
+</ol>
+<hr/>
+<h2 id="s2">3교시 · Makefile과 측정 스크립트</h2>
+<h3>3-1. 왜 Makefile인가</h3>
+<p>예제가 10개라면 <code>gcc -Wall -Wextra -g -o 01 01.c</code>를 10번 쳐야 한다. Makefile은 <strong>"무엇을 무엇으로 어떻게 만드는가"</strong> 를 적어 두면, 바뀐 파일만 다시 빌드한다.</p>
+<p><strong><code>src/Makefile</code></strong></p>
+<pre data-lang="make"><button class="copy" type="button">복사</button><code class="language-make"># Linux &amp; Shell Day 1 — 공통 Makefile
+# make        : 모든 예제 빌드
+# make clean  : 실행 파일 삭제
+CC      = gcc
+CFLAGS  = -Wall -Wextra -g
+SRCS    = $(wildcard *.c)
+TARGETS = $(SRCS:.c=)
+
+all: $(TARGETS)
+
+%: %.c
+    $(CC) $(CFLAGS) -o $@ $&lt;
+
+clean:
+    rm -f $(TARGETS)
+
+.PHONY: all clean
+</code></pre>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>요소</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CC</code>, <code>CFLAGS</code></td>
+<td>변수. <code>$(CFLAGS)</code> 처럼 꺼내 쓴다</td>
+</tr>
+<tr>
+<td><code>$(wildcard *.c)</code></td>
+<td>현재 폴더의 모든 <code>.c</code> 파일 목록</td>
+</tr>
+<tr>
+<td><code>$(SRCS:.c=)</code></td>
+<td>목록에서 <code>.c</code> 를 지운 것 → 실행 파일 이름</td>
+</tr>
+<tr>
+<td><code>%: %.c</code></td>
+<td>패턴 규칙. <code>foo</code>는 <code>foo.c</code>로 만든다</td>
+</tr>
+<tr>
+<td><code>$@</code> / <code>$&lt;</code></td>
+<td>만들 대상 / 첫 번째 재료</td>
+</tr>
+<tr>
+<td>탭</td>
+<td>명령 줄은 반드시 <strong>탭</strong>으로 시작 (스페이스면 <code>missing separator</code> 에러)</td>
+</tr>
+</tbody>
+</table></div>
+<pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">make                     # 전부 빌드
+make 03_errno            # 하나만 빌드
+touch 03_errno.c &amp;&amp; make # 03만 다시 빌드되는 것 확인
+make clean
+</code></pre>
+<h3>3-2. 반복 측정 스크립트 run.sh</h3>
+<p>측정은 한 번으로 믿지 않는다. 같은 프로그램을 N번 실행해 시간을 CSV로 남긴다.</p>
+<p><strong><code>src/run.sh</code></strong></p>
+<pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">#!/bin/bash
+# run.sh — 프로그램을 N회 반복 실행해 실행 시간을 CSV로 저장
+# 사용법: ./run.sh &lt;실행파일&gt; &lt;반복횟수&gt; [출력CSV]
+# 예)     ./run.sh ./01_write_vs_printf 5 result.csv
+
+if [ $# -lt 2 ]; then
+    echo "사용법: $0 &lt;실행파일&gt; &lt;반복횟수&gt; [출력CSV]"
+    exit 1
+fi
+
+PROG=$1
+N=$2
+OUT=${3:-result.csv}
+
+echo "run,elapsed_ms" &gt; "$OUT"
+for i in $(seq 1 "$N"); do
+    start=$(date +%s%N)
+    "$PROG" &gt; /dev/null
+    end=$(date +%s%N)
+    echo "$i,$(( (end - start) / 1000000 ))" &gt;&gt; "$OUT"
+done
+echo "저장 완료: $OUT"
+cat "$OUT"
+</code></pre>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>문법</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>#!/bin/bash</code></td>
+<td>shebang. 이 파일을 bash로 실행하라는 표시</td>
+</tr>
+<tr>
+<td><code>$1</code>, <code>$2</code>, <code>$#</code></td>
+<td>첫째·둘째 인자, 인자 개수</td>
+</tr>
+<tr>
+<td><code>${3:-result.csv}</code></td>
+<td>셋째 인자가 없으면 기본값 사용</td>
+</tr>
+<tr>
+<td><code>$(seq 1 "$N")</code></td>
+<td>명령의 출력을 그 자리에 대입 (명령 치환)</td>
+</tr>
+<tr>
+<td><code>$(( ... ))</code></td>
+<td>정수 산술</td>
+</tr>
+</tbody>
+</table></div>
+<pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">chmod +x run.sh
+./run.sh ./02_syscall_direct 5 r.csv
+</code></pre>
+<h3 class="check-h">✅ 3교시 확인</h3>
+<ol class="check">
+<li>Makefile에서 명령 줄은 반드시 <input class="blank" data-i="8" autocomplete="off" spellcheck="false" aria-label="빈칸 8"> 문자로 시작해야 한다.</li>
+<li>패턴 규칙에서 "만들 대상"을 뜻하는 자동 변수는 <input class="blank" data-i="9" autocomplete="off" spellcheck="false" aria-label="빈칸 9"> 이다.</li>
+<li>셸 스크립트에서 인자 개수를 담은 변수는 <input class="blank" data-i="10" autocomplete="off" spellcheck="false" aria-label="빈칸 10"> 이다.</li>
+<li>셸에서 명령의 출력 결과를 그 자리에 넣는 문법은 <input class="blank" data-i="11" autocomplete="off" spellcheck="false" aria-label="빈칸 11"> 이다.</li>
+</ol>
+<hr/>
+<h2 id="s3">4교시 · 시스템 콜과 커널 경계</h2>
+<h3>4-1. 사용자 모드와 커널 모드</h3>
+<p>프로그램은 평소 <strong>사용자 모드</strong>에서 돈다. 파일·화면·네트워크·프로세스 생성처럼 하드웨어나 다른 프로세스에 영향을 주는 일은 직접 못 하고, <strong>시스템 콜</strong>로 커널에 부탁해야 한다. 시스템 콜이 호출되면 CPU는 <strong>커널 모드</strong>로 전환되어 커널 코드를 실행한 뒤 결과를 들고 돌아온다.</p>
+<pre data-lang="text"><button class="copy" type="button">복사</button><code class="language-text">[사용자 모드]  printf() ─▶ (glibc 버퍼) ─▶ write() 래퍼
+                                              │ syscall 명령, 번호=1
+───────────────────────────────────────────── ▼ ───────────
+[커널 모드]                              sys_write() ─▶ 터미널 드라이버
+</code></pre>
+<ul>
+<li><code>man 2 write</code> → 섹션 2: <strong>시스템 콜</strong></li>
+<li><code>man 3 printf</code> → 섹션 3: <strong>C 라이브러리 함수</strong></li>
+</ul>
+<h3>4-2. 예제 01 — printf와 write</h3>
+<p><strong><code>src/01_write_vs_printf.c</code></strong></p>
+<pre data-lang="c"><button class="copy" type="button">복사</button><code class="language-c">/* 01_write_vs_printf.c — 라이브러리 함수(printf)와 시스템 콜(write) 비교
+ * 빌드: make 01_write_vs_printf
+ * 관찰: strace -e trace=write ./01_write_vs_printf
+ *       strace -c ./01_write_vs_printf &gt; /dev/null
+ */
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+#include &lt;unistd.h&gt;
+
+int main(void)
+{
+    const char *msg = "hello from write()\n";
+
+    /* 1) 시스템 콜 write(): fd 1(stdout)로 바로 커널에 요청 */
+    write(1, msg, strlen(msg));
+
+    /* 2) 라이브러리 함수 printf(): 먼저 stdio 버퍼에 쌓았다가 write()로 내보냄 */
+    for (int i = 0; i &lt; 5; i++)
+        printf("printf line %d\n", i);
+
+    /* 3) 버퍼를 비우지 않고 끝나도 exit 과정에서 fflush가 호출됨 */
+    return 0;
+}
+</code></pre>
+<pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">make 01_write_vs_printf
+./01_write_vs_printf
+./01_write_vs_printf | cat            # 출력 순서가 바뀌는가?
+strace -e trace=write ./01_write_vs_printf
+</code></pre>
+<p><strong>관찰 포인트</strong></p>
+<ul>
+<li>터미널에 출력할 때 printf는 <strong>줄 단위 버퍼링</strong> → 줄마다 write가 호출된다.</li>
+<li>파이프(<code>| cat</code>)나 파일로 보낼 때는 <strong>블록 단위 버퍼링</strong> → printf 5줄이 write <strong>한 번</strong>으로 합쳐지고, 먼저 호출한 write 문장보다 늦게 나온다.</li>
+</ul>
+<pre data-lang="text"><button class="copy" type="button">복사</button><code class="language-text">write(1, "hello from write()\n", 19)    = 19
+write(1, "printf line 0\nprintf line 1\n"..., 70) = 70   ← 파이프일 때
+</code></pre>
+<h3>4-3. 예제 02 — 래퍼 없이 직접 호출</h3>
+<p><strong><code>src/02_syscall_direct.c</code></strong></p>
+<pre data-lang="c"><button class="copy" type="button">복사</button><code class="language-c">/* 02_syscall_direct.c — glibc 래퍼 함수 vs syscall()로 직접 호출
+ * 빌드: make 02_syscall_direct
+ * 관찰: strace -e trace=getpid,write ./02_syscall_direct
+ */
+#define _GNU_SOURCE
+#include &lt;stdio.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;sys/syscall.h&gt;
+
+int main(void)
+{
+    pid_t a = getpid();                 /* glibc 래퍼 */
+    long  b = syscall(SYS_getpid);      /* 시스템 콜 번호로 직접 호출 */
+
+    printf("getpid()            = %d\n", a);
+    printf("syscall(SYS_getpid) = %ld\n", b);
+    printf("SYS_getpid 번호     = %d\n", SYS_getpid);
+    printf("SYS_write  번호     = %d\n", SYS_write);
+
+    syscall(SYS_write, 1, "직접 write 호출\n", sizeof("직접 write 호출\n") - 1);
+    return 0;
+}
+</code></pre>
+<pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">make 02_syscall_direct &amp;&amp; ./02_syscall_direct
+strace -c ./02_syscall_direct &gt; /dev/null    # 호출된 시스템 콜 통계
+</code></pre>
+<p><code>getpid()</code>와 <code>syscall(SYS_getpid)</code>는 같은 값을 돌려준다. glibc 함수는 시스템 콜 번호를 레지스터에 넣고 <code>syscall</code> 명령을 실행하는 <strong>얇은 포장(래퍼)</strong> 이다. x86_64에서 <code>write</code>는 1번, <code>getpid</code>는 39번이다.</p>
+<h3 class="check-h">✅ 4교시 확인</h3>
+<ol class="check">
+<li>시스템 콜이 호출되면 CPU는 사용자 모드에서 <input class="blank" data-i="12" autocomplete="off" spellcheck="false" aria-label="빈칸 12"> 모드로 전환된다.</li>
+<li>시스템 콜 설명서를 보려면 <code>man <input class="blank" data-i="13" autocomplete="off" spellcheck="false" aria-label="빈칸 13"> write</code> 처럼 섹션 번호를 붙인다.</li>
+<li>프로그램이 호출한 시스템 콜을 추적하는 도구는 <input class="blank" data-i="14" autocomplete="off" spellcheck="false" aria-label="빈칸 14"> 이다.</li>
+<li>출력이 파이프로 갈 때 printf는 <input class="blank" data-i="15" autocomplete="off" spellcheck="false" aria-label="빈칸 15"> 단위로 버퍼링한다.</li>
+</ol>
+<hr/>
+<h2 id="s4">5교시 · 에러 처리와 /proc</h2>
+<h3>5-1. 시스템 콜은 실패한다</h3>
+<p>대부분의 시스템 콜은 실패하면 <strong>-1을 반환</strong>하고, 원인 번호를 전역 변수 <strong><code>errno</code></strong> 에 남긴다. 반환값을 검사하지 않는 코드는 실패해도 모른 채 다음 줄로 간다.</p>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>errno</th>
+<th>이름</th>
+<th>흔한 원인</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2</td>
+<td><code>ENOENT</code></td>
+<td>파일·경로가 없음</td>
+</tr>
+<tr>
+<td>13</td>
+<td><code>EACCES</code></td>
+<td>권한 없음</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>EBADF</code></td>
+<td>열려 있지 않은 fd</td>
+</tr>
+<tr>
+<td>21</td>
+<td><code>EISDIR</code></td>
+<td>디렉터리를 쓰기로 열려 함</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong><code>src/03_errno.c</code></strong></p>
+<pre data-lang="c"><button class="copy" type="button">복사</button><code class="language-c">/* 03_errno.c — 시스템 콜 실패와 errno 확인
+ * 빌드: make 03_errno
+ * 실행: ./03_errno
+ */
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+#include &lt;errno.h&gt;
+#include &lt;fcntl.h&gt;
+#include &lt;unistd.h&gt;
+
+static void try_open(const char *path, int flags)
+{
+    int fd = open(path, flags);
+    if (fd == -1) {
+        /* 실패 시 -1 반환 + errno에 원인 번호가 저장됨 */
+        printf("%-22s → 실패: errno=%d (%s)\n", path, errno, strerror(errno));
+        return;
+    }
+    printf("%-22s → 성공: fd=%d\n", path, fd);
+    close(fd);
+}
+
+int main(void)
+{
+    try_open("/etc/hostname", O_RDONLY);   /* 성공 */
+    try_open("/no/such/file", O_RDONLY);   /* ENOENT */
+    try_open("/etc/shadow", O_RDONLY);     /* EACCES (일반 사용자) */
+    try_open("/etc", O_WRONLY);            /* EISDIR */
+
+    errno = 0;
+    if (close(100) == -1)
+        perror("close(100)");              /* EBADF, perror는 메시지 앞에 접두어를 붙임 */
+    return 0;
+}
+</code></pre>
+<pre data-lang="text"><button class="copy" type="button">복사</button><code class="language-text">/etc/hostname          → 성공: fd=3
+/no/such/file          → 실패: errno=2 (No such file or directory)
+/etc/shadow            → 실패: errno=13 (Permission denied)
+/etc                   → 실패: errno=21 (Is a directory)
+close(100): Bad file descriptor
+</code></pre>
+<blockquote class="note">
+<p><code>sudo ./03_errno</code>로 실행하면 <code>/etc/shadow</code>는 성공한다. root는 권한 검사를 통과하기 때문이다.</p>
+</blockquote>
+<p><strong>규칙:</strong> errno는 <strong>실패했을 때만</strong> 의미가 있다. 성공한 호출 뒤의 errno 값은 믿지 않는다.</p>
+<h3>5-2. /proc — 커널이 보여 주는 가상 파일</h3>
+<p><code>/proc</code>은 디스크에 없는 <strong>가상 파일시스템</strong>이다. 파일을 읽는 순간 커널이 그때의 값을 만들어 준다. <code>/proc/self</code>는 "지금 이 파일을 읽는 프로세스 자신"을 가리킨다.</p>
+<pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">cat /proc/self/status | head -10
+ls -l /proc/self/fd
+cat /proc/loadavg
+</code></pre>
+<h3>5-3. 예제 04 — C에서 /proc 읽기</h3>
+<p><strong><code>src/04_proc_self.c</code></strong></p>
+<pre data-lang="c"><button class="copy" type="button">복사</button><code class="language-c">/* 04_proc_self.c — /proc/self/status에서 내 프로세스 정보 읽기
+ * 빌드: make 04_proc_self
+ * 실행: ./04_proc_self
+ */
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+
+/* key(예: "VmRSS")에 해당하는 줄의 값을 out에 복사. 성공 0, 실패 -1 */
+static int read_status(const char *key, char *out, size_t size)
+{
+    FILE *fp = fopen("/proc/self/status", "r");
+    if (fp == NULL) {
+        perror("fopen");
+        return -1;
+    }
+
+    char line[256];
+    size_t klen = strlen(key);
+    int found = -1;
+
+    while (fgets(line, sizeof(line), fp) != NULL) {
+        if (strncmp(line, key, klen) == 0 &amp;&amp; line[klen] == ':') {
+            char *v = line + klen + 1;
+            while (*v == ' ' || *v == '\t')
+                v++;
+            v[strcspn(v, "\n")] = '\0';
+            snprintf(out, size, "%s", v);
+            found = 0;
+            break;
+        }
+    }
+    fclose(fp);
+    return found;
+}
+
+int main(void)
+{
+    const char *keys[] = { "Name", "State", "Pid", "PPid", "Threads", "VmRSS" };
+    char val[128];
+
+    printf("--- malloc 전 ---\n");
+    for (size_t i = 0; i &lt; sizeof(keys) / sizeof(keys[0]); i++)
+        if (read_status(keys[i], val, sizeof(val)) == 0)
+            printf("%-8s %s\n", keys[i], val);
+
+    /* 50MB를 할당하고 실제로 써야 RSS가 늘어난다 (Day 3 demand paging 예고) */
+    size_t n = 50 * 1024 * 1024;
+    char *buf = malloc(n);
+    if (buf == NULL)
+        return 1;
+    memset(buf, 1, n);
+
+    printf("--- 50MB 사용 후 ---\n");
+    if (read_status("VmRSS", val, sizeof(val)) == 0)
+        printf("%-8s %s\n", "VmRSS", val);
+
+    free(buf);
+    return 0;
+}
+</code></pre>
+<pre data-lang="text"><button class="copy" type="button">복사</button><code class="language-text">--- malloc 전 ---
+Name     04_proc_self
+State    R (running)
+Pid      5120
+PPid     4890
+Threads  1
+VmRSS    1508 kB
+--- 50MB 사용 후 ---
+VmRSS    52712 kB
+</code></pre>
+<p><code>VmRSS</code>는 실제로 물리 메모리를 차지하는 크기다. <code>malloc</code>만 하고 <code>memset</code>을 지우면 RSS가 거의 늘지 않는다 — Day 3에서 그 이유(demand paging)를 측정한다.</p>
+<h3 class="check-h">✅ 5교시 확인</h3>
+<ol class="check">
+<li>시스템 콜이 실패하면 대부분 <input class="blank" data-i="16" autocomplete="off" spellcheck="false" aria-label="빈칸 16"> 을 반환한다.</li>
+<li>실패 원인 번호가 저장되는 전역 변수는 <input class="blank" data-i="17" autocomplete="off" spellcheck="false" aria-label="빈칸 17"> 이다.</li>
+<li>없는 파일을 열려고 할 때 errno 이름은 <input class="blank" data-i="18" autocomplete="off" spellcheck="false" aria-label="빈칸 18"> 이다.</li>
+<li>현재 프로세스 자신의 정보를 가리키는 /proc 경로는 <code>/proc/<input class="blank" data-i="19" autocomplete="off" spellcheck="false" aria-label="빈칸 19"></code> 이다.</li>
+</ol>
+<hr/>
+<h2 id="s5">6교시 · 프로세스 생성</h2>
+<h3>6-1. fork — 하나가 둘이 된다</h3>
+<p><code>fork()</code>는 호출한 프로세스를 복제한다. <strong>한 번 호출해 두 번 반환</strong>한다.</p>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>반환값</th>
+<th>누가 받나</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-1</code></td>
+<td>부모</td>
+<td>실패 (프로세스 생성 불가)</td>
+</tr>
+<tr>
+<td><code>0</code></td>
+<td>자식</td>
+<td>"나는 자식이다"</td>
+</tr>
+<tr>
+<td><code>&gt; 0</code></td>
+<td>부모</td>
+<td>새로 태어난 자식의 PID</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong><code>src/05_fork_basic.c</code></strong></p>
+<pre data-lang="c"><button class="copy" type="button">복사</button><code class="language-c">/* 05_fork_basic.c — fork() 반환값으로 부모/자식 구분
+ * 빌드: make 05_fork_basic
+ * 실행: ./05_fork_basic
+ */
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;sys/wait.h&gt;
+
+int main(void)
+{
+    int x = 100;
+    printf("[fork 전] PID=%d, x=%d\n", getpid(), x);
+    fflush(stdout);   /* 버퍼를 비우지 않으면 자식에게 복사되어 두 번 출력될 수 있음 */
+
+    pid_t pid = fork();
+    if (pid == -1) {
+        perror("fork");
+        exit(1);
+    }
+
+    if (pid == 0) {
+        /* 자식: fork() 반환값 0 */
+        x += 1;
+        printf("[자식] PID=%d, PPID=%d, x=%d\n", getpid(), getppid(), x);
+        exit(0);
+    }
+
+    /* 부모: fork() 반환값 = 자식 PID */
+    x -= 1;
+    wait(NULL);
+    printf("[부모] PID=%d, 자식 PID=%d, x=%d\n", getpid(), pid, x);
+    return 0;
+}
+</code></pre>
+<pre data-lang="text"><button class="copy" type="button">복사</button><code class="language-text">[fork 전] PID=177, x=100
+[자식] PID=178, PPID=177, x=101
+[부모] PID=177, 자식 PID=178, x=99
+</code></pre>
+<p>자식의 <code>x</code>가 101, 부모의 <code>x</code>가 99인 이유: fork 후 두 프로세스는 <strong>메모리를 따로</strong> 가진다. (실제로는 Copy-on-Write로 쓰는 순간에 복사된다 — Day 3에서 측정)</p>
+<blockquote class="note">
+<p><code>fflush(stdout)</code>를 지우고 <code>./05_fork_basic | cat</code>으로 실행해 보라. "fork 전" 줄이 두 번 나온다. 버퍼에 남은 내용까지 자식에게 복제되기 때문이다.</p>
+</blockquote>
+<h3>6-2. exec와 wait</h3>
+<ul>
+<li><strong>exec</strong>: 현재 프로세스의 코드·데이터를 새 프로그램으로 <strong>통째로 교체</strong>한다. PID는 그대로다. 성공하면 돌아오지 않는다.</li>
+<li><strong>wait / waitpid</strong>: 부모가 자식의 종료를 기다리고 <strong>종료 상태</strong>를 받는다.</li>
+</ul>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>매크로</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>WIFEXITED(s)</code></td>
+<td><code>exit()</code>로 정상 종료했는가</td>
+</tr>
+<tr>
+<td><code>WEXITSTATUS(s)</code></td>
+<td>그때의 종료 코드(0~255)</td>
+</tr>
+<tr>
+<td><code>WIFSIGNALED(s)</code></td>
+<td>시그널로 죽었는가</td>
+</tr>
+<tr>
+<td><code>WTERMSIG(s)</code></td>
+<td>어떤 시그널이었나</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong><code>src/06_fork_exec_wait.c</code></strong></p>
+<pre data-lang="c"><button class="copy" type="button">복사</button><code class="language-c">/* 06_fork_exec_wait.c — fork → exec → wait, 종료 상태 확인
+ * 빌드: make 06_fork_exec_wait
+ * 실행: ./06_fork_exec_wait            (기본: ls -l /tmp)
+ *       ./06_fork_exec_wait ls /nope   (실패하는 명령 → 종료 코드 2)
+ */
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;sys/wait.h&gt;
+
+int main(int argc, char *argv[])
+{
+    char *def[] = { "ls", "-l", "/tmp", NULL };
+    char **cmd = (argc &gt; 1) ? &amp;argv[1] : def;
+
+    pid_t pid = fork();
+    if (pid == -1) {
+        perror("fork");
+        return 1;
+    }
+
+    if (pid == 0) {
+        execvp(cmd[0], cmd);          /* 성공하면 이 아래는 실행되지 않음 */
+        perror("execvp");
+        _exit(127);                   /* exec 실패 관례: 127 */
+    }
+
+    int status;
+    if (waitpid(pid, &amp;status, 0) == -1) {
+        perror("waitpid");
+        return 1;
+    }
+
+    if (WIFEXITED(status))
+        printf("[부모] 자식 %d 정상 종료, 종료 코드=%d\n", pid, WEXITSTATUS(status));
+    else if (WIFSIGNALED(status))
+        printf("[부모] 자식 %d 시그널로 종료, 시그널=%d\n", pid, WTERMSIG(status));
+    return 0;
+}
+</code></pre>
+<pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">./06_fork_exec_wait                 # 종료 코드=0
+./06_fork_exec_wait ls /nope        # 종료 코드=2
+./06_fork_exec_wait nosuchcmd       # execvp 실패 → 종료 코드=127
+./06_fork_exec_wait sleep 30        # 다른 터미널에서 kill → 시그널=15
+</code></pre>
+<h3 class="check-h">✅ 6교시 확인</h3>
+<ol class="check">
+<li>fork()가 자식 프로세스에게 돌려주는 값은 <input class="blank" data-i="20" autocomplete="off" spellcheck="false" aria-label="빈칸 20"> 이다.</li>
+<li>exec 계열 함수가 성공하면 호출한 다음 줄은 <input class="blank" data-i="21" autocomplete="off" spellcheck="false" aria-label="빈칸 21">.</li>
+<li>자식이 exit()로 끝났는지 검사하는 매크로는 <input class="blank" data-i="22" autocomplete="off" spellcheck="false" aria-label="빈칸 22"> 이다.</li>
+<li>exec 실패 시 관례적으로 쓰는 종료 코드는 <input class="blank" data-i="23" autocomplete="off" spellcheck="false" aria-label="빈칸 23"> 이다.</li>
+</ol>
+<hr/>
+<h2 id="s6">7교시 · 좀비 · 고아 · 시그널</h2>
+<h3>7-1. 좀비 — 끝났지만 수거되지 않은 자식</h3>
+<p>자식이 끝나도 커널은 <strong>종료 상태를 부모가 가져갈 때까지</strong> 프로세스 테이블 한 칸을 남겨 둔다. 이 상태가 좀비(<code>Z</code>, <code>&lt;defunct&gt;</code>)다. 부모가 <code>wait</code>하면 사라진다.</p>
+<p><strong><code>src/07_zombie.c</code></strong></p>
+<pre data-lang="c"><button class="copy" type="button">복사</button><code class="language-c">/* 07_zombie.c — 좀비 프로세스 만들고 관찰하기
+ * 빌드: make 07_zombie
+ * 실행: ./07_zombie &amp;
+ *       ps -o pid,ppid,stat,cmd --ppid $!    (STAT 열의 Z 확인)
+ */
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;sys/wait.h&gt;
+
+int main(void)
+{
+    pid_t pid = fork();
+    if (pid == -1) {
+        perror("fork");
+        return 1;
+    }
+
+    if (pid == 0) {
+        printf("[자식 %d] 바로 종료합니다\n", getpid());
+        exit(7);
+    }
+
+    printf("[부모 %d] 20초 동안 wait하지 않음 → 자식 %d는 좀비(Z)\n", getpid(), pid);
+    fflush(stdout);
+    sleep(20);
+
+    int status;
+    waitpid(pid, &amp;status, 0);          /* 이제 수거 → 좀비 사라짐 */
+    printf("[부모] 수거 완료, 종료 코드=%d\n", WEXITSTATUS(status));
+    sleep(5);                          /* 수거 후 ps로 다시 확인할 시간 */
+    return 0;
+}
+</code></pre>
+<pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">./07_zombie &amp;
+ps -o pid,ppid,stat,cmd --ppid $!
+</code></pre>
+<pre data-lang="text"><button class="copy" type="button">복사</button><code class="language-text">  PID  PPID STAT CMD
+ 6021  6020 Z    [07_zombie] &lt;defunct&gt;
+</code></pre>
+<p>20초 뒤 부모가 <code>waitpid</code>를 호출하면 다시 <code>ps</code>를 쳐 봐도 좀비가 없다.</p>
+<h3>7-2. 고아 — 부모가 먼저 끝난 자식</h3>
+<p><strong><code>src/08_orphan.c</code></strong></p>
+<pre data-lang="c"><button class="copy" type="button">복사</button><code class="language-c">/* 08_orphan.c — 부모가 먼저 끝나면 자식의 PPID가 바뀐다
+ * 빌드: make 08_orphan
+ * 실행: ./08_orphan   (3초 뒤 프롬프트가 돌아온 후 자식 출력이 이어짐)
+ */
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;unistd.h&gt;
+
+int main(void)
+{
+    pid_t pid = fork();
+    if (pid == -1) {
+        perror("fork");
+        return 1;
+    }
+
+    if (pid == 0) {
+        printf("[자식] 처음 PPID=%d\n", getppid());
+        fflush(stdout);
+        sleep(3);                       /* 그 사이 부모 종료 */
+        printf("[자식] 고아가 된 후 PPID=%d (init 또는 subreaper)\n", getppid());
+        exit(0);
+    }
+
+    printf("[부모 %d] 자식 %d를 기다리지 않고 1초 뒤 종료\n", getpid(), pid);
+    sleep(1);
+    return 0;
+}
+</code></pre>
+<p>부모가 먼저 끝나면 자식은 <strong>init(PID 1) 또는 subreaper</strong>가 입양한다. Ubuntu 데스크톱에서는 로그인 세션의 <code>systemd --user</code>가 subreaper라서 PPID가 1이 아닌 다른 숫자로 바뀔 수 있다. <code>ps -p &lt;PPID&gt; -o cmd</code>로 누구인지 확인해 보라.</p>
+<h3>7-3. 시그널과 sigaction</h3>
+<p>시그널은 커널이 프로세스에 보내는 <strong>비동기 알림</strong>이다.</p>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>시그널</th>
+<th>번호</th>
+<th>언제</th>
+<th>기본 동작</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SIGINT</code></td>
+<td>2</td>
+<td>Ctrl+C</td>
+<td>종료</td>
+</tr>
+<tr>
+<td><code>SIGKILL</code></td>
+<td>9</td>
+<td><code>kill -9</code></td>
+<td>종료 (잡을 수 없음)</td>
+</tr>
+<tr>
+<td><code>SIGTERM</code></td>
+<td>15</td>
+<td><code>kill</code> 기본값</td>
+<td>종료</td>
+</tr>
+<tr>
+<td><code>SIGCHLD</code></td>
+<td>17</td>
+<td>자식이 끝났을 때</td>
+<td>무시</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong><code>src/09_sigaction.c</code></strong></p>
+<pre data-lang="c"><button class="copy" type="button">복사</button><code class="language-c">/* 09_sigaction.c — SIGINT(Ctrl+C) 처리와 SIGCHLD로 자식 자동 수거
+ * 빌드: make 09_sigaction
+ * 실행: ./09_sigaction   → Ctrl+C를 두 번 눌러 보기 (세 번째에 종료)
+ */
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+#include &lt;signal.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;sys/wait.h&gt;
+
+static volatile sig_atomic_t g_int_count = 0;
+
+static void on_sigint(int sig)
+{
+    (void)sig;
+    g_int_count++;
+    /* 핸들러 안에서는 async-signal-safe 함수만: printf 대신 write */
+    const char msg[] = "\n[핸들러] SIGINT 받음\n";
+    write(1, msg, sizeof(msg) - 1);
+}
+
+static void on_sigchld(int sig)
+{
+    (void)sig;
+    /* 끝난 자식을 모두 수거 → 좀비가 남지 않음 */
+    while (waitpid(-1, NULL, WNOHANG) &gt; 0)
+        ;
+}
+
+int main(void)
+{
+    struct sigaction sa;
+    memset(&amp;sa, 0, sizeof(sa));
+    sigemptyset(&amp;sa.sa_mask);
+
+    sa.sa_handler = on_sigint;
+    sigaction(SIGINT, &amp;sa, NULL);
+
+    sa.sa_handler = on_sigchld;
+    sa.sa_flags = SA_RESTART;          /* 시그널에 끊긴 sleep 외 시스템 콜 자동 재시작 */
+    sigaction(SIGCHLD, &amp;sa, NULL);
+
+    /* 자식 하나를 만들어 2초 뒤 종료시킴 → SIGCHLD 핸들러가 수거 */
+    if (fork() == 0) {
+        sleep(2);
+        _exit(0);
+    }
+
+    printf("PID=%d, Ctrl+C를 3번 누르면 종료합니다\n", getpid());
+    while (g_int_count &lt; 3)
+        pause();                       /* 시그널이 올 때까지 잠듦 */
+
+    printf("SIGINT 3회 → 종료\n");
+    return 0;
+}
+</code></pre>
+<p><strong>핸들러 작성 규칙</strong></p>
+<ul>
+<li>핸들러에서는 <code>printf</code> 대신 <code>write</code> 같은 <strong>async-signal-safe</strong> 함수만 쓴다.</li>
+<li>핸들러와 main이 함께 쓰는 변수는 <code>volatile sig_atomic_t</code>로 선언한다.</li>
+<li><code>SIGCHLD</code> 핸들러에서 <code>waitpid(-1, NULL, WNOHANG)</code>을 <strong>반복</strong>해야 동시에 끝난 자식까지 모두 수거한다.</li>
+</ul>
+<h3 class="check-h">✅ 7교시 확인</h3>
+<ol class="check">
+<li>ps의 STAT 열에서 좀비 프로세스는 <input class="blank" data-i="24" autocomplete="off" spellcheck="false" aria-label="빈칸 24"> 로 표시된다.</li>
+<li>좀비를 없애려면 부모가 <input class="blank" data-i="25" autocomplete="off" spellcheck="false" aria-label="빈칸 25"> 를 호출해야 한다.</li>
+<li>핸들러로 잡을 수 없는 종료 시그널은 <input class="blank" data-i="26" autocomplete="off" spellcheck="false" aria-label="빈칸 26"> 이다.</li>
+<li>자식이 종료되면 부모에게 전달되는 시그널은 <input class="blank" data-i="27" autocomplete="off" spellcheck="false" aria-label="빈칸 27"> 이다.</li>
+</ol>
+<hr/>
+<h2 id="s7">8교시 · 종합 실습 — myshell 만들기</h2>
+<h3>8-1. 셸의 정체</h3>
+<p>우리가 매일 쓰는 bash도 결국 아래 루프다.</p>
+<pre data-lang="text"><button class="copy" type="button">복사</button><code class="language-text">for (;;) {
+    프롬프트 출력 → 한 줄 읽기 → 단어로 자르기
+    내장 명령(cd, exit)이면 셸이 직접 처리
+    아니면 fork → 자식은 execvp → 부모는 waitpid
+    종료 코드 저장
+}
+</code></pre>
+<p><strong>왜 <code>cd</code>는 내장 명령이어야 하나?</strong> <code>cd</code>를 자식 프로세스에서 실행하면 <strong>자식의</strong> 현재 디렉터리만 바뀌고, 자식이 끝나면 사라진다. 셸 자신의 위치를 바꾸려면 셸 프로세스가 직접 <code>chdir()</code>을 호출해야 한다.</p>
+<h3>8-2. 전체 코드</h3>
+<p><strong><code>src/myshell.c</code></strong></p>
+<pre data-lang="c"><button class="copy" type="button">복사</button><code class="language-c">/* myshell.c — Day 1 종합 실습: fork-exec-wait 루프로 만드는 미니 셸
+ * 빌드: make myshell
+ * 실행: ./myshell
+ * 관찰: strace -f -e trace=clone,execve,wait4 ./myshell
+ *
+ * 지원: 일반 명령 실행, 내장 명령 exit / cd, 직전 종료 코드 표시
+ */
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;signal.h&gt;
+#include &lt;sys/wait.h&gt;
+
+#define MAX_LINE 1024
+#define MAX_ARGS 64
+
+/* line을 공백 기준으로 잘라 argv에 담고 인자 개수를 반환 */
+static int parse(char *line, char *argv[])
+{
+    int argc = 0;
+    char *tok = strtok(line, " \t\n");
+    while (tok != NULL &amp;&amp; argc &lt; MAX_ARGS - 1) {
+        argv[argc++] = tok;
+        tok = strtok(NULL, " \t\n");
+    }
+    argv[argc] = NULL;                 /* execvp는 NULL로 끝나는 배열을 요구 */
+    return argc;
+}
+
+int main(void)
+{
+    char line[MAX_LINE];
+    char *argv[MAX_ARGS];
+    int last = 0;                      /* 직전 명령의 종료 코드 */
+
+    signal(SIGINT, SIG_IGN);           /* 셸 자신은 Ctrl+C로 죽지 않음 */
+
+    for (;;) {
+        printf("myshell[%d]$ ", last);
+        fflush(stdout);
+
+        if (fgets(line, sizeof(line), stdin) == NULL) {   /* Ctrl+D */
+            printf("\n");
+            break;
+        }
+
+        int argc = parse(line, argv);
+        if (argc == 0)
+            continue;
+
+        /* 내장 명령: 자식이 아니라 셸 자신이 처리해야 하는 것 */
+        if (strcmp(argv[0], "exit") == 0)
+            break;
+        if (strcmp(argv[0], "cd") == 0) {
+            const char *dir = (argc &gt; 1) ? argv[1] : getenv("HOME");
+            if (chdir(dir) == -1) {
+                perror("cd");
+                last = 1;
+            } else {
+                last = 0;
+            }
+            continue;
+        }
+
+        pid_t pid = fork();
+        if (pid == -1) {
+            perror("fork");
+            continue;
+        }
+        if (pid == 0) {
+            signal(SIGINT, SIG_DFL);   /* 자식은 Ctrl+C에 정상 반응 */
+            execvp(argv[0], argv);
+            perror(argv[0]);
+            _exit(127);
+        }
+
+        int status;
+        waitpid(pid, &amp;status, 0);
+        if (WIFEXITED(status))
+            last = WEXITSTATUS(status);
+        else if (WIFSIGNALED(status))
+            last = 128 + WTERMSIG(status);   /* bash와 같은 관례 */
+    }
+    return 0;
+}
+</code></pre>
+<h3>8-3. 실행과 관찰</h3>
+<pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">make myshell
+./myshell
+</code></pre>
+<pre data-lang="text"><button class="copy" type="button">복사</button><code class="language-text">myshell[0]$ echo hi
+hi
+myshell[0]$ ls /nope
+ls: cannot access '/nope': No such file or directory
+myshell[2]$ cd /tmp
+myshell[0]$ pwd
+/tmp
+myshell[0]$ sleep 100        ← Ctrl+C
+myshell[130]$ exit
+</code></pre>
+<p>다른 터미널에서 시스템 콜 흐름을 본다.</p>
+<pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">strace -f -e trace=clone,execve,wait4 ./myshell
+</code></pre>
+<h3>8-4. 도전 과제 (선택)</h3>
+<ol>
+<li><code>myshell[0]</code> 대신 현재 디렉터리를 프롬프트에 표시하기 (<code>getcwd</code>)</li>
+<li>명령 끝에 <code>&amp;</code>가 있으면 기다리지 않고 백그라운드로 실행하기 (좀비가 남지 않게 <code>SIGCHLD</code> 처리)</li>
+<li><code>&gt;</code> 리다이렉션 지원하기 (자식에서 <code>open</code> + <code>dup2(fd, 1)</code> 후 exec — Day 4 예고)</li>
+</ol>
+<h3 class="check-h">✅ 8교시 확인</h3>
+<ol class="check">
+<li><code>cd</code>는 셸 프로세스 자신이 <input class="blank" data-i="28" autocomplete="off" spellcheck="false" aria-label="빈칸 28"> 을 호출해야 하므로 내장 명령으로 처리한다.</li>
+<li>execvp에 넘기는 인자 배열의 마지막 원소는 <input class="blank" data-i="29" autocomplete="off" spellcheck="false" aria-label="빈칸 29"> 이어야 한다.</li>
+<li>bash 관례상 SIGINT(2번)로 죽은 자식의 종료 코드는 <input class="blank" data-i="30" autocomplete="off" spellcheck="false" aria-label="빈칸 30"> 으로 표시한다.</li>
+</ol>
+<hr/>
+<h2 id="s8">오늘 정리</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>개념</th>
+<th>핵심 한 줄</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>시스템 콜</td>
+<td>사용자 프로그램이 커널에 일을 부탁하는 유일한 문</td>
+</tr>
+<tr>
+<td>errno</td>
+<td>실패(-1) 했을 때만 읽는 원인 번호</td>
+</tr>
+<tr>
+<td>/proc</td>
+<td>읽는 순간 커널이 만들어 주는 가상 파일</td>
+</tr>
+<tr>
+<td>fork</td>
+<td>한 번 호출, 두 번 반환 (자식 0, 부모 PID)</td>
+</tr>
+<tr>
+<td>exec</td>
+<td>같은 PID에 새 프로그램을 덮어씀</td>
+</tr>
+<tr>
+<td>wait</td>
+<td>자식의 종료 상태 수거 — 안 하면 좀비</td>
+</tr>
+<tr>
+<td>시그널</td>
+<td>커널이 보내는 비동기 알림, sigaction으로 처리</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>다음 시간(Day 2, 10/6):</strong> 스케줄링 — 누가, 얼마나 자주, 얼마나 늦게 CPU를 받는가를 측정한다.</p></main>
+<div class="bar"><button class="primary" id="grade" type="button">채점하기</button><button id="reset" type="button">초기화</button><span class="score" id="score">빈칸 30개</span></div>
+<script>
+const KEY=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob("W1siLXIiXSwgWyJucHJvYyJdLCBbImFwdCJdLCBbIit4IiwgInUreCIsICI3NTUiXSwgWyIyPiYxIl0sIFsifCJdLCBbIiQhIl0sIFsi7YOtIiwgInRhYiIsICJUQUIiXSwgWyIkQCJdLCBbIiQjIl0sIFsiJCggKSIsICIkKCkiLCAiJCguLi4pIl0sIFsi7Luk64SQIiwgImtlcm5lbCJdLCBbIjIiXSwgWyJzdHJhY2UiXSwgWyLruJTroZ0iLCAiYmxvY2siLCAi7ZKAIiwgImZ1bGwiXSwgWyItMSJdLCBbImVycm5vIl0sIFsiRU5PRU5UIl0sIFsic2VsZiJdLCBbIjAiXSwgWyLsi6TtlonrkJjsp4Ag7JWK64qU64ukIiwgIuyLpO2WiSDslYgg65CoIiwgIuyLpO2WieuQmOyngOyViuuKlOuLpCJdLCBbIldJRkVYSVRFRCJdLCBbIjEyNyJdLCBbIloiXSwgWyJ3YWl0IiwgIndhaXRwaWQiLCAid2FpdCgpIiwgIndhaXRwaWQoKSJdLCBbIlNJR0tJTEwiXSwgWyJTSUdDSExEIl0sIFsiY2hkaXIiLCAiY2hkaXIoKSJdLCBbIk5VTEwiXSwgWyIxMzAiXV0="),c=>c.charCodeAt(0))));
+const SKEY="linux-day1-lecture";
+const blanks=[...document.querySelectorAll("input.blank")];
+const norm=s=>s.trim().replace(/\s+/g," ").toLowerCase();
+function save(){try{const d={nm:document.getElementById("nm").value,v:blanks.map(b=>b.value)};localStorage.setItem(SKEY,JSON.stringify(d));}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem(SKEY)||"null");if(!d)return;document.getElementById("nm").value=d.nm||"";blanks.forEach((b,i)=>b.value=d.v[i]||"");}catch(e){}}
+function fit(b){b.style.width=Math.max(6,b.value.length+2)+"ch"}
+function grade(){let ok=0;blanks.forEach(b=>{const a=KEY[b.dataset.i-1].map(norm);const r=a.includes(norm(b.value));b.classList.toggle("ok",r);b.classList.toggle("ng",!r);if(r)ok++;});
+document.getElementById("score").innerHTML=`<b>${ok}</b> / ${blanks.length} 정답`;}
+blanks.forEach(b=>{b.addEventListener("input",()=>{b.classList.remove("ok","ng");fit(b);save();});});
+document.getElementById("nm").addEventListener("input",save);
+document.getElementById("grade").onclick=grade;
+document.getElementById("reset").onclick=()=>{if(!confirm("입력한 답을 모두 지울까요?"))return;blanks.forEach(b=>{b.value="";b.classList.remove("ok","ng");fit(b)});save();document.getElementById("score").textContent="빈칸 "+blanks.length+"개";};
+document.querySelectorAll(".copy").forEach(btn=>btn.onclick=()=>{const t=btn.parentElement.querySelector("code").innerText;navigator.clipboard.writeText(t).then(()=>{btn.textContent="복사됨";setTimeout(()=>btn.textContent="복사",1200)})});
+load();blanks.forEach(fit);
+</script></body></html>
