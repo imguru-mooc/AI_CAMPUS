@@ -1,151 +1,605 @@
-<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Linux Day 1 애니메이션</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet"><style>
-:root{--bg:#0f141d;--panel:#161d2a;--panel2:#1c2535;--line:#2a3548;--ink:#e6ebf3;--muted:#8d9ab0;
---cyan:#4fd1e8;--amber:#f5b942;--green:#5ad49a;--red:#ff6b6b;--violet:#a78bfa;
---mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;--sans:'Noto Sans KR',system-ui,-apple-system,'Malgun Gothic',sans-serif}
-*{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.7}
-a{color:var(--cyan)}
-code,pre,kbd{font-family:var(--mono)}
-:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux &amp; Shell 1일차 — 눈으로 보는 8가지 (Shell · 시스템 콜 · 프로세스)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EEF1F5;
+    --panel:#FFFFFF;
+    --ink:#1B2A41;
+    --ink-soft:#5B6B80;
+    --line:#C9D1DC;
+    --blue:#2457C5;
+    --blue-soft:#DCE6FA;
+    --red:#D6452E;
+    --red-soft:#FBE3DF;
+    --green:#178A67;
+    --green-soft:#DDF2EA;
+    --amber:#C98A12;
+    --amber-soft:#FBF0D3;
+    --mono:'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    --sans:'IBM Plex Sans KR', 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    --t:.35s;
+  }
+  @media (prefers-reduced-motion: reduce){ :root{ --t:0s; } *{ animation:none !important; transition:none !important; } }
 
-body{padding:0}
-.wrap{max-width:1240px;margin:0 auto;padding:22px 26px 40px}
-.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.eyebrow{font-family:var(--mono);font-size:.78rem;color:var(--cyan)}
-h1{margin:2px 0 4px;font-size:1.55rem}
-.desc{color:var(--muted);margin:0;font-size:.93rem;max-width:760px}
-.home{font-size:.85rem;color:var(--muted);text-decoration:none;border:1px solid var(--line);padding:6px 12px;border-radius:8px}
-.home:hover{color:var(--ink)}
-.chips{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 12px}
-.chip{font:inherit;font-size:.86rem;padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--muted);cursor:pointer}
-.chip.on{background:var(--cyan);border-color:var(--cyan);color:#062028;font-weight:700}
-.grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:16px}
-.stage,.codep{background:var(--panel);border:1px solid var(--line);border-radius:12px}
-.stage svg{display:block;width:100%;height:auto}
-.codep{padding:12px 0;overflow:auto;max-height:470px}
-.codep .fn{font-family:var(--mono);font-size:.72rem;color:var(--muted);padding:0 14px 8px;border-bottom:1px solid var(--line);margin-bottom:6px}
-.ln{display:flex;font-family:var(--mono);font-size:.78rem;line-height:1.65;padding:0 14px;white-space:pre;color:#b9c6da}
-.ln i{font-style:normal;width:2.4em;flex:none;color:#4b5870;text-align:right;margin-right:12px}
-.ln.hl{background:rgba(245,185,66,.16);color:#fff;box-shadow:inset 3px 0 0 var(--amber)}
-.narr{margin-top:14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;min-height:96px}
-.narr .stepno{font-family:var(--mono);font-size:.75rem;color:var(--amber)}
-.narr p{margin:6px 0 0;font-size:1rem;color:var(--ink)}
-.predict{margin-top:14px;background:#171b2b;border:1px solid #39406a;border-radius:12px;padding:12px 16px}
-.predict .q{font-weight:700;margin-bottom:10px}
-.predict .q::before{content:"예측 먼저 · ";color:var(--violet);font-family:var(--mono);font-size:.8rem;font-weight:400}
-.predict .opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.predict button{font:inherit;font-size:.88rem;display:block;width:100%;text-align:left;margin:0;padding:9px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);cursor:pointer}
-.predict button.right{border-color:var(--green);background:#123326}
-.predict button.wrong{border-color:var(--red);background:#3a1717}
-.predict .why{margin-top:8px;color:var(--muted);font-size:.9rem}
-.ctrl{display:flex;gap:10px;margin-top:14px;align-items:center}
-.ctrl button{font:inherit;font-weight:600;padding:9px 18px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);cursor:pointer}
-.ctrl button.next{background:var(--amber);border-color:var(--amber);color:#1a1405}
-.ctrl button:disabled{opacity:.35;cursor:not-allowed}
-.ctrl .hint{color:var(--muted);font-size:.8rem;margin-left:auto;font-family:var(--mono)}
-svg text{font-family:var(--sans)}
-svg .mono{font-family:var(--mono)}
-.bx rect{transition:fill .25s,stroke .25s,opacity .25s}
-.bx{transition:opacity .25s}
-@media (max-width:900px){.grid{grid-template-columns:1fr}.predict .opts{grid-template-columns:1fr}}
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; }
+  body{
+    font-family:var(--sans); color:var(--ink); background:var(--paper);
+    background-image:
+      linear-gradient(rgba(27,42,65,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(27,42,65,.045) 1px, transparent 1px);
+    background-size:24px 24px;
+    font-size:16px; line-height:1.55;
+  }
+  code, .mono{ font-family:var(--mono); }
 
-.layout{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}
-.side{position:sticky;top:0;height:100vh;overflow:auto;padding:24px 14px;border-right:1px solid var(--line);background:#0c1119}
-.side .brand{font-family:var(--mono);color:var(--cyan);font-size:.76rem;padding:0 8px}
-.side h2{margin:4px 8px 16px;font-size:1.2rem}
-.nav button{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;font:inherit;padding:9px 10px;margin:2px 0;border:1px solid transparent;border-radius:8px;background:none;color:var(--muted);cursor:pointer}
-.nav button .no{font-family:var(--mono);font-size:.7rem;color:#5d6a82}
-.nav button .tt{font-size:.86rem;line-height:1.4}
-.nav button:hover{background:var(--panel);color:var(--ink)}
-.nav button.on{background:var(--panel);border-color:var(--amber);color:var(--ink)}
-.nav button.on .no{color:var(--amber)}
-.side .ws{display:block;margin:18px 8px 0;padding:9px 12px;border-radius:8px;background:var(--amber);color:#1a1405;text-decoration:none;font-weight:700;font-size:.86rem;text-align:center}
-.anav{display:flex;gap:8px}
-.anav button{font:inherit;font-size:.84rem;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--muted);cursor:pointer}
-.anav button:hover:not(:disabled){color:var(--ink)}.anav button:disabled{opacity:.35;cursor:not-allowed}
-.layout .wrap{margin:0;max-width:1180px}
-@media (max-width:980px){.layout{display:block}.side{position:static;height:auto}.nav{display:grid;grid-template-columns:1fr 1fr;gap:4px}}
-</style></head><body>
-<div class="layout"><aside class="side"><div class="brand">AI_CAMPUS · linux-day1</div><h2>Day 1 애니메이션</h2><div class="nav" id="nav"></div>
-<a class="ws" href="worksheet.html">개념 워크시트 (80문항)</a></aside>
-<div class="wrap">
-<div class="top"><div><div class="eyebrow" id="eyebrow"></div><h1 id="title"></h1><p class="desc" id="desc"></p></div>
-<div class="anav"><button id="prevA" type="button">◀ 이전 장면</button><button id="nextA" type="button">다음 장면 ▶</button></div></div>
-<div class="chips" id="chips"></div>
-<div class="grid"><div class="stage"><svg id="svg" viewBox="0 0 660 430" role="img"></svg></div><div class="codep" id="codep"></div></div>
-<div class="narr"><div class="stepno" id="stepno"></div><p id="narr"></p></div>
-<div class="ctrl"><button id="prev" type="button">◀ 이전</button><button class="next" id="next" type="button">다음 단계 ▶</button><button id="restart" type="button">처음으로</button><span class="hint">← → 단계 · PgUp/PgDn 장면</span></div>
-<div class="predict" id="predict"></div>
-</div></div>
-<script>const ALL=[{"file": "d1_1_make_rebuild.html", "eyebrow": "D1-1 · 3교시", "title": "make는 무엇을 다시 빌드하나", "desc": "make는 \"대상 파일이 재료보다 오래되었는가\"만 본다. 수정 시각(mtime)을 비교하는 과정을 따라가 보자.", "codefile": "src/Makefile", "code": ["CC      = gcc", "CFLAGS  = -Wall -Wextra -g", "SRCS    = $(wildcard *.c)", "TARGETS = $(SRCS:.c=)", "", "all: $(TARGETS)", "", "%: %.c", "\t$(CC) $(CFLAGS) -o $@ $<", "", "clean:", "\trm -f $(TARGETS)"], "boxes": [{"id": "mk", "x": 250, "y": 20, "w": 160, "h": 56, "t": "make", "s": "목표: all", "c": "cyan"}, {"id": "s1", "x": 40, "y": 130, "w": 170, "h": 58, "t": "01_write.c", "s": "mtime 09:00"}, {"id": "s3", "x": 245, "y": 130, "w": 170, "h": 58, "t": "03_errno.c", "s": "mtime 09:00"}, {"id": "s9", "x": 450, "y": 130, "w": 170, "h": 58, "t": "myshell.c", "s": "mtime 09:00"}, {"id": "e1", "x": 40, "y": 270, "w": 170, "h": 58, "t": "01_write", "s": "없음", "c": "gray"}, {"id": "e3", "x": 245, "y": 270, "w": 170, "h": 58, "t": "03_errno", "s": "없음"}, {"id": "e9", "x": 450, "y": 270, "w": 170, "h": 58, "t": "myshell", "s": "없음"}, {"id": "gcc", "x": 250, "y": 362, "w": 160, "h": 50, "t": "gcc", "s": "대기", "c": "violet"}], "sc": [{"name": "처음 make", "intro": "실행 파일이 하나도 없는 상태에서 make를 친다.", "predict": {"q": "처음 make를 실행하면 gcc는 몇 번 호출될까?", "o": ["0번 — 아직 아무것도 안 바뀌었다", "1번 — 한 번에 모두 컴파일한다", "3번 — 실행 파일마다 한 번씩", "6번 — 소스와 실행 파일마다"], "a": 2}, "steps": [{"on": ["mk"], "n": "make는 첫 번째 목표 all을 찾는다. all은 TARGETS(01_write, 03_errno, myshell)에 의존한다.", "L": [6]}, {"on": ["e1", "s1"], "arr": [["s1", "e1", "?"]], "n": "01_write가 없다 → 무조건 만들어야 한다. 패턴 규칙 %: %.c가 적용된다.", "L": [8]}, {"on": ["gcc"], "arr": [["s1", "gcc", "$<"], ["gcc", "e1", "$@"]], "set": {"e1": {"s": "mtime 09:05", "c": "green"}, "gcc": {"s": "호출 1"}}, "n": "gcc -Wall -Wextra -g -o 01_write 01_write.c 실행. $@=01_write, $<=01_write.c", "L": [9]}, {"on": ["gcc"], "arr": [["s3", "gcc"], ["gcc", "e3"]], "set": {"e3": {"s": "mtime 09:05", "c": "green"}, "gcc": {"s": "호출 2"}}, "n": "03_errno도 없으므로 같은 규칙으로 빌드.", "L": [9]}, {"on": ["gcc"], "arr": [["s9", "gcc"], ["gcc", "e9"]], "set": {"e9": {"s": "mtime 09:05", "c": "green"}, "gcc": {"s": "호출 3"}}, "n": "myshell까지 빌드 완료. 실행 파일 3개 = gcc 3번.", "L": [9]}]}, {"name": "변경 없이 다시 make", "intro": "방금 빌드한 직후, 아무것도 고치지 않고 make를 다시 친다.", "predict": {"q": "아무것도 바꾸지 않았다. make의 반응은?", "o": ["모두 다시 컴파일한다", "make: Nothing to be done for 'all'.", "에러: 이미 실행 파일이 있다", "가장 오래된 하나만 컴파일한다"], "a": 1}, "steps": [{"on": ["s1", "e1"], "set": {"e1": {"s": "mtime 09:05", "c": "green"}, "e3": {"s": "mtime 09:05", "c": "green"}, "e9": {"s": "mtime 09:05", "c": "green"}}, "arr": [["s1", "e1", "09:00 < 09:05", "green"]], "n": "01_write.c(09:00)보다 01_write(09:05)가 더 새롭다 → 건너뜀.", "L": [8]}, {"on": ["s3", "e3"], "arr": [["s3", "e3", "09:00 < 09:05", "green"]], "n": "03_errno도 최신 → 건너뜀.", "L": [8]}, {"on": ["s9", "e9"], "arr": [["s9", "e9", "09:00 < 09:05", "green"]], "n": "myshell도 최신 → gcc를 한 번도 부르지 않는다.", "L": [8]}, {"on": ["mk"], "set": {"mk": {"s": "Nothing to be done"}}, "n": "출력: make: Nothing to be done for 'all'. 빌드 시간을 아끼는 핵심 원리다.", "L": [6]}]}, {"name": "03_errno.c 수정 후", "intro": "03_errno.c를 고쳐 저장했다(또는 touch 03_errno.c). 그리고 make.", "predict": {"q": "어떤 파일만 다시 빌드될까?", "o": ["01_write만", "03_errno만", "myshell만", "셋 다"], "a": 1}, "steps": [{"on": ["s3"], "set": {"e1": {"s": "mtime 09:05", "c": "green"}, "e3": {"s": "mtime 09:05", "c": "green"}, "e9": {"s": "mtime 09:05", "c": "green"}, "s3": {"s": "mtime 09:20", "c": "amber"}}, "n": "03_errno.c의 수정 시각이 09:20으로 바뀌었다."}, {"on": ["s1", "e1"], "arr": [["s1", "e1", "최신", "green"]], "n": "01_write는 여전히 최신 → 건너뜀.", "L": [8]}, {"on": ["s3", "e3"], "arr": [["s3", "e3", "09:20 > 09:05", "red"]], "set": {"e3": {"c": "red", "s": "낡음"}}, "n": "03_errno(09:05)가 재료(09:20)보다 오래됨 → 다시 빌드 대상.", "L": [8]}, {"on": ["gcc"], "arr": [["s3", "gcc"], ["gcc", "e3"]], "set": {"e3": {"c": "green", "s": "mtime 09:21"}, "gcc": {"s": "호출 1"}}, "n": "gcc는 03_errno 하나만 컴파일한다.", "L": [9]}, {"on": ["s9", "e9"], "arr": [["s9", "e9", "최신", "green"]], "n": "myshell도 건너뜀. 바뀐 것만 빌드 — 프로젝트가 클수록 차이가 커진다.", "L": [8]}]}], "id": "d1-1"}, {"file": "d1_2_mode_switch.html", "eyebrow": "D1-2 · 4교시", "title": "시스템 콜: 사용자 모드 ↔ 커널 모드", "desc": "write() 한 번이 CPU 모드를 바꿔 커널로 들어갔다 나오는 과정. 레지스터에 무엇이 실리는지 보자.", "codefile": "src/02_syscall_direct.c (발췌)", "code": ["pid_t a = getpid();", "long  b = syscall(SYS_getpid);", "", "syscall(SYS_write, 1,", "        \"직접 write 호출\\n\", 20);", "", "/* x86_64 규약 */", "/* rax = 시스템 콜 번호  */", "/* rdi, rsi, rdx = 인자 1~3 */", "/* 반환값도 rax 로 돌아옴 */"], "boxes": [{"id": "zu", "zone": true, "x": 10, "y": 10, "w": 640, "h": 180, "t": "사용자 공간 (User mode)"}, {"id": "zk", "zone": true, "x": 10, "y": 230, "w": 640, "h": 190, "t": "커널 공간 (Kernel mode)"}, {"id": "app", "x": 30, "y": 50, "w": 150, "h": 60, "t": "main()", "s": "내 프로그램", "c": "cyan"}, {"id": "lib", "x": 220, "y": 50, "w": 150, "h": 60, "t": "glibc", "s": "write() 래퍼", "c": "cyan"}, {"id": "reg", "x": 410, "y": 40, "w": 220, "h": 86, "t": "CPU 레지스터", "s": "rax=?  rdi=?\nrsi=?  rdx=?"}, {"id": "mode", "x": 440, "y": 140, "w": 160, "h": 40, "t": "모드: U", "c": "green"}, {"id": "tbl", "x": 30, "y": 280, "w": 180, "h": 70, "t": "sys_call_table", "s": "[1]=sys_write\n[39]=sys_getpid", "c": "violet"}, {"id": "kfn", "x": 250, "y": 280, "w": 160, "h": 70, "t": "sys_write()", "s": "", "c": "violet"}, {"id": "drv", "x": 450, "y": 280, "w": 170, "h": 70, "t": "tty 드라이버", "s": "화면 출력", "c": "violet"}], "sc": [{"name": "write(1, msg, 20)", "intro": "syscall(SYS_write, 1, msg, 20)이 실행되는 순간을 따라간다.", "predict": {"q": "write가 끝나고 rax에 남는 값은?", "o": ["0 — 성공을 뜻한다", "1 — 시스템 콜 번호 그대로", "20 — 실제로 쓴 바이트 수", "-1 — 항상 이 값이 온다"], "a": 2}, "steps": [{"on": ["app"], "n": "main()이 syscall(SYS_write, 1, msg, 20)을 호출한다. 아직 사용자 모드.", "L": [4, 5]}, {"on": ["lib", "reg"], "arr": [["lib", "reg", "mov"]], "set": {"reg": {"s": "rax=1  rdi=1\nrsi=msg rdx=20", "c": "amber"}}, "n": "glibc가 번호(1=write)를 rax에, 인자 fd·버퍼·길이를 rdi·rsi·rdx에 싣는다.", "L": [8, 9]}, {"on": ["mode"], "set": {"mode": {"t": "모드: K", "c": "red"}}, "arr": [["lib", "tbl", "syscall 명령", "red"]], "n": "syscall 명령 → CPU가 커널 모드로 전환되고, 미리 정해진 커널 진입점으로 점프한다. 사용자 코드는 이 주소를 고를 수 없다."}, {"on": ["tbl"], "arr": [["tbl", "kfn", "[1]"]], "n": "커널은 rax=1을 번호표로 시스템 콜 테이블에서 sys_write를 찾는다."}, {"on": ["kfn", "drv"], "arr": [["kfn", "drv", "fd 1"]], "set": {"kfn": {"s": "fd 1 → 터미널"}}, "n": "sys_write는 fd 1이 가리키는 파일(터미널)을 찾아 드라이버에 20바이트를 넘긴다."}, {"on": ["reg"], "set": {"reg": {"s": "rax=20 (반환값)", "c": "green"}}, "arr": [["kfn", "reg", "return"]], "n": "쓴 바이트 수 20을 rax에 넣는다. 실패했다면 -errno(예: -9)가 들어간다.", "L": [10]}, {"on": ["mode", "app"], "set": {"mode": {"t": "모드: U", "c": "green"}}, "arr": [["reg", "app", "sysret", "green"]], "n": "sysret 명령으로 사용자 모드 복귀. main()은 반환값 20을 받는다. 이 왕복 비용 때문에 printf는 버퍼에 모아서 write를 적게 부른다."}]}, {"name": "getpid()", "intro": "장치가 필요 없는 시스템 콜 getpid()는 어떻게 다를까?", "steps": [{"on": ["app", "lib"], "n": "getpid() 호출. glibc 래퍼로 들어간다.", "L": [1]}, {"on": ["reg"], "set": {"reg": {"s": "rax=39", "c": "amber"}}, "arr": [["lib", "reg", "mov"]], "n": "번호 39를 rax에 싣는다. 인자는 없다."}, {"on": ["mode", "tbl"], "set": {"mode": {"t": "모드: K", "c": "red"}, "kfn": {"t": "sys_getpid()", "s": "current->tgid"}}, "arr": [["lib", "tbl", "syscall", "red"], ["tbl", "kfn", "[39]"]], "n": "커널 모드로 들어가 sys_getpid를 실행한다. 현재 태스크 구조체에서 PID만 읽으면 된다 — 드라이버는 안 쓴다."}, {"on": ["reg", "app"], "set": {"reg": {"s": "rax=174", "c": "green"}, "mode": {"t": "모드: U", "c": "green"}}, "arr": [["reg", "app", "sysret", "green"]], "n": "PID를 rax에 담아 돌아온다. syscall(SYS_getpid)도 정확히 같은 길을 간다 — glibc 래퍼는 이 과정을 감싼 것뿐이다.", "L": [2]}]}], "id": "d1-2"}, {"file": "d1_3_stdio_buffer.html", "eyebrow": "D1-3 · 4교시", "title": "printf 버퍼링: 줄 단위 vs 블록 단위", "desc": "같은 프로그램인데 터미널과 파이프에서 출력 순서가 달라진다. stdio 버퍼가 write를 언제 부르는지 보자.", "codefile": "src/01_write_vs_printf.c (발췌)", "code": ["write(1, msg, strlen(msg));", "", "for (int i = 0; i < 5; i++)", "    printf(\"printf line %d\\n\", i);", "", "return 0;   /* exit → fflush */"], "boxes": [{"id": "prog", "x": 20, "y": 30, "w": 170, "h": 64, "t": "프로그램", "s": "", "c": "cyan"}, {"id": "buf", "x": 230, "y": 20, "w": 200, "h": 150, "t": "stdio 버퍼", "s": "(비어 있음)", "c": "gray"}, {"id": "cnt", "x": 470, "y": 30, "w": 170, "h": 64, "t": "write 호출 수", "s": "0", "c": "violet"}, {"id": "k", "x": 230, "y": 220, "w": 200, "h": 56, "t": "커널 write()", "c": "violet"}, {"id": "out", "x": 60, "y": 320, "w": 540, "h": 96, "t": "화면에 나온 순서", "s": "", "c": "gray"}], "sc": [{"name": "터미널로 출력 (./a.out)", "intro": "stdout이 터미널이면 stdio는 줄 단위(line buffered)로 동작한다.", "predict": {"q": "터미널에서 write 시스템 콜은 총 몇 번 호출될까?", "o": ["1번 — printf 출력을 모두 모아서 한 번", "2번 — write 한 번과 exit 때 한 번", "5번 — printf 다섯 줄만 셈", "6번 — write 한 번과 줄마다 한 번씩"], "a": 3}, "steps": [{"on": ["prog", "k"], "arr": [["prog", "k", "write 직접", "amber"]], "set": {"cnt": {"s": "1"}, "out": {"s": "hello from write()"}}, "n": "write()는 버퍼를 거치지 않고 바로 커널로 간다.", "L": [1]}, {"on": ["buf"], "arr": [["prog", "buf", "printf"]], "set": {"buf": {"s": "printf line 0\\n", "c": "cyan"}}, "n": "printf는 먼저 stdio 버퍼에 글자를 쌓는다.", "L": [4]}, {"on": ["buf", "k"], "arr": [["buf", "k", "\\n 발견 → flush"]], "set": {"buf": {"s": "(비어 있음)", "c": "gray"}, "cnt": {"s": "2"}, "out": {"s": "hello from write()\nprintf line 0"}}, "n": "터미널 모드에서는 줄바꿈 \\n을 만나면 즉시 write로 내보낸다.", "L": [4]}, {"on": ["k", "cnt"], "set": {"cnt": {"s": "6"}, "out": {"s": "hello from write()\nprintf line 0 … printf line 4"}}, "n": "나머지 4줄도 줄마다 한 번씩 → write 총 6번. 화면 순서는 코드 순서와 같다.", "L": [3, 4]}]}, {"name": "파이프로 출력 (./a.out | cat)", "intro": "stdout이 파이프나 파일이면 stdio는 블록 단위(full buffered, 보통 4KB)로 동작한다.", "predict": {"q": "파이프로 보냈을 때 화면에 가장 먼저 찍히는 줄은?", "o": ["printf line 0", "hello from write()", "printf line 4", "출력 순서가 매번 무작위"], "a": 1}, "steps": [{"on": ["prog", "k"], "arr": [["prog", "k", "write 직접"]], "set": {"cnt": {"s": "1"}, "out": {"s": "hello from write()"}}, "n": "write()는 여전히 즉시 나간다.", "L": [1]}, {"on": ["buf"], "arr": [["prog", "buf", "printf ×5"]], "set": {"buf": {"s": "printf line 0\\n\n…\nprintf line 4\\n", "c": "cyan"}}, "n": "printf 5줄이 \\n이 있어도 버퍼에 계속 쌓인다. 버퍼가 차거나 프로그램이 끝날 때까지 기다린다.", "L": [3, 4]}, {"on": ["buf", "k"], "arr": [["buf", "k", "exit → fflush"]], "set": {"buf": {"s": "(비어 있음)", "c": "gray"}, "cnt": {"s": "2"}, "out": {"s": "hello from write()\nprintf line 0 … printf line 4 (한 번에)"}}, "n": "return 0 → exit 과정에서 fflush → write 한 번에 70바이트. write 총 2번.", "L": [6]}, {"on": ["out"], "n": "그래서 같은 코드라도 출력 대상에 따라 순서·호출 수가 달라진다. 확인: strace -e trace=write ./01_write_vs_printf | cat"}]}], "id": "d1-3"}, {"file": "d1_4_errno.html", "eyebrow": "D1-4 · 5교시", "title": "실패는 어떻게 errno가 되나", "desc": "커널은 음수 에러 코드를 돌려주고, glibc가 그것을 -1과 errno로 바꿔 준다.", "codefile": "src/03_errno.c (발췌)", "code": ["int fd = open(path, flags);", "if (fd == -1) {", "    printf(\"errno=%d (%s)\\n\",", "           errno, strerror(errno));", "    return;", "}", "printf(\"성공: fd=%d\\n\", fd);", "close(fd);"], "boxes": [{"id": "zu", "zone": true, "x": 10, "y": 10, "w": 640, "h": 210, "t": "사용자 공간"}, {"id": "zk", "zone": true, "x": 10, "y": 250, "w": 640, "h": 170, "t": "커널 공간"}, {"id": "app", "x": 30, "y": 50, "w": 170, "h": 64, "t": "main()", "s": "open(path)", "c": "cyan"}, {"id": "lib", "x": 245, "y": 50, "w": 170, "h": 64, "t": "glibc open()", "s": "", "c": "cyan"}, {"id": "err", "x": 460, "y": 50, "w": 170, "h": 64, "t": "errno", "s": "(이전 값)", "c": "gray"}, {"id": "res", "x": 245, "y": 140, "w": 170, "h": 56, "t": "반환값", "s": "?", "c": "gray"}, {"id": "k", "x": 150, "y": 300, "w": 200, "h": 80, "t": "sys_openat()", "s": "", "c": "violet"}, {"id": "fs", "x": 400, "y": 300, "w": 220, "h": 80, "t": "파일시스템 검사", "s": "경로 · 권한", "c": "violet"}], "sc": [{"name": "없는 파일 /no/such/file", "intro": "존재하지 않는 경로를 연다.", "predict": {"q": "open()이 main()에 돌려주는 값은?", "o": ["-2 (ENOENT 그대로)", "-1, 그리고 errno=2", "0, 그리고 errno=2", "NULL 포인터"], "a": 1}, "steps": [{"on": ["app", "lib"], "arr": [["app", "lib", "open()"]], "n": "main()이 open(\"/no/such/file\")을 호출한다.", "L": [1]}, {"on": ["k", "fs"], "arr": [["lib", "k", "syscall"], ["k", "fs", "경로 탐색"]], "set": {"fs": {"s": "/no 없음!", "c": "red"}}, "n": "커널이 경로를 따라가다 /no 디렉터리가 없음을 발견한다."}, {"on": ["k", "lib"], "arr": [["k", "lib", "rax = -2", "red"]], "set": {"k": {"s": "return -ENOENT"}}, "n": "커널은 rax에 -2(-ENOENT)를 넣어 돌아온다. 커널은 errno라는 변수를 모른다."}, {"on": ["lib", "err", "res"], "arr": [["lib", "err", "errno = 2"], ["lib", "res", "-1"]], "set": {"err": {"s": "2 (ENOENT)", "c": "red"}, "res": {"s": "-1", "c": "red"}}, "n": "glibc 래퍼가 음수를 보고 errno=2를 저장한 뒤, 함수 반환값은 -1로 통일한다."}, {"on": ["app"], "arr": [["res", "app", "fd == -1"]], "n": "main()은 -1을 확인하고 strerror(2) = \"No such file or directory\"를 출력한다.", "L": [2, 3, 4]}]}, {"name": "권한 없음 /etc/shadow", "intro": "일반 사용자로 /etc/shadow(root만 읽기 가능)를 연다.", "steps": [{"on": ["app", "lib", "k"], "arr": [["app", "lib"], ["lib", "k", "syscall"]], "n": "경로는 존재한다. 커널이 inode까지 찾는다.", "L": [1]}, {"on": ["fs"], "arr": [["k", "fs", "권한 검사"]], "set": {"fs": {"s": "-rw-r----- root\n나: other → r 없음", "c": "red"}}, "n": "권한 비트를 보니 other에게 읽기 권한이 없다."}, {"on": ["err", "res"], "arr": [["k", "lib", "-13", "red"], ["lib", "err", "errno=13"]], "set": {"err": {"s": "13 (EACCES)", "c": "red"}, "res": {"s": "-1", "c": "red"}}, "n": "-EACCES(-13) → errno=13, 반환 -1. sudo로 실행하면 root라 검사를 통과해 성공한다.", "L": [2, 3, 4]}]}, {"name": "성공 /etc/hostname", "intro": "정상적으로 열리는 파일. 이때 errno는 어떻게 될까?", "predict": {"q": "성공했을 때 errno의 값은?", "o": ["반드시 0으로 초기화된다", "성공 코드 1이 저장된다", "바뀌지 않는다 — 의미 없는 값일 수 있다", "반환값과 같은 fd 번호가 된다"], "a": 2}, "steps": [{"on": ["k", "fs"], "arr": [["lib", "k", "syscall"], ["k", "fs"]], "set": {"fs": {"s": "존재 · 읽기 가능", "c": "green"}, "err": {"s": "2 (이전 실패 값)", "c": "gray"}}, "n": "경로와 권한 검사 통과.", "L": [1]}, {"on": ["res"], "arr": [["k", "lib", "rax = 3", "green"], ["lib", "res", "3"]], "set": {"res": {"s": "3 (fd)", "c": "green"}}, "n": "커널은 비어 있는 가장 작은 fd 번호 3을 돌려준다(0·1·2는 표준 입출력)."}, {"on": ["err"], "n": "errno는 건드리지 않았다 — 이전 실패의 2가 그대로 남아 있을 수 있다. 그래서 \"반환값이 -1일 때만 errno를 읽는다\"가 규칙이다.", "L": [7]}]}], "id": "d1-4"}, {"file": "d1_5_fork_return.html", "eyebrow": "D1-5 · 6교시", "title": "fork: 한 번 호출, 두 번 반환", "desc": "fork() 이후 같은 코드가 두 프로세스에서 이어진다. 반환값이 어떻게 갈림길이 되는지 보자.", "codefile": "src/05_fork_basic.c (발췌)", "code": ["int x = 100;", "printf(\"[fork 전] x=%d\\n\", x);", "fflush(stdout);", "", "pid_t pid = fork();", "if (pid == 0) {", "    x += 1;          /* 자식 */", "    printf(\"[자식] x=%d\\n\", x);", "    exit(0);", "}", "x -= 1;              /* 부모 */", "wait(NULL);", "printf(\"[부모] x=%d\\n\", x);"], "boxes": [{"id": "p", "x": 30, "y": 30, "w": 270, "h": 150, "t": "부모 PID 177", "s": "x = 100\npid = ?\nstdout 버퍼: (빈)", "c": "cyan"}, {"id": "c", "x": 360, "y": 30, "w": 270, "h": 150, "t": "자식 PID 178", "s": "", "c": "green", "hidden": true}, {"id": "k", "x": 200, "y": 220, "w": 260, "h": 56, "t": "커널: 프로세스 복제", "s": "task_struct · 메모리 · fd", "c": "violet"}, {"id": "out", "x": 30, "y": 310, "w": 600, "h": 100, "t": "화면 출력", "s": "", "c": "gray"}], "sc": [{"name": "기본 실행", "intro": "fflush 후 fork하는 정상 흐름.", "predict": {"q": "fork() 직후 자식 프로세스의 변수 pid에는 무엇이 들어 있을까?", "o": ["부모의 PID 177", "자기 자신의 PID 178", "0", "-1"], "a": 2}, "steps": [{"on": ["p", "out"], "set": {"out": {"s": "[fork 전] x=100"}}, "n": "printf 후 fflush로 버퍼를 비운다. 이 시점엔 프로세스가 하나뿐.", "L": [2, 3]}, {"on": ["k"], "arr": [["p", "k", "fork()"]], "n": "fork 시스템 콜 → 커널이 task_struct, 메모리 지도, fd 테이블을 복제한다.", "L": [5]}, {"on": ["p", "c"], "show": ["c"], "arr": [["k", "p", "반환 178"], ["k", "c", "반환 0", "green"]], "set": {"p": {"s": "x = 100\npid = 178\n"}, "c": {"s": "x = 100 (복사본)\npid = 0\n"}}, "n": "같은 지점(fork 다음 줄)에서 두 프로세스가 동시에 실행을 이어간다. 부모는 178, 자식은 0을 받는다.", "L": [5]}, {"on": ["c"], "set": {"c": {"s": "x = 101\npid = 0\n"}}, "n": "자식: pid == 0 → x += 1 → 101. 부모의 x에는 영향이 없다(메모리 분리).", "L": [6, 7]}, {"on": ["p"], "set": {"p": {"s": "x = 99\npid = 178\nwait 중…"}}, "n": "부모: if를 건너뛰고 x -= 1 → 99. 그리고 wait로 자식을 기다린다.", "L": [11, 12]}, {"on": ["c", "out"], "set": {"c": {"s": "종료(0)", "c": "gray"}, "out": {"s": "[fork 전] x=100\n[자식] x=101"}}, "n": "자식이 출력 후 exit(0).", "L": [8, 9]}, {"on": ["p", "out"], "hide": ["c"], "set": {"p": {"s": "x = 99"}, "out": {"s": "[fork 전] x=100\n[자식] x=101\n[부모] x=99"}}, "n": "부모가 자식을 수거하고 출력. 실행 순서(자식 먼저 vs 부모 먼저)는 스케줄러가 정하므로 wait가 없으면 바뀔 수 있다.", "L": [13]}]}, {"name": "fflush 없이 | cat", "intro": "fflush(stdout)을 지우고 ./05_fork_basic | cat 으로 실행한다.", "predict": {"q": "\"[fork 전]\" 줄은 몇 번 출력될까?", "o": ["0번 — 버퍼째 사라진다", "1번 — 부모만 가지고 있다", "2번 — 버퍼가 자식에게도 복제된다", "3번 — exit 때 한 번 더 찍힌다"], "a": 2}, "steps": [{"on": ["p"], "set": {"p": {"s": "x = 100\npid = ?\nstdout 버퍼:\n\"[fork 전]…\"", "c": "amber"}}, "n": "파이프 출력이라 블록 버퍼링 → \"[fork 전]\" 줄이 아직 버퍼에만 있다.", "L": [2]}, {"on": ["k", "c"], "show": ["c"], "arr": [["p", "k", "fork()"], ["k", "c", "메모리 복제", "green"]], "set": {"c": {"s": "x = 100\npid = 0\nstdout 버퍼:\n\"[fork 전]…\"", "c": "amber"}}, "n": "fork는 메모리를 통째로 복제한다 — stdio 버퍼도 메모리이므로 같이 복사된다.", "L": [5]}, {"on": ["c", "out"], "set": {"c": {"s": "exit → flush", "c": "gray"}, "out": {"s": "[fork 전] x=100\n[자식] x=101"}}, "n": "자식이 exit하면서 버퍼를 비운다 → \"[fork 전]\"이 자식 몫으로 한 번.", "L": [9]}, {"on": ["p", "out"], "hide": ["c"], "set": {"p": {"s": "exit → flush", "c": "cyan"}, "out": {"s": "[fork 전] x=100\n[자식] x=101\n[fork 전] x=100\n[부모] x=99"}}, "n": "부모도 종료 시 자기 버퍼를 비운다 → 같은 줄이 두 번! fork 전에는 fflush가 필요하다.", "L": [13]}]}], "id": "d1-5"}, {"file": "d1_6_exec_replace.html", "eyebrow": "D1-6 · 6교시", "title": "exec: 같은 PID, 다른 프로그램", "desc": "execvp는 새 프로세스를 만들지 않는다. 지금 프로세스의 내용물을 통째로 갈아 끼운다.", "codefile": "src/06_fork_exec_wait.c (발췌)", "code": ["if (pid == 0) {", "    execvp(cmd[0], cmd);", "    perror(\"execvp\");", "    _exit(127);", "}", "", "int status;", "waitpid(pid, &status, 0);", "if (WIFEXITED(status))", "    printf(\"종료 코드=%d\\n\",", "           WEXITSTATUS(status));"], "boxes": [{"id": "hdr", "x": 30, "y": 20, "w": 300, "h": 50, "t": "자식 PID 180", "s": "PPID 179", "c": "green"}, {"id": "text", "x": 30, "y": 80, "w": 300, "h": 52, "t": "text (코드)", "s": "06_fork_exec_wait"}, {"id": "data", "x": 30, "y": 140, "w": 300, "h": 52, "t": "data · heap", "s": "06_fork_exec_wait 변수"}, {"id": "stk", "x": 30, "y": 200, "w": 300, "h": 52, "t": "stack", "s": "main() 프레임"}, {"id": "fd", "x": 30, "y": 262, "w": 300, "h": 52, "t": "fd 테이블", "s": "0 1 2 → 터미널", "c": "cyan"}, {"id": "disk", "x": 400, "y": 80, "w": 230, "h": 70, "t": "디스크", "s": "/usr/bin/ls", "c": "violet"}, {"id": "par", "x": 400, "y": 230, "w": 230, "h": 84, "t": "부모 PID 179", "s": "waitpid 대기", "c": "cyan"}, {"id": "res", "x": 30, "y": 340, "w": 600, "h": 70, "t": "결과", "s": "", "c": "gray"}], "sc": [{"name": "execvp(\"ls\") 성공", "intro": "자식이 execvp(\"ls\", [\"ls\",\"-l\",\"/tmp\",NULL])를 호출한다.", "predict": {"q": "exec 후 자식의 PID는?", "o": ["새 PID를 받는다", "180 그대로", "부모와 같은 179", "0으로 초기화"], "a": 1}, "steps": [{"on": ["hdr"], "n": "fork 직후 자식은 아직 부모와 같은 프로그램(06_fork_exec_wait)을 실행 중이다.", "L": [1]}, {"on": ["disk"], "arr": [["hdr", "disk", "PATH 검색"]], "n": "execvp는 PATH(/usr/local/bin:/usr/bin…)에서 ls를 찾아 /usr/bin/ls를 발견한다.", "L": [2]}, {"on": ["text", "data", "stk"], "arr": [["disk", "text", "적재"]], "set": {"text": {"s": "ls", "c": "amber"}, "data": {"s": "ls 변수", "c": "amber"}, "stk": {"s": "ls main(argc=3)", "c": "amber"}}, "n": "코드·데이터·힙·스택을 모두 버리고 ls 것으로 새로 채운다. 원래 코드가 없으니 execvp의 다음 줄로 돌아올 곳도 없다.", "L": [3]}, {"on": ["hdr", "fd"], "n": "PID 180, 부모 관계, 열린 fd 0·1·2는 유지된다. 그래서 ls 출력이 같은 터미널에 나온다(Day 4 dup2 리다이렉션의 원리)."}, {"on": ["par", "res"], "arr": [["hdr", "par", "exit(0)", "green"]], "set": {"hdr": {"s": "종료", "c": "gray"}, "res": {"s": "ls 출력 …\n[부모] 자식 180 정상 종료, 종료 코드=0", "c": "green"}}, "n": "ls가 끝나면 종료 코드 0이 부모의 waitpid로 전달된다.", "L": [8, 9, 10, 11]}]}, {"name": "execvp(\"nosuchcmd\") 실패", "intro": "존재하지 않는 명령을 실행하려 한다.", "steps": [{"on": ["disk"], "arr": [["hdr", "disk", "PATH 검색"]], "set": {"disk": {"s": "nosuchcmd 없음", "c": "red"}}, "n": "PATH의 모든 디렉터리를 찾아도 nosuchcmd가 없다.", "L": [2]}, {"on": ["text"], "set": {"text": {"s": "06_fork_exec_wait (그대로)", "c": "red"}}, "n": "exec 실패 → 프로세스 내용은 바뀌지 않고, execvp가 -1을 반환하며 돌아온다. errno=ENOENT.", "L": [2]}, {"on": ["hdr"], "n": "그래서 execvp 다음 줄이 실행된다: perror(\"execvp\") → \"execvp: No such file or directory\"", "L": [3]}, {"on": ["par", "res"], "arr": [["hdr", "par", "_exit(127)", "red"]], "set": {"hdr": {"s": "종료", "c": "gray"}, "res": {"s": "execvp: No such file or directory\n[부모] 자식 180 정상 종료, 종료 코드=127", "c": "red"}}, "n": "_exit(127)로 끝낸다. 셸이 \"command not found\"일 때 $?가 127인 것과 같은 관례. exit 대신 _exit를 쓰는 이유: 부모에게서 복제된 stdio 버퍼를 다시 비우지 않기 위해.", "L": [4, 8, 9, 10, 11]}]}], "id": "d1-6"}, {"file": "d1_7_zombie_orphan.html", "eyebrow": "D1-7 · 7교시", "title": "좀비와 고아: 종료 상태는 누가 가져가나", "desc": "프로세스가 끝나도 종료 코드를 부모가 가져갈 때까지 프로세스 테이블에 남는다.", "codefile": "src/07_zombie.c (발췌)", "code": ["pid_t pid = fork();", "if (pid == 0)", "    exit(7);          /* 자식 즉시 종료 */", "", "sleep(20);            /* wait 안 함 */", "", "int status;", "waitpid(pid, &status, 0);", "printf(\"종료 코드=%d\\n\",", "       WEXITSTATUS(status));"], "boxes": [{"id": "init", "x": 230, "y": 20, "w": 200, "h": 56, "t": "systemd PID 1", "s": "(또는 subreaper)", "c": "violet"}, {"id": "p", "x": 60, "y": 130, "w": 220, "h": 80, "t": "부모 PID 6020", "s": "STAT S (sleep)", "c": "cyan"}, {"id": "c", "x": 380, "y": 130, "w": 220, "h": 80, "t": "자식 PID 6021", "s": "STAT R", "c": "green"}, {"id": "tbl", "x": 60, "y": 260, "w": 540, "h": 70, "t": "커널 프로세스 테이블", "s": "6020 S · 6021 R"}, {"id": "ps", "x": 60, "y": 350, "w": 540, "h": 60, "t": "ps -o pid,ppid,stat,cmd", "s": "", "c": "gray"}], "sc": [{"name": "wait 하지 않는 동안", "intro": "07_zombie: 자식은 바로 exit(7), 부모는 20초 동안 wait하지 않는다.", "predict": {"q": "부모가 sleep 중일 때 자식은 ps에서 어떻게 보일까?", "o": ["완전히 사라져 보이지 않는다", "STAT Z, <defunct>", "STAT S, 잠든 상태", "STAT R, 계속 실행 중"], "a": 1}, "steps": [{"on": ["c"], "set": {"c": {"s": "exit(7)", "c": "amber"}}, "n": "자식이 exit(7)을 호출한다.", "L": [3]}, {"on": ["c", "tbl"], "set": {"c": {"s": "STAT Z\n메모리 해제됨", "c": "red"}, "tbl": {"s": "6020 S · 6021 Z (종료 코드 7 보관)", "c": "red"}}, "n": "커널은 메모리·파일을 모두 회수하지만, 종료 코드 7은 부모가 가져갈 때까지 테이블에 보관한다 → 좀비."}, {"on": ["p"], "arr": [["c", "p", "SIGCHLD"]], "n": "부모에게 SIGCHLD가 가지만 기본 동작은 \"무시\". 부모는 계속 잠들어 있다.", "L": [5]}, {"on": ["ps"], "set": {"ps": {"s": "6021  6020  Z   [07_zombie] <defunct>", "c": "red"}}, "n": "ps에 <defunct>로 보인다. kill -9로도 없앨 수 없다 — 이미 죽어 있기 때문."}, {"on": ["p", "tbl"], "arr": [["p", "c", "waitpid", "green"]], "hide": ["c"], "set": {"tbl": {"s": "6020 S", "c": "gray"}, "ps": {"s": "(자식 없음)", "c": "gray"}, "p": {"s": "종료 코드=7 수거", "c": "cyan"}}, "n": "20초 후 waitpid → 종료 코드 7을 받아 가고 좀비 칸이 사라진다.", "L": [8, 9, 10]}]}, {"name": "부모가 먼저 종료 (고아)", "intro": "08_orphan: 부모가 1초 만에 끝나고 자식은 3초 동안 산다.", "predict": {"q": "부모가 사라진 뒤 자식의 PPID는?", "o": ["0이 된다", "원래 부모 PID 그대로", "init(1) 또는 subreaper의 PID", "자식 자신의 PID"], "a": 2}, "steps": [{"on": ["p", "c"], "set": {"c": {"s": "PPID 6020\nsleep(3)", "c": "green"}, "p": {"s": "sleep(1)"}}, "n": "처음엔 자식의 부모가 6020이다."}, {"on": ["p"], "set": {"p": {"s": "종료!", "c": "gray"}}, "n": "부모가 먼저 끝난다. 그의 부모(bash)가 부모를 수거한다."}, {"on": ["init", "c"], "hide": ["p"], "arr": [["init", "c", "입양", "violet"]], "set": {"c": {"s": "PPID 1 (입양)", "c": "green"}}, "n": "고아가 된 자식은 init(PID 1) 또는 가장 가까운 subreaper(Ubuntu 데스크톱이면 systemd --user)가 입양한다."}, {"on": ["init"], "hide": ["c"], "arr": [["c", "init", "exit → 수거", "violet"]], "set": {"tbl": {"s": "(정리 완료)", "c": "gray"}}, "n": "자식이 끝나면 새 부모가 wait해 주므로 고아는 좀비로 오래 남지 않는다. 문제는 \"살아 있지만 wait하지 않는 부모\"다."}]}], "id": "d1-7"}, {"file": "d1_8_sigaction.html", "eyebrow": "D1-8 · 7교시", "title": "Ctrl+C가 핸들러에 도착하기까지", "desc": "시그널은 커널이 프로세스에 꽂아 두는 표시다. 프로세스가 커널에서 사용자 모드로 돌아갈 때 처리된다.", "codefile": "src/09_sigaction.c (발췌)", "code": ["static void on_sigint(int sig)", "{", "    g_int_count++;", "    write(1, \"SIGINT 받음\\n\", 15);", "}", "", "sa.sa_handler = on_sigint;", "sigaction(SIGINT, &sa, NULL);", "", "while (g_int_count < 3)", "    pause();"], "boxes": [{"id": "kb", "x": 20, "y": 30, "w": 150, "h": 60, "t": "키보드", "s": "Ctrl+C", "c": "gray"}, {"id": "tty", "x": 210, "y": 30, "w": 170, "h": 60, "t": "tty 드라이버", "s": "", "c": "violet"}, {"id": "pend", "x": 420, "y": 30, "w": 220, "h": 60, "t": "프로세스의 pending", "s": "(없음)", "c": "violet"}, {"id": "disp", "x": 420, "y": 130, "w": 220, "h": 70, "t": "동작 테이블", "s": "SIGINT → 기본(종료)"}, {"id": "main", "x": 40, "y": 240, "w": 250, "h": 80, "t": "main()", "s": "pause() — 잠듦", "c": "cyan"}, {"id": "h", "x": 360, "y": 240, "w": 260, "h": 80, "t": "on_sigint()", "s": "", "c": "gray"}, {"id": "res", "x": 40, "y": 350, "w": 580, "h": 60, "t": "결과", "s": "", "c": "gray"}], "sc": [{"name": "핸들러 등록 후 Ctrl+C", "intro": "sigaction(SIGINT, on_sigint)을 등록하고 pause()로 잠든 상태.", "predict": {"q": "Ctrl+C를 누르면 프로그램은?", "o": ["즉시 종료된다", "on_sigint가 실행되고 계속 산다", "무시되어 아무 일도 없다", "핸들러가 끝난 뒤 바로 종료"], "a": 1}, "steps": [{"on": ["disp"], "set": {"disp": {"s": "SIGINT → on_sigint", "c": "green"}}, "n": "sigaction이 커널의 동작 테이블에 \"SIGINT가 오면 on_sigint 실행\"을 기록해 둔다.", "L": [7, 8]}, {"on": ["kb", "tty"], "arr": [["kb", "tty", "^C"]], "n": "Ctrl+C는 문자 0x03. tty 드라이버가 이를 보고 포그라운드 프로세스 그룹에 SIGINT를 보낸다."}, {"on": ["pend"], "arr": [["tty", "pend", "SIGINT"]], "set": {"pend": {"s": "SIGINT ●", "c": "amber"}}, "n": "커널은 프로세스의 pending 비트에 SIGINT를 표시하고, 잠든 프로세스를 깨운다."}, {"on": ["main", "h"], "arr": [["main", "h", "커널이 호출", "amber"]], "set": {"h": {"s": "g_int_count++\nwrite(...)", "c": "amber"}, "pend": {"s": "(없음)"}}, "n": "커널에서 사용자 모드로 돌아가는 순간 pending을 확인 → main을 잠시 멈추고 on_sigint를 실행한다.", "L": [1, 2, 3, 4, 5]}, {"on": ["main"], "arr": [["h", "main", "sigreturn", "green"]], "set": {"h": {"s": "끝", "c": "gray"}, "main": {"s": "pause() -1 반환\n(EINTR)"}}, "n": "핸들러가 끝나면 원래 자리로 복귀. pause()는 -1(EINTR)로 돌아오고 while 조건을 다시 검사한다.", "L": [10, 11]}, {"on": ["res"], "set": {"res": {"s": "3번째 Ctrl+C 후 count=3 → 루프 탈출 → 정상 종료", "c": "green"}}, "n": "핸들러 안에서 printf 대신 write를 쓰는 이유: printf가 내부 락을 잡은 순간에 시그널이 오면 교착이 생길 수 있다."}]}, {"name": "핸들러 없이 Ctrl+C", "intro": "sigaction을 호출하지 않은 프로그램(예: sleep 100).", "steps": [{"on": ["disp"], "n": "동작 테이블은 기본값: SIGINT → 종료."}, {"on": ["pend"], "arr": [["kb", "tty", "^C"], ["tty", "pend", "SIGINT"]], "set": {"pend": {"s": "SIGINT ●", "c": "amber"}}, "n": "같은 경로로 pending에 SIGINT가 표시된다."}, {"on": ["main", "res"], "set": {"main": {"s": "종료", "c": "red"}, "res": {"s": "종료 상태: 시그널 2로 종료 → 셸의 $? = 130 (128+2)", "c": "red"}}, "n": "기본 동작이 실행되어 프로세스가 끝난다. 부모 셸은 WIFSIGNALED로 이를 알고 $?에 128+2=130을 넣는다."}]}, {"name": "kill -9 (SIGKILL)", "intro": "다른 터미널에서 kill -9 <PID>.", "predict": {"q": "on_sigint를 SIGKILL에도 등록하려 하면?", "o": ["등록되어 핸들러가 실행된다", "sigaction이 실패한다(EINVAL)", "컴파일 에러가 난다", "다음 재부팅부터 적용된다"], "a": 1}, "steps": [{"on": ["disp"], "set": {"disp": {"s": "SIGKILL → 항상 종료\n(변경 불가)", "c": "red"}}, "n": "SIGKILL(9)과 SIGSTOP은 잡거나 무시할 수 없다. sigaction(SIGKILL, …)은 EINVAL로 실패한다."}, {"on": ["pend", "main"], "arr": [["pend", "main", "SIGKILL", "red"]], "set": {"pend": {"s": "SIGKILL ●", "c": "red"}, "main": {"s": "즉시 종료", "c": "red"}, "res": {"s": "정리 작업 기회 없음 → 먼저 kill(SIGTERM), 안 되면 kill -9", "c": "red"}}, "n": "핸들러 없이 즉시 종료된다. 그래서 정상 종료 요청은 SIGTERM(15)을 먼저 보낸다."}]}], "id": "d1-8"}];let D=ALL[0];
-const COL={cyan:['#12303a','#4fd1e8'],amber:['#3a2c10','#f5b942'],green:['#12301f','#5ad49a'],red:['#3a1717','#ff6b6b'],violet:['#231c3d','#a78bfa'],gray:['#1c2535','#4b5870']};
-const NS='http://www.w3.org/2000/svg';
-const svg=document.getElementById('svg');
-let sc=0,st=-1,predicted=false;
-function el(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
-function wrapText(g,txt,x,y,w,cls,size,fill){const t=el('text',{x,y,'font-size':size,fill,'text-anchor':'middle',class:cls||''},g);
- const lines=String(txt).split('\n');lines.forEach((ln,i)=>{const s=el('tspan',{x,dy:i?size*1.25:0},t);s.textContent=ln});return t}
-function state(k){const S={};D.boxes.forEach(b=>S[b.id]={...b,vis:!b.hidden});
- const steps=D.sc[sc].steps;for(let i=0;i<=k;i++){const s=steps[i];if(!s)continue;(s.show||[]).forEach(id=>S[id].vis=true);(s.hide||[]).forEach(id=>S[id].vis=false);
- for(const id in (s.set||{}))Object.assign(S[id],s.set[id]);}return S}
-function clip(b,tx,ty){const cx=b.x+b.w/2,cy=b.y+b.h/2,dx=tx-cx,dy=ty-cy;if(!dx&&!dy)return[cx,cy];const s=Math.min(Math.abs((b.w/2)/(dx||1e-9)),Math.abs((b.h/2)/(dy||1e-9)));return[cx+dx*s,cy+dy*s]}
-function render(){svg.innerHTML='';const defs=el('defs',{},svg);
- ['amber','cyan','green','red','violet'].forEach(c=>{const m=el('marker',{id:'ar-'+c,viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'},defs);el('path',{d:'M0,0L10,5L0,10z',fill:COL[c][1]},m)});
- const S=state(st),step=D.sc[sc].steps[st]||{},on=new Set(step.on||[]);
- D.boxes.filter(b=>b.zone).forEach(b=>{const z=S[b.id];if(!z.vis)return;const g=el('g',{},svg);el('rect',{x:z.x,y:z.y,width:z.w,height:z.h,rx:12,fill:z.fill||'none',stroke:'#2f3c52','stroke-dasharray':'6 5'},g);
-  const t=el('text',{x:z.x+12,y:z.y+20,'font-size':12,fill:'#7f8ca3',class:'mono'},g);t.textContent=z.t});
- D.boxes.filter(b=>!b.zone).forEach(b=>{const s=S[b.id];if(!s.vis)return;const c=COL[on.has(b.id)?'amber':(s.c||'gray')];
-  const g=el('g',{class:'bx'},svg);el('rect',{x:s.x,y:s.y,width:s.w,height:s.h,rx:9,fill:c[0],stroke:c[1],'stroke-width':on.has(b.id)?2.6:1.4},g);
-  const hasS=s.s!==undefined&&s.s!=='';const tl=String(s.t).split('\n').length;const sl=hasS?String(s.s).split('\n').length:0;
-  const tot=tl*17+(hasS?6+sl*15:0);let y0=s.y+s.h/2-tot/2+13;
-  wrapText(g,s.t,s.x+s.w/2,y0,s.w,'',14,'#e6ebf3').setAttribute('font-weight',600);
-  if(hasS)wrapText(g,s.s,s.x+s.w/2,y0+tl*17+6,s.w,'mono',11.5,c[1])});
- (step.arr||[]).forEach(a=>{const A=S[a[0]],B=S[a[1]];if(!A||!B)return;const c=a[3]||'amber';
-  const [x1,y1]=clip(A,B.x+B.w/2,B.y+B.h/2),[x2,y2]=clip(B,A.x+A.w/2,A.y+A.h/2);
-  el('line',{x1,y1,x2,y2,stroke:COL[c][1],'stroke-width':2.4,'marker-end':'url(#ar-'+c+')'},svg);
-  if(a[2]){const mx=(x1+x2)/2,my=(y1+y2)/2;const tw=a[2].length*7.2+14;el('rect',{x:mx-tw/2,y:my-11,width:tw,height:20,rx:5,fill:'#0f141d',stroke:COL[c][1]},svg);
-   const t=el('text',{x:mx,y:my+4,'text-anchor':'middle','font-size':11.5,fill:COL[c][1],class:'mono'},svg);t.textContent=a[2]}});
- const steps=D.sc[sc].steps;
- document.getElementById('stepno').textContent=st<0?'준비':`단계 ${st+1} / ${steps.length}`;
- const needP0=D.sc[sc].predict&&!predicted;document.getElementById('narr').textContent=st<0?D.sc[sc].intro+(needP0?'  ↓ 아래 "예측 먼저"에서 답을 고르면 시작할 수 있다.':''):step.n;
- const L=new Set(step.L||[]);document.querySelectorAll('.ln').forEach((ln,i)=>ln.classList.toggle('hl',L.has(i+1)));
- const hl=document.querySelector('.ln.hl'),cp=document.querySelector('.codep');if(hl){const t=hl.offsetTop-cp.offsetTop;if(t<cp.scrollTop||t>cp.scrollTop+cp.clientHeight-30)cp.scrollTop=t-60}
- const needP=D.sc[sc].predict&&!predicted;
- document.getElementById('next').disabled=needP||st>=steps.length-1;document.getElementById('prev').disabled=st<0;
- document.getElementById('next').textContent=st<0?'시작 ▶':'다음 단계 ▶';
- document.getElementById('predict').style.display=D.sc[sc].predict?'block':'none'}
-function setPredict(){const P=D.sc[sc].predict,box=document.getElementById('predict');box.innerHTML='';if(!P)return;
- const q=document.createElement('div');q.className='q';q.textContent=P.q;box.appendChild(q);
- const why=document.createElement('div');why.className='why';const opts=document.createElement('div');opts.className='opts';box.appendChild(opts);
- P.o.forEach((o,i)=>{const b=document.createElement('button');b.type='button';b.textContent=o;b.onclick=()=>{if(predicted)return;predicted=true;
-  b.classList.add(i===P.a?'right':'wrong');opts.querySelectorAll('button')[P.a].classList.add('right');
-  why.textContent=(i===P.a?'정답! ':'다시 보자 — ')+'단계를 진행하며 확인해 보세요.';render()};opts.appendChild(b)});box.appendChild(why)}
-function choose(i){sc=i;st=-1;predicted=false;document.querySelectorAll('.chip').forEach((c,j)=>c.classList.toggle('on',j===i));setPredict();render()}
+  .app{ display:grid; grid-template-columns:260px 1fr; min-height:100vh; }
+  nav{
+    background:var(--ink); color:#fff; padding:28px 20px;
+    position:sticky; top:0; height:100vh; overflow:auto;
+  }
+  nav h1{ font-size:15px; font-weight:500; margin:0 0 4px; letter-spacing:.01em; color:#AEBBD1; }
+  nav .day{ font-size:26px; font-weight:600; margin:0 0 26px; line-height:1.2; }
+  nav ol{ list-style:none; margin:0; padding:0; counter-reset:lesson; }
+  nav li{ margin:0; }
+  nav button{
+    all:unset; display:grid; grid-template-columns:32px 1fr; gap:10px; align-items:baseline;
+    width:100%; padding:9px 10px; border-radius:6px; cursor:pointer; font-size:14.5px; line-height:1.35;
+    color:#D9E1EC;
+  }
+  nav button::before{ counter-increment:lesson; content:counter(lesson) "교시"; font-family:var(--mono); font-size:11px; color:#8A9BB5; }
+  nav button:hover{ background:rgba(255,255,255,.07); }
+  nav button[aria-current="true"]{ background:var(--blue); color:#fff; }
+  nav button[aria-current="true"]::before{ color:#C9D8F7; }
+  nav button:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
+  nav .hint{ margin-top:28px; font-size:12.5px; color:#8A9BB5; line-height:1.5; }
+  nav .hint kbd{ font-family:var(--mono); background:rgba(255,255,255,.12); padding:1px 5px; border-radius:3px; }
 
-function loadAnim(n){D=ALL[n];cur=n;
- document.querySelectorAll('.nav button').forEach((b,i)=>{b.classList.toggle('on',i===n);b.setAttribute('aria-current',i===n?'true':'false')});
- document.getElementById('eyebrow').textContent=D.eyebrow;document.getElementById('title').textContent=D.title;document.getElementById('desc').textContent=D.desc;
- document.title=D.title+' · Linux Day 1 애니메이션';
- svg.setAttribute('viewBox',`0 0 ${D.vw||660} ${D.vh||430}`);svg.setAttribute('aria-label',D.title);
- const cp=document.getElementById('codep');cp.innerHTML='';const fn=document.createElement('div');fn.className='fn';fn.textContent=D.codefile;cp.appendChild(fn);
- D.code.forEach((l,i)=>{const d=document.createElement('div');d.className='ln';const k=document.createElement('i');k.textContent=i+1;d.appendChild(k);d.appendChild(document.createTextNode(l||' '));cp.appendChild(d)});cp.scrollTop=0;
- const chips=document.getElementById('chips');chips.innerHTML='';D.sc.forEach((s,i)=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=s.name;b.onclick=()=>choose(i);chips.appendChild(b)});
- document.getElementById('prevA').disabled=n===0;document.getElementById('nextA').disabled=n===ALL.length-1;
- if(location.hash!=='#'+D.id)history.replaceState(null,'','#'+D.id);
- choose(0)}
-let cur=0;
-const nav=document.getElementById('nav');ALL.forEach((a,i)=>{const b=document.createElement('button');b.type='button';
- b.innerHTML=`<span class="no"></span><span class="tt"></span>`;b.querySelector('.no').textContent=a.eyebrow;b.querySelector('.tt').textContent=a.title;b.onclick=()=>{loadAnim(i);window.scrollTo({top:0})};nav.appendChild(b)});
-document.getElementById('next').onclick=()=>{if(st<D.sc[sc].steps.length-1){st++;render()}};
-document.getElementById('prev').onclick=()=>{if(st>=0){st--;render()}};
-document.getElementById('restart').onclick=()=>{st=-1;render()};
-document.getElementById('prevA').onclick=()=>{if(cur>0){loadAnim(cur-1);window.scrollTo({top:0})}};
-document.getElementById('nextA').onclick=()=>{if(cur<ALL.length-1){loadAnim(cur+1);window.scrollTo({top:0})}};
-document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();document.getElementById('next').click()}if(e.key==='ArrowLeft')document.getElementById('prev').click();
- if(e.key==='PageDown'){e.preventDefault();document.getElementById('nextA').click()}if(e.key==='PageUp'){e.preventDefault();document.getElementById('prevA').click()}});
-function fromHash(){const h=location.hash.slice(1);const i=ALL.findIndex(a=>a.id===h);return i<0?0:i}
-window.addEventListener('hashchange',()=>{const i=fromHash();if(i!==cur)loadAnim(i)});
-loadAnim(fromHash());
-</script></body></html>
+  main{ padding:36px 44px 80px; max-width:1100px; }
+  section.lesson{ display:none; }
+  section.lesson.active{ display:block; }
+  .lesson header{ margin-bottom:22px; }
+  .lesson h2{ font-size:30px; font-weight:600; margin:0 0 6px; line-height:1.25; }
+  .lesson header p{ margin:0; color:var(--ink-soft); font-size:16px; max-width:64ch; }
+
+  .stage{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:26px;
+    box-shadow:0 1px 0 rgba(27,42,65,.06);
+  }
+  .controls{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:20px; }
+  .controls label{ font-size:14px; color:var(--ink-soft); display:flex; align-items:center; gap:6px; }
+  button.btn{
+    font:inherit; font-size:14px; font-weight:500; padding:8px 14px; border-radius:6px; cursor:pointer;
+    border:1px solid var(--ink); background:var(--ink); color:#fff;
+  }
+  button.btn.secondary{ background:#fff; color:var(--ink); border-color:var(--line); }
+  button.btn:disabled{ opacity:.4; cursor:default; }
+  button.btn:focus-visible, select:focus-visible, input:focus-visible{ outline:2px solid var(--blue); outline-offset:2px; }
+  select, input[type=number], input[type=text]{
+    font:inherit; font-size:14px; padding:7px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink);
+  }
+  input[type=number], input[type=text]{ font-family:var(--mono); }
+  .toggle{ display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+  .toggle input{ position:absolute; opacity:0; width:0; height:0; }
+  .toggle .sw{ width:38px; height:22px; border-radius:11px; background:var(--line); position:relative; transition:background var(--t); }
+  .toggle .sw::after{ content:""; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition:transform var(--t); }
+  .toggle input:checked + .sw{ background:var(--blue); }
+  .toggle input:checked + .sw::after{ transform:translateX(16px); }
+  .toggle input:focus-visible + .sw{ outline:2px solid var(--blue); outline-offset:2px; }
+
+  .note{ margin-top:18px; padding:14px 16px; border-left:3px solid var(--blue); background:var(--blue-soft); border-radius:0 6px 6px 0; font-size:14.5px; }
+  .note.warn{ border-color:var(--red); background:var(--red-soft); }
+  .note.ok{ border-color:var(--green); background:var(--green-soft); }
+  .note code{ background:rgba(255,255,255,.7); padding:1px 5px; border-radius:3px; }
+
+  pre.code{
+    font-family:var(--mono); font-size:13.5px; background:#F6F8FB; border:1px solid var(--line); border-radius:6px;
+    padding:14px 16px; margin:0; overflow:auto; line-height:1.55; white-space:pre;
+  }
+  pre.code .dim{ color:#9AA7B8; }
+  pre.code .hi{ background:var(--amber-soft); }
+  pre.code .err{ background:var(--red-soft); color:var(--red); }
+
+    .readout{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-top:16px; }
+  .readout div{ padding:12px 14px; border:1px solid var(--line); border-radius:6px; background:#F6F8FB; }
+  .readout b{ display:block; font-size:12.5px; font-weight:500; color:var(--ink-soft); margin-bottom:2px; }
+  .readout span{ font-family:var(--mono); font-size:17px; font-weight:600; }
+  /* ---------- shared ---------- */
+  .mcell{ display:inline-flex; flex-direction:column; align-items:center; min-width:70px; border:2px solid var(--ink); border-radius:6px; background:#fff; overflow:hidden; transition:all var(--t); }
+  .mcell .a{ font-family:var(--mono); font-size:10px; color:var(--ink-soft); background:#F6F8FB; width:100%; text-align:center; padding:3px 4px; border-bottom:1px solid var(--line); }
+  .mcell .v{ font-family:var(--mono); font-size:20px; font-weight:600; padding:8px 6px; }
+  .mcell .n{ font-family:var(--mono); font-size:11px; color:var(--blue); padding:0 4px 6px; }
+  .mcell.hi{ border-color:var(--blue); background:var(--blue-soft); }
+  .mcell.bad{ border-color:var(--red); background:var(--red-soft); }
+  .mcell.ok{ border-color:var(--green); background:var(--green-soft); }
+  .mcell.dim{ opacity:.35; }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+  .lab{ font-size:12.5px; color:var(--ink-soft); margin:14px 0 6px; }
+  .term{ font-family:var(--mono); font-size:13.5px; background:var(--ink); color:#D9E1EC; padding:12px 16px; border-radius:6px; min-height:60px; white-space:pre-wrap; margin-top:16px; }
+  .term .r{ color:#FF9B8A; } .term .g{ color:#7FE0B8; } .term .y{ color:#FFD27F; } .term .c{ color:#8A9BB5; }
+  svg text{ font-family:var(--mono); }
+  .shake{ animation:shake .4s; } @keyframes shake{ 0%,100%{transform:none} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+  .pop-in{ animation:popin .3s ease-out; } @keyframes popin{ from{ transform:scale(.8); opacity:0; } }
+  .fade-out{ animation:fadeout .4s forwards; } @keyframes fadeout{ to{ opacity:0; transform:translateY(-8px); } }
+  .two{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:24px; }
+  .tabs2{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tabs2 button{ font:inherit; font-size:13px; padding:7px 12px; border-radius:6px; border:1px solid var(--line); background:#fff; cursor:pointer; }
+  .tabs2 button.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .fig svg{ width:100%; height:auto; background:#fff; border:1px solid var(--line); border-radius:6px; display:block; }
+  .fig text{ font-size:11px; fill:var(--ink-soft); }
+  .qslots{ display:flex; gap:6px; margin:10px 0; }
+  .qslots span{ flex:1; height:46px; border:2px solid var(--line); border-radius:6px; display:grid; place-items:center; font-family:var(--mono); font-size:13px; background:#fff; transition:all var(--t); }
+  .qslots span.full{ background:var(--blue-soft); border-color:var(--blue); }
+  .fs{ display:grid; grid-template-columns:repeat(16,1fr); gap:3px; }
+  .fs span{ height:22px; border-radius:3px; background:#EEF1F5; transition:background var(--t); }
+  .fs span.used{ background:#8FB0EA; } .fs span.dirty{ background:var(--amber); } .fs span.hot{ outline:2px solid var(--red); }
+  .crash{ font-family:var(--mono); font-size:12.5px; background:#0E1726; color:#D9E1EC; border-radius:8px; padding:12px 14px; line-height:1.7; }
+  .crash span.ln{ display:block; cursor:pointer; border-radius:3px; padding:0 4px; }
+  .crash span.ln:hover{ background:#22324A; } .crash span.ln.on{ background:#3A2A10; color:#FFD27A; }
+  .flow{ position:relative; }
+  table.rt{ border-collapse:collapse; width:100%; font-family:var(--mono); font-size:12.5px; }
+  table.rt th, table.rt td{ border:1px solid var(--line); padding:6px 8px; text-align:left; }
+  table.rt th{ background:var(--paper); font-family:var(--sans); }
+  table.rt tr.hot td{ background:var(--blue-soft); font-weight:700; }
+  @media (max-width:900px){ .two{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav aria-label="교시 선택">
+    <h1>Linux &amp; Shell · Ubuntu</h1>
+    <p class="day">1일차<br>눈으로 보는 8가지</p>
+    <ol id="navlist">
+      <li><button data-go="1" aria-current="true">환경 점검</button></li>
+      <li><button data-go="2">리다이렉션 · 파이프</button></li>
+      <li><button data-go="3">make 재빌드</button></li>
+      <li><button data-go="4">시스템 콜 · stdio 버퍼</button></li>
+      <li><button data-go="5">errno · /proc</button></li>
+      <li><button data-go="6">fork · exec · wait</button></li>
+      <li><button data-go="7">좀비 · 고아 · 시그널</button></li>
+      <li><button data-go="8">myshell 시뮬레이터</button></li>
+    </ol>
+    <p class="hint">키보드 <kbd>←</kbd> <kbd>→</kbd> 로 교시 이동</p>
+  </nav>
+  <main>
+
+  <section class="lesson active" id="l1">
+    <header><h2>내 Ubuntu 는 실습할 수 있는 상태인가</h2><p>내 PC 상태를 스위치로 맞춘 뒤 check_env.sh 를 실행해 보세요. [WARN] 하나하나가 몇 일차 실습에 영향을 주는지 아래에 나타납니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>vCPU <select id="e-cpu"><option value="1">1개</option><option value="2">2개</option><option value="4" selected>4개</option></select></label>
+        <label class="toggle"><input type="checkbox" id="e-sudo" checked><span class="sw"></span>sudo 그룹</label>
+        <label class="toggle"><input type="checkbox" id="e-sb"><span class="sw"></span>Secure Boot 켜짐</label>
+        <label class="toggle"><input type="checkbox" id="e-wsl"><span class="sw"></span>WSL2 에서 실행</label>
+        <label class="toggle"><input type="checkbox" id="e-pkg" checked><span class="sw"></span>도구 설치 완료</label>
+        <button class="btn" id="e-run">bash check_env.sh</button>
+      </div>
+      <div class="two">
+        <div class="term" id="e-term" style="margin-top:0;min-height:300px"></div>
+        <div>
+          <div class="readout" style="margin-top:0"><div><b>OK</b><span id="e-ok">–</span></div><div><b>WARN</b><span id="e-warn">–</span></div></div>
+          <div class="lab">영향받는 실습</div>
+          <table class="rt" id="e-impact"></table>
+          <div class="note" id="e-note"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l2">
+    <header><h2>출력은 fd 를 따라간다 — 리다이렉션과 파이프</h2><p>a.out 은 표준 출력(fd 1)으로 세 줄, 표준 에러(fd 2)로 한 줄을 씁니다. 명령을 골라 실행하거나, 셸이 리다이렉션을 왼쪽부터 하나씩 적용하는 과정을 단계로 보세요.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <div class="tabs2" id="r-cmd"></div>
+      </div>
+      <div class="controls">
+        <button class="btn" id="r-step">한 단계</button>
+        <button class="btn" id="r-run">실행</button>
+        <button class="btn secondary" id="r-reset">처음으로</button>
+      </div>
+      <div class="fig"><svg viewBox="0 0 860 230" id="r-svg"></svg></div>
+      <div class="two" style="margin-top:14px">
+        <div><div class="lab" style="margin-top:0">화면 (터미널)</div><div class="term" id="r-screen" style="margin-top:0;min-height:96px"></div></div>
+        <div><div class="lab" style="margin-top:0">파일</div><div class="term" id="r-files" style="margin-top:0;min-height:96px"></div></div>
+      </div>
+      <div class="note" id="r-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l3">
+    <header><h2>make 는 수정 시각만 본다</h2><p>make 를 치고, 소스를 고치고(touch), 다시 make 해 보세요. 실행 파일이 재료(.c)보다 새로우면 건너뜁니다. Makefile 명령 줄을 스페이스로 바꾸면 어떻게 될까요?</p></header>
+    <div class="stage">
+      <div class="controls">
+        <button class="btn" id="m-make">make</button>
+        <button class="btn secondary" data-touch="0">touch 01_write.c</button>
+        <button class="btn secondary" data-touch="1">touch 03_errno.c</button>
+        <button class="btn secondary" data-touch="2">touch myshell.c</button>
+        <button class="btn secondary" id="m-clean">make clean</button>
+        <label class="toggle"><input type="checkbox" id="m-space"><span class="sw"></span>명령 줄을 탭 대신 스페이스로</label>
+      </div>
+      <div id="m-grid"></div>
+      <div class="readout"><div><b>현재 시각</b><span id="m-now"></span></div><div><b>직전 make 의 gcc 호출</b><span id="m-gcc">–</span></div><div><b>누적 gcc 호출</b><span id="m-total">0</span></div></div>
+      <div class="term" id="m-term" style="min-height:90px"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l4">
+    <header><h2>printf 는 모았다가, write 는 바로 — 그리고 그때마다 커널로</h2><p>출력 대상을 고르고 한 줄씩 실행해 보세요. write 시스템 콜이 불릴 때마다 CPU 가 커널 모드로 들어갔다 나옵니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <div class="tabs2" id="b-dst"><button class="on" data-d="tty">./01_write_vs_printf (터미널)</button><button data-d="pipe">./01_write_vs_printf | cat (파이프)</button></div>
+        <button class="btn" id="b-step">한 줄 실행</button>
+        <button class="btn secondary" id="b-reset">처음부터</button>
+      </div>
+      <div class="two">
+        <div>
+          <pre class="code" id="b-code"></pre>
+          <div class="lab">stdio 버퍼 (프로세스 메모리 안)</div>
+          <div class="term" id="b-buf" style="margin-top:0;min-height:70px"></div>
+        </div>
+        <div>
+          <div class="fig"><svg viewBox="0 0 400 150" id="b-svg"></svg></div>
+          <div class="readout"><div><b>write 호출</b><span id="b-cnt">0</span></div><div><b>CPU 모드</b><span id="b-mode">U</span></div></div>
+          <div class="lab">strace -e trace=write</div>
+          <div class="term" id="b-strace" style="margin-top:0;min-height:70px"></div>
+          <div class="lab">화면에 나온 순서</div>
+          <div class="term" id="b-out" style="margin-top:0;min-height:70px"></div>
+        </div>
+      </div>
+      <div class="note" id="b-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l5">
+    <header><h2>실패는 -1 과 errno 로, 내 상태는 /proc 으로</h2><p>경로를 골라 open() 을 불러 보세요. 커널이 돌려준 값, glibc 가 바꾼 반환값, errno 가 어떻게 남는지 보입니다. 아래에서는 malloc 과 memset 이 VmRSS 를 어떻게 바꾸는지 확인하세요.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <div class="tabs2" id="o-path"><button class="on" data-p="0">/etc/hostname</button><button data-p="1">/no/such/file</button><button data-p="2">/etc/shadow</button><button data-p="3">/etc (O_WRONLY)</button></div>
+        <label class="toggle"><input type="checkbox" id="o-sudo"><span class="sw"></span>sudo 로 실행</label>
+        <button class="btn" id="o-call">open() 호출</button>
+      </div>
+      <div class="row" id="o-flow" style="gap:14px;align-items:stretch"></div>
+      <div class="term" id="o-term" style="min-height:66px"></div>
+      <div class="note" id="o-note"></div>
+      <div class="lab" style="margin-top:22px">/proc/self/status — 04_proc_self</div>
+      <div class="controls" style="margin-bottom:10px">
+        <button class="btn" id="v-malloc">malloc(50MB)</button>
+        <button class="btn" id="v-memset">memset 으로 모두 쓰기</button>
+        <button class="btn secondary" id="v-free">free</button>
+      </div>
+      <div id="v-bars"></div>
+      <div class="note" id="v-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l6">
+    <header><h2>fork 로 둘이 되고, exec 로 바뀌고, wait 로 결과를 받는다</h2><p>명령을 고른 뒤 버튼을 순서대로 눌러 보세요. 부모 · 자식의 PID 와 실행 중인 프로그램, 부모가 받는 종료 상태가 바뀝니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <div class="tabs2" id="f-cmd"><button class="on" data-c="0">ls -l /tmp</button><button data-c="1">ls /nope</button><button data-c="2">nosuchcmd</button><button data-c="3">sleep 30</button></div>
+      </div>
+      <div class="controls">
+        <button class="btn" id="f-fork">① fork()</button>
+        <button class="btn" id="f-exec">② execvp()</button>
+        <button class="btn" id="f-end">③ 자식 끝남</button>
+        <button class="btn" id="f-kill" style="display:none">③ 다른 터미널에서 kill</button>
+        <button class="btn" id="f-wait">④ waitpid()</button>
+        <button class="btn secondary" id="f-reset">처음으로</button>
+      </div>
+      <div class="fig"><svg viewBox="0 0 860 250" id="f-svg"></svg></div>
+      <div class="readout"><div><b>WIFEXITED</b><span id="f-ie">–</span></div><div><b>WEXITSTATUS</b><span id="f-es">–</span></div><div><b>WIFSIGNALED</b><span id="f-is">–</span></div><div><b>WTERMSIG</b><span id="f-ts">–</span></div></div>
+      <div class="term" id="f-term" style="min-height:66px"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l7">
+    <header><h2>끝난 자식은 누가 거두나 — 그리고 Ctrl+C 의 길</h2><p>왼쪽에서 자식을 만들고 끝내고 거둬 보세요. wait 하지 않으면 Z, 부모가 먼저 끝나면 입양됩니다. 오른쪽에서는 핸들러를 등록했을 때와 아닐 때 Ctrl+C · kill -9 결과를 비교하세요.</p></header>
+    <div class="stage">
+      <div class="two">
+        <div>
+          <div class="controls">
+            <button class="btn" id="z-fork">fork()</button>
+            <button class="btn" id="z-exit">자식 exit(7)</button>
+            <button class="btn" id="z-wait">부모 waitpid()</button>
+            <button class="btn" id="z-pexit">부모 먼저 종료</button>
+            <button class="btn secondary" id="z-reset">처음으로</button>
+          </div>
+          <label class="toggle" style="margin-bottom:12px"><input type="checkbox" id="z-chld"><span class="sw"></span>SIGCHLD 핸들러로 자동 수거</label>
+          <div class="lab" style="margin-top:0">$ ps -o pid,ppid,stat,cmd</div>
+          <table class="rt" id="z-ps"></table>
+          <div class="note" id="z-note"></div>
+        </div>
+        <div>
+          <div class="controls">
+            <label class="toggle"><input type="checkbox" id="s-handler" checked><span class="sw"></span>sigaction(SIGINT, on_sigint)</label>
+          </div>
+          <div class="controls">
+            <button class="btn" id="s-ctrlc">Ctrl+C</button>
+            <button class="btn" id="s-term">kill -15</button>
+            <button class="btn" id="s-kill">kill -9</button>
+            <button class="btn secondary" id="s-reset">다시 실행</button>
+          </div>
+          <div class="fig"><svg viewBox="0 0 400 210" id="s-svg"></svg></div>
+          <div class="readout"><div><b>g_int_count</b><span id="s-cnt">0</span></div><div><b>프로세스</b><span id="s-state">실행 중</span></div><div><b>셸의 $?</b><span id="s-rc">–</span></div></div>
+          <div class="term" id="s-out" style="min-height:66px"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l8">
+    <header><h2>myshell — fork · exec · wait 를 반복하는 셸</h2><p>명령을 입력하거나 아래 버튼을 눌러 보세요. 프롬프트 숫자는 직전 종료 코드이고, 오른쪽에는 strace -f 로 본 시스템 콜이 쌓입니다. cd 와 exit 는 셸이 직접 처리합니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <div class="tabs2" id="h-quick"></div>
+      </div>
+      <div class="two">
+        <div>
+          <div class="term" id="h-term" style="margin-top:0;min-height:260px;max-height:340px;overflow:auto"></div>
+          <div class="row" style="margin-top:10px"><span class="mono" id="h-prompt" style="font-size:14px"></span><input type="text" id="h-in" style="flex:1;min-width:160px" placeholder="명령 입력 후 Enter" aria-label="myshell 명령 입력"><button class="btn secondary" id="h-ctrlc">Ctrl+C</button></div>
+        </div>
+        <div>
+          <div class="readout" style="margin-top:0"><div><b>셸의 현재 디렉터리</b><span id="h-cwd"></span></div><div><b>만든 자식 수</b><span id="h-kids">0</span></div><div><b>직전 종료 코드</b><span id="h-last">0</span></div></div>
+          <div class="lab">strace -f -e trace=clone,execve,wait4,chdir</div>
+          <div class="term" id="h-strace" style="margin-top:0;min-height:170px;max-height:230px;overflow:auto"></div>
+          <div class="note" id="h-note"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  </main>
+</div>
+<script>
+(function(){
+  'use strict';
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+  const NS='http://www.w3.org/2000/svg';
+  const el=(n,a,t)=>{ const e=document.createElementNS(NS,n); for(const k in a) e.setAttribute(k,a[k]); if(t!==undefined) e.textContent=t; return e; };
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  let cur=1;
+  function go(n){ cur=Math.max(1,Math.min(8,n)); $$('.lesson').forEach(s=>s.classList.toggle('active',s.id==='l'+cur)); $$('#navlist button').forEach(b=>b.setAttribute('aria-current',b.dataset.go==cur?'true':'false')); history.replaceState(null,'','#l'+cur); window.scrollTo({top:0}); }
+  $$('#navlist button').forEach(b=>b.addEventListener('click',()=>go(+b.dataset.go)));
+  document.addEventListener('keydown',e=>{ if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName))return; if(e.key==='ArrowRight')go(cur+1); if(e.key==='ArrowLeft')go(cur-1); });
+  if(/^#l[1-8]$/.test(location.hash)) go(+location.hash[2]);
+  function tabs(id,fn){ $$('#'+id+' button').forEach(b=>b.addEventListener('click',()=>{ $$('#'+id+' button').forEach(x=>x.classList.toggle('on',x===b)); fn(b); })); }
+  function box(S,x,y,w,h,title,sub,kind){ const col={n:['#fff','#1B2A41'],b:['#DCE6FA','#2457C5'],g:['#DDF2EA','#178A67'],r:['#FBE3DF','#D6452E'],a:['#FBF0D3','#C98A12'],d:['#F6F8FB','#C9D1DC']}[kind||'n'];
+    S.appendChild(el('rect',{x,y,width:w,height:h,rx:8,fill:col[0],stroke:col[1],'stroke-width':2}));
+    const t=el('text',{x:x+w/2,y:y+(sub?h/2-4:h/2+5),'text-anchor':'middle','font-size':14,'font-weight':600,fill:'#1B2A41'},title); S.appendChild(t);
+    if(sub){ String(sub).split('\n').forEach((ln,i)=>S.appendChild(el('text',{x:x+w/2,y:y+h/2+14+i*14,'text-anchor':'middle','font-size':11.5,fill:col[1]},ln))); } }
+  function arrow(S,x1,y1,x2,y2,color,label){ const id='m'+color.replace('#',''); if(!S.querySelector('#'+id)){ const d=el('defs',{}); const m=el('marker',{id,viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'}); m.appendChild(el('path',{d:'M0,0L10,5L0,10z',fill:color})); d.appendChild(m); S.appendChild(d); }
+    S.appendChild(el('line',{x1,y1,x2,y2,stroke:color,'stroke-width':2.2,'marker-end':`url(#${id})`}));
+    if(label){ const mx=(x1+x2)/2,my=(y1+y2)/2; S.appendChild(el('rect',{x:mx-label.length*3.6-6,y:my-10,width:label.length*7.2+12,height:18,rx:4,fill:'#fff',stroke:color})); S.appendChild(el('text',{x:mx,y:my+3,'text-anchor':'middle','font-size':11,fill:color},label)); } }
+
+  /* ───────── 1 check_env ───────── */
+  function eRun(){
+    const cpu=+$('#e-cpu').value, sudo=$('#e-sudo').checked, sb=$('#e-sb').checked, wsl=$('#e-wsl').checked, pkg=$('#e-pkg').checked;
+    const L=[]; let ok=0,warn=0; const imp=[];
+    const OK=t=>{ L.push(`  <span class="g">[ OK ]</span> ${t}`); ok++; }, W=(t,day,why)=>{ L.push(`  <span class="y">[WARN]</span> ${t}`); warn++; if(day) imp.push([day,why]); };
+    L.push('<span class="c">$ bash check_env.sh</span>','== 1. 운영체제와 커널 ==');
+    OK('배포판 : Ubuntu 24.04.1 LTS'); OK(`커널   : ${wsl?'6.6.36.6-microsoft-standard-WSL2':'6.8.0-45-generic'} (x86_64)`);
+    L.push('== 2. CPU와 가상화 ==');
+    if(cpu>=2) OK(`코어 수 : ${cpu}`); else W('코어 수 : 1 (2개 이상 권장 — VM이면 vCPU를 늘리세요)','Day 2 · Day 5','affinity 비교와 race 재현이 안 됨');
+    OK(`가상화 : ${wsl?'wsl':(cpu<4?'oracle':'none')}`);
+    if(wsl) W('WSL 환경 — Day 4 커널 모듈 실습은 대체 과제로 진행','Day 4','insmod · /sys/class/thermal 없음');
+    L.push('== 3. Secure Boot ==');
+    if(wsl) OK('SecureBoot 해당 없음'); else if(sb) W('SecureBoot enabled','Day 4','서명 안 된 모듈 로드 거부'); else OK('SecureBoot disabled');
+    L.push('== 4. sudo 권한 ==');
+    if(sudo) OK('sudo 그룹 소속'); else W('sudo 권한 없음 — 강사에게 알려주세요','Day 2 · Day 4','SCHED_FIFO, insmod, drop_caches 불가');
+    L.push('== 5. 필수 도구 ==');
+    ['gcc','make','gdb','strace','valgrind','perf','stress-ng'].forEach((t,i)=>{ if(pkg||i<2) OK(t); else W(t+' 없음', i===3?'Day 1':(i===4?'Day 3':(i===6?'Day 2':'')), i===3?'시스템 콜 관찰 불가':(i===4?'누수 검사 불가':'부하 생성 불가')); });
+    const T=$('#e-term'); T.innerHTML=''; let k=0; clearInterval(eRun.t);
+    eRun.t=setInterval(()=>{ if(k>=L.length){ clearInterval(eRun.t); return; } T.innerHTML+=L[k++]+'\n'; },60);
+    $('#e-ok').textContent=ok; $('#e-warn').textContent=warn;
+    const uniq=[]; imp.forEach(r=>{ if(!uniq.some(u=>u[0]===r[0]&&u[1]===r[1])) uniq.push(r); });
+    $('#e-impact').innerHTML='<tr><th>실습</th><th>왜</th></tr>'+(uniq.length?uniq.map(r=>`<tr class="hot"><td>${r[0]}</td><td>${esc(r[1])}</td></tr>`).join(''):'<tr><td colspan="2">없음 — 모든 실습 가능</td></tr>');
+    const n=$('#e-note'); if(!warn){ n.className='note ok'; n.innerHTML='경고 0개. 이 상태 그대로 5일 실습을 모두 할 수 있습니다.'; }
+    else if(cpu<2||!sudo){ n.className='note warn'; n.innerHTML='코어 1개나 sudo 없음은 <b>Day 2 전에 반드시</b> 해결해야 합니다. 손을 들어 보조강사에게 알리세요.'; }
+    else { n.className='note'; n.innerHTML='도구 누락은 <code>sudo apt install …</code> 한 줄로 해결됩니다. Secure Boot · WSL2 는 Day 4 모듈 실습만 대체 과제로 진행합니다.'; }
+  }
+  $('#e-run').addEventListener('click',eRun); ['#e-cpu','#e-sudo','#e-sb','#e-wsl','#e-pkg'].forEach(s=>$(s).addEventListener('change',eRun)); eRun();
+
+  /* ───────── 2 redirection ───────── */
+  const R=[
+    {c:'./a.out', ops:[], note:'리다이렉션이 없으면 fd 1 · fd 2 모두 터미널입니다. 네 줄이 모두 화면에 나옵니다.'},
+    {c:'./a.out > out.txt', ops:[['1','out.txt','> out.txt : fd 1 → out.txt']], note:'표준 출력 세 줄은 파일로 가고, fd 2 는 그대로라 <b>에러 한 줄만 화면</b>에 남습니다.'},
+    {c:'./a.out 2> err.txt', ops:[['2','err.txt','2> err.txt : fd 2 → err.txt']], note:'에러만 파일로 갑니다. 정상 출력 세 줄은 화면에 나옵니다.'},
+    {c:'./a.out > log 2>&1', ops:[['1','log','> log : fd 1 → log'],['2','=1','2>&1 : fd 2 → (fd 1 이 지금 가리키는 곳) = log']], note:'왼쪽부터 적용됩니다. fd 1 을 log 로 바꾼 <b>다음</b> 2>&1 이 그 대상을 복사하므로 네 줄이 모두 log 에 들어갑니다.'},
+    {c:'./a.out 2>&1 > log', ops:[['2','=1','2>&1 : fd 2 → (fd 1 이 지금 가리키는 곳) = 터미널'],['1','log','> log : fd 1 → log']], note:'순서 함정! 2>&1 이 먼저 적용될 때 fd 1 은 아직 터미널이므로 fd 2 는 터미널을 복사합니다. 그 뒤 fd 1 만 log 로 바뀌어 <b>에러는 여전히 화면</b>에 나옵니다.'},
+    {c:'./a.out | wc -l', ops:[['1','pipe','| : fd 1 → 파이프 (wc 의 fd 0)']], note:'파이프는 fd 1 만 연결합니다. wc 는 세 줄을 세어 3 을 출력하고, 에러 한 줄은 파이프를 타지 않고 화면에 나옵니다.'}];
+  const OUTL=['data 1','data 2','data 3'], ERRL='error: sensor not found';
+  let rI=0, rS=0;
+  $('#r-cmd').innerHTML=R.map((r,i)=>`<button class="${i?'':'on'}" data-i="${i}">${esc(r.c)}</button>`).join('');
+  tabs('r-cmd',b=>{ rI=+b.dataset.i; rS=0; rDraw(); });
+  function rFd(upto){ const fd={0:'터미널',1:'터미널',2:'터미널'}; R[rI].ops.slice(0,upto).forEach(([f,t])=>{ fd[f]= t==='=1'?fd[1]:(t==='pipe'?'파이프 → wc':t); }); return fd; }
+  function rDraw(){ const r=R[rI], n=r.ops.length, fd=rFd(rS), S=$('#r-svg'); S.innerHTML='';
+    box(S,40,70,170,90,'a.out','fd 0 · 1 · 2','b');
+    const targets=['터미널','out.txt','err.txt','log','파이프 → wc']; const ty={};
+    targets.forEach((t,i)=>{ ty[t]=20+i*42; const used=Object.values(fd).includes(t)||(t==='터미널'); box(S,560,ty[t],250,34,t,'',used?(t==='터미널'?'d':'a'):'d'); });
+    [0,1,2].forEach((f,i)=>{ const y=88+i*28; S.appendChild(el('text',{x:226,y:y+4,'font-size':13,fill:'#1B2A41'},'fd '+f)); const tgt=fd[f]; const col=f===2?'#D6452E':(f===1?'#2457C5':'#8A9BB5'); if(f===0) return; arrow(S,262,y,556,ty[tgt]+17,col); });
+    S.appendChild(el('text',{x:240,y:212,'font-size':12,fill:'#5B6B80'},rS<n?`적용 단계 ${rS}/${n}${rS? ' — '+r.ops[rS-1][2]:''}`:`모든 리다이렉션 적용 완료 (${n}개)`));
+    $('#r-step').disabled=rS>=n; $('#r-screen').innerHTML=''; $('#r-files').innerHTML=''; $('#r-note').className='note'; $('#r-note').innerHTML= rS<n?'한 단계를 눌러 셸이 리다이렉션을 <b>왼쪽부터</b> 적용하는 모습을 보세요.':'실행을 눌러 결과를 확인하세요.'; }
+  function rRun(){ rS=R[rI].ops.length; rDraw(); const fd=rFd(rS); const scr=[], files={};
+    const put=(f,line,cls)=>{ const t=fd[f]; if(t==='터미널') scr.push(`<span class="${cls}">${line}</span>`); else if(t==='파이프 → wc'){ files['(wc 입력)']=(files['(wc 입력)']||0)+1; } else (files[t]=files[t]||[]).push(`<span class="${cls}">${line}</span>`); };
+    OUTL.forEach(l=>put(1,l,'g')); put(2,ERRL,'r');
+    if(files['(wc 입력)']){ scr.push(`<span class="y">${files['(wc 입력)']}</span>   <span class="c">← wc -l 의 출력</span>`); delete files['(wc 입력)']; }
+    $('#r-screen').innerHTML=`<span class="c">$ ${esc(R[rI].c)}</span>\n`+scr.join('\n');
+    $('#r-files').innerHTML=Object.keys(files).length?Object.entries(files).map(([k,v])=>`<span class="c">$ cat ${k}</span>\n${v.join('\n')}`).join('\n'):'<span class="c">(만들어진 파일 없음)</span>';
+    $('#r-note').className=rI===4?'note warn':'note ok'; $('#r-note').innerHTML=R[rI].note; }
+  $('#r-step').addEventListener('click',()=>{ if(rS<R[rI].ops.length){ rS++; rDraw(); if(rS===R[rI].ops.length){ $('#r-note').innerHTML='모든 리다이렉션이 적용됐습니다. 실행을 눌러 네 줄이 어디로 가는지 보세요.'; } } });
+  $('#r-run').addEventListener('click',rRun); $('#r-reset').addEventListener('click',()=>{ rS=0; rDraw(); });
+  rDraw();
+
+  /* ───────── 3 make ───────── */
+  const MF=['01_write','03_errno','myshell']; let mNow=540, mSrc=[540,540,540], mExe=[null,null,null], mTot=0, mHot=[];
+  const hm=t=>`${String(Math.floor(t/60)).padStart(2,'0')}:${String(t%60).padStart(2,'0')}`;
+  function mDraw(){ $('#m-grid').innerHTML=`<div class="row" style="gap:26px">`+MF.map((f,i)=>{ const stale=mExe[i]===null||mExe[i]<mSrc[i]; return `<div style="display:flex;flex-direction:column;gap:8px;align-items:center">
+      <div class="mcell ${mHot.includes('s'+i)?'hi':''}"><div class="a">${f}.c</div><div class="v">${hm(mSrc[i])}</div><div class="n">mtime</div></div>
+      <div class="mono" style="font-size:18px;color:${stale?'#D6452E':'#178A67'}">${stale?'▼ 낡음':'▼ 최신'}</div>
+      <div class="mcell ${mExe[i]===null?'dim':(mHot.includes('e'+i)?'ok':(stale?'bad':''))}"><div class="a">${f}</div><div class="v">${mExe[i]===null?'없음':hm(mExe[i])}</div><div class="n">실행 파일</div></div></div>`; }).join('')+`</div>`;
+    $('#m-now').textContent=hm(mNow); $('#m-total').textContent=mTot; }
+  const mTerm=$('#m-term');
+  $('#m-make').addEventListener('click',()=>{ mNow++; mHot=[]; const out=['<span class="c">$ make</span>'];
+    if($('#m-space').checked){ out.push('<span class="r">Makefile:9: *** missing separator.  Stop.</span>'); $('#m-gcc').textContent='0 (에러)'; mTerm.innerHTML=out.join('\n'); mDraw(); return; }
+    let n=0; MF.forEach((f,i)=>{ if(mExe[i]===null||mExe[i]<mSrc[i]){ out.push(`gcc -Wall -Wextra -g -o ${f} ${f}.c`); mExe[i]=mNow; n++; mHot.push('e'+i); } });
+    if(!n) out.push("<span class=\"y\">make: Nothing to be done for 'all'.</span>");
+    mTot+=n; $('#m-gcc').textContent=n; mTerm.innerHTML=out.join('\n'); mDraw(); });
+  $$('[data-touch]').forEach(b=>b.addEventListener('click',()=>{ const i=+b.dataset.touch; mNow++; mSrc[i]=mNow; mHot=['s'+i]; mTerm.innerHTML=`<span class="c">$ touch ${MF[i]}.c</span>\n${MF[i]}.c 의 수정 시각 → ${hm(mNow)}`; mDraw(); }));
+  $('#m-clean').addEventListener('click',()=>{ mNow++; mExe=[null,null,null]; mHot=[]; mTerm.innerHTML=`<span class="c">$ make clean</span>\nrm -f ${MF.join(' ')}`; $('#m-gcc').textContent='–'; mDraw(); });
+  $('#m-space').addEventListener('change',()=>{ mTerm.innerHTML=$('#m-space').checked?'<span class="y">Makefile 9번 줄이 "    $(CC) …" (스페이스 4칸)으로 바뀌었습니다. make 를 눌러 보세요.</span>':'명령 줄을 다시 탭으로 되돌렸습니다.'; });
+  mDraw(); mTerm.innerHTML='<span class="c">실행 파일이 하나도 없습니다. make 를 눌러 보세요.</span>';
+
+  /* ───────── 4 stdio buffer ───────── */
+  const BC=['write(1, "hello\\n", 6);','printf("line 0\\n");','printf("line 1\\n");','printf("line 2\\n");','return 0;   /* exit → fflush */'];
+  let bD='tty', bPc=-1, bBuf=[], bW=0, bTr=[], bOut=[], bMode='U';
+  function bSys(data){ bW++; bTr.push(`write(1, "${data.join('').replace(/\n/g,'\\n')}", ${data.join('').length}) = ${data.join('').length}`); bOut.push(...data.map(s=>s.replace('\n',''))); bMode='K'; setTimeout(()=>{ bMode='U'; bDraw(); },450); }
+  function bDraw(){ $('#b-code').innerHTML=BC.map((l,i)=>`<span class="${i===bPc?'hi':''}">${esc(l)}</span>`).join('\n');
+    $('#b-buf').innerHTML=bBuf.length?bBuf.map(s=>esc(s.replace('\n','\\n'))).join(''):'<span class="c">(비어 있음)</span>';
+    $('#b-cnt').textContent=bW; $('#b-mode').textContent=bMode==='K'?'K (커널)':'U (사용자)'; $('#b-strace').innerHTML=bTr.map(esc).join('\n'); $('#b-out').innerHTML=bOut.map(esc).join('\n');
+    const S=$('#b-svg'); S.innerHTML=''; box(S,20,12,170,46,'사용자 모드','main · glibc',bMode==='U'?'b':'d'); box(S,20,92,170,46,'커널 모드','sys_write',bMode==='K'?'r':'d');
+    box(S,230,52,150,46,bD==='tty'?'터미널':'파이프 → cat',bD==='tty'?'줄 단위 버퍼':'블록 단위 버퍼','a');
+    if(bMode==='K'){ arrow(S,105,58,105,90,'#D6452E','syscall'); arrow(S,190,115,228,85,'#D6452E'); }
+    $('#b-step').disabled=bPc>=BC.length-1; const n=$('#b-note');
+    if(bPc>=BC.length-1){ n.className='note ok'; n.innerHTML= bD==='tty'?`터미널: write <b>${bW}번</b>. printf 가 \\n 을 만날 때마다 비웠기 때문에 화면 순서 = 코드 순서입니다.`:`파이프: write <b>${bW}번</b>. printf 세 줄은 버퍼에 있다가 exit 에서 한 번에 나갔습니다. 시스템 콜(모드 전환)을 아끼는 대신, 버퍼에 남은 상태로 fork 하면 내용이 복제된다는 점을 기억하세요(6교시).`; }
+    else { n.className='note'; n.innerHTML='한 줄 실행을 눌러 보세요. 빨간 화살표가 보이는 순간이 사용자 모드 → 커널 모드 전환입니다.'; } }
+  $('#b-step').addEventListener('click',()=>{ bPc++; const l=bPc;
+    if(l===0) bSys(['hello\n']);
+    else if(l<=3){ bBuf.push(`line ${l-1}\n`); if(bD==='tty'){ const d=bBuf; bBuf=[]; bSys(d); } }
+    else { if(bBuf.length){ const d=bBuf; bBuf=[]; bSys(d); } }
+    bDraw(); });
+  function bReset(){ bPc=-1; bBuf=[]; bW=0; bTr=[]; bOut=[]; bMode='U'; bDraw(); }
+  $('#b-reset').addEventListener('click',bReset); tabs('b-dst',b=>{ bD=b.dataset.d; bReset(); }); bReset();
+
+  /* ───────── 5 errno · /proc ───────── */
+  const OP=[{p:'/etc/hostname',f:'O_RDONLY'},{p:'/no/such/file',f:'O_RDONLY'},{p:'/etc/shadow',f:'O_RDONLY'},{p:'/etc',f:'O_WRONLY'}];
+  let oI=0, oErr=0, oFd=3;
+  tabs('o-path',b=>{ oI=+b.dataset.p; });
+  function oCard(t,v,kind){ return `<div class="mcell ${kind}" style="min-width:180px"><div class="a">${t}</div><div class="v">${v}</div></div>`; }
+  function oFlow(k,g,m){ $('#o-flow').innerHTML=oCard('커널 → rax',k[0],k[1])+'<span class="mono" style="align-self:center;font-size:20px">→</span>'+oCard('glibc: errno',g[0],g[1])+'<span class="mono" style="align-self:center;font-size:20px">→</span>'+oCard('main(): fd',m[0],m[1]); }
+  $('#o-call').addEventListener('click',()=>{ const o=OP[oI], sudo=$('#o-sudo').checked; let rax, en=null, msg;
+    if(oI===1){ rax=-2; en=[2,'ENOENT','No such file or directory']; }
+    else if(oI===2&&!sudo){ rax=-13; en=[13,'EACCES','Permission denied']; }
+    else if(oI===3){ rax=-21; en=[21,'EISDIR','Is a directory']; }
+    else { rax=oFd; }
+    if(en){ oErr=en[0]; oFlow([rax,'bad'],[`${en[0]} (${en[1]})`,'bad'],['-1','bad']); msg=`<span class="c">$ ${sudo?'sudo ':''}./03_errno</span>\n${o.p.padEnd(22)} → <span class="r">실패: errno=${en[0]} (${en[2]})</span>`;
+      $('#o-note').className='note warn'; $('#o-note').innerHTML=`커널은 <code>-${en[1]}</code>(${rax})를 돌려줄 뿐 errno 를 모릅니다. glibc 래퍼가 음수를 보고 <b>errno=${en[0]}</b> 를 저장하고 반환값을 <b>-1</b> 로 통일합니다.`; }
+    else { oFlow([rax,'ok'],[`${oErr} (그대로)`,oErr?'hi':'ok'],[rax,'ok']); msg=`<span class="c">$ ${sudo?'sudo ':''}./03_errno</span>\n${o.p.padEnd(22)} → <span class="g">성공: fd=${rax}</span>`;
+      $('#o-note').className=oErr?'note':'note ok'; $('#o-note').innerHTML=oErr?`성공했지만 errno 는 <b>이전 실패 값 ${oErr}</b> 가 그대로 남아 있습니다. 그래서 errno 는 반환값이 -1 일 때만 읽습니다.`:(oI===2?'sudo 로 실행하면 root 라 권한 검사를 통과합니다.':'0 · 1 · 2 는 표준 입출력이 쓰고 있어 비어 있는 가장 작은 번호 3 을 받습니다.'); }
+    $('#o-term').innerHTML=msg; });
+  oFlow(['–',''],['0',''],['–','']); $('#o-note').innerHTML='경로를 고르고 open() 호출을 누르세요. 실패한 뒤 성공하는 경로를 불러 errno 가 어떻게 남는지도 보세요.';
+  let vM=false, vT=false;
+  function vDraw(){ const base=1.5, size=vM?52.6:2.6, rss=base+(vT?50.6:(vM?0.1:0));
+    const bar=(lab,v,max,col)=>`<div style="margin:8px 0"><div class="lab" style="margin:0 0 4px">${lab} <span class="mono" style="color:#1B2A41;font-weight:600">${v.toFixed(1)} MB</span></div><div style="height:22px;background:#EEF1F5;border-radius:4px;overflow:hidden"><div style="height:100%;width:${Math.min(100,v/max*100)}%;background:${col};transition:width var(--t)"></div></div></div>`;
+    $('#v-bars').innerHTML=bar('VmSize (예약한 가상 주소)',size,60,'#8FB0EA')+bar('VmRSS (실제 물리 메모리)',rss,60,'#178A67');
+    $('#v-memset').disabled=!vM||vT; $('#v-malloc').disabled=vM; $('#v-free').disabled=!vM;
+    const n=$('#v-note'); if(!vM){ n.className='note'; n.innerHTML='malloc(50MB) 를 눌러 보세요.'; } else if(!vT){ n.className='note warn'; n.innerHTML='주소 공간(VmSize)은 50MB 늘었지만 <b>VmRSS 는 거의 그대로</b>입니다. malloc 은 주소만 예약합니다 — 이유는 Day 3 demand paging 에서 측정합니다.'; } else { n.className='note ok'; n.innerHTML='memset 으로 실제로 쓰자 페이지가 하나씩 할당되어 VmRSS 가 약 52MB 가 되었습니다.'; } }
+  $('#v-malloc').addEventListener('click',()=>{ vM=true; vDraw(); }); $('#v-memset').addEventListener('click',()=>{ vT=true; vDraw(); }); $('#v-free').addEventListener('click',()=>{ vM=false; vT=false; vDraw(); }); vDraw();
+
+  /* ───────── 6 fork · exec · wait ───────── */
+  const FC=[{c:['ls','-l','/tmp'],out:'total 8\ndrwx------ 2 user user 4096 Oct  2 09:10 snap',code:0},{c:['ls','/nope'],err:"ls: cannot access '/nope': No such file or directory",code:2},{c:['nosuchcmd'],fail:true},{c:['sleep','30'],sig:true}];
+  let fI=0, fSt=0, fStat=null;
+  tabs('f-cmd',b=>{ fI=+b.dataset.c; fReset(); });
+  function fReset(){ fSt=0; fStat=null; $('#f-term').innerHTML=`<span class="c">$ ./06_fork_exec_wait ${FC[fI].c.join(' ')}</span>`; fDraw(); }
+  function fDraw(){ const S=$('#f-svg'); S.innerHTML=''; const c=FC[fI];
+    box(S,40,40,280,110,'부모 PID 179','06_fork_exec_wait\n'+(fSt===0?'fork 직전':fSt<4?'waitpid(180, &status, 0) 대기':'종료 상태 받음'),fSt===4?'g':'b');
+    if(fSt>=1){ let title='자식 PID 180', sub, kind='g';
+      if(fSt===1){ sub='06_fork_exec_wait (복제본)\nfork() 반환값 0'; }
+      else if(fSt===2){ sub=c.fail?'execvp 실패 → -1 반환\nperror → _exit(127)':`${c.c[0]} 으로 교체됨\nPID 그대로 · fd 0·1·2 유지`; kind=c.fail?'r':'a'; }
+      else { sub=fStat.sig?'시그널 15 로 종료':`종료 코드 ${fStat.code}\n(부모가 거둘 때까지 Z)`; kind=fSt===4?'d':'r'; if(fSt===4){ sub='거둬짐 — 사라짐'; } }
+      box(S,540,40,280,110,title,sub,kind); arrow(S,322,80,538,80,'#2457C5','fork() → 부모 180 / 자식 0'); }
+    if(fSt>=3) arrow(S,538,125,322,125,fStat.sig?'#D6452E':'#178A67',fStat.sig?'SIGCHLD (시그널 종료)':`SIGCHLD (exit ${fStat.code})`);
+    if(fSt===2&&!c.fail){ box(S,560,180,240,46,'디스크 /usr/bin/'+c.c[0],'코드 · 데이터를 읽어 들임','d'); arrow(S,680,178,680,152,'#C98A12'); }
+    const st=fSt===4?fStat:null; $('#f-ie').textContent=st?(st.sig?'0 (거짓)':'1 (참)'):'–'; $('#f-es').textContent=st&&!st.sig?st.code:'–'; $('#f-is').textContent=st?(st.sig?'1 (참)':'0 (거짓)'):'–'; $('#f-ts').textContent=st&&st.sig?'15 (SIGTERM)':'–';
+    $('#f-fork').disabled=fSt!==0; $('#f-exec').disabled=fSt!==1; $('#f-end').disabled=fSt!==2; $('#f-kill').disabled=fSt!==2; $('#f-wait').disabled=fSt!==3;
+    $('#f-end').style.display=c.sig?'none':''; $('#f-kill').style.display=c.sig?'':'none'; }
+  const fT=s=>{ $('#f-term').innerHTML+='\n'+s; };
+  $('#f-fork').addEventListener('click',()=>{ fSt=1; fDraw(); });
+  $('#f-exec').addEventListener('click',()=>{ const c=FC[fI]; fSt=2; if(c.fail) fT('<span class="r">execvp: No such file or directory</span>'); fDraw(); });
+  $('#f-end').addEventListener('click',()=>{ const c=FC[fI]; fSt=3; if(c.out) fT(c.out); if(c.err) fT(`<span class="r">${esc(c.err)}</span>`); fStat={code:c.fail?127:c.code}; fDraw(); });
+  $('#f-kill').addEventListener('click',()=>{ fSt=3; fT('<span class="c">(다른 터미널) $ kill 180</span>'); fStat={sig:15}; fDraw(); });
+  $('#f-wait').addEventListener('click',()=>{ fSt=4; fT(fStat.sig?'[부모] 자식 180 시그널로 종료, 시그널=15':`[부모] 자식 180 정상 종료, 종료 코드=${fStat.code}`); fDraw(); });
+  $('#f-reset').addEventListener('click',fReset); fReset();
+
+  /* ───────── 7 zombie · orphan · signal ───────── */
+  let Z;
+  function zReset(){ Z={rows:[{pid:4890,ppid:4880,st:'S',cmd:'bash'},{pid:6020,ppid:4890,st:'S',cmd:'./07_zombie'}],child:false,msg:'fork() 로 자식을 만들어 보세요.',cls:'note'}; zDraw(); }
+  function zDraw(){ $('#z-ps').innerHTML='<tr><th>PID</th><th>PPID</th><th>STAT</th><th>CMD</th></tr>'+Z.rows.map(r=>`<tr class="${r.st==='Z'?'hot':''}"><td>${r.pid}</td><td>${r.ppid}</td><td>${r.st}</td><td>${esc(r.cmd)}</td></tr>`).join('');
+    $('#z-note').className=Z.cls; $('#z-note').innerHTML=Z.msg;
+    const par=Z.rows.find(r=>r.pid===6020), ch=Z.rows.find(r=>r.pid===6021);
+    $('#z-fork').disabled=!par||!!ch; $('#z-exit').disabled=!ch||ch.st==='Z'; $('#z-wait').disabled=!par||!ch; $('#z-pexit').disabled=!par; }
+  $('#z-fork').addEventListener('click',()=>{ Z.rows.push({pid:6021,ppid:6020,st:'S',cmd:'./07_zombie'}); Z.msg='자식 6021 이 생겼습니다. 부모와 같은 프로그램입니다.'; Z.cls='note'; zDraw(); });
+  $('#z-exit').addEventListener('click',()=>{ const ch=Z.rows.find(r=>r.pid===6021); const par=Z.rows.find(r=>r.pid===6020);
+    if(!par){ Z.rows=Z.rows.filter(r=>r.pid!==6021); Z.msg='새 부모(PID 1)가 바로 wait 해 주어 좀비로 남지 않고 사라졌습니다.'; Z.cls='note ok'; }
+    else if($('#z-chld').checked){ Z.rows=Z.rows.filter(r=>r.pid!==6021); Z.msg='SIGCHLD 핸들러의 <code>waitpid(-1, NULL, WNOHANG)</code> 가 즉시 거둬 좀비가 남지 않습니다.'; Z.cls='note ok'; }
+    else { ch.st='Z'; ch.cmd='[07_zombie] <defunct>'; Z.msg='자식은 끝났지만 부모가 wait 하지 않아 <b>좀비(Z)</b>입니다. 메모리는 회수됐고 종료 코드 7 만 남았습니다. kill -9 로도 없앨 수 없습니다.'; Z.cls='note warn'; }
+    zDraw(); });
+  $('#z-wait').addEventListener('click',()=>{ const ch=Z.rows.find(r=>r.pid===6021);
+    if(ch.st==='Z'){ Z.rows=Z.rows.filter(r=>r.pid!==6021); Z.msg='waitpid 가 종료 코드 7 을 받아 가고 좀비 칸이 사라졌습니다.'; Z.cls='note ok'; }
+    else { Z.msg='자식이 아직 실행 중이라 부모는 waitpid 에서 <b>막혀 기다립니다</b>(STAT S). 자식이 끝나는 즉시 거둡니다.'; Z.cls='note'; }
+    zDraw(); });
+  $('#z-pexit').addEventListener('click',()=>{ const ch=Z.rows.find(r=>r.pid===6021); Z.rows=Z.rows.filter(r=>r.pid!==6020);
+    if(ch&&ch.st==='Z'){ Z.rows=Z.rows.filter(r=>r.pid!==6021); Z.msg='부모가 끝나자 좀비는 PID 1 에게 입양되었고, PID 1 이 즉시 거둬 사라졌습니다.'; Z.cls='note ok'; }
+    else if(ch){ ch.ppid=1; Z.msg='부모가 먼저 끝나 자식은 <b>고아</b>가 되었고 PID 1(또는 systemd --user 같은 subreaper)이 입양했습니다. PPID 를 보세요.'; Z.cls='note'; }
+    else { Z.msg='부모가 끝났습니다. bash 가 부모를 거둡니다.'; Z.cls='note'; }
+    zDraw(); });
+  $('#z-reset').addEventListener('click',zReset); zReset();
+  let S7;
+  function sReset(){ S7={cnt:0,alive:true,rc:'–',lines:['<span class="c">$ ./09_sigaction</span>','PID=7100, Ctrl+C를 3번 누르면 종료합니다'],path:null}; sDraw(); }
+  function sDraw(){ const S=$('#s-svg'); S.innerHTML=''; const p=S7.path;
+    box(S,10,10,110,44,'키보드','Ctrl+C',p==='int'?'a':'d'); box(S,145,10,110,44,'tty 드라이버','',p==='int'?'a':'d'); box(S,280,10,110,44,'kill 명령','',p&&p!=='int'?'a':'d');
+    box(S,110,90,180,44,'커널: pending',p?(p==='int'?'SIGINT ●':p==='term'?'SIGTERM ●':'SIGKILL ●'):'(없음)',p?'r':'d');
+    const h=$('#s-handler').checked; box(S,10,160,180,44,'on_sigint()',p==='int'&&h&&S7.alive!==false?'실행됨':'',p==='int'&&h?'g':'d'); box(S,210,160,180,44,'기본 동작: 종료','',S7.alive?'d':'r');
+    if(p==='int'){ arrow(S,120,32,143,32,'#C98A12'); arrow(S,200,56,200,88,'#C98A12'); arrow(S,200,136,h?100:300,158,h?'#178A67':'#D6452E'); }
+    else if(p){ arrow(S,335,56,240,88,'#C98A12'); arrow(S,200,136,300,158,'#D6452E'); }
+    $('#s-cnt').textContent=S7.cnt; $('#s-state').textContent=S7.alive?'실행 중 (pause)':'종료'; $('#s-rc').textContent=S7.rc; $('#s-out').innerHTML=S7.lines.join('\n');
+    ['#s-ctrlc','#s-term','#s-kill'].forEach(s=>$(s).disabled=!S7.alive); $('#s-handler').disabled=S7.lines.length>2; }
+  function sDie(sig,name){ S7.alive=false; S7.rc=128+sig; S7.lines.push(`<span class="r">(${name} 으로 종료)</span>`,`<span class="c">$ echo $?</span>`,`${128+sig}`); }
+  $('#s-ctrlc').addEventListener('click',()=>{ S7.path='int'; S7.lines.push('^C');
+    if($('#s-handler').checked){ S7.cnt++; S7.lines.push('<span class="g">[핸들러] SIGINT 받음</span>'); if(S7.cnt>=3){ S7.lines.push('SIGINT 3회 → 종료'); S7.alive=false; S7.rc=0; S7.lines.push('<span class="c">$ echo $?</span>','0'); } }
+    else sDie(2,'SIGINT'); sDraw(); });
+  $('#s-term').addEventListener('click',()=>{ S7.path='term'; S7.lines.push('<span class="c">(다른 터미널) $ kill 7100</span>'); sDie(15,'SIGTERM'); sDraw(); });
+  $('#s-kill').addEventListener('click',()=>{ S7.path='kill'; S7.lines.push('<span class="c">(다른 터미널) $ kill -9 7100</span>'); sDie(9,'SIGKILL'); S7.lines.push('<span class="y">SIGKILL 은 핸들러를 등록할 수 없습니다 — sigaction(SIGKILL, …) 은 EINVAL</span>'); sDraw(); });
+  $('#s-reset').addEventListener('click',sReset); $('#s-handler').addEventListener('change',sReset); sReset();
+
+  /* ───────── 8 myshell ───────── */
+  const FS={'/home/user':['linux-course','snap'],'/home/user/linux-course':['day1'],'/tmp':['snap-private-tmp'],'/etc':['hostname','os-release','passwd'],'/':['bin','etc','home','proc','tmp','usr']};
+  let H; let hPid=8001;
+  function hReset(){ H={cwd:'/home/user',last:0,kids:0,lines:[],tr:[],running:null}; $('#h-strace').innerHTML=''; hDraw(); hNote('위 버튼이나 입력창으로 명령을 실행해 보세요. <code>sleep 100</code> 을 실행한 뒤 Ctrl+C 도 눌러 보세요.'); }
+  function hNote(h,c){ $('#h-note').className='note'+(c?' '+c:''); $('#h-note').innerHTML=h; }
+  function hDraw(){ $('#h-term').innerHTML=H.lines.join('\n'); $('#h-term').scrollTop=1e6; $('#h-strace').innerHTML=H.tr.join('\n'); $('#h-strace').scrollTop=1e6;
+    $('#h-prompt').textContent=H.running?'(실행 중…)':`myshell[${H.last}]$`; $('#h-cwd').textContent=H.cwd; $('#h-kids').textContent=H.kids; $('#h-last').textContent=H.last; $('#h-in').disabled=!!H.running; $('#h-ctrlc').disabled=!H.running; }
+  const abs=p=>{ if(!p) return '/home/user'; if(p==='~') return '/home/user'; let parts=(p.startsWith('/')?p:H.cwd+'/'+p).split('/'); const st=[]; parts.forEach(x=>{ if(!x||x==='.') return; if(x==='..') st.pop(); else st.push(x); }); return '/'+st.join('/'); };
+  function child(argv,run){ const pid=hPid++; H.kids++; H.tr.push(`clone(...) = ${pid}`); const r=run(); if(r.notfound){ H.tr.push(`[pid ${pid}] execve("/usr/bin/${argv[0]}", …) = -1 ENOENT`); } else H.tr.push(`[pid ${pid}] execve("/usr/bin/${argv[0]}", [${argv.map(a=>'"'+a+'"').join(', ')}], …) = 0`);
+    if(r.wait) { H.running={pid}; H.tr.push(`wait4(${pid}, …  <span class="c">← 기다리는 중</span>`); return; }
+    H.tr.push(`wait4(${pid}, [{WIFEXITED(s) && WEXITSTATUS(s) == ${r.code}}], 0) = ${pid}`); H.last=r.code; }
+  function hExec(line){ const argv=line.trim().split(/\s+/).filter(Boolean); H.lines.push(`<span class="c">myshell[${H.last}]$</span> ${esc(line)}`); if(!argv.length){ hDraw(); return; }
+    const c=argv[0];
+    if(c==='exit'){ H.lines.push('<span class="y">(myshell 종료 — 처음으로 를 누르면 다시 시작)</span>'); H.tr.push('exit_group(0) = ?'); hDraw(); $('#h-in').disabled=true; hNote('exit 는 내장 명령이라 fork 없이 셸 자신이 끝납니다.','ok'); return; }
+    if(c==='cd'){ const d=abs(argv[1]); if(FS[d]){ H.cwd=d; H.last=0; H.tr.push(`chdir("${d}") = 0   <span class="c">← 셸 자신이 호출 (fork 없음)</span>`); hNote('cd 는 <b>내장 명령</b>입니다. 자식이 chdir 하면 자식만 이동하고 끝나 버리므로, 셸 프로세스가 직접 chdir 합니다. clone 이 없는 것을 확인하세요.','ok'); }
+      else { H.last=1; H.lines.push(`<span class="r">cd: No such file or directory</span>`); H.tr.push(`chdir("${d}") = -1 ENOENT`); hNote('chdir 실패 → perror 출력, 종료 코드 1.'); } hDraw(); return; }
+    child(argv,()=>{
+      if(c==='echo'){ H.lines.push(esc(argv.slice(1).join(' '))); return {code:0}; }
+      if(c==='pwd'){ H.lines.push(H.cwd); return {code:0}; }
+      if(c==='true') return {code:0}; if(c==='false') return {code:1};
+      if(c==='ls'){ const d=abs(argv.find((a,i)=>i&&!a.startsWith('-'))||H.cwd); if(FS[d]){ H.lines.push(FS[d].join('  ')); return {code:0}; } H.lines.push(`<span class="r">ls: cannot access '${esc(argv[argv.length-1])}': No such file or directory</span>`); return {code:2}; }
+      if(c==='sleep'){ return {wait:true}; }
+      H.lines.push(`<span class="r">${esc(c)}: No such file or directory</span>`); return {notfound:true,code:127}; });
+    const k=H.last; if(!H.running){ if(c==='false') hNote('false 는 아무것도 출력하지 않고 종료 코드 1 을 돌려줍니다. 프롬프트 숫자가 1 이 되었습니다.'); else if(k===127) hNote('execvp 가 실패해 자식이 <code>_exit(127)</code> 로 끝났습니다. bash 의 command not found 와 같은 관례입니다.','warn'); else if(k===2) hNote('ls 가 실패하며 종료 코드 2 를 돌려줬습니다. 프롬프트에 그대로 표시됩니다.'); else hNote('clone → execve → wait4 순서를 오른쪽에서 확인하세요. 명령마다 자식이 하나씩 생깁니다.','ok'); }
+    else hNote('자식이 sleep 중이고 셸은 wait4 에서 기다립니다. Ctrl+C 를 누르세요 — 셸은 SIGINT 를 무시(SIG_IGN), 자식은 기본 동작(SIG_DFL)으로 죽습니다.');
+    hDraw(); }
+  $('#h-ctrlc').addEventListener('click',()=>{ if(!H.running) return; const pid=H.running.pid; H.lines.push('^C'); H.tr.push(`--- SIGINT ---  <span class="c">← 셸은 무시, 자식 ${pid} 는 종료</span>`,`wait4(${pid}, [{WIFSIGNALED(s) && WTERMSIG(s) == SIGINT}], 0) = ${pid}`); H.last=130; H.running=null; hNote('자식이 SIGINT(2)로 죽어 종료 코드는 128+2 = <b>130</b> 입니다. 셸 자신은 살아 있습니다.','ok'); hDraw(); });
+  const QK=['echo hi','pwd','ls /nope','false','cd /tmp','pwd','sleep 100','nosuchcmd','cd /nowhere','exit'];
+  $('#h-quick').innerHTML=QK.map(q=>`<button data-q="${q}">${q}</button>`).join('')+'<button data-q="__reset">처음으로</button>';
+  $$('#h-quick button').forEach(b=>b.addEventListener('click',()=>{ if(b.dataset.q==='__reset'){ hReset(); return; } if(H.running||$('#h-in').disabled&&!H.running&&H.lines.some(l=>l.includes('myshell 종료'))) return; hExec(b.dataset.q); }));
+  $('#h-in').addEventListener('keydown',e=>{ if(e.key==='Enter'){ const v=e.target.value; e.target.value=''; hExec(v); } });
+  hReset();
+})();
+</script>
+</body>
+</html>
