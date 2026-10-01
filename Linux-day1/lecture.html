@@ -152,33 +152,77 @@ input.blank.ng{border-color:var(--red);color:var(--red)}
 </tr>
 </tbody>
 </table></div>
-<h3 class="check-h">1-2. 내 환경 확인하기</h3>
-<p>터미널을 열고(<code>Ctrl+Alt+T</code>) 아래를 따라 한다.</p>
+<h3>1-2. VM 켜고 PuTTY로 접속하기</h3>
+<p>실습 환경은 <strong>운영체제 활용 과목에서 설치한 VirtualBox VM</strong> 그대로다.</p>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th>값</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>게스트 OS</td>
+<td>Ubuntu Server 22.04.5 LTS (GUI 없음)</td>
+</tr>
+<tr>
+<td>VM 사양</td>
+<td>vCPU 2 · 메모리 4GB · 디스크 30GB · NAT</td>
+</tr>
+<tr>
+<td>접속</td>
+<td>PuTTY → <code>127.0.0.1</code> 포트 <code>2222</code> (공개키, 비밀번호 입력 없음)</td>
+</tr>
+<tr>
+<td>파일 전송</td>
+<td>FileZilla → SFTP, 같은 <code>.ppk</code> 키</td>
+</tr>
+<tr>
+<td>계정</td>
+<td><code>ubuntu@ubuntu-server</code></td>
+</tr>
+</tbody>
+</table></div>
+<ol>
+<li>VirtualBox Manager에서 <code>Ubuntu-22.04-Server</code> 선택 → <strong>Start</strong> (로그인 화면까지 기다린다. 이 창에서 작업할 필요는 없다)</li>
+<li>PuTTY 실행 → 저장해 둔 세션 선택 → <strong>Load</strong> → <strong>Open</strong></li>
+<li>아래 프롬프트가 보이면 성공이다.</li>
+</ol>
+<pre data-lang="text"><button class="copy" type="button">복사</button><code class="language-text">ubuntu@ubuntu-server:~$
+</code></pre>
+<blockquote class="note">
+<p>7교시에는 터미널이 두 개 필요하다. PuTTY 창 제목 표시줄을 마우스 오른쪽 버튼으로 눌러 <strong>Duplicate Session</strong>을 고르면 같은 VM에 창이 하나 더 열린다.</p>
+</blockquote>
+<h3 class="check-h">1-3. 내 환경 확인하기</h3>
 <pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">uname -r              # 커널 버전
 lsb_release -a        # Ubuntu 버전
-nproc                 # CPU 코어 수
+nproc                 # vCPU 수
 </code></pre>
-<p><strong>기대 출력 예시 (Ubuntu 24.04)</strong></p>
-<pre data-lang="text"><button class="copy" type="button">복사</button><code class="language-text">6.8.0-45-generic
-Description:    Ubuntu 24.04.1 LTS
-4
+<p><strong>기대 출력 예시</strong></p>
+<pre data-lang="text"><button class="copy" type="button">복사</button><code class="language-text">5.15.0-125-generic
+Description:    Ubuntu 22.04.5 LTS
+2
 </code></pre>
-<h3>1-3. 개발 도구 설치</h3>
+<p>커널이 <strong>5.15</strong> 이므로 스케줄러는 운영체제 과목에서 배운 <strong>CFS</strong> 다. (<code>6.x</code>가 나오면 HWE 커널로 올라간 것이니 강사에게 알린다.)</p>
+<h3>1-4. 개발 도구 설치</h3>
 <pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">sudo apt update
 sudo apt install -y build-essential gdb strace valgrind stress-ng \
-     linux-tools-$(uname -r) linux-headers-$(uname -r) mokutil
+     linux-tools-$(uname -r) linux-headers-$(uname -r)
 </code></pre>
-<h3>1-4. 실습 폴더와 환경 점검 스크립트</h3>
+<h3>1-5. 예제 소스 올리기와 환경 점검</h3>
 <pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">mkdir -p ~/linux-course/day1
-cd ~/linux-course/day1
-# 강사가 안내한 주소에서 src 폴더를 내려받은 뒤
-cd src
+</code></pre>
+<p>FileZilla에서 저장해 둔 사이트로 접속한 뒤, 왼쪽(Windows)의 <code>src</code> 폴더를 오른쪽(Ubuntu)의 <code>/home/ubuntu/linux-course/day1/</code>로 끌어다 놓는다.</p>
+<pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">cd ~/linux-course/day1/src
+ls
 bash check_env.sh
 </code></pre>
-<p><code>[WARN]</code>이 나온 항목은 손을 들어 보조강사에게 알린다. 특히 <strong>코어 수 1개</strong>(VM의 vCPU 부족)와 <strong>sudo 권한 없음</strong>은 Day 2 이전에 반드시 해결해야 한다.</p>
+<p><code>[WARN]</code>이 나온 항목은 손을 들어 보조강사에게 알린다. 특히 <strong>vCPU 1개</strong>와 <strong>sudo 권한 없음</strong>은 Day 2 이전에 반드시 해결해야 한다. vCPU는 VM을 끄고(<code>sudo poweroff</code>) <strong>Settings → System → Processor</strong>에서 2로 바꾼다.</p>
 <p><strong><code>src/check_env.sh</code></strong></p>
 <pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">#!/bin/bash
 # check_env.sh — Linux &amp; Shell Day 1 실습 환경 점검
+# 대상: 운영체제 활용 과목에서 설치한 VirtualBox VM (Ubuntu Server 22.04.5)
 # 사용법: bash check_env.sh
 
 ok()   { printf "  [ OK ] %s\n" "$*"; }
@@ -186,40 +230,51 @@ warn() { printf "  [WARN] %s\n" "$*"; }
 
 echo "== 1. 운영체제와 커널 =="
 . /etc/os-release
-ok "배포판 : $PRETTY_NAME"
-ok "커널   : $(uname -r) ($(uname -m))"
+if <input class="blank" data-i="1" autocomplete="off" spellcheck="false" aria-label="빈칸 1">; then ok "배포판 : $PRETTY_NAME"
+else warn "배포판 : $PRETTY_NAME (수업 기준은 Ubuntu 22.04)"; fi
+KREL=$(uname -r)
+if <input class="blank" data-i="2" autocomplete="off" spellcheck="false" aria-label="빈칸 2">; then ok "커널   : $KREL ($(uname -m)) — 스케줄러 CFS"
+else warn "커널   : $KREL — HWE 커널이면 스케줄러가 EEVDF (Day 2 해석이 달라짐, 강사에게 알리기)"; fi
 
-echo "== 2. CPU와 가상화 =="
+echo "== 2. VM 자원 =="
 CORES=$(nproc)
-if [ "$CORES" -ge 2 ]; then ok "코어 수 : $CORES"; else warn "코어 수 : $CORES (2개 이상 권장 — VM이면 vCPU를 늘리세요)"; fi
+if [ "$CORES" -ge 2 ]; then ok "vCPU   : $CORES"
+else warn "vCPU   : $CORES — VM 종료 후 Settings → System → Processor 에서 2개로"; fi
+MEM_MB=$(( $(grep MemTotal /proc/meminfo | awk '{print $2}') / 1024 ))
+if [ "$MEM_MB" -ge 3500 ]; then ok "메모리 : ${MEM_MB} MB"
+else warn "메모리 : ${MEM_MB} MB — 4096 MB 권장 (Settings → System → Base Memory)"; fi
+FREE_GB=$(df -BG --output=avail / | tail -1 | tr -dc '0-9')
+if [ "$FREE_GB" -ge 5 ]; then ok "디스크 여유 : ${FREE_GB} GB"
+else warn "디스크 여유 : ${FREE_GB} GB — 5GB 이상 필요 (Day 4 500MB 파일 실습)"; fi
 VIRT=$(systemd-detect-virt 2&gt;/dev/null || echo none)
 ok "가상화 : $VIRT"
-if grep -qi microsoft /proc/version; then warn "WSL 환경 — Day 4 커널 모듈 실습은 대체 과제로 진행"; fi
-
-echo "== 3. Secure Boot =="
-if command -v mokutil &gt;/dev/null 2&gt;&amp;1; then
-    ok "$(mokutil --sb-state 2&gt;/dev/null || echo '확인 불가')"
+if [ -d /sys/firmware/efi ]; then
+    SB=$(mokutil --sb-state 2&gt;/dev/null | head -1)
+    if <input class="blank" data-i="3" autocomplete="off" spellcheck="false" aria-label="빈칸 3">; then warn "Secure Boot 켜짐 — Day 4 커널 모듈 로드가 거부됨"; else ok "EFI 부팅, Secure Boot 꺼짐"; fi
 else
-    warn "mokutil 없음 (sudo apt install mokutil)"
+    ok "BIOS 부팅 (VirtualBox 기본) — Secure Boot 해당 없음"
 fi
 
-echo "== 4. sudo 권한 =="
+echo "== 3. sudo 권한 =="
 if sudo -n true 2&gt;/dev/null; then ok "sudo 사용 가능(비밀번호 캐시됨)"
 elif id -nG | grep -qw sudo; then ok "sudo 그룹 소속"
 else warn "sudo 권한 없음 — 강사에게 알려주세요"; fi
 
-echo "== 5. 필수 도구 =="
+echo "== 4. 필수 도구 =="
 for t in gcc make gdb strace valgrind perf stress-ng; do
     if command -v "$t" &gt;/dev/null 2&gt;&amp;1; then ok "$t"; else warn "$t 없음"; fi
 done
+if [ -d "/lib/modules/$KREL/build" ]; then ok "linux-headers-$KREL"
+else warn "linux-headers-$KREL 없음 (Day 4 커널 모듈 빌드에 필요)"; fi
 echo
-echo "설치 명령: sudo apt install build-essential gdb strace valgrind stress-ng linux-tools-\$(uname -r) linux-headers-\$(uname -r)"
+echo "설치 명령: sudo apt install -y build-essential gdb strace valgrind stress-ng linux-tools-\$(uname -r) linux-headers-\$(uname -r)"
 </code></pre>
 <h3 class="check-h">✅ 1교시 확인</h3>
 <ol class="check">
-<li>현재 실행 중인 커널 버전을 출력하는 명령은 <code>uname <input class="blank" data-i="1" autocomplete="off" spellcheck="false" aria-label="빈칸 1"></code> 이다.</li>
-<li>CPU 코어 수를 숫자 하나로 출력하는 명령은 <input class="blank" data-i="2" autocomplete="off" spellcheck="false" aria-label="빈칸 2"> 이다.</li>
-<li>Ubuntu 패키지를 설치하는 명령은 <code>sudo <input class="blank" data-i="3" autocomplete="off" spellcheck="false" aria-label="빈칸 3"> install 패키지명</code> 이다.</li>
+<li>현재 실행 중인 커널 버전을 출력하는 명령은 <code>uname <input class="blank" data-i="4" autocomplete="off" spellcheck="false" aria-label="빈칸 4"></code> 이다.</li>
+<li>vCPU 수를 숫자 하나로 출력하는 명령은 <input class="blank" data-i="5" autocomplete="off" spellcheck="false" aria-label="빈칸 5"> 이다.</li>
+<li>Ubuntu 패키지를 설치하는 명령은 <code>sudo <input class="blank" data-i="6" autocomplete="off" spellcheck="false" aria-label="빈칸 6"> install 패키지명</code> 이다.</li>
+<li>Windows의 PuTTY가 VM에 접속할 때 쓰는 주소는 <code>127.0.0.1</code>, 포트는 <input class="blank" data-i="7" autocomplete="off" spellcheck="false" aria-label="빈칸 7"> 이다.</li>
 </ol>
 <hr/>
 <h2 id="s1">2교시 · Shell 필수 (압축)</h2>
@@ -252,12 +307,12 @@ echo "설치 명령: sudo apt install build-essential gdb strace valgrind stress
 <tr>
 <td><code>cat</code> / <code>less</code></td>
 <td>파일 내용 보기</td>
-<td><code>cat /proc/cpuinfo</code>, <code>less /var/log/syslog</code></td>
+<td><code>cat /proc/cpuinfo</code>, <code>less /var/log/syslog</code> (<code>q</code>로 나가기)</td>
 </tr>
 </tbody>
 </table></div>
 <ul>
-<li>절대 경로는 <code>/</code>로 시작한다: <code>/home/user/linux-course</code></li>
+<li>절대 경로는 <code>/</code>로 시작한다: <code>/home/ubuntu/linux-course</code></li>
 <li>상대 경로는 현재 위치 기준이다: <code>../day2</code></li>
 <li><code>~</code> 는 내 홈 디렉터리, <code>.</code> 은 현재, <code>..</code> 은 상위 디렉터리</li>
 </ul>
@@ -270,10 +325,10 @@ rm -r test               # 디렉터리째 삭제 — 되돌릴 수 없음!
 </code></pre>
 <h3>2-3. 권한</h3>
 <pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">ls -l run.sh
-# -rw-r--r-- 1 user user 512 Oct  2 09:10 run.sh
+# -rw-r--r-- 1 ubuntu ubuntu 512 Oct  2 09:10 run.sh
 chmod +x run.sh
 ls -l run.sh
-# -rwxr-xr-x 1 user user 512 Oct  2 09:10 run.sh
+# -rwxr-xr-x 1 ubuntu ubuntu 512 Oct  2 09:10 run.sh
 ./run.sh                 # 이제 실행 가능
 </code></pre>
 <p><code>rwx</code> 세 묶음은 차례대로 <strong>소유자 · 그룹 · 그 외</strong>의 권한이다. 실행 권한이 없으면 <code>./run.sh</code>는 <code>Permission denied</code>가 난다.</p>
@@ -317,7 +372,40 @@ ls -l run.sh
 <pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">grep processor /proc/cpuinfo | wc -l    # 코어 수 세기
 ps aux | grep -v grep | grep bash       # bash 프로세스 찾기
 </code></pre>
-<h3>2-5. 백그라운드 실행</h3>
+<h3>2-5. nano로 파일 고치기</h3>
+<p>GUI가 없으므로 소스 수정은 nano로 한다.</p>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>키</th>
+<th>동작</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nano 파일명</code></td>
+<td>열기 (없으면 새로 만듦)</td>
+</tr>
+<tr>
+<td><code>Ctrl+O</code> → <code>Enter</code></td>
+<td>저장</td>
+</tr>
+<tr>
+<td><code>Ctrl+X</code></td>
+<td>종료</td>
+</tr>
+<tr>
+<td><code>Ctrl+W</code></td>
+<td>찾기</td>
+</tr>
+<tr>
+<td><code>Alt+N</code></td>
+<td>줄 번호 표시 켜기·끄기</td>
+</tr>
+</tbody>
+</table></div>
+<p>PuTTY에서 복사는 <strong>드래그만 하면</strong> 되고, 붙여넣기는 <strong>마우스 오른쪽 클릭</strong>이다. <code>Ctrl+C</code>는 복사가 아니라 실행 중인 프로그램을 멈추는 키다.</p>
+<h3>2-6. 백그라운드 실행</h3>
 <pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">sleep 30 &amp;      # 끝에 &amp; → 백그라운드에서 실행, 프롬프트 즉시 복귀
 jobs            # 내 백그라운드 작업 목록
 echo $!         # 방금 백그라운드로 띄운 프로세스의 PID
@@ -325,10 +413,11 @@ kill %1         # 1번 작업 종료
 </code></pre>
 <h3 class="check-h">✅ 2교시 확인</h3>
 <ol class="check">
-<li>실행 권한을 추가하는 명령은 <code>chmod <input class="blank" data-i="4" autocomplete="off" spellcheck="false" aria-label="빈칸 4"> run.sh</code> 이다.</li>
-<li>표준 출력과 에러 출력을 모두 <code>log.txt</code>로 보내려면 <code>make &gt; log.txt <input class="blank" data-i="5" autocomplete="off" spellcheck="false" aria-label="빈칸 5"></code> 라고 쓴다.</li>
-<li>앞 명령의 출력을 뒤 명령의 입력으로 연결하는 기호는 <input class="blank" data-i="6" autocomplete="off" spellcheck="false" aria-label="빈칸 6"> 이다.</li>
-<li>방금 백그라운드로 실행한 프로세스의 PID가 저장된 변수는 <input class="blank" data-i="7" autocomplete="off" spellcheck="false" aria-label="빈칸 7"> 이다.</li>
+<li>실행 권한을 추가하는 명령은 <code>chmod <input class="blank" data-i="8" autocomplete="off" spellcheck="false" aria-label="빈칸 8"> run.sh</code> 이다.</li>
+<li>표준 출력과 에러 출력을 모두 <code>log.txt</code>로 보내려면 <code>make &gt; log.txt <input class="blank" data-i="9" autocomplete="off" spellcheck="false" aria-label="빈칸 9"></code> 라고 쓴다.</li>
+<li>앞 명령의 출력을 뒤 명령의 입력으로 연결하는 기호는 <input class="blank" data-i="10" autocomplete="off" spellcheck="false" aria-label="빈칸 10"> 이다.</li>
+<li>방금 백그라운드로 실행한 프로세스의 PID가 저장된 변수는 <input class="blank" data-i="11" autocomplete="off" spellcheck="false" aria-label="빈칸 11"> 이다.</li>
+<li>nano에서 저장하는 키는 <code>Ctrl+<input class="blank" data-i="12" autocomplete="off" spellcheck="false" aria-label="빈칸 12"></code> 이다.</li>
 </ol>
 <hr/>
 <h2 id="s2">3교시 · Makefile과 측정 스크립트</h2>
@@ -454,10 +543,10 @@ cat "$OUT"
 </code></pre>
 <h3 class="check-h">✅ 3교시 확인</h3>
 <ol class="check">
-<li>Makefile에서 명령 줄은 반드시 <input class="blank" data-i="8" autocomplete="off" spellcheck="false" aria-label="빈칸 8"> 문자로 시작해야 한다.</li>
-<li>패턴 규칙에서 "만들 대상"을 뜻하는 자동 변수는 <input class="blank" data-i="9" autocomplete="off" spellcheck="false" aria-label="빈칸 9"> 이다.</li>
-<li>셸 스크립트에서 인자 개수를 담은 변수는 <input class="blank" data-i="10" autocomplete="off" spellcheck="false" aria-label="빈칸 10"> 이다.</li>
-<li>셸에서 명령의 출력 결과를 그 자리에 넣는 문법은 <input class="blank" data-i="11" autocomplete="off" spellcheck="false" aria-label="빈칸 11"> 이다.</li>
+<li>Makefile에서 명령 줄은 반드시 <input class="blank" data-i="13" autocomplete="off" spellcheck="false" aria-label="빈칸 13"> 문자로 시작해야 한다.</li>
+<li>패턴 규칙에서 "만들 대상"을 뜻하는 자동 변수는 <input class="blank" data-i="14" autocomplete="off" spellcheck="false" aria-label="빈칸 14"> 이다.</li>
+<li>셸 스크립트에서 인자 개수를 담은 변수는 <input class="blank" data-i="15" autocomplete="off" spellcheck="false" aria-label="빈칸 15"> 이다.</li>
+<li>셸에서 명령의 출력 결과를 그 자리에 넣는 문법은 <input class="blank" data-i="16" autocomplete="off" spellcheck="false" aria-label="빈칸 16"> 이다.</li>
 </ol>
 <hr/>
 <h2 id="s3">4교시 · 시스템 콜과 커널 경계</h2>
@@ -542,10 +631,10 @@ strace -c ./02_syscall_direct &gt; /dev/null    # 호출된 시스템 콜 통계
 <p><code>getpid()</code>와 <code>syscall(SYS_getpid)</code>는 같은 값을 돌려준다. glibc 함수는 시스템 콜 번호를 레지스터에 넣고 <code>syscall</code> 명령을 실행하는 <strong>얇은 포장(래퍼)</strong> 이다. x86_64에서 <code>write</code>는 1번, <code>getpid</code>는 39번이다.</p>
 <h3 class="check-h">✅ 4교시 확인</h3>
 <ol class="check">
-<li>시스템 콜이 호출되면 CPU는 사용자 모드에서 <input class="blank" data-i="12" autocomplete="off" spellcheck="false" aria-label="빈칸 12"> 모드로 전환된다.</li>
-<li>시스템 콜 설명서를 보려면 <code>man <input class="blank" data-i="13" autocomplete="off" spellcheck="false" aria-label="빈칸 13"> write</code> 처럼 섹션 번호를 붙인다.</li>
-<li>프로그램이 호출한 시스템 콜을 추적하는 도구는 <input class="blank" data-i="14" autocomplete="off" spellcheck="false" aria-label="빈칸 14"> 이다.</li>
-<li>출력이 파이프로 갈 때 printf는 <input class="blank" data-i="15" autocomplete="off" spellcheck="false" aria-label="빈칸 15"> 단위로 버퍼링한다.</li>
+<li>시스템 콜이 호출되면 CPU는 사용자 모드에서 <input class="blank" data-i="17" autocomplete="off" spellcheck="false" aria-label="빈칸 17"> 모드로 전환된다.</li>
+<li>시스템 콜 설명서를 보려면 <code>man <input class="blank" data-i="18" autocomplete="off" spellcheck="false" aria-label="빈칸 18"> write</code> 처럼 섹션 번호를 붙인다.</li>
+<li>프로그램이 호출한 시스템 콜을 추적하는 도구는 <input class="blank" data-i="19" autocomplete="off" spellcheck="false" aria-label="빈칸 19"> 이다.</li>
+<li>출력이 파이프로 갈 때 printf는 <input class="blank" data-i="20" autocomplete="off" spellcheck="false" aria-label="빈칸 20"> 단위로 버퍼링한다.</li>
 </ol>
 <hr/>
 <h2 id="s4">5교시 · 에러 처리와 /proc</h2>
@@ -710,10 +799,10 @@ VmRSS    52712 kB
 <p><code>VmRSS</code>는 실제로 물리 메모리를 차지하는 크기다. <code>malloc</code>만 하고 <code>memset</code>을 지우면 RSS가 거의 늘지 않는다 — Day 3에서 그 이유(demand paging)를 측정한다.</p>
 <h3 class="check-h">✅ 5교시 확인</h3>
 <ol class="check">
-<li>시스템 콜이 실패하면 대부분 <input class="blank" data-i="16" autocomplete="off" spellcheck="false" aria-label="빈칸 16"> 을 반환한다.</li>
-<li>실패 원인 번호가 저장되는 전역 변수는 <input class="blank" data-i="17" autocomplete="off" spellcheck="false" aria-label="빈칸 17"> 이다.</li>
-<li>없는 파일을 열려고 할 때 errno 이름은 <input class="blank" data-i="18" autocomplete="off" spellcheck="false" aria-label="빈칸 18"> 이다.</li>
-<li>현재 프로세스 자신의 정보를 가리키는 /proc 경로는 <code>/proc/<input class="blank" data-i="19" autocomplete="off" spellcheck="false" aria-label="빈칸 19"></code> 이다.</li>
+<li>시스템 콜이 실패하면 대부분 <input class="blank" data-i="21" autocomplete="off" spellcheck="false" aria-label="빈칸 21"> 을 반환한다.</li>
+<li>실패 원인 번호가 저장되는 전역 변수는 <input class="blank" data-i="22" autocomplete="off" spellcheck="false" aria-label="빈칸 22"> 이다.</li>
+<li>없는 파일을 열려고 할 때 errno 이름은 <input class="blank" data-i="23" autocomplete="off" spellcheck="false" aria-label="빈칸 23"> 이다.</li>
+<li>현재 프로세스 자신의 정보를 가리키는 /proc 경로는 <code>/proc/<input class="blank" data-i="24" autocomplete="off" spellcheck="false" aria-label="빈칸 24"></code> 이다.</li>
 </ol>
 <hr/>
 <h2 id="s5">6교시 · 프로세스 생성</h2>
@@ -864,14 +953,14 @@ int main(int argc, char *argv[])
 <pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">./06_fork_exec_wait                 # 종료 코드=0
 ./06_fork_exec_wait ls /nope        # 종료 코드=2
 ./06_fork_exec_wait nosuchcmd       # execvp 실패 → 종료 코드=127
-./06_fork_exec_wait sleep 30        # 다른 터미널에서 kill → 시그널=15
+./06_fork_exec_wait sleep 30        # 두 번째 PuTTY 창에서 kill &lt;자식PID&gt; → 시그널=15
 </code></pre>
 <h3 class="check-h">✅ 6교시 확인</h3>
 <ol class="check">
-<li>fork()가 자식 프로세스에게 돌려주는 값은 <input class="blank" data-i="20" autocomplete="off" spellcheck="false" aria-label="빈칸 20"> 이다.</li>
-<li>exec 계열 함수가 성공하면 호출한 다음 줄은 <input class="blank" data-i="21" autocomplete="off" spellcheck="false" aria-label="빈칸 21">.</li>
-<li>자식이 exit()로 끝났는지 검사하는 매크로는 <input class="blank" data-i="22" autocomplete="off" spellcheck="false" aria-label="빈칸 22"> 이다.</li>
-<li>exec 실패 시 관례적으로 쓰는 종료 코드는 <input class="blank" data-i="23" autocomplete="off" spellcheck="false" aria-label="빈칸 23"> 이다.</li>
+<li>fork()가 자식 프로세스에게 돌려주는 값은 <input class="blank" data-i="25" autocomplete="off" spellcheck="false" aria-label="빈칸 25"> 이다.</li>
+<li>exec 계열 함수가 성공하면 호출한 다음 줄은 <input class="blank" data-i="26" autocomplete="off" spellcheck="false" aria-label="빈칸 26">.</li>
+<li>자식이 exit()로 끝났는지 검사하는 매크로는 <input class="blank" data-i="27" autocomplete="off" spellcheck="false" aria-label="빈칸 27"> 이다.</li>
+<li>exec 실패 시 관례적으로 쓰는 종료 코드는 <input class="blank" data-i="28" autocomplete="off" spellcheck="false" aria-label="빈칸 28"> 이다.</li>
 </ol>
 <hr/>
 <h2 id="s6">7교시 · 좀비 · 고아 · 시그널</h2>
@@ -915,6 +1004,9 @@ int main(void)
 <pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">./07_zombie &amp;
 ps -o pid,ppid,stat,cmd --ppid $!
 </code></pre>
+<blockquote class="note">
+<p>같은 창에서 바로 <code>ps</code>를 쳐도 되고, Duplicate Session으로 연 두 번째 PuTTY 창에서 <code>ps -ef | grep 07_zombie</code>로 봐도 된다.</p>
+</blockquote>
 <pre data-lang="text"><button class="copy" type="button">복사</button><code class="language-text">  PID  PPID STAT CMD
  6021  6020 Z    [07_zombie] &lt;defunct&gt;
 </code></pre>
@@ -950,7 +1042,7 @@ int main(void)
     return 0;
 }
 </code></pre>
-<p>부모가 먼저 끝나면 자식은 <strong>init(PID 1) 또는 subreaper</strong>가 입양한다. Ubuntu 데스크톱에서는 로그인 세션의 <code>systemd --user</code>가 subreaper라서 PPID가 1이 아닌 다른 숫자로 바뀔 수 있다. <code>ps -p &lt;PPID&gt; -o cmd</code>로 누구인지 확인해 보라.</p>
+<p>부모가 먼저 끝나면 자식은 <strong>init(PID 1) 또는 subreaper</strong>가 입양한다. PuTTY(SSH)로 접속한 Ubuntu Server에서는 PPID가 <strong>1</strong>로 바뀐다. <code>ps -p 1 -o cmd</code>로 확인하면 <code>/sbin/init</code>(systemd)이다. (데스크톱 Ubuntu에서는 <code>systemd --user</code>가 subreaper라 다른 숫자가 나올 수 있다.)</p>
 <h3>7-3. 시그널과 sigaction</h3>
 <p>시그널은 커널이 프로세스에 보내는 <strong>비동기 알림</strong>이다.</p>
 <div class="tbl"><table>
@@ -1055,10 +1147,10 @@ int main(void)
 </ul>
 <h3 class="check-h">✅ 7교시 확인</h3>
 <ol class="check">
-<li>ps의 STAT 열에서 좀비 프로세스는 <input class="blank" data-i="24" autocomplete="off" spellcheck="false" aria-label="빈칸 24"> 로 표시된다.</li>
-<li>좀비를 없애려면 부모가 <input class="blank" data-i="25" autocomplete="off" spellcheck="false" aria-label="빈칸 25"> 를 호출해야 한다.</li>
-<li>핸들러로 잡을 수 없는 종료 시그널은 <input class="blank" data-i="26" autocomplete="off" spellcheck="false" aria-label="빈칸 26"> 이다.</li>
-<li>자식이 종료되면 부모에게 전달되는 시그널은 <input class="blank" data-i="27" autocomplete="off" spellcheck="false" aria-label="빈칸 27"> 이다.</li>
+<li>ps의 STAT 열에서 좀비 프로세스는 <input class="blank" data-i="29" autocomplete="off" spellcheck="false" aria-label="빈칸 29"> 로 표시된다.</li>
+<li>좀비를 없애려면 부모가 <input class="blank" data-i="30" autocomplete="off" spellcheck="false" aria-label="빈칸 30"> 를 호출해야 한다.</li>
+<li>핸들러로 잡을 수 없는 종료 시그널은 <input class="blank" data-i="31" autocomplete="off" spellcheck="false" aria-label="빈칸 31"> 이다.</li>
+<li>자식이 종료되면 부모에게 전달되는 시그널은 <input class="blank" data-i="32" autocomplete="off" spellcheck="false" aria-label="빈칸 32"> 이다.</li>
 </ol>
 <hr/>
 <h2 id="s7">8교시 · 종합 실습 — myshell 만들기</h2>
@@ -1175,7 +1267,7 @@ myshell[0]$ pwd
 myshell[0]$ sleep 100        ← Ctrl+C
 myshell[130]$ exit
 </code></pre>
-<p>다른 터미널에서 시스템 콜 흐름을 본다.</p>
+<p>myshell을 <code>exit</code>로 끝낸 뒤, 이번에는 strace 아래에서 실행해 시스템 콜 흐름을 본다.</p>
 <pre data-lang="bash"><button class="copy" type="button">복사</button><code class="language-bash">strace -f -e trace=clone,execve,wait4 ./myshell
 </code></pre>
 <h3>8-4. 도전 과제 (선택)</h3>
@@ -1186,9 +1278,9 @@ myshell[130]$ exit
 </ol>
 <h3 class="check-h">✅ 8교시 확인</h3>
 <ol class="check">
-<li><code>cd</code>는 셸 프로세스 자신이 <input class="blank" data-i="28" autocomplete="off" spellcheck="false" aria-label="빈칸 28"> 을 호출해야 하므로 내장 명령으로 처리한다.</li>
-<li>execvp에 넘기는 인자 배열의 마지막 원소는 <input class="blank" data-i="29" autocomplete="off" spellcheck="false" aria-label="빈칸 29"> 이어야 한다.</li>
-<li>bash 관례상 SIGINT(2번)로 죽은 자식의 종료 코드는 <input class="blank" data-i="30" autocomplete="off" spellcheck="false" aria-label="빈칸 30"> 으로 표시한다.</li>
+<li><code>cd</code>는 셸 프로세스 자신이 <input class="blank" data-i="33" autocomplete="off" spellcheck="false" aria-label="빈칸 33"> 을 호출해야 하므로 내장 명령으로 처리한다.</li>
+<li>execvp에 넘기는 인자 배열의 마지막 원소는 <input class="blank" data-i="34" autocomplete="off" spellcheck="false" aria-label="빈칸 34"> 이어야 한다.</li>
+<li>bash 관례상 SIGINT(2번)로 죽은 자식의 종료 코드는 <input class="blank" data-i="35" autocomplete="off" spellcheck="false" aria-label="빈칸 35"> 으로 표시한다.</li>
 </ol>
 <hr/>
 <h2 id="s8">오늘 정리</h2>
@@ -1231,9 +1323,9 @@ myshell[130]$ exit
 </tbody>
 </table></div>
 <p><strong>다음 시간(Day 2, 10/6):</strong> 스케줄링 — 누가, 얼마나 자주, 얼마나 늦게 CPU를 받는가를 측정한다.</p></main>
-<div class="bar"><button class="primary" id="grade" type="button">채점하기</button><button id="reset" type="button">초기화</button><span class="score" id="score">빈칸 30개</span></div>
+<div class="bar"><button class="primary" id="grade" type="button">채점하기</button><button id="reset" type="button">초기화</button><span class="score" id="score">빈칸 35개</span></div>
 <script>
-const KEY=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob("W1siLXIiXSwgWyJucHJvYyJdLCBbImFwdCJdLCBbIit4IiwgInUreCIsICI3NTUiXSwgWyIyPiYxIl0sIFsifCJdLCBbIiQhIl0sIFsi7YOtIiwgInRhYiIsICJUQUIiXSwgWyIkQCJdLCBbIiQjIl0sIFsiJCggKSIsICIkKCkiLCAiJCguLi4pIl0sIFsi7Luk64SQIiwgImtlcm5lbCJdLCBbIjIiXSwgWyJzdHJhY2UiXSwgWyLruJTroZ0iLCAiYmxvY2siLCAi7ZKAIiwgImZ1bGwiXSwgWyItMSJdLCBbImVycm5vIl0sIFsiRU5PRU5UIl0sIFsic2VsZiJdLCBbIjAiXSwgWyLsi6TtlonrkJjsp4Ag7JWK64qU64ukIiwgIuyLpO2WiSDslYgg65CoIiwgIuyLpO2WieuQmOyngOyViuuKlOuLpCJdLCBbIldJRkVYSVRFRCJdLCBbIjEyNyJdLCBbIloiXSwgWyJ3YWl0IiwgIndhaXRwaWQiLCAid2FpdCgpIiwgIndhaXRwaWQoKSJdLCBbIlNJR0tJTEwiXSwgWyJTSUdDSExEIl0sIFsiY2hkaXIiLCAiY2hkaXIoKSJdLCBbIk5VTEwiXSwgWyIxMzAiXV0="),c=>c.charCodeAt(0))));
+const KEY=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob("W1siIFwiJFZFUlNJT05fSURcIiA9PSBcIjIyLjA0XCIgIl0sIFsiIFwiJEtSRUxcIiA9PSA1LjE1LiogIl0sIFsiIFwiJFNCXCIgPT0gKmVuYWJsZWQqICJdLCBbIi1yIl0sIFsibnByb2MiXSwgWyJhcHQiXSwgWyIyMjIyIl0sIFsiK3giLCAidSt4IiwgIjc1NSJdLCBbIjI+JjEiXSwgWyJ8Il0sIFsiJCEiXSwgWyJPIiwgIm8iXSwgWyLtg60iLCAidGFiIiwgIlRBQiJdLCBbIiRAIl0sIFsiJCMiXSwgWyIkKCApIiwgIiQoKSIsICIkKC4uLikiXSwgWyLsu6TrhJAiLCAia2VybmVsIl0sIFsiMiJdLCBbInN0cmFjZSJdLCBbIuu4lOuhnSIsICJibG9jayIsICLtkoAiLCAiZnVsbCJdLCBbIi0xIl0sIFsiZXJybm8iXSwgWyJFTk9FTlQiXSwgWyJzZWxmIl0sIFsiMCJdLCBbIuyLpO2WieuQmOyngCDslYrripTri6QiLCAi7Iuk7ZaJIOyViCDrkKgiLCAi7Iuk7ZaJ65CY7KeA7JWK64qU64ukIl0sIFsiV0lGRVhJVEVEIl0sIFsiMTI3Il0sIFsiWiJdLCBbIndhaXQiLCAid2FpdHBpZCIsICJ3YWl0KCkiLCAid2FpdHBpZCgpIl0sIFsiU0lHS0lMTCJdLCBbIlNJR0NITEQiXSwgWyJjaGRpciIsICJjaGRpcigpIl0sIFsiTlVMTCJdLCBbIjEzMCJdXQ=="),c=>c.charCodeAt(0))));
 const SKEY="linux-day1-lecture";
 const blanks=[...document.querySelectorAll("input.blank")];
 const norm=s=>s.trim().replace(/\s+/g," ").toLowerCase();

@@ -153,7 +153,7 @@
 <body>
 <div class="app">
   <nav aria-label="교시 선택">
-    <h1>Linux &amp; Shell · Ubuntu</h1>
+    <h1>Linux &amp; Shell · Ubuntu Server VM</h1>
     <p class="day">1일차<br>눈으로 보는 8가지</p>
     <ol id="navlist">
       <li><button data-go="1" aria-current="true">환경 점검</button></li>
@@ -170,14 +170,14 @@
   <main>
 
   <section class="lesson active" id="l1">
-    <header><h2>내 Ubuntu 는 실습할 수 있는 상태인가</h2><p>내 PC 상태를 스위치로 맞춘 뒤 check_env.sh 를 실행해 보세요. [WARN] 하나하나가 몇 일차 실습에 영향을 주는지 아래에 나타납니다.</p></header>
+    <header><h2>운영체제 수업의 VM 은 실습할 수 있는 상태인가</h2><p>VirtualBox VM(Ubuntu Server 22.04.5) 설정을 스위치로 맞춘 뒤, PuTTY 에서 check_env.sh 를 실행해 보세요. [WARN] 하나하나가 몇 일차 실습에 영향을 주는지 오른쪽에 나타납니다.</p></header>
     <div class="stage">
       <div class="controls">
-        <label>vCPU <select id="e-cpu"><option value="1">1개</option><option value="2">2개</option><option value="4" selected>4개</option></select></label>
-        <label class="toggle"><input type="checkbox" id="e-sudo" checked><span class="sw"></span>sudo 그룹</label>
-        <label class="toggle"><input type="checkbox" id="e-sb"><span class="sw"></span>Secure Boot 켜짐</label>
-        <label class="toggle"><input type="checkbox" id="e-wsl"><span class="sw"></span>WSL2 에서 실행</label>
-        <label class="toggle"><input type="checkbox" id="e-pkg" checked><span class="sw"></span>도구 설치 완료</label>
+        <label>vCPU <select id="e-cpu"><option value="1">1개</option><option value="2" selected>2개</option><option value="4">4개</option></select></label>
+        <label>메모리 <select id="e-mem"><option value="2048">2048 MB</option><option value="4096" selected>4096 MB</option></select></label>
+        <label class="toggle"><input type="checkbox" id="e-hwe"><span class="sw"></span>apt 로 HWE 커널(6.x)까지 올림</label>
+        <label class="toggle"><input type="checkbox" id="e-pkg"><span class="sw"></span>도구 설치 완료</label>
+        <label class="toggle"><input type="checkbox" id="e-hdr"><span class="sw"></span>linux-headers 설치</label>
         <button class="btn" id="e-run">bash check_env.sh</button>
       </div>
       <div class="two">
@@ -288,7 +288,7 @@
         <button class="btn" id="f-fork">① fork()</button>
         <button class="btn" id="f-exec">② execvp()</button>
         <button class="btn" id="f-end">③ 자식 끝남</button>
-        <button class="btn" id="f-kill" style="display:none">③ 다른 터미널에서 kill</button>
+        <button class="btn" id="f-kill" style="display:none">③ 두 번째 PuTTY 창에서 kill</button>
         <button class="btn" id="f-wait">④ waitpid()</button>
         <button class="btn secondary" id="f-reset">처음으로</button>
       </div>
@@ -379,31 +379,32 @@
 
   /* ───────── 1 check_env ───────── */
   function eRun(){
-    const cpu=+$('#e-cpu').value, sudo=$('#e-sudo').checked, sb=$('#e-sb').checked, wsl=$('#e-wsl').checked, pkg=$('#e-pkg').checked;
+    const cpu=+$('#e-cpu').value, mem=+$('#e-mem').value, hwe=$('#e-hwe').checked, pkg=$('#e-pkg').checked, hdr=$('#e-hdr').checked;
     const L=[]; let ok=0,warn=0; const imp=[];
     const OK=t=>{ L.push(`  <span class="g">[ OK ]</span> ${t}`); ok++; }, W=(t,day,why)=>{ L.push(`  <span class="y">[WARN]</span> ${t}`); warn++; if(day) imp.push([day,why]); };
-    L.push('<span class="c">$ bash check_env.sh</span>','== 1. 운영체제와 커널 ==');
-    OK('배포판 : Ubuntu 24.04.1 LTS'); OK(`커널   : ${wsl?'6.6.36.6-microsoft-standard-WSL2':'6.8.0-45-generic'} (x86_64)`);
-    L.push('== 2. CPU와 가상화 ==');
-    if(cpu>=2) OK(`코어 수 : ${cpu}`); else W('코어 수 : 1 (2개 이상 권장 — VM이면 vCPU를 늘리세요)','Day 2 · Day 5','affinity 비교와 race 재현이 안 됨');
-    OK(`가상화 : ${wsl?'wsl':(cpu<4?'oracle':'none')}`);
-    if(wsl) W('WSL 환경 — Day 4 커널 모듈 실습은 대체 과제로 진행','Day 4','insmod · /sys/class/thermal 없음');
-    L.push('== 3. Secure Boot ==');
-    if(wsl) OK('SecureBoot 해당 없음'); else if(sb) W('SecureBoot enabled','Day 4','서명 안 된 모듈 로드 거부'); else OK('SecureBoot disabled');
-    L.push('== 4. sudo 권한 ==');
-    if(sudo) OK('sudo 그룹 소속'); else W('sudo 권한 없음 — 강사에게 알려주세요','Day 2 · Day 4','SCHED_FIFO, insmod, drop_caches 불가');
-    L.push('== 5. 필수 도구 ==');
+    const krel=hwe?'6.8.0-48-generic':'5.15.0-125-generic';
+    L.push('<span class="c">ubuntu@ubuntu-server:~/linux-course/day1/src$ bash check_env.sh</span>','== 1. 운영체제와 커널 ==');
+    OK('배포판 : Ubuntu 22.04.5 LTS');
+    if(hwe) W(`커널   : ${krel} — HWE 커널이면 스케줄러가 EEVDF`,'Day 2','CFS 기준 해석(vruntime·가중치)이 맞지 않음'); else OK(`커널   : ${krel} (x86_64) — 스케줄러 CFS`);
+    L.push('== 2. VM 자원 ==');
+    if(cpu>=2) OK(`vCPU   : ${cpu}`); else W('vCPU   : 1 — VM 종료 후 Settings → System → Processor 에서 2개로','Day 2 · Day 5','affinity 비교와 race 재현이 안 됨');
+    if(mem>=4096) OK('메모리 : 3915 MB'); else W('메모리 : 1925 MB — 4096 MB 권장','Day 3','OOM · mlock 실험 여유 부족');
+    OK('디스크 여유 : 21 GB'); OK('가상화 : oracle'); OK('BIOS 부팅 (VirtualBox 기본) — Secure Boot 해당 없음');
+    L.push('== 3. sudo 권한 =='); OK('sudo 그룹 소속');
+    L.push('== 4. 필수 도구 ==');
     ['gcc','make','gdb','strace','valgrind','perf','stress-ng'].forEach((t,i)=>{ if(pkg||i<2) OK(t); else W(t+' 없음', i===3?'Day 1':(i===4?'Day 3':(i===6?'Day 2':'')), i===3?'시스템 콜 관찰 불가':(i===4?'누수 검사 불가':'부하 생성 불가')); });
+    if(hdr) OK(`linux-headers-${krel}`); else W(`linux-headers-${krel} 없음 (Day 4 커널 모듈 빌드에 필요)`,'Day 4','mysysfs.ko 빌드 불가');
     const T=$('#e-term'); T.innerHTML=''; let k=0; clearInterval(eRun.t);
     eRun.t=setInterval(()=>{ if(k>=L.length){ clearInterval(eRun.t); return; } T.innerHTML+=L[k++]+'\n'; },60);
     $('#e-ok').textContent=ok; $('#e-warn').textContent=warn;
-    const uniq=[]; imp.forEach(r=>{ if(!uniq.some(u=>u[0]===r[0]&&u[1]===r[1])) uniq.push(r); });
+    const uniq=[]; imp.forEach(r=>{ if(r[0]&&!uniq.some(u=>u[0]===r[0]&&u[1]===r[1])) uniq.push(r); });
     $('#e-impact').innerHTML='<tr><th>실습</th><th>왜</th></tr>'+(uniq.length?uniq.map(r=>`<tr class="hot"><td>${r[0]}</td><td>${esc(r[1])}</td></tr>`).join(''):'<tr><td colspan="2">없음 — 모든 실습 가능</td></tr>');
-    const n=$('#e-note'); if(!warn){ n.className='note ok'; n.innerHTML='경고 0개. 이 상태 그대로 5일 실습을 모두 할 수 있습니다.'; }
-    else if(cpu<2||!sudo){ n.className='note warn'; n.innerHTML='코어 1개나 sudo 없음은 <b>Day 2 전에 반드시</b> 해결해야 합니다. 손을 들어 보조강사에게 알리세요.'; }
-    else { n.className='note'; n.innerHTML='도구 누락은 <code>sudo apt install …</code> 한 줄로 해결됩니다. Secure Boot · WSL2 는 Day 4 모듈 실습만 대체 과제로 진행합니다.'; }
+    const n=$('#e-note'); if(!warn){ n.className='note ok'; n.innerHTML='경고 0개. 운영체제 수업의 VM 그대로 5일 실습을 모두 할 수 있습니다.'; }
+    else if(cpu<2||mem<4096){ n.className='note warn'; n.innerHTML='vCPU · 메모리는 VM 을 끄고(<code>sudo poweroff</code>) VirtualBox <b>Settings → System</b> 에서 바꿉니다. <b>Day 2 전에 반드시</b> 해결하세요.'; }
+    else if(hwe){ n.className='note warn'; n.innerHTML='HWE 커널은 EEVDF 를 씁니다. 실습은 되지만 Day 2 결과 해석이 달라지니 강사에게 알리세요.'; }
+    else { n.className='note'; n.innerHTML='도구 누락은 <code>sudo apt install -y build-essential gdb strace valgrind stress-ng linux-tools-$(uname -r) linux-headers-$(uname -r)</code> 한 줄로 해결됩니다.'; }
   }
-  $('#e-run').addEventListener('click',eRun); ['#e-cpu','#e-sudo','#e-sb','#e-wsl','#e-pkg'].forEach(s=>$(s).addEventListener('change',eRun)); eRun();
+  $('#e-run').addEventListener('click',eRun); ['#e-cpu','#e-mem','#e-hwe','#e-pkg','#e-hdr'].forEach(s=>$(s).addEventListener('change',eRun)); eRun();
 
   /* ───────── 2 redirection ───────── */
   const R=[
@@ -502,7 +503,7 @@
   $('#v-malloc').addEventListener('click',()=>{ vM=true; vDraw(); }); $('#v-memset').addEventListener('click',()=>{ vT=true; vDraw(); }); $('#v-free').addEventListener('click',()=>{ vM=false; vT=false; vDraw(); }); vDraw();
 
   /* ───────── 6 fork · exec · wait ───────── */
-  const FC=[{c:['ls','-l','/tmp'],out:'total 8\ndrwx------ 2 user user 4096 Oct  2 09:10 snap',code:0},{c:['ls','/nope'],err:"ls: cannot access '/nope': No such file or directory",code:2},{c:['nosuchcmd'],fail:true},{c:['sleep','30'],sig:true}];
+  const FC=[{c:['ls','-l','/tmp'],out:'total 12\ndrwx------ 3 root root 4096 Oct  2 09:00 systemd-private-…-systemd-logind.service-…\ndrwx------ 2 root root 4096 Oct  2 09:00 snap-private-tmp',code:0},{c:['ls','/nope'],err:"ls: cannot access '/nope': No such file or directory",code:2},{c:['nosuchcmd'],fail:true},{c:['sleep','30'],sig:true}];
   let fI=0, fSt=0, fStat=null;
   tabs('f-cmd',b=>{ fI=+b.dataset.c; fReset(); });
   function fReset(){ fSt=0; fStat=null; $('#f-term').innerHTML=`<span class="c">$ ./06_fork_exec_wait ${FC[fI].c.join(' ')}</span>`; fDraw(); }
@@ -522,7 +523,7 @@
   $('#f-fork').addEventListener('click',()=>{ fSt=1; fDraw(); });
   $('#f-exec').addEventListener('click',()=>{ const c=FC[fI]; fSt=2; if(c.fail) fT('<span class="r">execvp: No such file or directory</span>'); fDraw(); });
   $('#f-end').addEventListener('click',()=>{ const c=FC[fI]; fSt=3; if(c.out) fT(c.out); if(c.err) fT(`<span class="r">${esc(c.err)}</span>`); fStat={code:c.fail?127:c.code}; fDraw(); });
-  $('#f-kill').addEventListener('click',()=>{ fSt=3; fT('<span class="c">(다른 터미널) $ kill 180</span>'); fStat={sig:15}; fDraw(); });
+  $('#f-kill').addEventListener('click',()=>{ fSt=3; fT('<span class="c">(두 번째 PuTTY 창) $ kill 180</span>'); fStat={sig:15}; fDraw(); });
   $('#f-wait').addEventListener('click',()=>{ fSt=4; fT(fStat.sig?'[부모] 자식 180 시그널로 종료, 시그널=15':`[부모] 자식 180 정상 종료, 종료 코드=${fStat.code}`); fDraw(); });
   $('#f-reset').addEventListener('click',fReset); fReset();
 
@@ -545,7 +546,7 @@
     zDraw(); });
   $('#z-pexit').addEventListener('click',()=>{ const ch=Z.rows.find(r=>r.pid===6021); Z.rows=Z.rows.filter(r=>r.pid!==6020);
     if(ch&&ch.st==='Z'){ Z.rows=Z.rows.filter(r=>r.pid!==6021); Z.msg='부모가 끝나자 좀비는 PID 1 에게 입양되었고, PID 1 이 즉시 거둬 사라졌습니다.'; Z.cls='note ok'; }
-    else if(ch){ ch.ppid=1; Z.msg='부모가 먼저 끝나 자식은 <b>고아</b>가 되었고 PID 1(또는 systemd --user 같은 subreaper)이 입양했습니다. PPID 를 보세요.'; Z.cls='note'; }
+    else if(ch){ ch.ppid=1; Z.msg='부모가 먼저 끝나 자식은 <b>고아</b>가 되었고 PID 1(systemd)이 입양했습니다. PuTTY(SSH) 세션에서는 1 이 나옵니다. PPID 를 보세요.'; Z.cls='note'; }
     else { Z.msg='부모가 끝났습니다. bash 가 부모를 거둡니다.'; Z.cls='note'; }
     zDraw(); });
   $('#z-reset').addEventListener('click',zReset); zReset();
@@ -563,18 +564,18 @@
   $('#s-ctrlc').addEventListener('click',()=>{ S7.path='int'; S7.lines.push('^C');
     if($('#s-handler').checked){ S7.cnt++; S7.lines.push('<span class="g">[핸들러] SIGINT 받음</span>'); if(S7.cnt>=3){ S7.lines.push('SIGINT 3회 → 종료'); S7.alive=false; S7.rc=0; S7.lines.push('<span class="c">$ echo $?</span>','0'); } }
     else sDie(2,'SIGINT'); sDraw(); });
-  $('#s-term').addEventListener('click',()=>{ S7.path='term'; S7.lines.push('<span class="c">(다른 터미널) $ kill 7100</span>'); sDie(15,'SIGTERM'); sDraw(); });
-  $('#s-kill').addEventListener('click',()=>{ S7.path='kill'; S7.lines.push('<span class="c">(다른 터미널) $ kill -9 7100</span>'); sDie(9,'SIGKILL'); S7.lines.push('<span class="y">SIGKILL 은 핸들러를 등록할 수 없습니다 — sigaction(SIGKILL, …) 은 EINVAL</span>'); sDraw(); });
+  $('#s-term').addEventListener('click',()=>{ S7.path='term'; S7.lines.push('<span class="c">(두 번째 PuTTY 창) $ kill 7100</span>'); sDie(15,'SIGTERM'); sDraw(); });
+  $('#s-kill').addEventListener('click',()=>{ S7.path='kill'; S7.lines.push('<span class="c">(두 번째 PuTTY 창) $ kill -9 7100</span>'); sDie(9,'SIGKILL'); S7.lines.push('<span class="y">SIGKILL 은 핸들러를 등록할 수 없습니다 — sigaction(SIGKILL, …) 은 EINVAL</span>'); sDraw(); });
   $('#s-reset').addEventListener('click',sReset); $('#s-handler').addEventListener('change',sReset); sReset();
 
   /* ───────── 8 myshell ───────── */
-  const FS={'/home/user':['linux-course','snap'],'/home/user/linux-course':['day1'],'/tmp':['snap-private-tmp'],'/etc':['hostname','os-release','passwd'],'/':['bin','etc','home','proc','tmp','usr']};
+  const FS={'/home/ubuntu':['linux-course'],'/home/ubuntu/linux-course':['day1'],'/tmp':['snap-private-tmp'],'/etc':['hostname','os-release','passwd'],'/':['bin','etc','home','proc','tmp','usr']};
   let H; let hPid=8001;
-  function hReset(){ H={cwd:'/home/user',last:0,kids:0,lines:[],tr:[],running:null}; $('#h-strace').innerHTML=''; hDraw(); hNote('위 버튼이나 입력창으로 명령을 실행해 보세요. <code>sleep 100</code> 을 실행한 뒤 Ctrl+C 도 눌러 보세요.'); }
+  function hReset(){ H={cwd:'/home/ubuntu',last:0,kids:0,lines:[],tr:[],running:null}; $('#h-strace').innerHTML=''; hDraw(); hNote('위 버튼이나 입력창으로 명령을 실행해 보세요. <code>sleep 100</code> 을 실행한 뒤 Ctrl+C 도 눌러 보세요.'); }
   function hNote(h,c){ $('#h-note').className='note'+(c?' '+c:''); $('#h-note').innerHTML=h; }
   function hDraw(){ $('#h-term').innerHTML=H.lines.join('\n'); $('#h-term').scrollTop=1e6; $('#h-strace').innerHTML=H.tr.join('\n'); $('#h-strace').scrollTop=1e6;
     $('#h-prompt').textContent=H.running?'(실행 중…)':`myshell[${H.last}]$`; $('#h-cwd').textContent=H.cwd; $('#h-kids').textContent=H.kids; $('#h-last').textContent=H.last; $('#h-in').disabled=!!H.running; $('#h-ctrlc').disabled=!H.running; }
-  const abs=p=>{ if(!p) return '/home/user'; if(p==='~') return '/home/user'; let parts=(p.startsWith('/')?p:H.cwd+'/'+p).split('/'); const st=[]; parts.forEach(x=>{ if(!x||x==='.') return; if(x==='..') st.pop(); else st.push(x); }); return '/'+st.join('/'); };
+  const abs=p=>{ if(!p) return '/home/ubuntu'; if(p==='~') return '/home/ubuntu'; let parts=(p.startsWith('/')?p:H.cwd+'/'+p).split('/'); const st=[]; parts.forEach(x=>{ if(!x||x==='.') return; if(x==='..') st.pop(); else st.push(x); }); return '/'+st.join('/'); };
   function child(argv,run){ const pid=hPid++; H.kids++; H.tr.push(`clone(...) = ${pid}`); const r=run(); if(r.notfound){ H.tr.push(`[pid ${pid}] execve("/usr/bin/${argv[0]}", …) = -1 ENOENT`); } else H.tr.push(`[pid ${pid}] execve("/usr/bin/${argv[0]}", [${argv.map(a=>'"'+a+'"').join(', ')}], …) = 0`);
     if(r.wait) { H.running={pid}; H.tr.push(`wait4(${pid}, …  <span class="c">← 기다리는 중</span>`); return; }
     H.tr.push(`wait4(${pid}, [{WIFEXITED(s) && WEXITSTATUS(s) == ${r.code}}], 0) = ${pid}`); H.last=r.code; }
