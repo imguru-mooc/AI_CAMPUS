@@ -303,6 +303,147 @@ code{color:#1B2A41}
 <p class="goal-title"><strong>학습 목표</strong></p>
 <ul><li>프로세스 상태 R · S · D · Z 를 구분한다</li><li>자발적 · 비자발적 컨텍스트 스위치의 차이를 측정한다</li><li>/proc/self/status 로 전환 횟수를 읽는다</li></ul>
 <p class="anim">🎬 <a href="animation.html#l1" style="color:inherit"><strong>D2-1 컨텍스트 스위치</strong></a> — sleep 형 · busy 형 프로세스가 CPU 를 넘겨주는 순간과 두 카운터</p>
+<h3>1-0. 실습 전 점검 — VM 이 제때 깨어나는가</h3>
+<p>오늘 실습은 "언제 CPU 를 받았는가" 를 µs 단위로 잰다. 그런데 Windows 에서 <strong>Hyper-V 가 켜진 채로 VirtualBox 를 쓰면</strong>, VM 이 잠든(idle) 뒤 제때 깨어나지 못해 측정이 수 초씩 틀어진다. 수업 전에 한 번만 점검한다.</p>
+<p><strong>증상 — 계산만 하는 예제는 정상, 잠드는 예제만 이상하다</strong></p>
+<table>
+<thead>
+<tr>
+<th>예제</th>
+<th>CPU 쓰는 방식</th>
+<th>Hyper-V 가 켜진 PC 의 결과</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>02 · 03 · 04, stallwatch</td>
+<td>쉬지 않고 계산 → vCPU 가 쉬지 않음</td>
+<td>정상 (90.3 % : 9.7 %, 비율 9.31)</td>
+</tr>
+<tr>
+<td>06 상대 sleep, jitter</td>
+<td>잠들었다 깨어남 → vCPU 가 idle(HLT)</td>
+<td>오차 +1800 ms, 최대 지연 1.8 초</td>
+</tr>
+</tbody>
+</table>
+<div class="hl"><pre class="language-text lang-plain"><code>$ ./jitter -n 2000
+지연(us)  최소    25.0  평균 172727.6  99% 1812886.6  최대 1829993.0     ← 1.8초 멈춤 1회
+$ sudo dmesg | grep -i &quot;Long readout&quot;
+clocksource: Long readout interval, skipping watchdog check: cs_nsec: 2949341046 …
+</code></pre></div>
+<p><code>clock_gettime</code> 은 고장 나지 않았다. 시계는 흐른 시간을 정확히 재고 있고, <strong>프로세스가 늦게 깨어났을 뿐</strong>이다.</p>
+<p><strong>원인</strong></p>
+<ul>
+<li>Windows 의 Hyper-V · 가상 머신 플랫폼(WSL2) · 메모리 무결성(HVCI) 중 하나라도 켜져 있으면 부팅 때 Windows 하이퍼바이저가 올라온다.</li>
+<li>그러면 VirtualBox 는 CPU 가상화를 직접 쓰지 못하고 Hyper-V 위에서(NEM 모드) 동작한다. VM 창 상태 표시줄에 <strong>초록 거북이 아이콘</strong>이 보인다.</li>
+<li>이 모드에서는 쉬고 있던 vCPU 를 타이머 시각에 맞춰 깨우는 일이 가끔 수 초씩 늦어진다.</li>
+</ul>
+<p><strong>확인 1 — 거북이 아이콘:</strong> VM 창 오른쪽 아래 상태 표시줄. 거북이면 문제, 파란 V 칩이면 정상.</p>
+<p><strong>확인 2 — VM 안에서 측정</strong></p>
+<p><strong><code>src/stallwatch.c</code></strong></p>
+<div class="hl"><pre class="language-c lang-c"><code><span class="cm">/* stallwatch.c — VM 의 vCPU 가 호스트에 의해 멈추는지 감시</span>
+<span class="cm"> * 빌드: gcc -O2 -Wall -o stallwatch stallwatch.c</span>
+<span class="cm"> * 실행: ./stallwatch 30        (30초 동안 감시, 기본 20초)</span>
+<span class="cm"> * 원리: CPU 를 쉬지 않고 돌며 clock_gettime 을 연속으로 읽는다.</span>
+<span class="cm"> *       연속 두 번 읽은 사이가 5ms 이상 벌어졌다면 그동안 이 프로세스가 실행되지 못한 것이다.</span>
+<span class="cm"> *       게스트 안에 경쟁자가 없는데도 자주 생기면 호스트(Windows · Hyper-V)가 vCPU 를 멈춘 것이다.</span>
+<span class="cm"> */</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;time.h&gt;</span>
+
+<span class="k">static</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="nf">ns</span><span class="p">(</span><span class="k">struct</span><span class="w"> </span><span class="nc">timespec</span><span class="w"> </span><span class="n">t</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="n">t</span><span class="p">.</span><span class="n">tv_sec</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">1000000000L</span><span class="n">L</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">t</span><span class="p">.</span><span class="n">tv_nsec</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">argc</span><span class="p">,</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
+<span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">secs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">argc</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="n">atoi</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="mi">20</span><span class="p">;</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="nc">timespec</span><span class="w"> </span><span class="n">t</span><span class="p">;</span>
+<span class="w">    </span><span class="n">clock_gettime</span><span class="p">(</span><span class="n">CLOCK_MONOTONIC</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">t</span><span class="p">);</span>
+<span class="w">    </span><span class="kt">long</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ns</span><span class="p">(</span><span class="n">t</span><span class="p">),</span><span class="w"> </span><span class="n">prev</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">start</span><span class="p">,</span><span class="w"> </span><span class="n">end</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">secs</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">1000000000L</span><span class="n">L</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">long</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">worst</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">total_lost</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d초 동안 감시합니다 (5ms 이상 멈춤만 표시)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">secs</span><span class="p">);</span>
+<span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">prev</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">end</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">clock_gettime</span><span class="p">(</span><span class="n">CLOCK_MONOTONIC</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">t</span><span class="p">);</span>
+<span class="w">        </span><span class="kt">long</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">now</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ns</span><span class="p">(</span><span class="n">t</span><span class="p">),</span><span class="w"> </span><span class="n">gap</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">now</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">prev</span><span class="p">;</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">gap</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">5000000</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">count</span><span class="o">++</span><span class="p">;</span>
+<span class="w">            </span><span class="n">total_lost</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">gap</span><span class="p">;</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">gap</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">worst</span><span class="p">)</span><span class="w"> </span><span class="n">worst</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">gap</span><span class="p">;</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">count</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mi">15</span><span class="p">)</span>
+<span class="w">                </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;  %6.2f 초 지점: %8.1f ms 멈춤</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">now</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">1e9</span><span class="p">,</span><span class="w"> </span><span class="n">gap</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">1e6</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="n">prev</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">now</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;멈춤 %d회, 최대 %.1f ms, 합계 %.1f ms (전체의 %.2f %%)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+<span class="w">           </span><span class="n">count</span><span class="p">,</span><span class="w"> </span><span class="n">worst</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">1e6</span><span class="p">,</span><span class="w"> </span><span class="n">total_lost</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">1e6</span><span class="p">,</span><span class="w"> </span><span class="mf">100.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">total_lost</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="n">secs</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">1e9</span><span class="p">));</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;판단: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="s">&quot;정상 — 실습 결과를 그대로 믿어도 됩니다&quot;</span><span class="w"> </span><span class="o">:</span>
+<span class="w">                         </span><span class="n">worst</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">20000000</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="s">&quot;가벼움 — 측정값이 조금 흔들릴 수 있습니다&quot;</span><span class="w"> </span><span class="o">:</span>
+<span class="w">                                            </span><span class="s">&quot;심각 — 호스트가 vCPU 를 자주 멈춥니다 (Hyper-V · 전원 설정 · 호스트 부하 확인)&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+<div class="hl"><pre class="language-bash lang-bash"><code>make<span class="w"> </span>-s<span class="w"> </span>jitter<span class="w"> </span>stallwatch
+./stallwatch<span class="w"> </span><span class="m">30</span><span class="w">           </span><span class="c1"># 쉬지 않는 프로그램: 거북이여도 0회로 나올 수 있다</span>
+./jitter<span class="w"> </span>-n<span class="w"> </span><span class="m">20000</span><span class="w">         </span><span class="c1"># 잠드는 프로그램: 최대가 수 ms 이하면 정상, 100 ms 이상이면 문제</span>
+</code></pre></div>
+<p><strong>해결 — Windows 호스트 (관리자 PowerShell)</strong></p>
+<p>관리자 PowerShell 은 <strong>Win + X → 터미널(관리자)</strong> 로 연다. 창 제목에 "관리자:" 가 있어야 한다. 일반 창에서는 <code>bcdedit</code> 가 "액세스가 거부되었습니다" 로 실패한다.</p>
+<div class="hl"><pre class="language-powershell lang-plain"><code># 1) 무엇이 하이퍼바이저를 켜는지 확인
+Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All | Select-Object FeatureName, State
+Get-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform | Select-Object FeatureName, State
+Get-CimInstance -Namespace root\Microsoft\Windows\DeviceGuard -ClassName Win32_DeviceGuard |
+  Format-List VirtualizationBasedSecurityStatus, SecurityServicesRunning
+#    VirtualizationBasedSecurityStatus : 2  → VBS 실행 중,  SecurityServicesRunning : {2} → 메모리 무결성
+
+# 2) 끄기
+Disable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -NoRestart
+Disable-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform -NoRestart
+reg add &quot;HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity&quot; /v Enabled /t REG_DWORD /d 0 /f
+reg add &quot;HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard&quot; /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 0 /f
+bcdedit /set &quot;{current}&quot; hypervisorlaunchtype off
+bcdedit /enum &quot;{current}&quot; | findstr -i hypervisor      # hypervisorlaunchtype  Off
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>순서</th>
+<th>할 일</th>
+<th>비고</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Windows 보안 → 장치 보안 → 코어 격리 → <strong>메모리 무결성 끔</strong></td>
+<td>"커널 모드 하드웨어 적용 스택 보호" 도 끔</td>
+</tr>
+<tr>
+<td>2</td>
+<td>VM 은 <code>sudo poweroff</code> 로 완전히 종료</td>
+<td>"상태 저장" 으로 끄지 않는다</td>
+</tr>
+<tr>
+<td>3</td>
+<td>시작 → 전원 → <strong>다시 시작</strong></td>
+<td>VirtualBox 만 다시 켜는 것으로는 바뀌지 않는다 · 업데이트 구성으로 한 번 더 재부팅될 수 있다</td>
+</tr>
+<tr>
+<td>4</td>
+<td>VBS 상태 <code>0</code>, 두 기능 <code>Disabled</code>, 거북이 → 파란 V</td>
+<td><code>./jitter -n 20000</code> 최대가 수 ms 이하로</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>알아 둘 점:</strong> 이렇게 끄면 WSL2 · Docker Desktop · Windows 샌드박스는 동작하지 않는다(데이터는 남는다). BitLocker 가 켜진 PC 는 다음 부팅 때 복구 키를 물을 수 있으니 미리 확인한다. 되돌릴 때는 관리자 PowerShell 에서 <code>Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -All</code>, <code>Enable-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform</code>, <code>bcdedit /set "{current}" hypervisorlaunchtype auto</code> 후 다시 시작.</p>
+</blockquote>
+<p><strong>끌 수 없는 PC (회사 정책 · UEFI 잠금):</strong> VM 안에서 <code>idle=poll</code> 커널 옵션을 넣으면 vCPU 가 쉬지 않아 지연이 사라진다. 대신 VM 이 켜져 있는 동안 호스트 코어를 계속 100 % 쓴다.</p>
+<div class="hl"><pre class="language-bash lang-bash"><code>sudo<span class="w"> </span>sed<span class="w"> </span>-i<span class="w"> </span><span class="s1">&#39;s/GRUB_CMDLINE_LINUX_DEFAULT=&quot;/&amp;idle=poll /&#39;</span><span class="w"> </span>/etc/default/grub<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>update-grub<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>reboot
+<span class="c1"># 실습 후 되돌리기</span>
+sudo<span class="w"> </span>sed<span class="w"> </span>-i<span class="w"> </span><span class="s1">&#39;s/idle=poll //&#39;</span><span class="w"> </span>/etc/default/grub<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>update-grub<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>reboot
+</code></pre></div>
 <h3>1-1. Day 1 복습과 오늘의 질문</h3>
 <p>Day 1 에서 프로세스를 만들고(fork) 바꾸고(exec) 거뒀다(wait). 오늘은 그 프로세스들이 <strong>CPU 를 언제, 얼마나 받는가</strong>를 숫자로 잰다. VM 의 vCPU 는 2개인데 실행 중인 프로세스는 수백 개다. 커널은 짧은 시간마다 실행할 프로세스를 바꾸는데, 이것이 <strong>컨텍스트 스위치</strong>다.</p>
 <div class="hl"><pre class="language-bash lang-bash"><code>nproc<span class="w">                         </span><span class="c1"># 2</span>
@@ -1102,6 +1243,9 @@ sudo<span class="w"> </span>chrt<span class="w"> </span>-f<span class="w"> </spa
 절대 clock_nanosleep  :   1000.1 ms (목표 1000 ms, 오차 +0.1 ms)
 </code></pre></div>
 <p>1000번 반복에 0.3초가 밀렸다. 1시간이면 18분 차이다. 주기 태스크는 반드시 <strong>절대 시각</strong>으로 잔다.</p>
+<blockquote>
+<p>상대 sleep 오차가 +1000 ms 를 훌쩍 넘거나 절대 sleep 오차가 수십 ms 이상이면 측정이 아니라 VM 문제다. <strong>1-0 실습 전 점검</strong>(거북이 아이콘)을 다시 확인한다.</p>
+</blockquote>
 <h4 id="b5-1" class="fill">✏️ 빈칸 채우기 5-1</h4>
 <p>다음 깨어날 시각을 1ms 씩 더하며 절대 시각으로 잠드는 루프입니다. 빈칸을 채우세요.</p>
 <div class="hl"><pre class="language-c lang-c"><code><span class="k">struct</span><span class="w"> </span><span class="nc">timespec</span><span class="w"> </span><span class="n">next</span><span class="p">;</span>
@@ -1432,7 +1576,7 @@ sudo<span class="w"> </span>./jitter<span class="w"> </span>-f<span class="w"> <
 </tbody>
 </table>
 <blockquote>
-<p>숫자는 PC 와 VirtualBox 설정에 따라 크게 다르다. 중요한 것은 <strong>순서</strong>다. VM 은 호스트(Windows)가 vCPU 자체를 멈출 수 있어 최대값이 실제 보드보다 크게 튄다.</p>
+<p>숫자는 PC 와 VirtualBox 설정에 따라 크게 다르다. 중요한 것은 <strong>순서</strong>다. VM 은 호스트(Windows)가 vCPU 자체를 멈출 수 있어 최대값이 실제 보드보다 크게 튄다. 부하 없이도 최대가 100 ms 를 넘으면 Hyper-V 위에서 돌고 있는 것이다 — <strong>1-0 실습 전 점검</strong>으로 돌아간다.</p>
 </blockquote>
 <h3>7-3. CSV 로 통계 다시 내기</h3>
 <div class="hl"><pre class="language-bash lang-bash"><code>tail<span class="w"> </span>-n<span class="w"> </span>+2<span class="w"> </span>other_load.csv<span class="w"> </span><span class="p">|</span><span class="w"> </span>cut<span class="w"> </span>-d,<span class="w"> </span>-f2<span class="w"> </span><span class="p">|</span><span class="w"> </span>sort<span class="w"> </span>-n<span class="w"> </span><span class="p">|</span><span class="w"> </span>tail<span class="w"> </span>-1<span class="w">      </span><span class="c1"># 최대</span>
