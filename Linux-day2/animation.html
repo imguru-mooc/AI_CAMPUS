@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux &amp; Shell 2일차 — 눈으로 보는 스케줄링 (CFS · affinity · RT · cgroup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EEF1F5;
+    --panel:#FFFFFF;
+    --ink:#1B2A41;
+    --ink-soft:#5B6B80;
+    --line:#C9D1DC;
+    --blue:#2457C5;
+    --blue-soft:#DCE6FA;
+    --red:#D6452E;
+    --red-soft:#FBE3DF;
+    --green:#178A67;
+    --green-soft:#DDF2EA;
+    --amber:#C98A12;
+    --amber-soft:#FBF0D3;
+    --mono:'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    --sans:'IBM Plex Sans KR', 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    --t:.35s;
+  }
+  @media (prefers-reduced-motion: reduce){ :root{ --t:0s; } *{ animation:none !important; transition:none !important; } }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; }
+  body{
+    font-family:var(--sans); color:var(--ink); background:var(--paper);
+    background-image:
+      linear-gradient(rgba(27,42,65,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(27,42,65,.045) 1px, transparent 1px);
+    background-size:24px 24px;
+    font-size:16px; line-height:1.55;
+  }
+  code, .mono{ font-family:var(--mono); }
+
+  .app{ display:grid; grid-template-columns:260px 1fr; min-height:100vh; }
+  nav{
+    background:var(--ink); color:#fff; padding:28px 20px;
+    position:sticky; top:0; height:100vh; overflow:auto;
+  }
+  nav h1{ font-size:15px; font-weight:500; margin:0 0 4px; letter-spacing:.01em; color:#AEBBD1; }
+  nav .day{ font-size:26px; font-weight:600; margin:0 0 26px; line-height:1.2; }
+  nav ol{ list-style:none; margin:0; padding:0; counter-reset:lesson; }
+  nav li{ margin:0; }
+  nav button{
+    all:unset; display:grid; grid-template-columns:32px 1fr; gap:10px; align-items:baseline;
+    width:100%; padding:9px 10px; border-radius:6px; cursor:pointer; font-size:14.5px; line-height:1.35;
+    color:#D9E1EC;
+  }
+  nav button::before{ counter-increment:lesson; content:counter(lesson) "교시"; font-family:var(--mono); font-size:11px; color:#8A9BB5; }
+  nav button:hover{ background:rgba(255,255,255,.07); }
+  nav button[aria-current="true"]{ background:var(--blue); color:#fff; }
+  nav button[aria-current="true"]::before{ color:#C9D8F7; }
+  nav button:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
+  nav .hint{ margin-top:28px; font-size:12.5px; color:#8A9BB5; line-height:1.5; }
+  nav .hint kbd{ font-family:var(--mono); background:rgba(255,255,255,.12); padding:1px 5px; border-radius:3px; }
+
+  main{ padding:36px 44px 80px; max-width:1100px; }
+  section.lesson{ display:none; }
+  section.lesson.active{ display:block; }
+  .lesson header{ margin-bottom:22px; }
+  .lesson h2{ font-size:30px; font-weight:600; margin:0 0 6px; line-height:1.25; }
+  .lesson header p{ margin:0; color:var(--ink-soft); font-size:16px; max-width:64ch; }
+
+  .stage{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:26px;
+    box-shadow:0 1px 0 rgba(27,42,65,.06);
+  }
+  .controls{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:20px; }
+  .controls label{ font-size:14px; color:var(--ink-soft); display:flex; align-items:center; gap:6px; }
+  button.btn{
+    font:inherit; font-size:14px; font-weight:500; padding:8px 14px; border-radius:6px; cursor:pointer;
+    border:1px solid var(--ink); background:var(--ink); color:#fff;
+  }
+  button.btn.secondary{ background:#fff; color:var(--ink); border-color:var(--line); }
+  button.btn:disabled{ opacity:.4; cursor:default; }
+  button.btn:focus-visible, select:focus-visible, input:focus-visible{ outline:2px solid var(--blue); outline-offset:2px; }
+  select, input[type=number], input[type=text]{
+    font:inherit; font-size:14px; padding:7px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink);
+  }
+  input[type=number], input[type=text]{ font-family:var(--mono); }
+  .toggle{ display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+  .toggle input{ position:absolute; opacity:0; width:0; height:0; }
+  .toggle .sw{ width:38px; height:22px; border-radius:11px; background:var(--line); position:relative; transition:background var(--t); }
+  .toggle .sw::after{ content:""; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition:transform var(--t); }
+  .toggle input:checked + .sw{ background:var(--blue); }
+  .toggle input:checked + .sw::after{ transform:translateX(16px); }
+  .toggle input:focus-visible + .sw{ outline:2px solid var(--blue); outline-offset:2px; }
+
+  .note{ margin-top:18px; padding:14px 16px; border-left:3px solid var(--blue); background:var(--blue-soft); border-radius:0 6px 6px 0; font-size:14.5px; }
+  .note.warn{ border-color:var(--red); background:var(--red-soft); }
+  .note.ok{ border-color:var(--green); background:var(--green-soft); }
+  .note code{ background:rgba(255,255,255,.7); padding:1px 5px; border-radius:3px; }
+
+  pre.code{
+    font-family:var(--mono); font-size:13.5px; background:#F6F8FB; border:1px solid var(--line); border-radius:6px;
+    padding:14px 16px; margin:0; overflow:auto; line-height:1.55; white-space:pre;
+  }
+  pre.code .dim{ color:#9AA7B8; }
+  pre.code .hi{ background:var(--amber-soft); }
+  pre.code .err{ background:var(--red-soft); color:var(--red); }
+
+    .readout{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-top:16px; }
+  .readout div{ padding:12px 14px; border:1px solid var(--line); border-radius:6px; background:#F6F8FB; }
+  .readout b{ display:block; font-size:12.5px; font-weight:500; color:var(--ink-soft); margin-bottom:2px; }
+  .readout span{ font-family:var(--mono); font-size:17px; font-weight:600; }
+  /* ---------- shared ---------- */
+  .mcell{ display:inline-flex; flex-direction:column; align-items:center; min-width:70px; border:2px solid var(--ink); border-radius:6px; background:#fff; overflow:hidden; transition:all var(--t); }
+  .mcell .a{ font-family:var(--mono); font-size:10px; color:var(--ink-soft); background:#F6F8FB; width:100%; text-align:center; padding:3px 4px; border-bottom:1px solid var(--line); }
+  .mcell .v{ font-family:var(--mono); font-size:20px; font-weight:600; padding:8px 6px; }
+  .mcell .n{ font-family:var(--mono); font-size:11px; color:var(--blue); padding:0 4px 6px; }
+  .mcell.hi{ border-color:var(--blue); background:var(--blue-soft); }
+  .mcell.bad{ border-color:var(--red); background:var(--red-soft); }
+  .mcell.ok{ border-color:var(--green); background:var(--green-soft); }
+  .mcell.dim{ opacity:.35; }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+  .lab{ font-size:12.5px; color:var(--ink-soft); margin:14px 0 6px; }
+  .term{ font-family:var(--mono); font-size:13.5px; background:var(--ink); color:#D9E1EC; padding:12px 16px; border-radius:6px; min-height:60px; white-space:pre-wrap; margin-top:16px; }
+  .term .r{ color:#FF9B8A; } .term .g{ color:#7FE0B8; } .term .y{ color:#FFD27F; } .term .c{ color:#8A9BB5; }
+  svg text{ font-family:var(--mono); }
+  .shake{ animation:shake .4s; } @keyframes shake{ 0%,100%{transform:none} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+  .pop-in{ animation:popin .3s ease-out; } @keyframes popin{ from{ transform:scale(.8); opacity:0; } }
+  .fade-out{ animation:fadeout .4s forwards; } @keyframes fadeout{ to{ opacity:0; transform:translateY(-8px); } }
+  .two{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:24px; }
+  .tabs2{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tabs2 button{ font:inherit; font-size:13px; padding:7px 12px; border-radius:6px; border:1px solid var(--line); background:#fff; cursor:pointer; }
+  .tabs2 button.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .fig svg{ width:100%; height:auto; background:#fff; border:1px solid var(--line); border-radius:6px; display:block; }
+  .fig text{ font-size:11px; fill:var(--ink-soft); }
+  .qslots{ display:flex; gap:6px; margin:10px 0; }
+  .qslots span{ flex:1; height:46px; border:2px solid var(--line); border-radius:6px; display:grid; place-items:center; font-family:var(--mono); font-size:13px; background:#fff; transition:all var(--t); }
+  .qslots span.full{ background:var(--blue-soft); border-color:var(--blue); }
+  .fs{ display:grid; grid-template-columns:repeat(16,1fr); gap:3px; }
+  .fs span{ height:22px; border-radius:3px; background:#EEF1F5; transition:background var(--t); }
+  .fs span.used{ background:#8FB0EA; } .fs span.dirty{ background:var(--amber); } .fs span.hot{ outline:2px solid var(--red); }
+  .crash{ font-family:var(--mono); font-size:12.5px; background:#0E1726; color:#D9E1EC; border-radius:8px; padding:12px 14px; line-height:1.7; }
+  .crash span.ln{ display:block; cursor:pointer; border-radius:3px; padding:0 4px; }
+  .crash span.ln:hover{ background:#22324A; } .crash span.ln.on{ background:#3A2A10; color:#FFD27A; }
+  .flow{ position:relative; }
+  table.rt{ border-collapse:collapse; width:100%; font-family:var(--mono); font-size:12.5px; }
+  table.rt th, table.rt td{ border:1px solid var(--line); padding:6px 8px; text-align:left; }
+  table.rt th{ background:var(--paper); font-family:var(--sans); }
+  table.rt tr.hot td{ background:var(--blue-soft); font-weight:700; }
+  @media (max-width:900px){ .two{ grid-template-columns:1fr; } }
+</style><style>.rt select,.rt input[type=number]{font:inherit;font-size:13px;padding:3px 6px;border:1px solid var(--line,#C9D1DC);border-radius:6px;background:#fff}</style>
+</head>
+<body>
+<div class="app">
+  <nav aria-label="교시 선택">
+    <h1>Linux &amp; Shell · Ubuntu Server VM</h1>
+    <p class="day">2일차<br>눈으로 보는 스케줄링</p>
+    <ol id="navlist">
+      <li><button data-go="1" aria-current="true">컨텍스트 스위치</button></li>
+      <li><button data-go="2">CFS vruntime</button></li>
+      <li><button data-go="3">CPU affinity</button></li>
+      <li><button data-go="4">실시간 정책</button></li>
+      <li><button data-go="5">주기 실행과 드리프트</button></li>
+      <li><button data-go="6">cgroup cpu.max</button></li>
+      <li><button data-go="7">jitter 측정</button></li>
+      <li><button data-go="8">스케줄러 놀이터</button></li>
+    </ol>
+    <p class="hint">키보드 <kbd>←</kbd> <kbd>→</kbd> 로 교시 이동</p>
+  </nav>
+  <main>
+
+  <section class="lesson active" id="l1">
+    <header><h2>CPU 를 내려놓는 두 가지 방법</h2><p>CPU 하나에서 A 와 B 가 번갈아 실행됩니다. 각 태스크의 종류를 바꾸고 부하(stress-ng)를 켜 보세요. ▼ 는 스스로 잠든 자발적 전환, ✕ 는 빼앗긴 비자발적 전환입니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>A <select id="c-a"><option value="sleeper" selected>sleep 형 (1ms 일, 2ms 잠)</option><option value="busy">busy 형 (계속 계산)</option></select></label>
+        <label>B <select id="c-b"><option value="none">없음</option><option value="busy" selected>busy 형 (계속 계산)</option><option value="sleeper">sleep 형</option></select></label>
+        <label class="toggle"><input type="checkbox" id="c-stress"><span class="sw"></span>stress-ng 부하 추가</label>
+        <button class="btn" id="c-run">100ms 실행</button>
+        <button class="btn secondary" id="c-reset">처음으로</button>
+      </div>
+      <div class="fig"><svg viewBox="0 0 860 150" id="c-svg"></svg></div>
+      <table class="rt" id="c-tbl" style="margin-top:12px"></table>
+      <div class="note" id="c-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l2">
+    <header><h2>CFS 는 vruntime 이 가장 작은 태스크를 고른다</h2><p>CPU 하나를 세 태스크가 나눠 씁니다. nice 를 바꾸고 "한 번 고르기" 로 스케줄러의 선택을 따라가 보세요. 막대는 vruntime, 오른쪽 표는 실제 CPU 몫과 weight 로 계산한 예상 몫입니다.</p></header>
+    <div class="stage">
+      <div class="controls" id="v-ctrls"></div>
+      <div class="controls">
+        <button class="btn" id="v-step">한 번 고르기</button>
+        <button class="btn" id="v-run">1초 실행</button>
+        <button class="btn secondary" id="v-reset">처음으로</button>
+      </div>
+      <div class="two">
+        <div class="fig"><svg viewBox="0 0 430 220" id="v-svg"></svg></div>
+        <div><table class="rt" id="v-tbl" style="margin-top:0"></table><div class="note" id="v-note"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l3">
+    <header><h2>vCPU 2개, 어디서 돌게 할 것인가</h2><p>내 프로그램 P 의 affinity 와 각 CPU 의 부하를 바꿔 보세요. 같은 CPU 에 고정된 태스크끼리는 시간을 나눠 쓰고, 고정되지 않은 태스크는 덜 바쁜 CPU 로 옮겨 갑니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>P 의 affinity <select id="a-aff"><option value="">자유 (0, 1)</option><option value="0">CPU 0 고정</option><option value="1">CPU 1 고정</option></select></label>
+        <label class="toggle"><input type="checkbox" id="a-s0" checked><span class="sw"></span>stress-ng --taskset 0</label>
+        <label class="toggle"><input type="checkbox" id="a-s1"><span class="sw"></span>stress-ng --taskset 1</label>
+        <button class="btn" id="a-run">200ms 실행</button>
+      </div>
+      <div class="fig"><svg viewBox="0 0 860 170" id="a-svg"></svg></div>
+      <div class="readout"><div><b>P 의 CPU 몫</b><span id="a-share">–</span></div><div><b>P 가 실행된 CPU</b><span id="a-where">–</span></div><div><b>P 의 최대 대기</b><span id="a-wait">–</span></div></div>
+      <div class="note" id="a-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l4">
+    <header><h2>SCHED_FIFO 는 잠들 때까지 비키지 않는다</h2><p>CPU 0 에서 셸(sshd), 일반 계산, RT 태스크가 경쟁합니다. RT 태스크가 제대로 잠드는 경우와 무한 루프 버그가 있는 경우를 비교하고, RT throttling 을 꺼 보세요.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>RT 태스크 <select id="r-mode"><option value="none">없음 (모두 SCHED_OTHER)</option><option value="periodic" selected>FIFO 50 · 10ms 마다 2ms 일하고 잠듦</option><option value="loop">FIFO 50 · 무한 루프 (버그)</option></select></label>
+        <label class="toggle"><input type="checkbox" id="r-thr" checked><span class="sw"></span>RT throttling (950ms / 1s)</label>
+        <button class="btn" id="r-run">2초 실행</button>
+      </div>
+      <div class="fig"><svg viewBox="0 0 860 190" id="r-svg"></svg></div>
+      <div class="readout"><div><b>RT 몫</b><span id="r-rt">–</span></div><div><b>계산(OTHER) 몫</b><span id="r-oth">–</span></div><div><b>셸 최대 응답 지연</b><span id="r-sh">–</span></div></div>
+      <div class="note" id="r-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l5">
+    <header><h2>"1ms 쉬기" 와 "다음 1ms 시각까지 쉬기"</h2><p>매 주기 일하는 시간과 깨어나는 지연을 바꿔 보세요. 상대 sleep 은 주기마다 어긋남이 더해지고, 절대 sleep 은 늘 정해진 눈금으로 돌아옵니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>매 주기 일하는 시간 <input type="range" id="d-work" min="0" max="800" step="50" value="200"> <span class="mono" id="d-workv"></span></label>
+        <label>깨어나는 지연 <input type="range" id="d-lat" min="0" max="300" step="10" value="100"> <span class="mono" id="d-latv"></span></label>
+      </div>
+      <div class="fig"><svg viewBox="0 0 860 210" id="d-svg"></svg></div>
+      <div class="readout"><div><b>상대 sleep · 1000주기</b><span id="d-rel"></span></div><div><b>절대 sleep · 1000주기</b><span id="d-abs"></span></div><div><b>1시간 뒤 상대 sleep 오차</b><span id="d-hour"></span></div></div>
+      <div class="note" id="d-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l6">
+    <header><h2>cpu.max — 주기마다 쓸 수 있는 시간</h2><p>07_busy 를 cgroup 에 넣고 quota 와 period 를 바꿔 보세요. 각 주기 안에서 quota 를 다 쓰면 다음 주기까지 멈춥니다(throttled).</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>quota <input type="range" id="g-q" min="5" max="100" step="5" value="20"> <span class="mono" id="g-qv"></span></label>
+        <label>period <select id="g-p"><option value="50">50 ms</option><option value="100" selected>100 ms</option><option value="200">200 ms</option></select></label>
+        <label class="toggle"><input type="checkbox" id="g-two"><span class="sw"></span>busy 프로세스 2개 (vCPU 2개 모두)</label>
+      </div>
+      <div class="term" id="g-cmd" style="min-height:0"></div>
+      <div class="fig" style="margin-top:12px"><svg viewBox="0 0 860 150" id="g-svg"></svg></div>
+      <div class="readout"><div><b>CPU 사용률</b><span id="g-use"></span></div><div><b>nr_throttled (1초)</b><span id="g-nr"></span></div><div><b>throttled_usec (1초)</b><span id="g-us"></span></div></div>
+      <div class="note" id="g-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l7">
+    <header><h2>지연은 평균이 아니라 꼬리를 본다</h2><p>jitter 를 조합별로 5000번 실행한 결과를 흉내 낸 분포입니다. 조합을 바꾸고 다시 측정해 보세요. 히스토그램의 오른쪽 꼬리(최대 · 99%)가 실시간 성능입니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <div class="tabs2" id="j-tabs"><button class="on" data-k="0">OTHER · 부하 없음</button><button data-k="1">OTHER · 부하</button><button data-k="2">FIFO 80 · 부하</button><button data-k="3">FIFO 80 · CPU 1 · 부하</button></div>
+      </div>
+      <div class="controls">
+        <label class="toggle"><input type="checkbox" id="j-vm" checked><span class="sw"></span>VirtualBox VM (호스트 간섭)</label>
+        <button class="btn" id="j-run">다시 측정</button>
+      </div>
+      <div class="fig"><svg viewBox="0 0 860 230" id="j-svg"></svg></div>
+      <div class="readout"><div><b>최소</b><span id="j-min"></span></div><div><b>평균</b><span id="j-avg"></span></div><div><b>99%</b><span id="j-p99"></span></div><div><b>최대</b><span id="j-max"></span></div></div>
+      <div class="term" id="j-term" style="min-height:0"></div>
+      <div class="note" id="j-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l8">
+    <header><h2>스케줄러 놀이터 — 정책 · nice · CPU 를 직접 정하기</h2><p>태스크 세 개의 정책, nice 또는 우선순위, CPU 고정, 동작 방식을 정하고 실행하세요. vCPU 2개에서 누가 언제 실행되는지, 주기 태스크가 얼마나 늦게 시작되는지 보입니다.</p></header>
+    <div class="stage">
+      <table class="rt" id="p-cfg" style="margin-top:0"></table>
+      <div class="controls" style="margin-top:12px">
+        <label class="toggle"><input type="checkbox" id="p-thr" checked><span class="sw"></span>RT throttling</label>
+        <button class="btn" id="p-run">300ms 실행</button>
+        <div class="tabs2" id="p-pre"><button data-p="0">예시: 셋 다 OTHER</button><button data-p="1">예시: 센서 FIFO + 고정</button><button data-p="2">예시: 잘못된 고정</button></div>
+      </div>
+      <div class="fig"><svg viewBox="0 0 860 170" id="p-svg"></svg></div>
+      <table class="rt" id="p-res"></table>
+      <div class="note" id="p-note"></div>
+    </div>
+  </section>
+
+  </main>
+</div>
+<script>
+(function(){
+  'use strict';
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+  const NS='http://www.w3.org/2000/svg';
+  const el=(n,a,t)=>{ const e=document.createElementNS(NS,n); for(const k in a) e.setAttribute(k,a[k]); if(t!==undefined) e.textContent=t; return e; };
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  let cur=1;
+  function go(n){ cur=Math.max(1,Math.min(8,n)); $$('.lesson').forEach(s=>s.classList.toggle('active',s.id==='l'+cur)); $$('#navlist button').forEach(b=>b.setAttribute('aria-current',b.dataset.go==cur?'true':'false')); history.replaceState(null,'','#l'+cur); window.scrollTo({top:0}); }
+  $$('#navlist button').forEach(b=>b.addEventListener('click',()=>go(+b.dataset.go)));
+  document.addEventListener('keydown',e=>{ if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName))return; if(e.key==='ArrowRight')go(cur+1); if(e.key==='ArrowLeft')go(cur-1); });
+  if(/^#l[1-8]$/.test(location.hash)) go(+location.hash[2]);
+  function tabs(id,fn){ $$('#'+id+' button').forEach(b=>b.addEventListener('click',()=>{ $$('#'+id+' button').forEach(x=>x.classList.toggle('on',x===b)); fn(b); })); }
+  const pct=v=>(v*100).toFixed(1)+' %';
+
+  /* ═════════ 공용 스케줄러 시뮬레이터 (1ms 틱) ═════════
+     task: {id,name,color,policy:'OTHER'|'FIFO',nice,prio,aff:null|[cpu],kind:'busy'|'sleeper'|'periodic',work,sleep,period}
+     CFS: vruntime 최소 선택, 단 현재 태스크가 최소 조각(GRAN ms)을 채울 때까지는 계속 실행
+     FIFO: 우선순위 높은 RT 가 항상 먼저, RT throttling 950/1000 */
+  const WEIGHT={'-5':3121,'-4':2501,'-3':1991,'-2':1586,'-1':1277,'0':1024,'1':820,'2':655,'3':526,'4':423,'5':335,'6':272,'7':215,'8':172,'9':137,'10':110,'11':87,'12':70,'13':56,'14':45,'15':36,'16':29,'17':23,'18':18,'19':15};
+  const GRAN=3;
+  function Sim(tasks,ncpu,opt){
+    opt=opt||{};
+    this.ncpu=ncpu; this.t=0; this.thr=opt.throttle!==false;
+    this.tasks=tasks.map(x=>Object.assign({vr:0,run:0,vol:0,inv:0,state:'R',left:x.work||0,wake:0,rel:0,waits:[],maxWait:0,cpus:{}},x));
+    this.last=new Array(ncpu).fill(null); this.streak=new Array(ncpu).fill(0); this.hist=Array.from({length:ncpu},()=>[]); this.marks=[]; this.rtUsed=new Array(ncpu).fill(0);
+    this.tasks.forEach(k=>{ if(k.kind==='periodic'){ k.state='S'; k.wake=k.offset||0; } });
+  }
+  Sim.prototype.step=function(){
+    const t=this.t, T=this.tasks;
+    if(t%1000===0) this.rtUsed.fill(0);
+    T.forEach(k=>{ if(k.state==='S'&&t>=k.wake){ k.state='R'; k.rel=t; k.left=k.work; if(k.kind!=='busy'){ const mn=Math.min(...T.filter(x=>x.state==='R'&&x!==k&&x.policy==='OTHER').map(x=>x.vr).concat([k.vr])); k.vr=Math.max(k.vr,mn-GRAN); } } });
+    const picked=[];
+    for(let c=0;c<this.ncpu;c++){
+      const cand=T.filter(k=>k.state==='R'&&!picked.includes(k)&&(!k.aff||k.aff.includes(c)));
+      let pick=null;
+      const rtOk=!this.thr||this.rtUsed[c]<950;
+      const rt=cand.filter(k=>k.policy==='FIFO'&&rtOk).sort((a,b)=>b.prio-a.prio);
+      if(rt.length) pick=rt[0];
+      else{
+        const oth=cand.filter(k=>k.policy==='OTHER'||!rtOk);
+        if(oth.length){ const mn=oth.reduce((a,b)=>a.vr<=b.vr?a:b); const prev=this.last[c];
+          pick=(prev&&oth.includes(prev)&&this.streak[c]<GRAN)?prev:mn; }   /* 최소 실행 조각(GRAN ms)을 채우기 전에는 OTHER 끼리 선점하지 않음 */
+      }
+      const prev=this.last[c];
+      if(prev&&prev!==pick&&prev.state==='R'&&!picked.includes(prev)){ prev.inv++; this.marks.push({t,c,type:'x',id:prev.id}); }
+      if(pick){ picked.push(pick);
+        if(pick.rel!==null&&pick.kind==='periodic'&&pick.left===pick.work){ const w=t-pick.rel; pick.waits.push(w); pick.maxWait=Math.max(pick.maxWait,w); pick.rel=null; }
+        if(pick.kind==='sleeper'&&pick.left===pick.work&&pick.relS!==undefined){ const w=t-pick.relS; pick.maxWait=Math.max(pick.maxWait,w); pick.relS=undefined; }
+        pick.run++; pick.cpus[c]=(pick.cpus[c]||0)+1; pick.vr+=1024/WEIGHT[String(pick.nice||0)];
+        if(pick.policy==='FIFO') this.rtUsed[c]++;
+        if(pick.kind!=='busy'){ pick.left--; if(pick.left<=0){ pick.state='S'; pick.vol++; this.marks.push({t:t+1,c,type:'v',id:pick.id}); pick.wake=pick.kind==='periodic'?(Math.floor((t+1-(pick.offset||0))/pick.period)+1)*pick.period+(pick.offset||0):t+1+pick.sleep; if(pick.kind==='sleeper') pick.relS=pick.wake; } }
+      }
+      this.streak[c]=(pick&&pick===prev)?this.streak[c]+1:1;
+      this.hist[c].push(pick?pick.id:null);
+      this.last[c]=pick&&pick.state==='R'?pick:null;
+    }
+    this.t++;
+  };
+  Sim.prototype.runFor=function(ms){ for(let i=0;i<ms;i++) this.step(); };
+  function drawTimeline(S,sim,from,to,opt){
+    opt=opt||{}; S.innerHTML=''; const x0=70,W=770,lh=opt.lh||40,gap=12,top=opt.top||14; const span=to-from;
+    const col={}; sim.tasks.forEach(k=>col[k.id]=k.color);
+    for(let c=0;c<sim.ncpu;c++){ const y=top+c*(lh+gap);
+      S.appendChild(el('text',{x:8,y:y+lh/2+5,'font-size':13,fill:'#1B2A41','font-weight':600},opt.labels?opt.labels[c]:'CPU '+c));
+      S.appendChild(el('rect',{x:x0,y,width:W,height:lh,fill:'#EEF1F5',rx:4}));
+      let s=from, id=sim.hist[c][from];
+      for(let t=from+1;t<=to;t++){ const v=t<to?sim.hist[c][t]:'__end'; if(v!==id){ if(id!==null&&id!==undefined) S.appendChild(el('rect',{x:x0+(s-from)/span*W,y:y+2,width:Math.max(1,(t-s)/span*W),height:lh-4,fill:col[id]})); s=t; id=v; } }
+    }
+    if(opt.marks!==false) sim.marks.filter(m=>m.t>=from&&m.t<to).forEach(m=>{ const x=x0+(m.t-from)/span*W, y=top+m.c*(lh+gap);
+      S.appendChild(el('text',{x,y:m.type==='v'?y-2:y+lh+11,'text-anchor':'middle','font-size':11,fill:m.type==='v'?'#178A67':'#D6452E','font-weight':700},m.type==='v'?'▼':'✕')); });
+    const by=top+sim.ncpu*(lh+gap)+4; const tick=opt.tick||(span>=1000?250:(span>=200?50:10));
+    for(let t=0;t<=span;t+=tick){ const x=x0+t/span*W; S.appendChild(el('line',{x1:x,y1:by-4,x2:x,y2:by,stroke:'#8A9BB5'})); S.appendChild(el('text',{x,y:by+12,'text-anchor':'middle','font-size':10.5,fill:'#5B6B80'},(from+t)+'ms')); }
+    let lx=x0; sim.tasks.forEach(k=>{ S.appendChild(el('rect',{x:lx,y:by+20,width:12,height:12,fill:k.color,rx:2})); const t=el('text',{x:lx+16,y:by+30,'font-size':12,fill:'#1B2A41'},k.name); S.appendChild(t); lx+=k.name.length*7.5+40; });
+  }
+  const C={a:'#2457C5',b:'#C98A12',s:'#8A9BB5',s2:'#B5A06A',rt:'#D6452E',sh:'#178A67',p:'#7A3E9D'};
+
+  /* ───────── 1 컨텍스트 스위치 ───────── */
+  function cRun(){ const A=$('#c-a').value, B=$('#c-b').value, st=$('#c-stress').checked; const T=[];
+    const mk=(id,name,kind,color)=>({id,name,color,policy:'OTHER',nice:0,kind,work:1,sleep:2});
+    T.push(mk('A','A ('+(A==='busy'?'busy':'sleep')+')',A,C.a)); if(B!=='none') T.push(mk('B','B ('+(B==='busy'?'busy':'sleep')+')',B,C.b)); if(st) T.push(mk('S','stress-ng',' busy'.trim(),C.s));
+    const sim=new Sim(T,1); sim.runFor(100); drawTimeline($('#c-svg'),sim,0,100,{labels:['CPU 0']});
+    $('#c-tbl').innerHTML='<tr><th>태스크</th><th>CPU 사용</th><th>자발적 ▼</th><th>비자발적 ✕</th></tr>'+sim.tasks.map(k=>`<tr><td>${esc(k.name)}</td><td>${k.run} ms</td><td>${k.vol}</td><td>${k.inv}</td></tr>`).join('');
+    const a=sim.tasks[0]; const n=$('#c-note');
+    if(A==='sleeper'){ n.className='note ok'; n.innerHTML=`A 는 1ms 일하고 스스로 잠들어 자발적 전환이 <b>${a.vol}번</b>입니다. 잠들 때마다 CPU 가 다른 태스크에게 넘어가므로 빼앗길 일이 거의 없습니다(비자발적 ${a.inv}).`; }
+    else if(T.length===1){ n.className='note'; n.innerHTML='경쟁자가 없으면 busy 형도 빼앗기지 않습니다. B 를 추가하거나 부하를 켜 보세요.'; }
+    else { n.className='note warn'; n.innerHTML=`A 는 스스로 내려놓지 않으므로 자발적 전환이 ${a.vol}, 경쟁자가 있어 스케줄러가 <b>${a.inv}번 빼앗았습니다</b>. 01_ctxsw busy 를 stress-ng 와 함께 돌렸을 때와 같은 모습입니다.`; } }
+  $('#c-run').addEventListener('click',cRun); ['#c-a','#c-b','#c-stress'].forEach(s=>$(s).addEventListener('change',cRun));
+  $('#c-reset').addEventListener('click',()=>{ $('#c-a').value='sleeper'; $('#c-b').value='busy'; $('#c-stress').checked=false; cRun(); }); cRun();
+
+  /* ───────── 2 CFS vruntime ───────── */
+  const VT=[{id:'A',name:'A',color:C.a,nice:0,on:true},{id:'B',name:'B',color:C.b,nice:5,on:true},{id:'C',name:'C',color:C.p,nice:10,on:false}];
+  $('#v-ctrls').innerHTML=VT.map((k,i)=>`<label class="toggle"><input type="checkbox" data-on="${i}" ${k.on?'checked':''}><span class="sw"></span>${k.name}</label><label>nice <input type="range" min="-5" max="19" value="${k.nice}" data-n="${i}"> <span class="mono" id="v-nv${i}">${k.nice}</span></label>`).join('<span style="width:14px"></span>');
+  let vSim, vLog=[];
+  function vReset(){ vSim=new Sim(VT.filter(k=>k.on).map(k=>({id:k.id,name:k.name,color:k.color,policy:'OTHER',nice:k.nice,kind:'busy'})),1); vLog=[]; vDraw(); }
+  function vDraw(){ const S=$('#v-svg'); S.innerHTML=''; const T=vSim.tasks; const mx=Math.max(10,...T.map(k=>k.vr)); const R=T.filter(k=>k.state==='R'); const mn=R.length?R.reduce((a,b)=>a.vr<=b.vr?a:b):null;
+    T.forEach((k,i)=>{ const y=20+i*62; S.appendChild(el('text',{x:4,y:y+22,'font-size':14,'font-weight':700,fill:k.color},k.name));
+      S.appendChild(el('text',{x:4,y:y+40,'font-size':11,fill:'#5B6B80'},`nice ${k.nice}`));
+      S.appendChild(el('rect',{x:60,y,width:300,height:34,fill:'#EEF1F5',rx:4})); S.appendChild(el('rect',{x:60,y,width:Math.max(2,k.vr/mx*300),height:34,fill:k.color,rx:4,opacity:k===mn?1:.55}));
+      S.appendChild(el('text',{x:66,y:y+22,'font-size':12,fill:'#fff','font-weight':600},`vruntime ${k.vr.toFixed(1)} ms`));
+      if(k===mn) S.appendChild(el('text',{x:366,y:y+22,'font-size':12,fill:'#D6452E','font-weight':700},'◀ 최소')); });
+    S.appendChild(el('text',{x:60,y:212,'font-size':11.5,fill:'#5B6B80'},`경과 ${vSim.t} ms · 최근 선택: ${vLog.slice(-12).join(' ')}`));
+    const ws=T.map(k=>WEIGHT[String(k.nice)]), sw=ws.reduce((a,b)=>a+b,0);
+    $('#v-tbl').innerHTML='<tr><th>태스크</th><th>weight</th><th>실제 몫</th><th>예상 몫</th><th>vruntime/실행</th></tr>'+T.map((k,i)=>`<tr><td>${k.name} (nice ${k.nice})</td><td>${ws[i]}</td><td>${vSim.t?pct(k.run/vSim.t):'–'}</td><td>${pct(ws[i]/sw)}</td><td>${(1024/ws[i]).toFixed(2)}×</td></tr>`).join('');
+    const n=$('#v-note'); n.className='note'; n.innerHTML=vSim.t<50?'"한 번 고르기" 를 여러 번 눌러 보세요. 매번 vruntime 이 가장 작은 막대(◀)가 선택되어 1ms 실행되고, 그만큼 막대가 <b>1024/weight 배</b> 늘어납니다.':'nice 가 큰 태스크는 같은 1ms 를 실행해도 막대가 더 많이 늘어나 오른쪽으로 빨리 밀려납니다. 그래서 <b>실제 몫이 weight 비율과 같아집니다</b>(02_nice_race 의 90.3 % : 9.7 %).'; }
+  $('#v-step').addEventListener('click',()=>{ vSim.step(); vLog.push(vSim.hist[0][vSim.t-1]); vDraw(); });
+  $('#v-run').addEventListener('click',()=>{ for(let i=0;i<1000;i++){ vSim.step(); vLog.push(vSim.hist[0][vSim.t-1]); } vDraw(); });
+  $('#v-reset').addEventListener('click',vReset);
+  $$('#v-ctrls [data-n]').forEach(r=>r.addEventListener('input',()=>{ VT[+r.dataset.n].nice=+r.value; $('#v-nv'+r.dataset.n).textContent=r.value; vReset(); }));
+  $$('#v-ctrls [data-on]').forEach(r=>r.addEventListener('change',()=>{ VT[+r.dataset.on].on=r.checked; if(!VT.some(k=>k.on)){ r.checked=true; VT[+r.dataset.on].on=true; } vReset(); }));
+  vReset();
+
+  /* ───────── 3 affinity ───────── */
+  function aRun(){ const aff=$('#a-aff').value; const T=[{id:'P',name:'P (내 프로그램)',color:C.a,policy:'OTHER',nice:0,kind:'busy',aff:aff===''?null:[+aff]}];
+    if($('#a-s0').checked) T.push({id:'S0',name:'stress (CPU 0)',color:C.s,policy:'OTHER',nice:0,kind:'busy',aff:[0]});
+    if($('#a-s1').checked) T.push({id:'S1',name:'stress (CPU 1)',color:C.s2,policy:'OTHER',nice:0,kind:'busy',aff:[1]});
+    const sim=new Sim(T,2); sim.runFor(200); drawTimeline($('#a-svg'),sim,0,200,{marks:false});
+    const p=sim.tasks[0]; $('#a-share').textContent=pct(p.run/200); $('#a-where').textContent=Object.keys(p.cpus).map(c=>`CPU ${c} (${p.cpus[c]}ms)`).join(', ')||'–';
+    let mw=0,run=0; for(let t=0;t<200;t++){ const on=sim.hist.some(h=>h[t]==='P'); if(on) run=0; else { run++; mw=Math.max(mw,run); } } $('#a-wait').textContent=mw+' ms';
+    const busyOn=c=>$(c?'#a-s1':'#a-s0').checked; const n=$('#a-note');
+    if(aff!==''&&busyOn(+aff)&&!busyOn(1-aff)){ n.className='note warn'; n.innerHTML=`P 를 바쁜 CPU ${aff} 에 고정했습니다. CPU ${1-aff} 가 놀고 있어도 옮겨 갈 수 없어 <b>절반만</b> 실행됩니다. 고정의 대가입니다.`; }
+    else if(aff===''){ n.className='note ok'; n.innerHTML=busyOn(0)&&busyOn(1)?'두 CPU 가 모두 바빠 자유로운 P 도 어딘가에서 나눠 써야 합니다.':'고정하지 않으면 스케줄러가 P 를 <b>덜 바쁜 CPU</b> 로 보내 100 % 가까이 실행됩니다.'; }
+    else { n.className='note ok'; n.innerHTML=busyOn(+aff)?'두 CPU 가 모두 바쁘면 고정 여부와 상관없이 나눠 씁니다.':`P 를 비어 있는 CPU ${aff} 에 고정해 혼자 씁니다. 실행 위치가 예측 가능하고 캐시도 데워진 채 유지됩니다.`; } }
+  $('#a-run').addEventListener('click',aRun); ['#a-aff','#a-s0','#a-s1'].forEach(s=>$(s).addEventListener('change',aRun)); aRun();
+
+  /* ───────── 4 RT 정책 ───────── */
+  function rRun(){ const mode=$('#r-mode').value; const thr=$('#r-thr').checked;
+    const T=[{id:'SH',name:'셸·sshd (가끔 1ms)',color:C.sh,policy:'OTHER',nice:0,kind:'periodic',work:1,period:50,offset:7},{id:'W',name:'계산 (OTHER)',color:C.b,policy:'OTHER',nice:0,kind:'busy'}];
+    if(mode==='periodic') T.unshift({id:'RT',name:'RT 주기 (FIFO 50)',color:C.rt,policy:'FIFO',prio:50,kind:'periodic',work:2,period:10});
+    if(mode==='loop') T.unshift({id:'RT',name:'RT 무한 루프 (FIFO 50)',color:C.rt,policy:'FIFO',prio:50,kind:'busy'});
+    const sim=new Sim(T,1,{throttle:thr}); sim.runFor(2000); drawTimeline($('#r-svg'),sim,0,2000,{marks:false,labels:['CPU 0'],lh:60,top:24});
+    const S4=$('#r-svg'); S4.appendChild(el('text',{x:8,y:14,'font-size':11,fill:'#178A67','font-weight':600},'셸 실행'));
+    sim.hist[0].forEach((id,t)=>{ if(id==='SH'&&sim.hist[0][t-1]!=='SH') S4.appendChild(el('text',{x:70+t/2000*770,y:16,'text-anchor':'middle','font-size':11,fill:'#178A67','font-weight':700},'▼')); });
+    const g=id=>sim.tasks.find(k=>k.id===id); const rt=g('RT'), w=g('W'), sh=g('SH');
+    $('#r-rt').textContent=rt?pct(rt.run/2000):'–'; $('#r-oth').textContent=pct(w.run/2000);
+    const starved=sh.run===0; $('#r-sh').textContent=starved?'응답 없음':sh.maxWait+' ms';
+    const n=$('#r-note');
+    if(mode==='none'){ n.className='note'; n.innerHTML='모두 SCHED_OTHER 면 셸이 깨어날 때 바로 CPU 를 받습니다(잠들어 있던 태스크는 vruntime 이 작기 때문).'; }
+    else if(mode==='periodic'){ n.className='note ok'; n.innerHTML='RT 태스크가 10ms 마다 2ms 일하고 <b>잠들기 때문에</b> 나머지 80 % 는 일반 태스크가 씁니다. RT 를 쓰는 올바른 모양입니다.'; }
+    else if(thr){ n.className='note warn'; n.innerHTML='무한 루프 RT 가 CPU 를 독차지하지만, throttling 이 <b>1초마다 50ms</b> 를 일반 태스크에 남겨 셸이 겨우 반응합니다. PuTTY 가 아주 느려지지만 멈추지는 않는 이유입니다.'; }
+    else { n.className='note warn'; n.innerHTML='throttling 을 끄면 RT 무한 루프가 CPU 를 <b>100 %</b> 가져가 셸 · sshd 가 전혀 실행되지 않습니다. 실제 VM 이면 PuTTY 접속이 끊긴 것처럼 보입니다. 수업에서 절대 끄지 않습니다.'; } }
+  $('#r-run').addEventListener('click',rRun); ['#r-mode','#r-thr'].forEach(s=>$(s).addEventListener('change',rRun)); rRun();
+
+  /* ───────── 5 드리프트 ───────── */
+  function dDraw(){ const w=+$('#d-work').value/1000, l=+$('#d-lat').value/1000; $('#d-workv').textContent=(w).toFixed(2)+' ms'; $('#d-latv').textContent=(l).toFixed(2)+' ms';
+    const S=$('#d-svg'); S.innerHTML=''; const x0=110,W=730,span=10;
+    const X=t=>x0+t/span*W;
+    [['목표 눈금',30],['상대 sleep',90],['절대 sleep',150]].forEach(([t,y])=>{ S.appendChild(el('text',{x:6,y:y+5,'font-size':13,'font-weight':600,fill:'#1B2A41'},t)); S.appendChild(el('line',{x1:x0,y1:y,x2:x0+W,y2:y,stroke:'#C9D1DC'})); });
+    for(let i=0;i<=span;i++){ S.appendChild(el('line',{x1:X(i),y1:22,x2:X(i),y2:38,stroke:'#1B2A41'})); S.appendChild(el('text',{x:X(i),y:16,'text-anchor':'middle','font-size':10.5,fill:'#5B6B80'},i+'ms')); }
+    let t=0; for(let i=0;i<10&&t<span;i++){ S.appendChild(el('rect',{x:X(t),y:80,width:Math.max(1,w/span*W),height:20,fill:'#2457C5'})); t+=w+1+l; if(t<=span) S.appendChild(el('line',{x1:X(t),y1:74,x2:X(t),y2:106,stroke:'#D6452E','stroke-width':2})); }
+    for(let i=0;i<10;i++){ const s=i+(i?l:0); S.appendChild(el('rect',{x:X(s),y:140,width:Math.max(1,w/span*W),height:20,fill:'#178A67'})); S.appendChild(el('line',{x1:X(i+1)+l/span*W,y1:134,x2:X(i+1)+l/span*W,y2:166,stroke:'#178A67','stroke-width':2})); }
+    S.appendChild(el('text',{x:x0,y:196,'font-size':12,fill:'#5B6B80'},'파란 막대 = 일한 시간, 빨간 선 = 상대 sleep 이 깨어난 시각 · 초록 = 절대 sleep (항상 눈금 + 지연)'));
+    const rel=1000*(1+w+l), abs=1000+l; $('#d-rel').textContent=rel.toFixed(1)+' ms ('+(rel-1000>=0?'+':'')+(rel-1000).toFixed(1)+')'; $('#d-abs').textContent=abs.toFixed(1)+' ms (+'+l.toFixed(2)+')';
+    $('#d-hour').textContent=((w+l)*3600).toFixed(0)+' 초 늦음';
+    const n=$('#d-note'); n.className=w+l>0?'note warn':'note ok'; n.innerHTML=w+l>0?`상대 sleep 은 매 주기 (일한 시간 ${w.toFixed(2)} + 지연 ${l.toFixed(2)}) ms 씩 밀려 1000주기에 <b>${(1000*(w+l)).toFixed(0)} ms</b> 어긋납니다. 절대 sleep 은 매번 다음 눈금으로 돌아오므로 마지막 한 번의 지연만 남습니다.`:'일한 시간과 지연이 0 이면 둘이 같습니다 — 현실에서는 불가능한 경우입니다.'; }
+  ['#d-work','#d-lat'].forEach(s=>$(s).addEventListener('input',dDraw)); dDraw();
+
+  /* ───────── 6 cgroup ───────── */
+  function gDraw(){ const q=+$('#g-q').value, p=+$('#g-p').value, two=$('#g-two').checked; $('#g-qv').textContent=q+' ms';
+    const quota=Math.min(q,p)*1000, period=p*1000; const need=two?2:1;   // CPU 몫 (vCPU 개수 기준)
+    $('#g-cmd').innerHTML=`<span class="c">$ cat /sys/fs/cgroup/lab/cpu.max</span>\n${quota} ${period}        <span class="c"># ${period/1000}ms 마다 ${quota/1000}ms (cgroup 전체, 모든 CPU 합산)</span>`;
+    const S=$('#g-svg'); S.innerHTML=''; const x0=70,W=770,span=500; const X=t=>x0+t/span*W;
+    for(let c=0;c<2;c++){ const y=12+c*46; S.appendChild(el('text',{x:8,y:y+24,'font-size':13,'font-weight':600,fill:'#1B2A41'},'CPU '+c)); S.appendChild(el('rect',{x:x0,y,width:W,height:36,fill:'#EEF1F5',rx:4})); }
+    let used=0, nr=0, thrUs=0;
+    for(let s=0;s<span;s+=p){ const e=Math.min(span,s+p); let budget=q; const len=e-s;
+      const per=need===1?[Math.min(budget,len),0]:[Math.min(budget/2,len),Math.min(budget/2,len)];
+      for(let c=0;c<2;c++){ if(c===1&&!two) continue; const y=12+c*46; const r=per[c];
+        S.appendChild(el('rect',{x:X(s),y:y+2,width:r/span*W,height:32,fill:'#2457C5'}));
+        if(r<len) S.appendChild(el('rect',{x:X(s+r),y:y+2,width:(len-r)/span*W,height:32,fill:'#FBE3DF'})); used+=r; }
+      if(per[0]<len){ nr++; thrUs+=(len-per[0])*1000; }
+      S.appendChild(el('line',{x1:X(s),y1:6,x2:X(s),y2:108,stroke:'#D6452E','stroke-dasharray':'3 3'})); }
+    for(let t=0;t<=span;t+=100){ S.appendChild(el('text',{x:X(t),y:124,'text-anchor':'middle','font-size':10.5,fill:'#5B6B80'},t+'ms')); }
+    S.appendChild(el('rect',{x:x0,y:134,width:12,height:12,fill:'#2457C5'})); S.appendChild(el('text',{x:x0+16,y:144,'font-size':12,fill:'#1B2A41'},'07_busy 실행'));
+    S.appendChild(el('rect',{x:x0+120,y:134,width:12,height:12,fill:'#FBE3DF',stroke:'#D6452E'})); S.appendChild(el('text',{x:x0+136,y:144,'font-size':12,fill:'#1B2A41'},'throttled (다음 주기까지 대기)'));
+    const use=Math.min(q,p)/p; $('#g-use').textContent=two?`각 ${pct(use/2)} (합 ${pct(use)})`:pct(use);
+    $('#g-nr').textContent=q>=p?'0':String(Math.round(1000/p)); $('#g-us').textContent=q>=p?'0':String(Math.round((1000/p)*(p-q)*1000));
+    const n=$('#g-note'); if(q>=p){ n.className='note ok'; n.innerHTML='quota 가 period 이상이면 한 CPU 를 다 써도 제한에 걸리지 않습니다.'; }
+    else if(two){ n.className='note warn'; n.innerHTML='quota 는 <b>cgroup 전체의 합</b>입니다. 프로세스가 둘이면 같은 예산을 나눠 써서 각각 절반이 됩니다 — CPU 를 2개 쓰려면 quota 를 period 의 2배까지 줄 수 있습니다.'; }
+    else { n.className='note'; n.innerHTML=`매 ${p}ms 주기 시작에 ${q}ms 예산이 채워지고, 다 쓰면 주기 끝까지 멈춥니다. period 를 짧게 하면 같은 비율이라도 멈추는 시간이 짧게 여러 번으로 나뉩니다.`; } }
+  ['#g-q','#g-p','#g-two'].forEach(s=>$(s).addEventListener('input',gDraw)); $('#g-p').addEventListener('change',gDraw); gDraw();
+
+  /* ───────── 7 jitter ───────── */
+  let jK=0, jSeed=7;
+  const rnd=()=>{ jSeed=(jSeed*1103515245+12345)%2147483648; return jSeed/2147483648; };
+  const J=[{name:'OTHER · 부하 없음',cmd:'./jitter',base:60,spread:40,tail:.01,tailMax:700},{name:'OTHER · 부하',cmd:'stress-ng --cpu 2 &  ./jitter',base:70,spread:3000,tail:.03,tailMax:6000},{name:'FIFO 80 · 부하',cmd:'sudo ./jitter -f 80',base:24,spread:25,tail:.008,tailMax:500},{name:'FIFO 80 · CPU 1 · 부하',cmd:'sudo ./jitter -f 80 -c 1',base:21,spread:20,tail:.006,tailMax:380}];
+  function jRun(){ const k=J[jK], vm=$('#j-vm').checked; const N=5000, d=[];
+    for(let i=0;i<N;i++){ let v=k.base+(-Math.log(1-rnd()))*k.spread*(jK===1?.6:1)*(jK===1&&rnd()<.5?1:(jK===1?.05:1));
+      if(rnd()<k.tail) v+=rnd()*k.tailMax*(vm?1:.25); if(vm&&rnd()<.002) v+=800+rnd()*1500; d.push(v); }
+    d.sort((a,b)=>a-b); const avg=d.reduce((a,b)=>a+b,0)/N, p99=d[Math.floor(N*.99)], mx=d[N-1];
+    $('#j-min').textContent=d[0].toFixed(1)+' us'; $('#j-avg').textContent=avg.toFixed(1)+' us'; $('#j-p99').textContent=p99.toFixed(1)+' us'; $('#j-max').textContent=mx.toFixed(1)+' us';
+    $('#j-term').innerHTML=`<span class="c">$ ${esc(k.cmd)}</span>\n정책=${jK>=2?'SCHED_FIFO(80)':'SCHED_OTHER'}  CPU=${jK===3?'1':'자유'}  주기=1000us  횟수=5000\n지연(us)  최소 ${d[0].toFixed(1).padStart(7)}  평균 ${avg.toFixed(1).padStart(7)}  99% ${p99.toFixed(1).padStart(7)}  최대 ${mx.toFixed(1).padStart(7)}`;
+    const S=$('#j-svg'); S.innerHTML=''; const edges=[0,25,50,100,200,400,800,1600,3200,6400,1e9]; const lab=['<25','25','50','100','200','400','800','1.6k','3.2k','6.4k+']; const cnt=new Array(10).fill(0);
+    d.forEach(v=>{ for(let i=0;i<10;i++) if(v>=edges[i]&&v<edges[i+1]){ cnt[i]++; break; } });
+    const x0=60,W=780,bw=W/10, H=160; const lmax=Math.log10(N+1);
+    S.appendChild(el('text',{x:6,y:14,'font-size':11,fill:'#5B6B80'},'횟수(로그)'));
+    cnt.forEach((c,i)=>{ const h=c?Math.log10(c+1)/lmax*H:0; const x=x0+i*bw; const tail=edges[i]>=p99;
+      S.appendChild(el('rect',{x:x+4,y:20+H-h,width:bw-8,height:h,fill:tail?'#D6452E':'#2457C5',rx:3}));
+      S.appendChild(el('text',{x:x+bw/2,y:20+H-h-4,'text-anchor':'middle','font-size':11,fill:'#1B2A41'},c||''));
+      S.appendChild(el('text',{x:x+bw/2,y:H+38,'text-anchor':'middle','font-size':11,fill:'#5B6B80'},lab[i])); });
+    S.appendChild(el('text',{x:x0+W/2,y:H+56,'text-anchor':'middle','font-size':11.5,fill:'#5B6B80'},'지연 구간 (us) — 빨강 = 99% 값 이상인 꼬리'));
+    const n=$('#j-note'); n.className=jK===1?'note warn':(jK>=2?'note ok':'note');
+    n.innerHTML=jK===0?'부하가 없으면 OTHER 도 대부분 100us 안에 깨어납니다. 하지만 최대값은 평균의 수 배입니다.':jK===1?'부하가 걸리면 OTHER 는 다른 프로세스와 CPU 를 나눠 써야 해서 <b>수 ms</b> 늦게 깨어나는 일이 생깁니다. 1ms 주기 태스크로는 실패입니다.':jK===2?'FIFO 는 부하가 있어도 일반 태스크를 밀어내고 바로 실행되어 꼬리가 크게 줄어듭니다.':'CPU 까지 고정하면 다른 CPU 로 옮겨 가는 비용이 사라져 꼬리가 가장 짧습니다.';
+    if(vm) n.innerHTML+=' VM 스위치가 켜져 있으면 호스트가 vCPU 를 멈추는 드문 경우가 섞여 최대값이 크게 튑니다.'; }
+  tabs('j-tabs',b=>{ jK=+b.dataset.k; jRun(); }); $('#j-run').addEventListener('click',()=>{ jSeed=(jSeed+97)%2147483648; jRun(); }); $('#j-vm').addEventListener('change',jRun); jRun();
+
+  /* ───────── 8 놀이터 ───────── */
+  const PCFG=[{id:'S',name:'센서 (주기)',color:C.rt,policy:'OTHER',val:0,aff:'',kind:'periodic'},{id:'AI',name:'AI 추론',color:C.a,policy:'OTHER',val:0,aff:'',kind:'busy'},{id:'LOG',name:'로그 저장',color:C.b,policy:'OTHER',val:0,aff:'',kind:'busy'}];
+  const PRE=[[['OTHER',0,'','periodic'],['OTHER',0,'','busy'],['OTHER',0,'','busy']],[['FIFO',80,'1','periodic'],['OTHER',0,'0','busy'],['OTHER',10,'0','busy']],[['OTHER',0,'0','periodic'],['OTHER',0,'0','busy'],['OTHER',0,'0','busy']]];
+  function pTable(){ $('#p-cfg').innerHTML='<tr><th>태스크</th><th>정책</th><th>nice / 우선순위</th><th>CPU</th><th>동작</th></tr>'+PCFG.map((k,i)=>`<tr><td><span style="display:inline-block;width:12px;height:12px;background:${k.color};border-radius:2px;margin-right:6px"></span>${k.name}</td>
+      <td><select data-i="${i}" data-f="policy"><option ${k.policy==='OTHER'?'selected':''}>OTHER</option><option ${k.policy==='FIFO'?'selected':''}>FIFO</option></select></td>
+      <td><input type="number" data-i="${i}" data-f="val" value="${k.val}" style="width:80px" min="${k.policy==='FIFO'?1:-5}" max="${k.policy==='FIFO'?99:19}"> <span class="mono" style="font-size:12px">${k.policy==='FIFO'?'(1~99)':'(nice -5~19)'}</span></td>
+      <td><select data-i="${i}" data-f="aff"><option value="" ${k.aff===''?'selected':''}>자유</option><option value="0" ${k.aff==='0'?'selected':''}>0</option><option value="1" ${k.aff==='1'?'selected':''}>1</option></select></td>
+      <td><select data-i="${i}" data-f="kind"><option value="periodic" ${k.kind==='periodic'?'selected':''}>10ms 마다 2ms</option><option value="busy" ${k.kind==='busy'?'selected':''}>계속 계산</option></select></td></tr>`).join('');
+    $$('#p-cfg [data-f]').forEach(e=>e.addEventListener('change',()=>{ const k=PCFG[+e.dataset.i]; let v=e.value; if(e.dataset.f==='val'){ v=+v; if(k.policy==='FIFO') v=Math.max(1,Math.min(99,v)); else v=Math.max(-5,Math.min(19,v)); } k[e.dataset.f]=v; if(e.dataset.f==='policy') k.val=v==='FIFO'?50:0; pTable(); pRun(); })); }
+  function pRun(){ const T=PCFG.map(k=>({id:k.id,name:k.name,color:k.color,policy:k.policy,prio:k.policy==='FIFO'?k.val:0,nice:k.policy==='OTHER'?k.val:0,aff:k.aff===''?null:[+k.aff],kind:k.kind,work:2,period:10,offset:k.id==='S'?3:0}));
+    const sim=new Sim(T,2,{throttle:$('#p-thr').checked}); sim.runFor(300); drawTimeline($('#p-svg'),sim,0,300,{marks:false});
+    $('#p-res').innerHTML='<tr><th>태스크</th><th>CPU 몫</th><th>실행된 CPU</th><th>주기 시작 지연 (최대)</th></tr>'+sim.tasks.map(k=>`<tr class="${k.kind==='periodic'&&k.maxWait>3?'hot':''}"><td>${esc(k.name)}</td><td>${pct(k.run/300)}</td><td>${Object.keys(k.cpus).join(', ')||'–'}</td><td>${k.kind==='periodic'?k.maxWait+' ms':'–'}</td></tr>`).join('');
+    const s=sim.tasks[0]; const n=$('#p-note');
+    if(s.kind!=='periodic'){ n.className='note'; n.innerHTML='센서를 "10ms 마다 2ms" 로 두면 주기 태스크의 시작 지연을 볼 수 있습니다.'; return; }
+    if(s.maxWait<=1){ n.className='note ok'; n.innerHTML=`센서가 매 주기 <b>최대 ${s.maxWait}ms</b> 안에 시작됩니다. ${s.policy==='FIFO'?'FIFO 로 다른 태스크를 밀어내고, 무거운 일은 다른 CPU 에 두었기 때문입니다.':'경쟁이 적어 운 좋게 바로 실행되었습니다. 부하가 늘면 달라집니다.'}`; }
+    else { n.className='note warn'; n.innerHTML=`센서가 최대 <b>${s.maxWait}ms</b> 늦게 시작합니다. 10ms 주기에 이 정도 지연은 위험합니다. 센서를 FIFO 로 올리거나, 무거운 일과 다른 CPU 로 떼어 보세요(예시 2).`; } }
+  $('#p-run').addEventListener('click',pRun); $('#p-thr').addEventListener('change',pRun);
+  $$('#p-pre button').forEach(b=>b.addEventListener('click',()=>{ PRE[+b.dataset.p].forEach((v,i)=>{ Object.assign(PCFG[i],{policy:v[0],val:v[1],aff:v[2],kind:v[3]}); }); $$('#p-pre button').forEach(x=>x.classList.toggle('on',x===b)); pTable(); pRun(); }));
+  pTable(); pRun();
+})();
+</script>
+</body>
+</html>
