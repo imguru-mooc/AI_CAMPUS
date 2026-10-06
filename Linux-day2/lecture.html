@@ -389,22 +389,111 @@ clocksource: Long readout interval, skipping watchdog check: cs_nsec: 2949341046
 ./jitter<span class="w"> </span>-n<span class="w"> </span><span class="m">20000</span><span class="w">         </span><span class="c1"># 잠드는 프로그램: 최대가 수 ms 이하면 정상, 100 ms 이상이면 문제</span>
 </code></pre></div>
 <p><strong>해결 — Windows 호스트 (관리자 PowerShell)</strong></p>
-<p>관리자 PowerShell 은 <strong>Win + X → 터미널(관리자)</strong> 로 연다. 창 제목에 "관리자:" 가 있어야 한다. 일반 창에서는 <code>bcdedit</code> 가 "액세스가 거부되었습니다" 로 실패한다.</p>
-<div class="hl"><pre class="language-powershell lang-plain"><code># 1) 무엇이 하이퍼바이저를 켜는지 확인
-Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All | Select-Object FeatureName, State
+<p>관리자 PowerShell 은 <strong>Win + X → 터미널(관리자)</strong> 로 연다. 창 제목에 "관리자:" 가 있어야 한다. 일반 창에서는 <code>bcdedit</code> 가 "액세스가 거부되었습니다" 로 실패한다. 하이퍼바이저를 켜는 원인은 여러 겹일 수 있으므로 <strong>① 진단 → ② 원인별로 끄기 → ③ 다시 시작 → ④ 확인</strong> 을 VBS 상태가 0 이 될 때까지 반복한다.</p>
+<p><strong>① 진단 — 무엇이 하이퍼바이저를 켜는가</strong></p>
+<div class="hl"><pre class="language-powershell lang-plain"><code>Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All | Select-Object FeatureName, State
 Get-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform | Select-Object FeatureName, State
 Get-CimInstance -Namespace root\Microsoft\Windows\DeviceGuard -ClassName Win32_DeviceGuard |
   Format-List VirtualizationBasedSecurityStatus, SecurityServicesRunning
-#    VirtualizationBasedSecurityStatus : 2  → VBS 실행 중,  SecurityServicesRunning : {2} → 메모리 무결성
-
-# 2) 끄기
+reg query &quot;HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard&quot;
+reg query &quot;HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\SystemGuard&quot;
+bcdedit /enum &quot;{current}&quot; | findstr -i hypervisor
+</code></pre></div>
+<blockquote>
+<p><code>Get-WindowsOptionalFeature -FeatureName</code> 에는 이름을 <strong>한 번에 하나만</strong> 넣는다. 쉼표로 둘을 넣으면 "System.Object[] 을(를) … 변환할 수 없습니다" 오류가 난다.</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>진단 결과</th>
+<th>의미</th>
+<th>② 에서 할 일</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Microsoft-Hyper-V-All</code> · <code>VirtualMachinePlatform</code> 이 <code>Enabled</code></td>
+<td>Hyper-V · WSL2 기능</td>
+<td>A</td>
+</tr>
+<tr>
+<td><code>VirtualizationBasedSecurityStatus : 2</code></td>
+<td>VBS(가상화 기반 보안) 실행 중 — 이것만 남아도 거북이</td>
+<td>아래 서비스 번호로 판단</td>
+</tr>
+<tr>
+<td><code>SecurityServicesRunning : {1}</code></td>
+<td>Credential Guard</td>
+<td>B</td>
+</tr>
+<tr>
+<td><code>SecurityServicesRunning : {2}</code></td>
+<td>메모리 무결성(HVCI)</td>
+<td>B</td>
+</tr>
+<tr>
+<td><code>SecurityServicesRunning : {3, 4}</code></td>
+<td><strong>System Guard Secure Launch</strong> + SMM 펌웨어 측정 — Windows 보안 화면에 보이지 않는다</td>
+<td>C</td>
+</tr>
+<tr>
+<td><code>Policies\…\DeviceGuard</code> 에 <code>EnableVirtualizationBasedSecurity 0x1</code></td>
+<td><strong>정책이 VBS 를 강제</strong> — 일반 설정을 꺼도 다시 켜진다</td>
+<td>D</td>
+</tr>
+<tr>
+<td><code>hypervisorlaunchtype</code> 줄이 없음</td>
+<td>기본값(자동) — 기능 해제 때 지워질 수 있다</td>
+<td>E</td>
+</tr>
+</tbody>
+</table>
+<p><strong>② 원인별로 끄기</strong></p>
+<div class="hl"><pre class="language-powershell lang-plain"><code># A. Hyper-V · 가상 머신 플랫폼(WSL2)
 Disable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -NoRestart
 Disable-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform -NoRestart
+
+# B. 메모리 무결성 · Credential Guard
 reg add &quot;HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity&quot; /v Enabled /t REG_DWORD /d 0 /f
+reg add &quot;HKLM\SYSTEM\CurrentControlSet\Control\Lsa&quot; /v LsaCfgFlags /t REG_DWORD /d 0 /f
+
+# C. System Guard Secure Launch
+reg add &quot;HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\SystemGuard&quot; /v Enabled /t REG_DWORD /d 0 /f
+
+# D. 정책 강제 해제 + VBS 끄기
+reg add &quot;HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard&quot; /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 0 /f
 reg add &quot;HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard&quot; /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 0 /f
+
+# E. 부팅 때 하이퍼바이저 올리지 않기
 bcdedit /set &quot;{current}&quot; hypervisorlaunchtype off
 bcdedit /enum &quot;{current}&quot; | findstr -i hypervisor      # hypervisorlaunchtype  Off
 </code></pre></div>
+<table>
+<thead>
+<tr>
+<th>함께 바꿀 화면 설정</th>
+<th>위치</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>메모리 무결성 · 커널 모드 하드웨어 적용 스택 보호 끄기 (B)</td>
+<td>Windows 보안 → 장치 보안 → 코어 격리 세부 정보</td>
+</tr>
+<tr>
+<td>가상화 기반 보안 켜기 → <strong>사용 안 함</strong> (D, Windows Pro 이상)</td>
+<td><code>gpedit.msc</code> → 컴퓨터 구성 → 관리 템플릿 → 시스템 → Device Guard</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>D 는 로컬 그룹 정책도 바꿔야 한다. 레지스트리만 고치면 정책 갱신 때 다시 <code>0x1</code> 로 돌아간다. Windows Home 에는 gpedit 가 없으므로 레지스트리만 바꾸면 된다.</p>
+</blockquote>
+<p><strong>회사 관리 PC 인지 먼저 확인 (D 가 나왔을 때)</strong></p>
+<div class="hl"><pre class="language-powershell lang-plain"><code>dsregcmd /status | findstr /i &quot;AzureAdJoined DomainJoined MDMUrl&quot;
+</code></pre></div>
+<p><code>AzureAdJoined : YES</code> · <code>DomainJoined : YES</code> 이거나 <code>MDMUrl</code> 에 주소가 있으면 회사(Intune · 도메인)가 정책을 내려보내는 PC 다. 고쳐도 다시 켜지므로 IT 담당자에게 요청하고, 그동안은 아래 <strong>끌 수 없는 PC</strong> 방법을 쓴다.</p>
+<p><strong>③ 다시 시작 · ④ 확인</strong></p>
 <table>
 <thead>
 <tr>
@@ -416,28 +505,34 @@ bcdedit /enum &quot;{current}&quot; | findstr -i hypervisor      # hypervisorlau
 <tbody>
 <tr>
 <td>1</td>
-<td>Windows 보안 → 장치 보안 → 코어 격리 → <strong>메모리 무결성 끔</strong></td>
-<td>"커널 모드 하드웨어 적용 스택 보호" 도 끔</td>
-</tr>
-<tr>
-<td>2</td>
-<td>VM 은 <code>sudo poweroff</code> 로 완전히 종료</td>
+<td>VM 은 <code>sudo poweroff</code> 로 완전히 종료, VirtualBox 종료</td>
 <td>"상태 저장" 으로 끄지 않는다</td>
 </tr>
 <tr>
-<td>3</td>
+<td>2</td>
 <td>시작 → 전원 → <strong>다시 시작</strong></td>
-<td>VirtualBox 만 다시 켜는 것으로는 바뀌지 않는다 · 업데이트 구성으로 한 번 더 재부팅될 수 있다</td>
+<td>VirtualBox 만 다시 켜서는 바뀌지 않는다 · "시스템 종료 후 켜기" 는 빠른 시작 때문에 반영 안 될 수 있다 · 업데이트 구성으로 한 번 더 재부팅될 수 있다</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>(Get-CimInstance -Namespace root\Microsoft\Windows\DeviceGuard -ClassName Win32_DeviceGuard).VirtualizationBasedSecurityStatus</code></td>
+<td><strong>0</strong> 이면 성공 · 2 면 ① 로 돌아가 남은 원인 확인</td>
 </tr>
 <tr>
 <td>4</td>
-<td>VBS 상태 <code>0</code>, 두 기능 <code>Disabled</code>, 거북이 → 파란 V</td>
-<td><code>./jitter -n 20000</code> 최대가 수 ms 이하로</td>
+<td>VirtualBox 상태 표시줄</td>
+<td>거북이 → 파란 V 칩</td>
+</tr>
+<tr>
+<td>5</td>
+<td>VM 안에서 <code>./jitter -n 20000</code></td>
+<td>최대가 수 ms 이하</td>
 </tr>
 </tbody>
 </table>
 <blockquote>
-<p><strong>알아 둘 점:</strong> 이렇게 끄면 WSL2 · Docker Desktop · Windows 샌드박스는 동작하지 않는다(데이터는 남는다). BitLocker 가 켜진 PC 는 다음 부팅 때 복구 키를 물을 수 있으니 미리 확인한다. 되돌릴 때는 관리자 PowerShell 에서 <code>Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -All</code>, <code>Enable-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform</code>, <code>bcdedit /set "{current}" hypervisorlaunchtype auto</code> 후 다시 시작.</p>
+<p><strong>그래도 VBS 가 2 일 때:</strong> 정책 값이 <code>0x0</code> 인데도 Secure Launch 가 남으면 BIOS/UEFI 의 보안 메뉴에서 <strong>AMD DRTM</strong> 또는 <strong>Intel TXT</strong>(제조사마다 "Secure Launch", "Trusted Execution" 등)를 끈다. <strong>SVM / VT-x(가상화)는 VirtualBox 에 필요하므로 끄지 않는다.</strong> 예전에 "UEFI 잠금 사용" 으로 켜진 PC 는 Microsoft 의 Device Guard and Credential Guard hardware readiness tool 의 <code>DG_Readiness_Tool.ps1 -Disable</code> 실행 후, 재부팅 때 나오는 확인 화면에서 F3 로 허용해야 꺼진다.</p>
+<p><strong>알아 둘 점:</strong> 이렇게 끄면 WSL2 · Docker Desktop · Windows 샌드박스는 동작하지 않는다(데이터는 남는다). BitLocker 가 켜진 PC 는 다음 부팅 때 복구 키를 물을 수 있으니 미리 확인한다. 되돌릴 때는 바꾼 레지스트리 값을 1 로, <code>Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -All</code>, <code>Enable-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform</code>, <code>bcdedit /set "{current}" hypervisorlaunchtype auto</code> 후 다시 시작.</p>
 </blockquote>
 <p><strong>끌 수 없는 PC (회사 정책 · UEFI 잠금):</strong> VM 안에서 <code>idle=poll</code> 커널 옵션을 넣으면 vCPU 가 쉬지 않아 지연이 사라진다. 대신 VM 이 켜져 있는 동안 호스트 코어를 계속 100 % 쓴다.</p>
 <div class="hl"><pre class="language-bash lang-bash"><code>sudo<span class="w"> </span>sed<span class="w"> </span>-i<span class="w"> </span><span class="s1">&#39;s/GRUB_CMDLINE_LINUX_DEFAULT=&quot;/&amp;idle=poll /&#39;</span><span class="w"> </span>/etc/default/grub<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>update-grub<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>reboot
