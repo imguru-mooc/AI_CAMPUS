@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux &amp; Shell 3일차 — 눈으로 보는 메모리 (paging · mmap · COW · OOM)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EEF1F5;
+    --panel:#FFFFFF;
+    --ink:#1B2A41;
+    --ink-soft:#5B6B80;
+    --line:#C9D1DC;
+    --blue:#2457C5;
+    --blue-soft:#DCE6FA;
+    --red:#D6452E;
+    --red-soft:#FBE3DF;
+    --green:#178A67;
+    --green-soft:#DDF2EA;
+    --amber:#C98A12;
+    --amber-soft:#FBF0D3;
+    --mono:'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    --sans:'IBM Plex Sans KR', 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    --t:.35s;
+  }
+  @media (prefers-reduced-motion: reduce){ :root{ --t:0s; } *{ animation:none !important; transition:none !important; } }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; }
+  body{
+    font-family:var(--sans); color:var(--ink); background:var(--paper);
+    background-image:
+      linear-gradient(rgba(27,42,65,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(27,42,65,.045) 1px, transparent 1px);
+    background-size:24px 24px;
+    font-size:16px; line-height:1.55;
+  }
+  code, .mono{ font-family:var(--mono); }
+
+  .app{ display:grid; grid-template-columns:260px 1fr; min-height:100vh; }
+  nav{
+    background:var(--ink); color:#fff; padding:28px 20px;
+    position:sticky; top:0; height:100vh; overflow:auto;
+  }
+  nav h1{ font-size:15px; font-weight:500; margin:0 0 4px; letter-spacing:.01em; color:#AEBBD1; }
+  nav .day{ font-size:26px; font-weight:600; margin:0 0 26px; line-height:1.2; }
+  nav ol{ list-style:none; margin:0; padding:0; counter-reset:lesson; }
+  nav li{ margin:0; }
+  nav button{
+    all:unset; display:grid; grid-template-columns:32px 1fr; gap:10px; align-items:baseline;
+    width:100%; padding:9px 10px; border-radius:6px; cursor:pointer; font-size:14.5px; line-height:1.35;
+    color:#D9E1EC;
+  }
+  nav button::before{ counter-increment:lesson; content:counter(lesson) "교시"; font-family:var(--mono); font-size:11px; color:#8A9BB5; }
+  nav button:hover{ background:rgba(255,255,255,.07); }
+  nav button[aria-current="true"]{ background:var(--blue); color:#fff; }
+  nav button[aria-current="true"]::before{ color:#C9D8F7; }
+  nav button:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
+  nav .hint{ margin-top:28px; font-size:12.5px; color:#8A9BB5; line-height:1.5; }
+  nav .hint kbd{ font-family:var(--mono); background:rgba(255,255,255,.12); padding:1px 5px; border-radius:3px; }
+
+  main{ padding:36px 44px 80px; max-width:1100px; }
+  section.lesson{ display:none; }
+  section.lesson.active{ display:block; }
+  .lesson header{ margin-bottom:22px; }
+  .lesson h2{ font-size:30px; font-weight:600; margin:0 0 6px; line-height:1.25; }
+  .lesson header p{ margin:0; color:var(--ink-soft); font-size:16px; max-width:64ch; }
+
+  .stage{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:26px;
+    box-shadow:0 1px 0 rgba(27,42,65,.06);
+  }
+  .controls{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:20px; }
+  .controls label{ font-size:14px; color:var(--ink-soft); display:flex; align-items:center; gap:6px; }
+  button.btn{
+    font:inherit; font-size:14px; font-weight:500; padding:8px 14px; border-radius:6px; cursor:pointer;
+    border:1px solid var(--ink); background:var(--ink); color:#fff;
+  }
+  button.btn.secondary{ background:#fff; color:var(--ink); border-color:var(--line); }
+  button.btn:disabled{ opacity:.4; cursor:default; }
+  button.btn:focus-visible, select:focus-visible, input:focus-visible{ outline:2px solid var(--blue); outline-offset:2px; }
+  select, input[type=number], input[type=text]{
+    font:inherit; font-size:14px; padding:7px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink);
+  }
+  input[type=number], input[type=text]{ font-family:var(--mono); }
+  .toggle{ display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+  .toggle input{ position:absolute; opacity:0; width:0; height:0; }
+  .toggle .sw{ width:38px; height:22px; border-radius:11px; background:var(--line); position:relative; transition:background var(--t); }
+  .toggle .sw::after{ content:""; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition:transform var(--t); }
+  .toggle input:checked + .sw{ background:var(--blue); }
+  .toggle input:checked + .sw::after{ transform:translateX(16px); }
+  .toggle input:focus-visible + .sw{ outline:2px solid var(--blue); outline-offset:2px; }
+
+  .note{ margin-top:18px; padding:14px 16px; border-left:3px solid var(--blue); background:var(--blue-soft); border-radius:0 6px 6px 0; font-size:14.5px; }
+  .note.warn{ border-color:var(--red); background:var(--red-soft); }
+  .note.ok{ border-color:var(--green); background:var(--green-soft); }
+  .note code{ background:rgba(255,255,255,.7); padding:1px 5px; border-radius:3px; }
+
+  pre.code{
+    font-family:var(--mono); font-size:13.5px; background:#F6F8FB; border:1px solid var(--line); border-radius:6px;
+    padding:14px 16px; margin:0; overflow:auto; line-height:1.55; white-space:pre;
+  }
+  pre.code .dim{ color:#9AA7B8; }
+  pre.code .hi{ background:var(--amber-soft); }
+  pre.code .err{ background:var(--red-soft); color:var(--red); }
+
+    .readout{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-top:16px; }
+  .readout div{ padding:12px 14px; border:1px solid var(--line); border-radius:6px; background:#F6F8FB; }
+  .readout b{ display:block; font-size:12.5px; font-weight:500; color:var(--ink-soft); margin-bottom:2px; }
+  .readout span{ font-family:var(--mono); font-size:17px; font-weight:600; }
+  /* ---------- shared ---------- */
+  .mcell{ display:inline-flex; flex-direction:column; align-items:center; min-width:70px; border:2px solid var(--ink); border-radius:6px; background:#fff; overflow:hidden; transition:all var(--t); }
+  .mcell .a{ font-family:var(--mono); font-size:10px; color:var(--ink-soft); background:#F6F8FB; width:100%; text-align:center; padding:3px 4px; border-bottom:1px solid var(--line); }
+  .mcell .v{ font-family:var(--mono); font-size:20px; font-weight:600; padding:8px 6px; }
+  .mcell .n{ font-family:var(--mono); font-size:11px; color:var(--blue); padding:0 4px 6px; }
+  .mcell.hi{ border-color:var(--blue); background:var(--blue-soft); }
+  .mcell.bad{ border-color:var(--red); background:var(--red-soft); }
+  .mcell.ok{ border-color:var(--green); background:var(--green-soft); }
+  .mcell.dim{ opacity:.35; }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+  .lab{ font-size:12.5px; color:var(--ink-soft); margin:14px 0 6px; }
+  .term{ font-family:var(--mono); font-size:13.5px; background:var(--ink); color:#D9E1EC; padding:12px 16px; border-radius:6px; min-height:60px; white-space:pre-wrap; margin-top:16px; }
+  .term .r{ color:#FF9B8A; } .term .g{ color:#7FE0B8; } .term .y{ color:#FFD27F; } .term .c{ color:#8A9BB5; }
+  svg text{ font-family:var(--mono); }
+  .shake{ animation:shake .4s; } @keyframes shake{ 0%,100%{transform:none} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+  .pop-in{ animation:popin .3s ease-out; } @keyframes popin{ from{ transform:scale(.8); opacity:0; } }
+  .fade-out{ animation:fadeout .4s forwards; } @keyframes fadeout{ to{ opacity:0; transform:translateY(-8px); } }
+  .two{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:24px; }
+  .tabs2{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tabs2 button{ font:inherit; font-size:13px; padding:7px 12px; border-radius:6px; border:1px solid var(--line); background:#fff; cursor:pointer; }
+  .tabs2 button.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .fig svg{ width:100%; height:auto; background:#fff; border:1px solid var(--line); border-radius:6px; display:block; }
+  .fig text{ font-size:11px; fill:var(--ink-soft); }
+  .qslots{ display:flex; gap:6px; margin:10px 0; }
+  .qslots span{ flex:1; height:46px; border:2px solid var(--line); border-radius:6px; display:grid; place-items:center; font-family:var(--mono); font-size:13px; background:#fff; transition:all var(--t); }
+  .qslots span.full{ background:var(--blue-soft); border-color:var(--blue); }
+  .fs{ display:grid; grid-template-columns:repeat(16,1fr); gap:3px; }
+  .fs span{ height:22px; border-radius:3px; background:#EEF1F5; transition:background var(--t); }
+  .fs span.used{ background:#8FB0EA; } .fs span.dirty{ background:var(--amber); } .fs span.hot{ outline:2px solid var(--red); }
+  .crash{ font-family:var(--mono); font-size:12.5px; background:#0E1726; color:#D9E1EC; border-radius:8px; padding:12px 14px; line-height:1.7; }
+  .crash span.ln{ display:block; cursor:pointer; border-radius:3px; padding:0 4px; }
+  .crash span.ln:hover{ background:#22324A; } .crash span.ln.on{ background:#3A2A10; color:#FFD27A; }
+  .flow{ position:relative; }
+  table.rt{ border-collapse:collapse; width:100%; font-family:var(--mono); font-size:12.5px; }
+  table.rt th, table.rt td{ border:1px solid var(--line); padding:6px 8px; text-align:left; }
+  table.rt th{ background:var(--paper); font-family:var(--sans); }
+  table.rt tr.hot td{ background:var(--blue-soft); font-weight:700; }
+  @media (max-width:900px){ .two{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav aria-label="교시 선택">
+    <h1>Linux &amp; Shell · Ubuntu Server VM</h1>
+    <p class="day">3일차<br>눈으로 보는 메모리</p>
+    <ol id="navlist">
+      <li><button data-go="1" aria-current="true">주소 공간 지도</button></li>
+      <li><button data-go="2">malloc 의 두 길</button></li>
+      <li><button data-go="3">demand paging</button></li>
+      <li><button data-go="4">mmap 과 page cache</button></li>
+      <li><button data-go="5">Copy-on-Write</button></li>
+      <li><button data-go="6">mlock · OOM</button></li>
+      <li><button data-go="7">메모리 오류 탐지</button></li>
+      <li><button data-go="8">memlab 대시보드</button></li>
+    </ol>
+    <p class="hint">키보드 <kbd>←</kbd> <kbd>→</kbd> 로 교시 이동</p>
+  </nav>
+  <main>
+
+  <section class="lesson active" id="l1">
+    <header><h2>변수는 주소 공간의 어디에 사는가</h2><p>01_layout 의 변수를 눌러 어느 영역에 있는지 보세요. ASLR 을 켠 채 "다시 실행" 하면 영역의 시작 주소가 바뀌고, 끄면 매번 같습니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <div class="tabs2" id="m-vars"></div>
+      </div>
+      <div class="controls">
+        <label class="toggle"><input type="checkbox" id="m-aslr" checked><span class="sw"></span>ASLR (setarch -R 이면 끔)</label>
+        <button class="btn" id="m-run">다시 실행</button>
+      </div>
+      <div class="two">
+        <div class="fig"><svg viewBox="0 0 420 470" id="m-svg"></svg></div>
+        <div><div class="term" id="m-out" style="margin-top:0;min-height:200px"></div><div class="note" id="m-note"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l2">
+    <header><h2>작으면 heap, 크면 mmap</h2><p>요청 크기를 바꾸고 malloc · free 를 눌러 보세요. 기준값(M_MMAP_THRESHOLD)보다 작으면 heap 안에서 잘라 주고, 크면 따로 mmap 해서 free 할 때 바로 돌려줍니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>요청 크기 <input type="range" id="k-size" min="0" max="10" step="1" value="3"> <span class="mono" id="k-sizev"></span></label>
+        <label>기준값 <select id="k-thr"><option value="128" selected>128 KB (기본)</option><option value="512">512 KB (mallopt)</option></select></label>
+        <button class="btn" id="k-malloc">malloc</button>
+        <button class="btn secondary" id="k-free">free</button>
+      </div>
+      <div class="fig"><svg viewBox="0 0 860 230" id="k-svg"></svg></div>
+      <div class="readout"><div><b>판정</b><span id="k-path">–</span></div><div><b>heap 끝(brk) 변화</b><span id="k-brk">–</span></div><div><b>실제 매핑 크기</b><span id="k-map">–</span></div></div>
+      <div class="term" id="k-term" style="min-height:70px"></div>
+      <div class="note" id="k-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l3">
+    <header><h2>주소는 먼저, 페이지는 처음 만질 때</h2><p>칸 하나가 1MB(256 페이지)입니다. malloc → 앞 50MB 쓰기 → 전체 memset 을 차례로 눌러 VmSize · VmRSS · minflt 가 어떻게 바뀌는지 보세요. 아래에서는 page fault 한 번을 단계별로 따라갑니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <button class="btn" id="p-malloc">① malloc(100MB)</button>
+        <button class="btn" id="p-half">② 앞 50MB 페이지마다 1바이트</button>
+        <button class="btn" id="p-all">③ memset 100MB</button>
+        <button class="btn secondary" id="p-reset">처음으로</button>
+      </div>
+      <div class="fig"><svg viewBox="0 0 860 200" id="p-svg"></svg></div>
+      <div class="readout"><div><b>VmSize</b><span id="p-size"></span></div><div><b>VmRSS</b><span id="p-rss"></span></div><div><b>minflt (누적)</b><span id="p-flt"></span></div></div>
+      <div class="lab">page fault 한 번 따라가기</div>
+      <div class="controls"><button class="btn" id="p-step">다음 단계</button><button class="btn secondary" id="p-sreset">처음부터</button></div>
+      <div class="fig"><svg viewBox="0 0 860 120" id="p-flow"></svg></div>
+      <div class="note" id="p-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l4">
+    <header><h2>같은 파일, 두 개의 매핑</h2><p>프로세스 A 와 B 가 test.txt 를 매핑했습니다. A 의 매핑 방식을 고르고 A 가 페이지에 쓴 뒤, B 가 무엇을 보는지와 파일에 무엇이 남는지 확인하세요.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <div class="tabs2" id="f-mode"><button class="on" data-m="shared">A: MAP_SHARED</button><button data-m="private">A: MAP_PRIVATE</button></div>
+        <button class="btn" id="f-write">A 가 대문자로 쓰기</button>
+        <button class="btn" id="f-sync">A: msync</button>
+        <button class="btn" id="f-read">B 가 읽기</button>
+        <button class="btn secondary" id="f-reset">처음으로</button>
+      </div>
+      <div class="fig"><svg viewBox="0 0 860 270" id="f-svg"></svg></div>
+      <div class="term" id="f-term" style="min-height:70px"></div>
+      <div class="note" id="f-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l5">
+    <header><h2>fork 는 복사하지 않는다 — 쓸 때만 복사한다</h2><p>fork 직후 부모와 자식은 같은 물리 페이지를 읽기 전용으로 공유합니다. 자식이 쓰는 비율을 바꾸고 "자식이 쓰기" 를 눌러 복사되는 페이지와 minflt 를 보세요.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <button class="btn" id="w-fork">fork()</button>
+        <label>자식이 쓸 비율 <input type="range" id="w-pct" min="0" max="100" step="10" value="50"> <span class="mono" id="w-pctv"></span></label>
+        <button class="btn" id="w-child">자식이 쓰기</button>
+        <button class="btn" id="w-parent">부모가 마지막 페이지 쓰기</button>
+        <button class="btn secondary" id="w-reset">처음으로</button>
+      </div>
+      <div class="fig"><svg viewBox="0 0 860 305" id="w-svg"></svg></div>
+      <div class="readout"><div><b>공유 중인 페이지</b><span id="w-shared"></span></div><div><b>복사된 페이지</b><span id="w-copied"></span></div><div><b>자식 minflt (50MB 환산)</b><span id="w-flt"></span></div></div>
+      <div class="note" id="w-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l6">
+    <header><h2>fault 를 미리 당기고, 한도 안에서 죽인다</h2><p>왼쪽: mlockall 을 켜면 page fault 가 malloc 시점으로 옮겨 가 실시간 루프가 깨끗해집니다. 오른쪽: cgroup 한도 안에서 메모리를 계속 쓰면 OOM killer 가 끝냅니다.</p></header>
+    <div class="stage">
+      <div class="two">
+        <div>
+          <div class="controls">
+            <label class="toggle"><input type="checkbox" id="l-lock"><span class="sw"></span>mlockall(MCL_CURRENT | MCL_FUTURE)</label>
+            <label>크기 <select id="l-size"><option value="8">8 MB</option><option value="32" selected>32 MB</option><option value="128">128 MB</option></select></label>
+          </div>
+          <div class="fig"><svg viewBox="0 0 400 210" id="l-svg"></svg></div>
+          <div class="readout"><div><b>malloc 중 fault</b><span id="l-f1"></span></div><div><b>루프 중 fault</b><span id="l-f2"></span></div><div><b>루프 시간</b><span id="l-t"></span></div></div>
+          <div class="note" id="l-note"></div>
+        </div>
+        <div>
+          <div class="controls">
+            <label>MemoryMax <select id="o-max"><option value="100" selected>100 MB</option><option value="200">200 MB</option></select></label>
+            <label>overcommit <select id="o-oc"><option value="0" selected>0 (기본)</option><option value="2">2 (엄격)</option></select></label>
+          </div>
+          <div class="controls"><button class="btn" id="o-more">10MB 더 malloc + memset</button><button class="btn secondary" id="o-reset">다시</button></div>
+          <div class="fig"><svg viewBox="0 0 400 110" id="o-svg"></svg></div>
+          <div class="term" id="o-term" style="min-height:120px"></div>
+          <div class="note" id="o-note"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l7">
+    <header><h2>바로 죽지 않는 오류를 도구로 잡는다</h2><p>오류 종류와 실행 방법을 골라 보세요. 도구 없이 실행하면 대부분 아무 일도 없는 것처럼 끝납니다. 힙 그림의 빨간 띠는 ASan 이 블록 양옆에 두는 레드존입니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <div class="tabs2" id="b-kind"><button class="on" data-k="leak">누수 leak</button><button data-k="uaf">use-after-free</button><button data-k="overflow">오버플로</button><button data-k="double">double free</button></div>
+      </div>
+      <div class="controls">
+        <div class="tabs2" id="b-tool"><button class="on" data-t="none">도구 없이 ./08_bugs</button><button data-t="vg">valgrind</button><button data-t="asan">./08_bugs_asan</button></div>
+      </div>
+      <div class="two">
+        <div><pre class="code" id="b-code"></pre><div class="fig"><svg viewBox="0 0 400 120" id="b-svg"></svg></div></div>
+        <div><div class="term" id="b-term" style="margin-top:0;min-height:220px"></div><div class="note" id="b-note"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l8">
+    <header><h2>memlab — 네 가지 실험을 한 표로</h2><p>크기를 고르고 실험을 실행하면 CSV 한 줄이 쌓입니다. 막대는 실험별 page fault 와 시간입니다. 같은 크기를 만지는데 fault 수가 왜 다른지 비교하세요.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>크기 <select id="x-mb"><option value="16">16 MB</option><option value="64" selected>64 MB</option><option value="256">256 MB</option></select></label>
+        <button class="btn" data-x="demand">./memlab demand</button>
+        <button class="btn" data-x="cow">./memlab cow</button>
+        <button class="btn" data-x="mmap">./memlab mmap</button>
+        <button class="btn" data-x="lock">sudo ./memlab lock</button>
+        <button class="btn secondary" id="x-all">./memlab_run.sh 3</button>
+        <button class="btn secondary" id="x-clear">지우기</button>
+      </div>
+      <div class="two">
+        <div class="term" id="x-csv" style="margin-top:0;min-height:240px;max-height:300px;overflow:auto"></div>
+        <div class="fig"><svg viewBox="0 0 400 260" id="x-svg"></svg></div>
+      </div>
+      <div class="note" id="x-note"></div>
+    </div>
+  </section>
+
+  </main>
+</div>
+<script>
+(function(){
+  'use strict';
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+  const NS='http://www.w3.org/2000/svg';
+  const el=(n,a,t)=>{ const e=document.createElementNS(NS,n); for(const k in a) e.setAttribute(k,a[k]); if(t!==undefined) e.textContent=t; return e; };
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  let cur=1;
+  function go(n){ cur=Math.max(1,Math.min(8,n)); $$('.lesson').forEach(s=>s.classList.toggle('active',s.id==='l'+cur)); $$('#navlist button').forEach(b=>b.setAttribute('aria-current',b.dataset.go==cur?'true':'false')); history.replaceState(null,'','#l'+cur); window.scrollTo({top:0}); }
+  $$('#navlist button').forEach(b=>b.addEventListener('click',()=>go(+b.dataset.go)));
+  document.addEventListener('keydown',e=>{ if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName))return; if(e.key==='ArrowRight')go(cur+1); if(e.key==='ArrowLeft')go(cur-1); });
+  if(/^#l[1-8]$/.test(location.hash)) go(+location.hash[2]);
+  function tabs(id,fn){ $$('#'+id+' button').forEach(b=>b.addEventListener('click',()=>{ $$('#'+id+' button').forEach(x=>x.classList.toggle('on',x===b)); fn(b); })); }
+  const COL={n:['#fff','#1B2A41'],b:['#DCE6FA','#2457C5'],g:['#DDF2EA','#178A67'],r:['#FBE3DF','#D6452E'],a:['#FBF0D3','#C98A12'],d:['#F6F8FB','#C9D1DC'],v:['#ECE3F5','#7A3E9D']};
+  function box(S,x,y,w,h,title,sub,kind,fs){ const col=COL[kind||'n'];
+    S.appendChild(el('rect',{x,y,width:w,height:h,rx:7,fill:col[0],stroke:col[1],'stroke-width':2}));
+    S.appendChild(el('text',{x:x+w/2,y:y+(sub?h/2-3:h/2+5),'text-anchor':'middle','font-size':fs||13,'font-weight':600,fill:'#1B2A41'},title));
+    if(sub) String(sub).split('\n').forEach((ln,i)=>S.appendChild(el('text',{x:x+w/2,y:y+h/2+13+i*13,'text-anchor':'middle','font-size':11,fill:col[1]},ln))); }
+  function arrow(S,x1,y1,x2,y2,color,label){ const id='m'+color.replace('#',''); if(!S.querySelector('#'+id)){ const d=el('defs',{}); const m=el('marker',{id,viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'}); m.appendChild(el('path',{d:'M0,0L10,5L0,10z',fill:color})); d.appendChild(m); S.appendChild(d); }
+    S.appendChild(el('line',{x1,y1,x2,y2,stroke:color,'stroke-width':2.2,'marker-end':`url(#${id})`}));
+    if(label){ const mx=(x1+x2)/2,my=(y1+y2)/2; S.appendChild(el('rect',{x:mx-label.length*3.6-6,y:my-10,width:label.length*7.2+12,height:18,rx:4,fill:'#fff',stroke:color})); S.appendChild(el('text',{x:mx,y:my+3,'text-anchor':'middle','font-size':11,fill:color},label)); } }
+  const hex=n=>'0x'+n.toString(16);
+
+  /* ───────── 1 주소 공간 ───────── */
+  const SEG=[{k:'stack',name:'stack',perm:'rw-p [stack]',y:20,h:46,kind:'g'},{k:'gap1',name:'(비어 있음 · 자라는 공간)',y:66,h:40,kind:'d'},{k:'mmap',name:'mmap 영역 · 공유 라이브러리',perm:'rw-p / r-xp',y:106,h:70,kind:'v'},{k:'gap2',name:'(비어 있음)',y:176,h:60,kind:'d'},{k:'heap',name:'heap',perm:'rw-p [heap]',y:236,h:46,kind:'a'},{k:'bss',name:'bss',perm:'rw-p',y:290,h:30,kind:'b'},{k:'data',name:'data',perm:'rw-p',y:320,h:30,kind:'b'},{k:'rodata',name:'rodata',perm:'r--p',y:350,h:30,kind:'b'},{k:'text',name:'text',perm:'r-xp',y:380,h:36,kind:'b'}];
+  const VARS=[{n:'main()',seg:'text',off:0x136a},{n:'"hello"',seg:'rodata',off:0x2008},{n:'g_init',seg:'data',off:0x4010},{n:'static s_local',seg:'data',off:0x4014},{n:'g_zero',seg:'bss',off:0x4024},{n:'malloc(64)',seg:'heap',off:0x2a0},{n:'malloc(1MB)',seg:'mmap',off:0x10},{n:'local',seg:'stack',off:0x1f044}];
+  let mSel=0, base={};
+  function mRand(){ const r=()=>Math.floor(Math.random()*0xfffff); const aslr=$('#m-aslr').checked;
+    base={exe:aslr?0x550000000000+r()*0x1000:0x555555554000, heap:0, mmap:aslr?0x7f0000000000+r()*0x10000:0x7ffff7d80000, stack:aslr?0x7ffc00000000+r()*0x1000:0x7ffffffde000};
+    base.heap=aslr?base.exe+0x5000+r()*0x1000:0x555555559000; }
+  function addrOf(v){ if(['text','rodata','data','bss'].includes(v.seg)) return base.exe+v.off; if(v.seg==='heap') return base.heap+v.off; if(v.seg==='mmap') return base.mmap+v.off; return base.stack+v.off; }
+  $('#m-vars').innerHTML=VARS.map((v,i)=>`<button class="${i?'':'on'}" data-i="${i}">${esc(v.n)}</button>`).join('');
+  tabs('m-vars',b=>{ mSel=+b.dataset.i; mDraw(); });
+  function mDraw(){ const S=$('#m-svg'); S.innerHTML=''; const v=VARS[mSel];
+    S.appendChild(el('text',{x:10,y:14,'font-size':11,fill:'#5B6B80'},'높은 주소 ▲ 0x7fff…'));
+    SEG.forEach(s=>{ const small=s.h<40; box(S,40,s.y,250,s.h,small&&s.perm?s.name+'   '+s.perm:s.name,small?'':(s.perm||''),s.k===v.seg?'r':s.kind,12); });
+    S.appendChild(el('text',{x:10,y:440,'font-size':11,fill:'#5B6B80'},'낮은 주소 ▼ 0x55…  (커널 영역은 위쪽 · 사용자 접근 불가)'));
+    const sg=SEG.find(s=>s.k===v.seg); arrow(S,410,sg.y+sg.h/2,294,sg.y+sg.h/2,'#D6452E'); S.appendChild(el('text',{x:300,y:sg.y-4,'font-size':11,fill:'#D6452E','font-weight':700},v.n));
+    S.appendChild(el('text',{x:300,y:sg.y+sg.h+12,'font-size':11,fill:'#1B2A41',class:'mono'},hex(addrOf(v))));
+    const lines=VARS.map(x=>`${(x.seg+' '+x.n).padEnd(22)} ${hex(addrOf(x))}`); 
+    $('#m-out').innerHTML=`<span class="c">$ ${$('#m-aslr').checked?'':'setarch -R '}./01_layout</span>\n`+lines.map((l,i)=>i===mSel?`<span class="y">${esc(l)}</span>`:esc(l)).join('\n')+`\n\n<span class="c">--- /proc/self/maps</span>\n${hex(base.exe+0x1000)}-${hex(base.exe+0x2000)} r-xp …/01_layout\n${hex(base.exe+0x4000)}-${hex(base.exe+0x5000)} rw-p …/01_layout\n${hex(base.heap)}-${hex(base.heap+0x21000)} rw-p [heap]\n${hex(base.stack)}-${hex(base.stack+0x21000)} rw-p [stack]`;
+    const info={text:'기계어 코드 — 읽기·실행만 가능(r-xp). 실행 파일에서 그대로 매핑됩니다.',rodata:'문자열 상수 — 읽기 전용(r--p). 고치려 하면 Segmentation fault.',data:'초기값이 있는 전역 · static 변수 — 값이 실행 파일에 저장되어 있습니다.',bss:'초기값이 없는 전역 · static — 실행 파일에는 크기만 있고 0 으로 채워진 페이지로 시작합니다.',heap:'작은 malloc — brk 로 위쪽(높은 주소)으로 늘어납니다.',mmap:'큰 malloc(128KB 이상)과 공유 라이브러리 — heap 과 전혀 다른 0x7f… 주소입니다.',stack:'지역 변수 — 함수를 부를수록 아래쪽(낮은 주소)으로 자랍니다.'};
+    $('#m-note').className='note'; $('#m-note').innerHTML=`<b>${esc(v.n)}</b> → <b>${v.seg}</b>. ${info[v.seg]} ${$('#m-aslr').checked?'"다시 실행" 을 누르면 시작 주소가 바뀝니다(ASLR).':'ASLR 을 끄면 0x5555555… 처럼 매번 같은 주소입니다.'}`; }
+  $('#m-run').addEventListener('click',()=>{ mRand(); mDraw(); }); $('#m-aslr').addEventListener('change',()=>{ mRand(); mDraw(); }); mRand(); mDraw();
+
+  /* ───────── 2 malloc 경로 ───────── */
+  const KS=[1,16,64,100,120,128,200,256,512,600,1024]; let kState=null;
+  function kInfo(){ const kb=KS[+$('#k-size').value], thr=+$('#k-thr').value; return {kb,thr,mmap:kb>=thr}; }
+  function kDraw(){ const {kb,thr,mmap}=kInfo(); $('#k-sizev').textContent=kb+' KB'; const S=$('#k-svg'); S.innerHTML='';
+    box(S,20,30,380,150,'','', 'd'); S.appendChild(el('text',{x:30,y:48,'font-size':12,'font-weight':600,fill:'#1B2A41'},'heap [brk 영역]'));
+    const heapKB=Math.max(132, kState&&!kState.mmap&&kState.kb>100?kState.kb+132:132); const w=Math.min(340,heapKB/1.6);
+    S.appendChild(el('rect',{x:40,y:60,width:w,height:40,fill:'#FBF0D3',stroke:'#C98A12','stroke-width':1.5,rx:4}));
+    S.appendChild(el('text',{x:44,y:118,'font-size':11,fill:'#5B6B80'},`처음 malloc 때 준비된 ${heapKB} KB (top chunk)`));
+    S.appendChild(el('line',{x1:40+w,y1:54,x2:40+w,y2:106,stroke:'#D6452E','stroke-width':2,'stroke-dasharray':'4 3'})); S.appendChild(el('text',{x:40+w-4,y:52,'text-anchor':'end','font-size':10.5,fill:'#D6452E'},'brk'));
+    box(S,460,30,380,150,'','','d'); S.appendChild(el('text',{x:470,y:48,'font-size':12,'font-weight':600,fill:'#1B2A41'},'mmap 영역 (0x7f…)'));
+    if(kState){ if(!kState.mmap){ const bw=Math.max(6,Math.min(w-10,kState.kb/1.6)); S.appendChild(el('rect',{x:44,y:64,width:bw,height:32,fill:kState.freed?'#fff':'#2457C5',stroke:'#2457C5','stroke-dasharray':kState.freed?'4 3':'',rx:3})); S.appendChild(el('text',{x:44,y:150,'font-size':11.5,fill:'#2457C5'},kState.freed?`free → glibc 가 보관 (brk 그대로, 다음 malloc 에 재사용)`:`malloc(${kState.kb} KB) — heap 안에서 잘라 줌`)); }
+      else { const mk=Math.ceil((kState.kb*1024+16)/4096)*4; S.appendChild(el('rect',{x:480,y:64,width:Math.min(340,mk/3.2),height:32,fill:kState.freed?'#fff':'#7A3E9D',stroke:'#7A3E9D','stroke-dasharray':kState.freed?'4 3':'',rx:3})); S.appendChild(el('text',{x:480,y:150,'font-size':11.5,fill:'#7A3E9D'},kState.freed?'free → munmap 으로 커널에 즉시 반환':`mmap ${mk} KB (요청 + 머리 → 4KB 단위 올림)`)); } }
+    S.appendChild(el('text',{x:430,y:210,'text-anchor':'middle','font-size':12,fill:'#5B6B80'},`기준값 ${thr} KB — ${kb} KB 는 ${mmap?'기준 이상 → mmap':'기준 미만 → heap'}`)); }
+  $('#k-malloc').addEventListener('click',()=>{ const i=kInfo(); kState={...i,freed:false}; const mk=Math.ceil((i.kb*1024+16)/4096)*4096;
+    $('#k-path').textContent=i.mmap?'mmap (독립 영역)':'heap (brk 영역)'; $('#k-brk').textContent=i.mmap?'+0 KB':(i.kb>100?`+${i.kb+4} KB`:'+0 KB (top chunk 안)'); $('#k-map').textContent=i.mmap?mk+' B':'–';
+    $('#k-term').innerHTML=`<span class="c">$ strace -e trace=brk,mmap,munmap ./02_malloc_path ${i.kb}${i.thr===512?' 512':''}</span>\n`+(i.mmap?`mmap(NULL, ${mk}, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7fcd6e6e7000`:(i.kb>100?`brk(0x55da46f0e000) = 0x55da46f0e000`:'<span class="c">(새 시스템 콜 없음 — 이미 준비된 heap 에서)</span>'));
+    $('#k-note').className='note'; $('#k-note').innerHTML=i.mmap?'기준 이상이라 heap 과 상관없는 곳에 따로 매핑했습니다. 4KB 단위로 올림되어 요청보다 조금 큽니다.':'malloc 은 매번 커널에 가지 않습니다. 처음 준비한 heap 에서 잘라 주므로 시스템 콜이 없습니다.'; kDraw(); });
+  $('#k-free').addEventListener('click',()=>{ if(!kState||kState.freed) return; kState.freed=true;
+    $('#k-term').innerHTML+=kState.mmap?`\nmunmap(0x7fcd6e6e7000, ${Math.ceil((kState.kb*1024+16)/4096)*4096}) = 0`:'\n<span class="c">(free — 시스템 콜 없음, brk 그대로)</span>';
+    $('#k-note').className='note warn'; $('#k-note').innerHTML=kState.mmap?'mmap 블록은 free 하는 즉시 munmap 되어 VmSize 가 줄어듭니다.':'heap 블록은 free 해도 커널에 돌려주지 않고 glibc 가 보관합니다. 그래서 free 후에도 RSS 가 바로 줄지 않을 수 있습니다.'; kDraw(); });
+  ['#k-size','#k-thr'].forEach(s=>$(s).addEventListener('input',()=>{ kState=null; $('#k-term').innerHTML=''; $('#k-path').textContent=$('#k-brk').textContent=$('#k-map').textContent='–'; $('#k-note').innerHTML='크기를 정하고 malloc 을 누르세요.'; kDraw(); }));
+  $('#k-thr').addEventListener('change',()=>$('#k-thr').dispatchEvent(new Event('input'))); $('#k-note').innerHTML='크기를 정하고 malloc 을 누르세요.'; kDraw();
+
+  /* ───────── 3 demand paging ───────── */
+  let P={res:0,alloc:false,flt:0};
+  function pDraw(){ const S=$('#p-svg'); S.innerHTML=''; for(let i=0;i<100;i++){ const x=20+(i%50)*16.4, y=20+Math.floor(i/50)*60; const res=P.alloc&&i<P.res;
+      S.appendChild(el('rect',{x,y,width:14,height:50,rx:2,fill:res?'#2457C5':(P.alloc?'#fff':'#F6F8FB'),stroke:P.alloc?'#2457C5':'#C9D1DC','stroke-dasharray':P.alloc&&!res?'3 2':''})); }
+    S.appendChild(el('text',{x:20,y:150,'font-size':12,fill:'#5B6B80'},'칸 1개 = 1MB = 256 페이지 · 점선 = 주소만 예약 · 파랑 = 실제 RAM 페이지가 연결됨'));
+    S.appendChild(el('text',{x:20,y:172,'font-size':12,fill:'#1B2A41'},'0 MB')); S.appendChild(el('text',{x:430,y:172,'font-size':12,fill:'#1B2A41'},'50 MB')); S.appendChild(el('text',{x:840,y:172,'text-anchor':'end','font-size':12,fill:'#1B2A41'},'100 MB'));
+    $('#p-size').textContent=(2692+(P.alloc?102404:0))+' kB'; $('#p-rss').textContent=(1412+(P.alloc?324:0)+P.res*1024)+' kB'; $('#p-flt').textContent='+'+P.flt;
+    $('#p-half').disabled=!P.alloc||P.res>=50; $('#p-all').disabled=!P.alloc||P.res>=100; $('#p-malloc').disabled=P.alloc;
+    const n=$('#p-note'); if(!P.alloc){ n.className='note'; n.innerHTML='① malloc(100MB) 부터 누르세요.'; } else if(P.res===0){ n.className='note warn'; n.innerHTML='VmSize 는 100MB 늘었지만 <b>VmRSS 는 거의 그대로</b>입니다. 주소만 예약됐습니다(fault 12번은 관리용 머리).'; } else if(P.res===50){ n.className='note ok'; n.innerHTML='페이지마다 1바이트만 썼는데 50MB 가 통째로 올라왔습니다. 페이지 12800개 → fault 약 12800번.'; } else { n.className='note ok'; n.innerHTML='전체를 쓰자 나머지 12800 페이지도 fault 로 할당되었습니다. 03_demand 실측: +25612.'; } }
+  $('#p-malloc').addEventListener('click',()=>{ P.alloc=true; P.flt=12; pDraw(); }); $('#p-half').addEventListener('click',()=>{ P.res=50; P.flt=12811; pDraw(); }); $('#p-all').addEventListener('click',()=>{ P.res=100; P.flt=25612; pDraw(); }); $('#p-reset').addEventListener('click',()=>{ P={res:0,alloc:false,flt:0}; pDraw(); });
+  const FS=[['CPU','p[i] = 1 실행'],['MMU','페이지 테이블 확인'],['page fault','매핑 없음 → 커널 진입'],['커널','빈 4KB 페이지를 0 으로'],['페이지 테이블','가상 → 물리 연결'],['다시 실행','이번엔 성공']]; let fsI=-1;
+  function fsDraw(){ const S=$('#p-flow'); S.innerHTML=''; FS.forEach((f,i)=>{ const x=10+i*142; box(S,x,25,124,62,f[0],f[1],i===fsI?'r':(i<fsI?'g':'d'),13); if(i<5) arrow(S,x+124,56,x+142,56,'#8A9BB5'); }); $('#p-step').disabled=fsI>=FS.length-1; }
+  $('#p-step').addEventListener('click',()=>{ fsI++; fsDraw(); }); $('#p-sreset').addEventListener('click',()=>{ fsI=-1; fsDraw(); }); pDraw(); fsDraw();
+
+  /* ───────── 4 mmap ───────── */
+  let F;
+  function fReset(){ F={mode:$('#f-mode .on').dataset.m,cache:'hello mmap world',file:'hello mmap world',priv:null,written:false,synced:false,bview:null}; $('#f-term').innerHTML='<span class="c">$ cat test.txt</span>\nhello mmap world'; fDraw(); }
+  function fDraw(){ const S=$('#f-svg'); S.innerHTML=''; const sh=F.mode==='shared';
+    box(S,40,20,220,70,'프로세스 A',sh?'MAP_SHARED':'MAP_PRIVATE','b'); box(S,600,20,220,70,'프로세스 B','MAP_SHARED (읽기)','b');
+    box(S,300,130,260,60,'page cache (커널)',F.cache,F.written&&sh?'a':'n',13);
+    box(S,300,215,260,44,'디스크 test.txt',F.file,F.synced?'g':'d',13);
+    if(F.priv!==null) box(S,40,130,220,60,'A 의 복사본 (COW)',F.priv,'r',13);
+    arrow(S,150,92,F.priv!==null?150:340,F.priv!==null?128:128,F.priv!==null?'#D6452E':'#2457C5',F.priv!==null?'쓰기 → 복사':'페이지 테이블');
+    arrow(S,710,92,520,128,'#2457C5','페이지 테이블'); arrow(S,430,192,430,213,'#8A9BB5',F.synced?'msync':'나중에 기록');
+    $('#f-sync').disabled=!F.written||!sh; }
+  $('#f-write').addEventListener('click',()=>{ F.written=true; if(F.mode==='shared') F.cache='HELLO MMAP WORLD'; else F.priv='HELLO MMAP WORLD';
+    $('#f-note').className='note'+(F.mode==='shared'?'':' warn'); $('#f-note').innerHTML=F.mode==='shared'?'A 는 page cache 를 <b>직접</b> 고쳤습니다. 같은 파일을 매핑한 B 도 즉시 같은 페이지를 봅니다. 디스크에는 나중에(또는 msync 로 바로) 기록됩니다.':'MAP_PRIVATE 라 쓰는 순간 <b>A 만의 복사본</b>이 생겼습니다(COW). page cache 와 파일은 그대로입니다.'; fDraw(); });
+  $('#f-sync').addEventListener('click',()=>{ F.file=F.cache; F.synced=true; $('#f-term').innerHTML='<span class="c">$ cat test.txt</span>\n'+F.file; $('#f-note').className='note ok'; $('#f-note').innerHTML='msync(MS_SYNC) 로 고친 페이지가 디스크에 기록되었습니다.'; fDraw(); });
+  $('#f-read').addEventListener('click',()=>{ $('#f-term').innerHTML+=`\n<span class="c">B 가 읽은 내용:</span> ${F.cache}`; fDraw(); });
+  $('#f-reset').addEventListener('click',fReset); tabs('f-mode',()=>fReset()); fReset(); $('#f-note').innerHTML='"A 가 대문자로 쓰기" 를 누르세요.';
+
+  /* ───────── 5 COW ───────── */
+  const NP=20; let W;
+  function wReset(){ W={forked:false,childCopy:new Array(NP).fill(false),parentCopy:new Array(NP).fill(false),flt:0}; wDraw(); }
+  function wDraw(){ const S=$('#w-svg'); S.innerHTML=''; $('#w-pctv').textContent=$('#w-pct').value+' %';
+    const fx=i=>40+i*39.5; S.appendChild(el('text',{x:40,y:24,'font-size':12,'font-weight':600,fill:'#1B2A41',stroke:'#fff','stroke-width':5,'paint-order':'stroke'},'부모 페이지 테이블'));
+    S.appendChild(el('text',{x:40,y:113,'font-size':12,'font-weight':600,fill:'#1B2A41',stroke:'#fff','stroke-width':5,'paint-order':'stroke'},'물리 페이지 (RAM)'));
+    if(W.forked) S.appendChild(el('text',{x:40,y:239,'font-size':12,'font-weight':600,fill:'#1B2A41',stroke:'#fff','stroke-width':5,'paint-order':'stroke'},'자식 페이지 테이블'));
+    for(let i=0;i<NP;i++){ const x=fx(i);
+      S.appendChild(el('rect',{x,y:32,width:32,height:26,rx:3,fill:'#DCE6FA',stroke:'#2457C5'})); S.appendChild(el('text',{x:x+16,y:49,'text-anchor':'middle','font-size':10,fill:'#1B2A41'},i));
+      const shared=W.forked&&!W.childCopy[i]&&!W.parentCopy[i];
+      S.appendChild(el('rect',{x,y:118,width:32,height:26,rx:3,fill:shared?'#FBF0D3':'#fff',stroke:shared?'#C98A12':'#2457C5'}));
+      if(W.forked){ S.appendChild(el('rect',{x,y:244,width:32,height:26,rx:3,fill:'#DDF2EA',stroke:'#178A67'})); S.appendChild(el('text',{x:x+16,y:261,'text-anchor':'middle','font-size':10,fill:'#1B2A41'},i));
+        if(W.childCopy[i]){ S.appendChild(el('rect',{x,y:170,width:32,height:26,rx:3,fill:'#FBE3DF',stroke:'#D6452E'})); S.appendChild(el('line',{x1:x+16,y1:242,x2:x+16,y2:198,stroke:'#D6452E','stroke-width':1.5})); }
+        else S.appendChild(el('line',{x1:x+16,y1:242,x2:x+16,y2:146,stroke:'#178A67','stroke-width':1,opacity:.6}));
+        if(W.parentCopy[i]) S.appendChild(el('rect',{x,y:84,width:32,height:26,rx:3,fill:'#FBE3DF',stroke:'#D6452E'})); }
+      S.appendChild(el('line',{x1:x+16,y1:60,x2:x+16,y2:W.parentCopy[i]?82:116,stroke:'#2457C5','stroke-width':1,opacity:.6})); }
+    if(W.forked) S.appendChild(el('text',{x:40,y:294,'font-size':11.5,fill:'#5B6B80'},'노랑 = 부모·자식 공유 (읽기 전용)   ·   빨강 = 쓰는 순간 복사된 새 페이지   ·   파랑 테두리 = 부모 전용'));
+    [['부모 페이지 테이블',24],['물리 페이지 (RAM)',113]].concat(W.forked?[['자식 페이지 테이블',239]]:[]).forEach(([t,y])=>S.appendChild(el('text',{x:40,y,'font-size':12,'font-weight':600,fill:'#1B2A41',stroke:'#fff','stroke-width':5,'paint-order':'stroke'},t)));
+    const cc=W.childCopy.filter(x=>x).length, pc=W.parentCopy.filter(x=>x).length;
+    $('#w-shared').textContent=W.forked?(NP-cc-pc)+' / '+NP:'–'; $('#w-copied').textContent=W.forked?(cc+pc):'–'; $('#w-flt').textContent=W.forked?'+'+Math.round(cc/NP*12800):'–';
+    $('#w-child').disabled=!W.forked; $('#w-parent').disabled=!W.forked||W.parentCopy[NP-1]||W.childCopy[NP-1]; $('#w-fork').disabled=W.forked;
+    const n=$('#w-note'); if(!W.forked){ n.className='note'; n.innerHTML='부모가 50MB(그림의 20칸)를 채운 상태입니다. fork() 를 누르세요.'; }
+    else if(!cc&&!pc){ n.className='note ok'; n.innerHTML='fork 직후: 자식 페이지 테이블이 <b>같은 물리 페이지</b>를 가리킵니다. 복사된 것은 페이지 테이블뿐이라 fork 가 빠릅니다.'; }
+    else { n.className='note warn'; n.innerHTML=`쓰기가 일어난 페이지만 복사되었습니다. 자식 minflt 는 <b>쓴 페이지 수와 정확히 같습니다</b> (05_cow: 10 % → 1280, 100 % → 12800).${pc?' 부모가 쓴 페이지도 똑같이 복사됩니다 — 누가 먼저 쓰든 쓰는 쪽이 새 페이지를 받습니다.':''}`; } }
+  $('#w-fork').addEventListener('click',()=>{ W.forked=true; wDraw(); }); $('#w-pct').addEventListener('input',wDraw);
+  $('#w-child').addEventListener('click',()=>{ const k=Math.round(+$('#w-pct').value/100*NP); for(let i=0;i<k;i++) if(!W.parentCopy[i]) W.childCopy[i]=true; wDraw(); });
+  $('#w-parent').addEventListener('click',()=>{ W.parentCopy[NP-1]=true; wDraw(); }); $('#w-reset').addEventListener('click',wReset); wReset();
+
+  /* ───────── 6 mlock · OOM ───────── */
+  function lDraw(){ const lock=$('#l-lock').checked, mb=+$('#l-size').value; const pages=mb*256;
+    const f1=lock?pages+34:3, f2=lock?1:pages+2, t=lock?0.12*mb/32:13.04*mb/32;
+    $('#l-f1').textContent='+'+f1; $('#l-f2').textContent='+'+f2; $('#l-t').textContent=t.toFixed(2)+' ms';
+    const S=$('#l-svg'); S.innerHTML=''; S.appendChild(el('text',{x:10,y:16,'font-size':12,fill:'#5B6B80'},'시간 →'));
+    box(S,10,30,150,56,'malloc','',lock?'a':'d'); box(S,180,30,210,56,'실시간 루프 (처음 만짐)','',lock?'g':'r');
+    const dots=(x0,w,n,c)=>{ for(let i=0;i<Math.min(n,60);i++) S.appendChild(el('rect',{x:x0+4+(i%30)*(w-8)/30,y:100+Math.floor(i/30)*14,width:3,height:10,fill:c})); };
+    if(lock) dots(10,150,60,'#C98A12'); else dots(180,210,60,'#D6452E');
+    S.appendChild(el('text',{x:10,y:150,'font-size':11.5,fill:'#5B6B80'},'막대 = page fault (개수는 축약)'));
+    S.appendChild(el('text',{x:10,y:172,'font-size':12,fill:'#1B2A41'},`VmLck: ${lock?(mb*1024+3240)+' kB':'0 kB'}   ·   ulimit -l 8192 kB → ${mb*1024>8192?'sudo 필요':'일반 사용자도 가능'}`));
+    $('#l-note').className=lock?'note ok':'note warn'; $('#l-note').innerHTML=lock?'fault 가 malloc 시점으로 옮겨 갔습니다. 실시간 루프 안에서는 거의 0 — Day 2 의 RT 태스크와 함께 쓰는 짝입니다.':'잠그지 않으면 루프 안에서 처음 만지는 페이지마다 fault 가 나 루프가 느려지고 흔들립니다.'; }
+  ['#l-lock','#l-size'].forEach(s=>$(s).addEventListener('change',lDraw)); lDraw();
+  let O;
+  function oReset(){ O={used:0,dead:false,lines:[`<span class="c">$ sudo systemd-run --scope -p MemoryMax=${$('#o-max').value}M -p MemorySwapMax=0 ./07_oom</span>`,`overcommit_memory = ${$('#o-oc').value}`]}; oDraw(); }
+  function oDraw(){ const max=+$('#o-max').value; const S=$('#o-svg'); S.innerHTML=''; S.appendChild(el('rect',{x:10,y:30,width:380,height:34,fill:'#EEF1F5',rx:4}));
+    S.appendChild(el('rect',{x:10,y:30,width:Math.min(380,O.used/max*380),height:34,fill:O.dead?'#D6452E':'#2457C5',rx:4}));
+    S.appendChild(el('text',{x:10,y:20,'font-size':12,fill:'#1B2A41'},`cgroup 메모리 사용 ${O.used} / ${max} MB`)); S.appendChild(el('line',{x1:390,y1:24,x2:390,y2:70,stroke:'#D6452E','stroke-width':2}));
+    S.appendChild(el('text',{x:390,y:86,'text-anchor':'end','font-size':11,fill:'#D6452E'},'MemoryMax'));
+    $('#o-term').innerHTML=O.lines.join('\n'); $('#o-term').scrollTop=1e6; $('#o-more').disabled=O.dead; }
+  $('#o-more').addEventListener('click',()=>{ const max=+$('#o-max').value, oc=$('#o-oc').value; const next=O.used+10;
+    if(oc==='2'&&next>max-5){ O.lines.push(`<span class="y">malloc 실패 (${next} MB 째)</span>`); O.dead=true; $('#o-note').className='note ok'; $('#o-note').innerHTML='엄격 모드(2)에서는 한도를 넘는 <b>malloc 자체가 NULL</b> 을 돌려줍니다. 프로그램이 직접 처리할 기회가 있습니다. (실제 정책은 시스템 전체 RAM 기준 — 여기서는 cgroup 한도로 흉내)'; oDraw(); return; }
+    if(next>max-6){ O.used=max; O.dead=true; O.lines.push('<span class="r">Killed</span>',`<span class="c">$ sudo dmesg | tail -1</span>`,`Memory cgroup out of memory: Killed process 2731 (07_oom) anon-rss:${(max-4)*1024}kB …`); $('#o-note').className='note warn'; $('#o-note').innerHTML='malloc 은 한 번도 실패하지 않았는데, <b>memset(실제 사용) 순간 SIGKILL</b> 로 끝났습니다. 기본 overcommit 에서는 NULL 검사만으로 OOM 을 막을 수 없습니다.'; oDraw(); return; }
+    O.used=next; O.lines.push(`${String(next).padStart(4)} MB 사용, VmRSS ${String(next*1024+1400).padStart(7)} kB`); oDraw(); });
+  $('#o-reset').addEventListener('click',()=>{ oReset(); $('#o-note').innerHTML=''; }); ['#o-max','#o-oc'].forEach(s=>$(s).addEventListener('change',()=>{ oReset(); $('#o-note').innerHTML=''; })); oReset();
+
+  /* ───────── 7 메모리 오류 ───────── */
+  const BUG={leak:{code:['char *p = malloc(100);','strcpy(p, "free 를 잊었다");','printf("%s\\n", p);','}   /* p 를 잃어버림 */'],bad:3,
+     none:'free 를 잊었다\n<span class="c">$ echo $?</span>\n0',vg:'==808== HEAP SUMMARY:\n==808==     in use at exit: 100 bytes in 1 blocks\n==808== <span class="r">100 bytes in 1 blocks are definitely lost</span>\n==808==    at 0x4846828: malloc (vgpreload_memcheck…)\n==808==    by 0x1091FE: leak (08_bugs.c:13)\n==808==    by 0x109354: main (08_bugs.c:44)',asan:'free 를 잊었다\n<span class="r">==846==ERROR: LeakSanitizer: detected memory leaks</span>\nDirect leak of 100 byte(s) in 1 object(s) allocated from:\n    #1 0x557b07cd42fe in leak 08_bugs.c:13\nSUMMARY: AddressSanitizer: 100 byte(s) leaked in 1 allocation(s).',
+     note:'누수는 프로그램이 끝나면 운영체제가 회수하므로 짧은 프로그램에서는 티가 안 납니다. 며칠씩 도는 장치 프로그램에서 조금씩 쌓여 결국 OOM 이 됩니다.'},
+   uaf:{code:['int *p = malloc(4 * sizeof(int));','p[0] = 10;','free(p);','printf("%d\\n", p[0]);  /* 해제 후 읽기 */'],bad:3,
+     none:'해제 후 읽기: 1458826807\n<span class="c">$ echo $?</span>\n0',vg:'==817== <span class="r">Invalid read of size 4</span>\n==817==    at 0x109280: use_after_free (08_bugs.c:23)\n==817==  Address 0x4a7d040 is 0 bytes inside a block of size 16 free\'d\n==817== ERROR SUMMARY: 1 errors from 1 contexts',asan:'<span class="r">==837==ERROR: AddressSanitizer: heap-use-after-free</span> on address 0x502000000010\nREAD of size 4 at 0x502000000010 thread T0\n    #1 0x55c8873b3393 in use_after_free 08_bugs.c:22\nfreed by thread T0 here: … 08_bugs.c:21',
+     note:'도구 없이 실행하면 10 이 아닌 쓰레기 값(1458826807)이 나오고 종료 코드는 0 입니다. 운이 나쁘면 다른 데이터를 망가뜨린 채 한참 뒤에 엉뚱한 곳에서 죽습니다.'},
+   overflow:{code:['char *p = malloc(8);','strcpy(p, "123456789");  /* 10바이트 → 8바이트 */','printf("%s\\n", p);','free(p);'],bad:1,
+     none:'123456789\n<span class="c">$ echo $?</span>\n0',vg:'==1013== <span class="r">Invalid write of size 2</span>\n==1013==    at 0x484F363: strcpy\n==1013==    by 0x1092D6: overflow (08_bugs.c:29)\n==1013==  Address 0x4a7d048 is 0 bytes after a block of size 8 alloc\'d',asan:'<span class="r">==840==ERROR: AddressSanitizer: heap-buffer-overflow</span> on address 0x502000000018\nWRITE of size 10 at 0x502000000010 thread T0\n    #1 0x55f5e219841e in overflow 08_bugs.c:29\n0x502000000018 is located 0 bytes after 8-byte region',
+     note:'8바이트 블록에 10바이트를 썼는데 도구 없이는 정상처럼 출력됩니다. malloc 은 보통 16바이트 단위로 잘라 주기 때문에 넘친 2바이트가 우연히 빈 곳에 떨어졌을 뿐입니다. gcc 13 은 빌드 때 -Wstringop-overflow 경고로 알려 줍니다.'},
+   double:{code:['char *p = malloc(16);','free(p);','free(p);  /* 두 번 해제 */'],bad:2,
+     none:'<span class="r">free(): double free detected in tcache 2</span>\nAborted\n<span class="c">$ echo $?</span>\n134',vg:'==1015== <span class="r">Invalid free() / delete / delete[] / realloc()</span>\n==1015==    by 0x10931B: double_free (08_bugs.c:38)\n==1015==  Address 0x4a7d040 is 0 bytes inside a block of size 16 free\'d',asan:'<span class="r">==843==ERROR: AddressSanitizer: attempting double-free</span> on 0x502000000010 in thread T0:\n    #1 0x559a1745846b in double_free 08_bugs.c:38\nfreed by thread T0 here: … 08_bugs.c:37',
+     note:'double free 는 glibc 가 스스로 검사해 SIGABRT(134 = 128+6)로 멈춥니다. 네 가지 중 도구 없이도 드러나는 유일한 경우입니다 — 하지만 몇 줄째인지는 알려 주지 않습니다.'}};
+  let bK='leak', bT='none';
+  function bDraw(){ const B=BUG[bK]; $('#b-code').innerHTML=B.code.map((l,i)=>`<span class="${i===B.bad?'hi':''}">${esc(l)}</span>`).join('\n');
+    const cmd=bT==='none'?`./08_bugs ${bK}`:(bT==='vg'?`valgrind${bK==='leak'?' --leak-check=full':''} ./08_bugs ${bK}`:`./08_bugs_asan ${bK}`);
+    $('#b-term').innerHTML=`<span class="c">$ ${cmd}</span>\n`+B[bT];
+    const S=$('#b-svg'); S.innerHTML=''; const asan=bT==='asan';
+    if(asan){ S.appendChild(el('rect',{x:20,y:40,width:60,height:40,fill:'#FBE3DF',stroke:'#D6452E'})); S.appendChild(el('rect',{x:300,y:40,width:60,height:40,fill:'#FBE3DF',stroke:'#D6452E'})); S.appendChild(el('text',{x:50,y:96,'text-anchor':'middle','font-size':10.5,fill:'#D6452E'},'레드존')); S.appendChild(el('text',{x:330,y:96,'text-anchor':'middle','font-size':10.5,fill:'#D6452E'},'레드존')); }
+    const freed=bK==='uaf'||bK==='double';
+    S.appendChild(el('rect',{x:80,y:40,width:220,height:40,fill:freed?'#F6F8FB':'#DCE6FA',stroke:'#2457C5','stroke-dasharray':freed?'4 3':''}));
+    S.appendChild(el('text',{x:190,y:65,'text-anchor':'middle','font-size':12,fill:'#1B2A41'},bK==='leak'?'100 B (아무도 가리키지 않음)':(freed?'해제된 블록 (격리 대기)':'8 B 블록')));
+    if(bK==='overflow') { S.appendChild(el('rect',{x:300,y:44,width:40,height:32,fill:'#D6452E',opacity:.7})); S.appendChild(el('text',{x:320,y:30,'text-anchor':'middle','font-size':11,fill:'#D6452E'},'+2 B 넘침')); }
+    S.appendChild(el('text',{x:20,y:20,'font-size':11.5,fill:'#5B6B80'},asan?'ASan: 블록 양옆 레드존 + 해제 블록 격리 → 닿는 순간 보고':(bT==='vg'?'valgrind: 모든 메모리 접근을 가상 CPU 로 검사':'도구 없음: 아무도 검사하지 않음')));
+    $('#b-note').className=bT==='none'&&bK!=='double'?'note warn':'note ok'; $('#b-note').innerHTML=bT==='none'?B.note:(bT==='vg'?'valgrind 는 다시 빌드하지 않고 실행 파일을 그대로 검사합니다. 대신 10~50배 느립니다.':'ASan 은 -fsanitize=address 로 빌드해야 하지만 2배 정도만 느리고, 오류 순간 멈추며 할당·해제 위치까지 줄 번호로 보여 줍니다.'); }
+  tabs('b-kind',b=>{ bK=b.dataset.k; bDraw(); }); tabs('b-tool',b=>{ bT=b.dataset.t; bDraw(); }); bDraw();
+
+  /* ───────── 8 memlab ───────── */
+  let X=[]; let xs=11;
+  const rnd=()=>{ xs=(xs*1103515245+12345)%2147483648; return xs/2147483648; };
+  const XM={demand:{f:m=>m*256+9,t:m=>.39*m},cow:{f:m=>m*256+19,t:m=>.82*m},mmap:{f:m=>Math.round(m*256/29.5),t:m=>.18*m,maj:1},lock:{f:()=>1,t:m=>.008*m}};
+  function xRun(e){ const m=+$('#x-mb').value, d=XM[e]; const j=1+(rnd()-.5)*.12; X.push({e,m,f:Math.round(d.f(m)*(e==='lock'?1:(1+(rnd()-.5)*.01))),maj:d.maj||0,rss:m*1024+3000+Math.round(rnd()*900),ms:+(d.t(m)*j).toFixed(2)}); xDraw(); }
+  function xDraw(){ $('#x-csv').innerHTML='<span class="c">exp,size_mb,minflt,majflt,rss_kb,ms</span>\n'+X.map(r=>`${r.e},${r.m},${r.f},${r.maj},${r.rss},${r.ms}`).join('\n'); $('#x-csv').scrollTop=1e6;
+    const S=$('#x-svg'); S.innerHTML=''; const ex=['demand','cow','mmap','lock'], c={demand:'#2457C5',cow:'#D6452E',mmap:'#7A3E9D',lock:'#178A67'};
+    const avg=(e,k)=>{ const r=X.filter(x=>x.e===e); return r.length?r.reduce((a,b)=>a+b[k],0)/r.length:0; };
+    const mf=Math.max(1,...ex.map(e=>avg(e,'f'))), mt=Math.max(.01,...ex.map(e=>avg(e,'ms')));
+    S.appendChild(el('text',{x:10,y:16,'font-size':12,'font-weight':600,fill:'#1B2A41'},'평균 minflt')); S.appendChild(el('text',{x:210,y:16,'font-size':12,'font-weight':600,fill:'#1B2A41'},'평균 시간(ms)'));
+    ex.forEach((e,i)=>{ const y=32+i*52; const f=avg(e,'f'), t=avg(e,'ms');
+      S.appendChild(el('text',{x:10,y:y+12,'font-size':11,fill:'#5B6B80'},e)); S.appendChild(el('rect',{x:10,y:y+18,width:Math.max(1,f/mf*170),height:18,fill:c[e],rx:3})); S.appendChild(el('text',{x:14+Math.max(1,f/mf*170),y:y+31,'font-size':10.5,fill:'#1B2A41'},f?Math.round(f):''));
+      S.appendChild(el('rect',{x:210,y:y+18,width:Math.max(1,t/mt*150),height:18,fill:c[e],rx:3,opacity:.7})); S.appendChild(el('text',{x:214+Math.max(1,t/mt*150),y:y+31,'font-size':10.5,fill:'#1B2A41'},t?t.toFixed(2):'')); });
+    const n=$('#x-note'); const has=e=>X.some(x=>x.e===e);
+    if(!X.length){ n.className='note'; n.innerHTML='실험 버튼을 눌러 CSV 를 쌓아 보세요.'; }
+    else if(has('demand')&&has('cow')&&has('mmap')&&has('lock')){ n.className='note ok'; n.innerHTML='demand · cow 는 페이지마다 fault(64MB → 약 16384). cow 는 복사까지 해서 더 느립니다. mmap 은 page cache 의 이웃 페이지를 한 번에 연결해 fault 가 적고, lock 은 미리 확보해 루프 안 fault 가 1 입니다.'; }
+    else { n.className='note'; n.innerHTML='네 실험을 모두 실행하면 비교 해설이 나옵니다.'; } }
+  $$('[data-x]').forEach(b=>b.addEventListener('click',()=>xRun(b.dataset.x)));
+  $('#x-all').addEventListener('click',()=>{ ['demand','cow','mmap','lock'].forEach(e=>{ for(let i=0;i<3;i++) xRun(e); }); });
+  $('#x-clear').addEventListener('click',()=>{ X=[]; xDraw(); }); xDraw();
+})();
+</script>
+</body>
+</html>
