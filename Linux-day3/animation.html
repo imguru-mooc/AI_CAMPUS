@@ -341,7 +341,7 @@
   const hex=n=>'0x'+n.toString(16);
 
   /* ───────── 1 주소 공간 ───────── */
-  const SEG=[{k:'stack',name:'stack',perm:'rw-p [stack]',y:20,h:46,kind:'g'},{k:'gap1',name:'(비어 있음 · 자라는 공간)',y:66,h:40,kind:'d'},{k:'mmap',name:'mmap 영역 · 공유 라이브러리',perm:'rw-p / r-xp',y:106,h:70,kind:'v'},{k:'gap2',name:'(비어 있음)',y:176,h:60,kind:'d'},{k:'heap',name:'heap',perm:'rw-p [heap]',y:236,h:46,kind:'a'},{k:'bss',name:'bss',perm:'rw-p',y:290,h:30,kind:'b'},{k:'data',name:'data',perm:'rw-p',y:320,h:30,kind:'b'},{k:'rodata',name:'rodata',perm:'r--p',y:350,h:30,kind:'b'},{k:'text',name:'text',perm:'r-xp',y:380,h:36,kind:'b'}];
+  const SEG=[{k:'text',name:'text',perm:'r-xp',y:20,h:36,kind:'b'},{k:'rodata',name:'rodata',perm:'r--p',y:56,h:30,kind:'b'},{k:'data',name:'data',perm:'rw-p',y:86,h:30,kind:'b'},{k:'bss',name:'bss',perm:'rw-p',y:116,h:30,kind:'b'},{k:'heap',name:'heap',perm:'rw-p [heap]  ↓ 높은 주소로 자람',y:154,h:46,kind:'a'},{k:'gap2',name:'(비어 있음)',y:200,h:60,kind:'d'},{k:'mmap',name:'mmap 영역 · 공유 라이브러리',perm:'rw-p / r-xp',y:260,h:70,kind:'v'},{k:'gap1',name:'(비어 있음 · stack 이 ↑ 자라는 공간)',y:330,h:40,kind:'d'},{k:'stack',name:'stack',perm:'rw-p [stack]  ↑ 낮은 주소로 자람',y:370,h:46,kind:'g'}];
   const VARS=[{n:'main()',seg:'text',off:0x136a},{n:'"hello"',seg:'rodata',off:0x2008},{n:'g_init',seg:'data',off:0x4010},{n:'static s_local',seg:'data',off:0x4014},{n:'g_zero',seg:'bss',off:0x4024},{n:'malloc(64)',seg:'heap',off:0x2a0},{n:'malloc(1MB)',seg:'mmap',off:0x10},{n:'local',seg:'stack',off:0x1f044}];
   let mSel=0, base={};
   function mRand(){ const r=()=>Math.floor(Math.random()*0xfffff); const aslr=$('#m-aslr').checked;
@@ -351,14 +351,14 @@
   $('#m-vars').innerHTML=VARS.map((v,i)=>`<button class="${i?'':'on'}" data-i="${i}">${esc(v.n)}</button>`).join('');
   tabs('m-vars',b=>{ mSel=+b.dataset.i; mDraw(); });
   function mDraw(){ const S=$('#m-svg'); S.innerHTML=''; const v=VARS[mSel];
-    S.appendChild(el('text',{x:10,y:14,'font-size':11,fill:'#5B6B80'},'높은 주소 ▲ 0x7fff…'));
+    S.appendChild(el('text',{x:10,y:14,'font-size':11,fill:'#5B6B80'},'낮은 주소 ▲ 0x55…'));
     SEG.forEach(s=>{ const small=s.h<40; box(S,40,s.y,250,s.h,small&&s.perm?s.name+'   '+s.perm:s.name,small?'':(s.perm||''),s.k===v.seg?'r':s.kind,12); });
-    S.appendChild(el('text',{x:10,y:440,'font-size':11,fill:'#5B6B80'},'낮은 주소 ▼ 0x55…  (커널 영역은 위쪽 · 사용자 접근 불가)'));
+    S.appendChild(el('text',{x:10,y:440,'font-size':11,fill:'#5B6B80'},'높은 주소 ▼ 0x7fff…  (그 너머는 커널 영역 · 사용자 접근 불가)'));
     const sg=SEG.find(s=>s.k===v.seg); arrow(S,410,sg.y+sg.h/2,294,sg.y+sg.h/2,'#D6452E'); S.appendChild(el('text',{x:300,y:sg.y-4,'font-size':11,fill:'#D6452E','font-weight':700},v.n));
     S.appendChild(el('text',{x:300,y:sg.y+sg.h+12,'font-size':11,fill:'#1B2A41',class:'mono'},hex(addrOf(v))));
     const lines=VARS.map(x=>`${(x.seg+' '+x.n).padEnd(22)} ${hex(addrOf(x))}`); 
     $('#m-out').innerHTML=`<span class="c">$ ${$('#m-aslr').checked?'':'setarch -R '}./01_layout</span>\n`+lines.map((l,i)=>i===mSel?`<span class="y">${esc(l)}</span>`:esc(l)).join('\n')+`\n\n<span class="c">--- /proc/self/maps</span>\n${hex(base.exe+0x1000)}-${hex(base.exe+0x2000)} r-xp …/01_layout\n${hex(base.exe+0x4000)}-${hex(base.exe+0x5000)} rw-p …/01_layout\n${hex(base.heap)}-${hex(base.heap+0x21000)} rw-p [heap]\n${hex(base.stack)}-${hex(base.stack+0x21000)} rw-p [stack]`;
-    const info={text:'기계어 코드 — 읽기·실행만 가능(r-xp). 실행 파일에서 그대로 매핑됩니다.',rodata:'문자열 상수 — 읽기 전용(r--p). 고치려 하면 Segmentation fault.',data:'초기값이 있는 전역 · static 변수 — 값이 실행 파일에 저장되어 있습니다.',bss:'초기값이 없는 전역 · static — 실행 파일에는 크기만 있고 0 으로 채워진 페이지로 시작합니다.',heap:'작은 malloc — brk 로 위쪽(높은 주소)으로 늘어납니다.',mmap:'큰 malloc(128KB 이상)과 공유 라이브러리 — heap 과 전혀 다른 0x7f… 주소입니다.',stack:'지역 변수 — 함수를 부를수록 아래쪽(낮은 주소)으로 자랍니다.'};
+    const info={text:'기계어 코드 — 읽기·실행만 가능(r-xp). 실행 파일에서 그대로 매핑됩니다.',rodata:'문자열 상수 — 읽기 전용(r--p). 고치려 하면 Segmentation fault.',data:'초기값이 있는 전역 · static 변수 — 값이 실행 파일에 저장되어 있습니다.',bss:'초기값이 없는 전역 · static — 실행 파일에는 크기만 있고 0 으로 채워진 페이지로 시작합니다.',heap:'작은 malloc — brk 로 높은 주소 쪽(그림의 아래쪽)으로 늘어납니다.',mmap:'큰 malloc(128KB 이상)과 공유 라이브러리 — heap 과 전혀 다른 0x7f… 주소입니다.',stack:'지역 변수 — 함수를 부를수록 낮은 주소 쪽(그림의 위쪽)으로 자랍니다.'};
     $('#m-note').className='note'; $('#m-note').innerHTML=`<b>${esc(v.n)}</b> → <b>${v.seg}</b>. ${info[v.seg]} ${$('#m-aslr').checked?'"다시 실행" 을 누르면 시작 주소가 바뀝니다(ASLR).':'ASLR 을 끄면 0x5555555… 처럼 매번 같은 주소입니다.'}`; }
   $('#m-run').addEventListener('click',()=>{ mRand(); mDraw(); }); $('#m-aslr').addEventListener('change',()=>{ mRand(); mDraw(); }); mRand(); mDraw();
 
