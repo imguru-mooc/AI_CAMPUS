@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Embedded I/O 제어 1일차 — 눈으로 보는 8가지 (라즈베리파이 설정 · I/O 지도)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EEF1F5;
+    --panel:#FFFFFF;
+    --ink:#1B2A41;
+    --ink-soft:#5B6B80;
+    --line:#C9D1DC;
+    --blue:#2457C5;
+    --blue-soft:#DCE6FA;
+    --red:#D6452E;
+    --red-soft:#FBE3DF;
+    --green:#178A67;
+    --green-soft:#DDF2EA;
+    --amber:#C98A12;
+    --amber-soft:#FBF0D3;
+    --mono:'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    --sans:'IBM Plex Sans KR', 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    --t:.35s;
+  }
+  @media (prefers-reduced-motion: reduce){ :root{ --t:0s; } *{ animation:none !important; transition:none !important; } }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; }
+  body{
+    font-family:var(--sans); color:var(--ink); background:var(--paper);
+    background-image:
+      linear-gradient(rgba(27,42,65,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(27,42,65,.045) 1px, transparent 1px);
+    background-size:24px 24px;
+    font-size:16px; line-height:1.55;
+  }
+  code, .mono{ font-family:var(--mono); }
+
+  .app{ display:grid; grid-template-columns:260px 1fr; min-height:100vh; }
+  nav{
+    background:var(--ink); color:#fff; padding:28px 20px;
+    position:sticky; top:0; height:100vh; overflow:auto;
+  }
+  nav h1{ font-size:15px; font-weight:500; margin:0 0 4px; letter-spacing:.01em; color:#AEBBD1; }
+  nav .day{ font-size:26px; font-weight:600; margin:0 0 26px; line-height:1.2; }
+  nav ol{ list-style:none; margin:0; padding:0; counter-reset:lesson; }
+  nav li{ margin:0; }
+  nav button{
+    all:unset; display:grid; grid-template-columns:32px 1fr; gap:10px; align-items:baseline;
+    width:100%; padding:9px 10px; border-radius:6px; cursor:pointer; font-size:14.5px; line-height:1.35;
+    color:#D9E1EC;
+  }
+  nav button::before{ counter-increment:lesson; content:counter(lesson) "교시"; font-family:var(--mono); font-size:11px; color:#8A9BB5; }
+  nav button:hover{ background:rgba(255,255,255,.07); }
+  nav button[aria-current="true"]{ background:var(--blue); color:#fff; }
+  nav button[aria-current="true"]::before{ color:#C9D8F7; }
+  nav button:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
+  nav .hint{ margin-top:28px; font-size:12.5px; color:#8A9BB5; line-height:1.5; }
+  nav .hint kbd{ font-family:var(--mono); background:rgba(255,255,255,.12); padding:1px 5px; border-radius:3px; }
+
+  main{ padding:36px 44px 80px; max-width:1100px; }
+  section.lesson{ display:none; }
+  section.lesson.active{ display:block; }
+  .lesson header{ margin-bottom:22px; }
+  .lesson h2{ font-size:30px; font-weight:600; margin:0 0 6px; line-height:1.25; }
+  .lesson header p{ margin:0; color:var(--ink-soft); font-size:16px; max-width:64ch; }
+
+  .stage{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:26px;
+    box-shadow:0 1px 0 rgba(27,42,65,.06);
+  }
+  .controls{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:20px; }
+  .controls label{ font-size:14px; color:var(--ink-soft); display:flex; align-items:center; gap:6px; }
+  button.btn{
+    font:inherit; font-size:14px; font-weight:500; padding:8px 14px; border-radius:6px; cursor:pointer;
+    border:1px solid var(--ink); background:var(--ink); color:#fff;
+  }
+  button.btn.secondary{ background:#fff; color:var(--ink); border-color:var(--line); }
+  button.btn:disabled{ opacity:.4; cursor:default; }
+  button.btn:focus-visible, select:focus-visible, input:focus-visible{ outline:2px solid var(--blue); outline-offset:2px; }
+  select, input[type=number], input[type=text]{
+    font:inherit; font-size:14px; padding:7px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink);
+  }
+  input[type=number], input[type=text]{ font-family:var(--mono); }
+  .toggle{ display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+  .toggle input{ position:absolute; opacity:0; width:0; height:0; }
+  .toggle .sw{ width:38px; height:22px; border-radius:11px; background:var(--line); position:relative; transition:background var(--t); }
+  .toggle .sw::after{ content:""; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition:transform var(--t); }
+  .toggle input:checked + .sw{ background:var(--blue); }
+  .toggle input:checked + .sw::after{ transform:translateX(16px); }
+  .toggle input:focus-visible + .sw{ outline:2px solid var(--blue); outline-offset:2px; }
+
+  .note{ margin-top:18px; padding:14px 16px; border-left:3px solid var(--blue); background:var(--blue-soft); border-radius:0 6px 6px 0; font-size:14.5px; }
+  .note.warn{ border-color:var(--red); background:var(--red-soft); }
+  .note.ok{ border-color:var(--green); background:var(--green-soft); }
+  .note code{ background:rgba(255,255,255,.7); padding:1px 5px; border-radius:3px; }
+
+  pre.code{
+    font-family:var(--mono); font-size:13.5px; background:#F6F8FB; border:1px solid var(--line); border-radius:6px;
+    padding:14px 16px; margin:0; overflow:auto; line-height:1.55; white-space:pre;
+  }
+  pre.code .dim{ color:#9AA7B8; }
+  pre.code .hi{ background:var(--amber-soft); }
+  pre.code .err{ background:var(--red-soft); color:var(--red); }
+
+    .readout{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-top:16px; }
+  .readout div{ padding:12px 14px; border:1px solid var(--line); border-radius:6px; background:#F6F8FB; }
+  .readout b{ display:block; font-size:12.5px; font-weight:500; color:var(--ink-soft); margin-bottom:2px; }
+  .readout span{ font-family:var(--mono); font-size:17px; font-weight:600; }
+  /* ---------- shared ---------- */
+  .mcell{ display:inline-flex; flex-direction:column; align-items:center; min-width:70px; border:2px solid var(--ink); border-radius:6px; background:#fff; overflow:hidden; transition:all var(--t); }
+  .mcell .a{ font-family:var(--mono); font-size:10px; color:var(--ink-soft); background:#F6F8FB; width:100%; text-align:center; padding:3px 4px; border-bottom:1px solid var(--line); }
+  .mcell .v{ font-family:var(--mono); font-size:20px; font-weight:600; padding:8px 6px; }
+  .mcell .n{ font-family:var(--mono); font-size:11px; color:var(--blue); padding:0 4px 6px; }
+  .mcell.hi{ border-color:var(--blue); background:var(--blue-soft); }
+  .mcell.bad{ border-color:var(--red); background:var(--red-soft); }
+  .mcell.ok{ border-color:var(--green); background:var(--green-soft); }
+  .mcell.dim{ opacity:.35; }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+  .lab{ font-size:12.5px; color:var(--ink-soft); margin:14px 0 6px; }
+  .term{ font-family:var(--mono); font-size:13.5px; background:var(--ink); color:#D9E1EC; padding:12px 16px; border-radius:6px; min-height:60px; white-space:pre-wrap; margin-top:16px; }
+  .term .r{ color:#FF9B8A; } .term .g{ color:#7FE0B8; } .term .y{ color:#FFD27F; } .term .c{ color:#8A9BB5; }
+  svg text{ font-family:var(--mono); }
+  .shake{ animation:shake .4s; } @keyframes shake{ 0%,100%{transform:none} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+  .pop-in{ animation:popin .3s ease-out; } @keyframes popin{ from{ transform:scale(.8); opacity:0; } }
+  .fade-out{ animation:fadeout .4s forwards; } @keyframes fadeout{ to{ opacity:0; transform:translateY(-8px); } }
+  .two{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:24px; }
+  .tabs2{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tabs2 button{ font:inherit; font-size:13px; padding:7px 12px; border-radius:6px; border:1px solid var(--line); background:#fff; cursor:pointer; }
+  .tabs2 button.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .fig svg{ width:100%; height:auto; background:#fff; border:1px solid var(--line); border-radius:6px; display:block; }
+  .fig text{ font-size:11px; fill:var(--ink-soft); }
+  .qslots{ display:flex; gap:6px; margin:10px 0; }
+  .qslots span{ flex:1; height:46px; border:2px solid var(--line); border-radius:6px; display:grid; place-items:center; font-family:var(--mono); font-size:13px; background:#fff; transition:all var(--t); }
+  .qslots span.full{ background:var(--blue-soft); border-color:var(--blue); }
+  .fs{ display:grid; grid-template-columns:repeat(16,1fr); gap:3px; }
+  .fs span{ height:22px; border-radius:3px; background:#EEF1F5; transition:background var(--t); }
+  .fs span.used{ background:#8FB0EA; } .fs span.dirty{ background:var(--amber); } .fs span.hot{ outline:2px solid var(--red); }
+  .crash{ font-family:var(--mono); font-size:12.5px; background:#0E1726; color:#D9E1EC; border-radius:8px; padding:12px 14px; line-height:1.7; }
+  .crash span.ln{ display:block; cursor:pointer; border-radius:3px; padding:0 4px; }
+  .crash span.ln:hover{ background:#22324A; } .crash span.ln.on{ background:#3A2A10; color:#FFD27A; }
+  .flow{ position:relative; }
+  table.rt{ border-collapse:collapse; width:100%; font-family:var(--mono); font-size:12.5px; }
+  table.rt th, table.rt td{ border:1px solid var(--line); padding:6px 8px; text-align:left; }
+  table.rt th{ background:var(--paper); font-family:var(--sans); }
+  table.rt tr.hot td{ background:var(--blue-soft); font-weight:700; }
+  @media (max-width:900px){ .two{ grid-template-columns:1fr; } }
+  /* ── Embedded I/O Day 1 추가 스타일 ── */
+  .lanes{ display:grid; grid-template-columns:110px 1fr; gap:10px 14px; align-items:center; }
+  .lanes .ln{ font-size:13px; font-weight:600; color:var(--ink-soft); }
+  .chips{ display:flex; gap:6px; flex-wrap:wrap; }
+  .chip{ font-family:var(--mono); font-size:12px; padding:7px 10px; border-radius:6px; border:2px solid var(--line); background:#fff; color:var(--ink-soft); transition:all var(--t); }
+  .chip.on{ border-color:var(--blue); background:var(--blue-soft); color:var(--ink); }
+  .chip.now{ border-color:var(--amber); background:var(--amber-soft); color:var(--ink); font-weight:600; }
+  .chip.done{ border-color:var(--green); background:var(--green-soft); color:var(--ink); }
+  .chip.bad{ border-color:var(--red); background:var(--red-soft); color:var(--ink); }
+  .hdr{ display:grid; grid-template-columns:repeat(20, 1fr); grid-template-rows:repeat(2, 38px); gap:4px; background:#1B2A41; padding:10px; border-radius:8px; }
+  .pin{ all:unset; cursor:pointer; border-radius:6px; display:grid; place-items:center; font-family:var(--mono); font-size:10.5px; font-weight:600; color:#1B2A41; background:#C9D1DC; position:relative; }
+  .pin:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
+  .pin.p5v{ background:#F28B82; } .pin.p3v{ background:#FFD27F; } .pin.gnd{ background:#5B6B80; color:#fff; }
+  .pin.gpio{ background:#B9CCF2; } .pin.alt{ background:#9FD9C4; } .pin.id{ background:#E3E7ED; color:#8A9BB5; }
+  .pin.sel{ outline:3px solid #fff; transform:scale(1.08); }
+  .pin.hit{ background:var(--green); color:#fff; } .pin.miss{ background:var(--red); color:#fff; }
+  .pinlegend{ display:flex; gap:14px; flex-wrap:wrap; font-size:12.5px; color:var(--ink-soft); margin:10px 0 0; }
+  .pinlegend span::before{ content:""; display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:5px; vertical-align:-2px; background:var(--c); }
+  .pipe{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px; }
+  .stg{ border:2px solid var(--line); border-radius:8px; padding:10px 12px; background:#fff; min-height:74px; transition:all var(--t); }
+  .stg b{ display:block; font-size:13px; margin-bottom:4px; } .stg span{ font-size:12.5px; color:var(--ink-soft); }
+  .stg.ok{ border-color:var(--green); background:var(--green-soft); } .stg.bad{ border-color:var(--red); background:var(--red-soft); } .stg.warn{ border-color:var(--amber); background:var(--amber-soft); } .stg.skip{ opacity:.35; }
+  .cfg{ font-family:var(--mono); font-size:13px; background:#F6F8FB; border:1px solid var(--line); border-radius:6px; padding:12px 14px; white-space:pre; overflow:auto; line-height:1.6; }
+  .cfg .off{ color:#9AA7B8; text-decoration:line-through; } .cfg .add{ background:var(--green-soft); } .cfg .bad{ background:var(--red-soft); }
+  .checks{ display:grid; gap:8px; }
+  .led{ width:54px; height:54px; border-radius:50%; background:#5B2A24; border:3px solid #3A1A16; display:inline-block; transition:all .12s; vertical-align:middle; }
+  .led.on{ background:#FF5A3C; box-shadow:0 0 22px 6px rgba(255,90,60,.55); border-color:#C0392B; }
+  .led.unk{ background:repeating-linear-gradient(45deg,#5B2A24,#5B2A24 6px,#7A3A30 6px,#7A3A30 12px); }
+  .twoterm{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:18px; }
+  .twoterm .term{ min-height:150px; margin-top:8px; }
+  .tbtns{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tbtns button{ font:inherit; font-family:var(--mono); font-size:12px; padding:6px 10px; border-radius:6px; border:1px solid var(--line); background:#fff; cursor:pointer; }
+  .tbtns button:hover{ border-color:var(--ink); }
+  .pressbtn{ font:inherit; font-size:15px; font-weight:600; width:140px; height:64px; border-radius:12px; border:3px solid var(--ink); background:#fff; cursor:pointer; user-select:none; box-shadow:0 4px 0 var(--ink); transition:transform .05s, box-shadow .05s; }
+  .pressbtn.down{ transform:translateY(4px); box-shadow:0 0 0 var(--ink); background:var(--amber-soft); }
+  .wave svg{ width:100%; height:auto; background:#fff; border:1px solid var(--line); border-radius:6px; display:block; }
+  table.rt td.okc{ color:var(--green); font-weight:700; } table.rt td.badc{ color:var(--red); font-weight:700; }
+  @media (max-width:900px){ .pipe{ grid-template-columns:1fr 1fr; } .twoterm{ grid-template-columns:1fr; } }
+
+</style>
+</head>
+<body>
+<div class="app">
+  <nav aria-label="교시 선택">
+    <h1>Embedded I/O 제어 · Raspberry Pi 4</h1>
+    <p class="day">1일차<br>눈으로 보는 8가지</p>
+    <ol id="navlist">
+      <li><button data-go="1" aria-current="true">ESP32 vs Pi 부팅</button></li>
+      <li><button data-go="2">40핀 헤더 탐색기</button></li>
+      <li><button data-go="3">SD 굽기 → USB 첫 접속</button></li>
+      <li><button data-go="4">USB · Wi-Fi 접속 진단</button></li>
+      <li><button data-go="5">config.txt → /dev</button></li>
+      <li><button data-go="6">장치 파일 권한</button></li>
+      <li><button data-go="7">라인 요청과 busy</button></li>
+      <li><button data-go="8">pull-up 버튼과 엣지</button></li>
+    </ol>
+    <p class="hint">키보드 <kbd>←</kbd> <kbd>→</kbd> 로 교시 이동<br><a href="lecture.html" style="color:#AEBBD1">강의 자료</a> · <a href="worksheet.html" style="color:#AEBBD1">워크시트</a></p>
+  </nav>
+  <main>
+
+  <section class="lesson active" id="l1">
+    <header><h2>전원을 넣고 내 코드가 핀을 만지기까지</h2><p>ESP32 는 업로드한 코드가 곧바로 레지스터를 씁니다. Pi 는 부트로더 → 펌웨어 → Device Tree → 커널 → 드라이버를 거쳐 장치 파일이 생긴 뒤에야 프로그램이 핀에 닿습니다. 한 단계씩 넘기며 두 보드를 비교하고, config.txt 줄을 바꾸면 무엇이 달라지는지 보세요.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <button class="btn" id="a-step">한 단계</button>
+        <button class="btn" id="a-play">자동 재생</button>
+        <button class="btn secondary" id="a-reset">전원 끄기 (처음으로)</button>
+        <label class="toggle"><input type="checkbox" id="a-pwm" checked><span class="sw"></span>dtoverlay=pwm-2chan</label>
+        <label class="toggle"><input type="checkbox" id="a-i2c" checked><span class="sw"></span>dtparam=i2c_arm=on</label>
+      </div>
+      <div class="lanes">
+        <div class="ln">ESP32</div><div class="chips" id="a-esp"></div>
+        <div class="ln">Raspberry Pi 4</div><div class="chips" id="a-pi"></div>
+      </div>
+      <div class="readout"><div><b>경과 시간</b><span id="a-t">0.0 s</span></div><div><b>ESP32 내 코드</b><span id="a-e">대기</span></div><div><b>Pi 내 프로그램</b><span id="a-p">대기</span></div></div>
+      <div class="term" id="a-term"></div>
+      <div class="note" id="a-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l2">
+    <header><h2>40핀 헤더 — 이름표를 읽는 법</h2><p>핀을 눌러 물리 번호 · BCM 번호 · 대체 기능 · 이 과목에서 쓰는 곳을 확인하세요. <b>찾기 퀴즈</b>에서는 문제에 나온 핀을 헤더에서 찾아 누릅니다. 위쪽 줄이 짝수, 아래쪽 줄이 홀수 핀이고 왼쪽 끝 아래가 1번입니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <div class="tabs2" id="h-mode"><button class="on" data-m="explore">탐색</button><button data-m="quiz">찾기 퀴즈</button></div>
+        <span id="h-q" style="font-weight:600"></span>
+        <button class="btn secondary" id="h-next" style="display:none">다음 문제</button>
+      </div>
+      <div class="hdr" id="h-grid"></div>
+      <div class="pinlegend"><span style="--c:#F28B82">5V</span><span style="--c:#FFD27F">3V3</span><span style="--c:#5B6B80">GND</span><span style="--c:#B9CCF2">GPIO</span><span style="--c:#9FD9C4">이 과목에서 대체 기능으로 쓰는 GPIO</span><span style="--c:#E3E7ED">ID EEPROM (쓰지 않음)</span></div>
+      <div class="two" style="margin-top:16px">
+        <table class="rt" id="h-info"></table>
+        <div><div class="readout" style="margin-top:0"><div><b>퀴즈 점수</b><span id="h-score">0 / 0</span></div><div><b>선택한 핀</b><span id="h-sel">–</span></div></div><div class="note" id="h-note">핀을 하나 눌러 보세요.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l3">
+    <header><h2>SD 카드부터 USB 첫 접속까지 — 빠뜨린 한 칸이 어디서 막히는가</h2><p>모니터 · 키보드 없이 USB-C 케이블 하나로 처음 접속합니다. 이미지 · Imager 설정 · user-data · 케이블 · PC 쪽 준비를 고른 뒤 <b>굽고 USB 로 부팅</b>을 누르세요. 8단계가 차례로 진행되고, 빠뜨린 것이 있으면 그것이 드러나는 단계에서 멈춥니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>이미지 <select id="i-os"><option value="new" selected>Lite 64-bit · Trixie (2025-10-20 이후)</option><option value="old">Lite 64-bit · Trixie (2025-10 이전)</option><option value="bw">Lite 64-bit · Bookworm</option><option value="desk">Desktop 64-bit · Trixie (최신)</option></select></label>
+        <label>user-data 들여쓰기 <select id="i-indent"><option value="sp" selected>스페이스 2칸</option><option value="tab">탭</option></select></label>
+        <label>케이블 <select id="i-cable"><option value="data" selected>USB-C 데이터 케이블</option><option value="charge">충전 전용 케이블</option></select></label>
+        <label>PC 포트 <select id="i-port"><option value="direct" selected>본체 뒷면 직접</option><option value="hub">무전원 USB 허브</option></select></label>
+      </div>
+      <div class="controls">
+        <label class="toggle"><input type="checkbox" id="i-user" checked><span class="sw"></span>사용자 · 비밀번호</label>
+        <label class="toggle"><input type="checkbox" id="i-ssh" checked><span class="sw"></span>SSH 켜기</label>
+        <label class="toggle"><input type="checkbox" id="i-gadget" checked><span class="sw"></span>user-data 에 enable_usb_gadget</label>
+        <label class="toggle"><input type="checkbox" id="i-drv" checked><span class="sw"></span>Windows 드라이버 설치</label>
+        <button class="btn" id="i-run">굽고 USB 로 부팅</button>
+      </div>
+      <div class="pipe" id="i-pipe"></div>
+      <div class="term" id="i-term"></div>
+      <div class="note" id="i-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l4">
+    <header><h2>"접속이 안 돼요" — USB 단계와 Wi-Fi 단계에서 끊긴 곳 찾기</h2><p>먼저 <b>연결 단계</b>(USB 첫 접속 / Wi-Fi 전환 후)를 고르고 증상을 고른 뒤 <b>접속 시도</b>를 누르세요. 요청이 어느 구간까지 가고 어디서 멈추는지, 화면에는 어떤 메시지가 뜨는지 보입니다.</p></header>
+    <div class="stage">
+      <div class="controls"><div class="tabs2" id="c-mode"><button class="on" data-m="usb">① USB 첫 접속</button><button data-m="wifi">② Wi-Fi 전환 후</button></div></div>
+      <div class="controls"><div class="tabs2" id="c-sym"></div></div>
+      <div class="controls"><button class="btn" id="c-go">접속 시도</button></div>
+      <div class="fig"><svg viewBox="0 0 900 240" id="c-svg"></svg></div>
+      <div class="term" id="c-term" style="min-height:70px"></div>
+      <div class="note" id="c-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l5">
+    <header><h2>config.txt 한 줄이 장치 파일 하나가 된다</h2><p>왼쪽에서 config.txt · cmdline.txt 를 고친 뒤 <b>재부팅</b>을 누르세요. 고치기만 하면 아무것도 바뀌지 않습니다 — 부팅 때 한 번 읽기 때문입니다. 오른쪽에 생긴 장치 파일과 핀 기능(<code>pinctrl get</code>)을 확인하세요.</p></header>
+    <div class="stage">
+      <div class="two">
+        <div>
+          <div class="checks" id="d-checks"></div>
+          <div class="lab">/boot/firmware/config.txt (편집 중)</div>
+          <div class="cfg" id="d-cfg"></div>
+          <div class="controls" style="margin-top:12px;margin-bottom:0"><button class="btn" id="d-boot">sudo reboot</button><span id="d-pend" style="font-size:13px;color:var(--ink-soft)"></span></div>
+        </div>
+        <div>
+          <div class="lab" style="margin-top:0">재부팅 후 — 장치 파일</div>
+          <div class="term" id="d-term" style="margin-top:0;min-height:120px"></div>
+          <div class="lab">재부팅 후 — 핀 기능</div>
+          <table class="rt" id="d-pins"></table>
+        </div>
+      </div>
+      <div class="note" id="d-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l6">
+    <header><h2>장치 파일을 여는 열쇠는 그룹이다</h2><p><code>usermod</code> 로 그룹을 바꾼 뒤 <b>다시 로그인</b>해야 적용됩니다. 각 장치 파일의 <b>open()</b> 을 눌러 열리는지 확인하세요. sudo 로 실행하면 모두 열리지만, 그것이 왜 나쁜 습관인지도 함께 보입니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <span style="font-size:14px;color:var(--ink-soft)">/etc/group 에 등록:</span>
+        <label class="toggle"><input type="checkbox" class="g" value="gpio" checked><span class="sw"></span>gpio</label>
+        <label class="toggle"><input type="checkbox" class="g" value="i2c" checked><span class="sw"></span>i2c</label>
+        <label class="toggle"><input type="checkbox" class="g" value="spi" checked><span class="sw"></span>spi</label>
+        <label class="toggle"><input type="checkbox" class="g" value="dialout" checked><span class="sw"></span>dialout</label>
+        <button class="btn secondary" id="p-relog">다시 로그인</button>
+        <label class="toggle"><input type="checkbox" id="p-sudo"><span class="sw"></span>sudo 로 실행</label>
+      </div>
+      <div class="term" id="p-id" style="min-height:40px;margin-top:0"></div>
+      <table class="rt" id="p-tab" style="margin-top:14px"></table>
+      <div class="term" id="p-term" style="min-height:60px"></div>
+      <div class="note" id="p-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l7">
+    <header><h2>먼저 요청한 프로세스가 라인을 가진다</h2><p>PuTTY 창 두 개를 흉내 냈습니다. 창 1 에서 GPIO17 을 요청한 채로 창 2 에서 같은 라인을 건드려 보세요. Ctrl+C · kill 로 프로세스가 끝나면 커널이 라인을 어떻게 정리하는지도 확인합니다.</p></header>
+    <div class="stage">
+      <div class="twoterm">
+        <div><div class="lab" style="margin-top:0">창 1</div><div class="tbtns" id="b-w1"></div><div class="term" id="b-t1"></div></div>
+        <div><div class="lab" style="margin-top:0">창 2</div><div class="tbtns" id="b-w2"></div><div class="term" id="b-t2"></div></div>
+      </div>
+      <div class="two" style="margin-top:16px;align-items:center">
+        <table class="rt" id="b-lines"></table>
+        <div style="display:flex;gap:16px;align-items:center"><span class="led" id="b-led"></span><div><b>GPIO17 LED</b><div id="b-ledtxt" style="font-size:13px;color:var(--ink-soft)">꺼짐 (요청 없음)</div></div></div>
+      </div>
+      <div class="note" id="b-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l8">
+    <header><h2>버튼은 누르면 0 — pull-up, 엣지, 바운싱</h2><p>버튼은 GPIO5 와 GND 사이에 있습니다. bias 를 고르고 버튼을 눌렀다 떼 보세요(마우스를 누르고 있거나 <kbd>Space</kbd>). 아래 파형은 핀 전압, 오른쪽은 <code>gpiomon</code> 이 받은 이벤트입니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>bias <select id="w-bias"><option value="none">없음 (as-is)</option><option value="up" selected>pull-up</option><option value="down">pull-down</option></select></label>
+        <label>gpiomon -e <select id="w-edge"><option value="falling" selected>falling</option><option value="rising">rising</option><option value="both">both</option></select></label>
+        <label class="toggle"><input type="checkbox" id="w-bounce" checked><span class="sw"></span>접점 바운싱</label>
+        <label class="toggle"><input type="checkbox" id="w-deb"><span class="sw"></span>-p 10ms (디바운스)</label>
+        <button class="btn secondary" id="w-clear">기록 지우기</button>
+      </div>
+      <div class="two">
+        <div>
+          <div style="display:flex;gap:18px;align-items:center;margin-bottom:12px"><button class="pressbtn" id="w-btn">버튼</button><div class="readout" style="margin-top:0;flex:1"><div><b>gpioget 값</b><span id="w-val">1</span></div><div><b>이번 누름 이벤트</b><span id="w-cnt">0</span></div></div></div>
+          <div class="wave"><svg viewBox="0 0 520 170" id="w-svg"></svg></div>
+        </div>
+        <div><div class="lab" style="margin-top:0">gpiomon -c gpiochip0 -b <span id="w-cmd">pull-up -e falling</span> 5</div><div class="term" id="w-term" style="margin-top:0;min-height:250px;max-height:250px;overflow:auto"></div></div>
+      </div>
+      <div class="note" id="w-note"></div>
+    </div>
+  </section>
+
+  </main>
+</div>
+<script>
+(function(){
+  'use strict';
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+  const NS='http://www.w3.org/2000/svg';
+  const el=(n,a,t)=>{ const e=document.createElementNS(NS,n); for(const k in a) e.setAttribute(k,a[k]); if(t!==undefined) e.textContent=t; return e; };
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  let cur=1;
+  function go(n){ cur=Math.max(1,Math.min(8,n)); $$('.lesson').forEach(s=>s.classList.toggle('active',s.id==='l'+cur)); $$('#navlist button').forEach(b=>b.setAttribute('aria-current',b.dataset.go==cur?'true':'false')); history.replaceState(null,'','#l'+cur); window.scrollTo({top:0}); }
+  $$('#navlist button').forEach(b=>b.addEventListener('click',()=>go(+b.dataset.go)));
+  document.addEventListener('keydown',e=>{ if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName))return; if(e.key==='ArrowRight')go(cur+1); if(e.key==='ArrowLeft')go(cur-1); });
+  if(/^#l[1-8]$/.test(location.hash)) go(+location.hash[2]);
+  function tabs(id,fn){ $$('#'+id+' button').forEach(b=>b.addEventListener('click',()=>{ $$('#'+id+' button').forEach(x=>x.classList.toggle('on',x===b)); fn(b); })); }
+  function box(S,x,y,w,h,title,sub,kind){ const col={n:['#fff','#1B2A41'],b:['#DCE6FA','#2457C5'],g:['#DDF2EA','#178A67'],r:['#FBE3DF','#D6452E'],a:['#FBF0D3','#C98A12'],d:['#F6F8FB','#C9D1DC']}[kind||'n'];
+    S.appendChild(el('rect',{x,y,width:w,height:h,rx:8,fill:col[0],stroke:col[1],'stroke-width':2}));
+    const t=el('text',{x:x+w/2,y:y+(sub?h/2-4:h/2+5),'text-anchor':'middle','font-size':14,'font-weight':600,fill:'#1B2A41'},title); S.appendChild(t);
+    if(sub){ String(sub).split('\n').forEach((ln,i)=>S.appendChild(el('text',{x:x+w/2,y:y+h/2+14+i*14,'text-anchor':'middle','font-size':11.5,fill:col[1]},ln))); } }
+  function arrow(S,x1,y1,x2,y2,color,label){ const id='m'+color.replace('#',''); if(!S.querySelector('#'+id)){ const d=el('defs',{}); const m=el('marker',{id,viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'}); m.appendChild(el('path',{d:'M0,0L10,5L0,10z',fill:color})); d.appendChild(m); S.appendChild(d); }
+    S.appendChild(el('line',{x1,y1,x2,y2,stroke:color,'stroke-width':2.2,'marker-end':`url(#${id})`}));
+    if(label){ const mx=(x1+x2)/2,my=(y1+y2)/2; S.appendChild(el('rect',{x:mx-label.length*3.6-6,y:my-10,width:label.length*7.2+12,height:18,rx:4,fill:'#fff',stroke:color})); S.appendChild(el('text',{x:mx,y:my+3,'text-anchor':'middle','font-size':11,fill:color},label)); } }
+
+    const note=(id,html,kind)=>{ const n=$(id); n.className='note'+(kind?' '+kind:''); n.innerHTML=html; };
+
+  /* ───────── 1 부팅 흐름 ───────── */
+  const ESP=[['전원',0],['ROM 부트로더',0.03],['Flash 에서 펌웨어 로드',0.25],['setup()',0.4],['loop() → 핀 제어',0.45]];
+  const PI=[
+    ['전원',0,'5V 가 들어오고 빨간 PWR LED 가 켜집니다.','<span class="c">(아직 아무것도 출력되지 않음)</span>'],
+    ['EEPROM 부트로더',0.5,'보드의 EEPROM 에 든 부트로더가 SD 카드를 찾습니다. 초록 ACT LED 가 깜빡이기 시작합니다.','<span class="c">[EEPROM] boot mode: SD</span>'],
+    ['start4.elf (GPU 펌웨어)',2,'SD 카드 부트 파티션의 GPU 펌웨어가 올라옵니다. 아직 CPU(ARM)는 일하지 않습니다.','<span class="c">loading start4.elf ...</span>'],
+    ['config.txt · Device Tree',3,'펌웨어가 config.txt 를 읽어 bcm2711-rpi-4-b.dtb 에 dtparam 을 적용하고 overlay 를 덧붙입니다. <b>config.txt 를 읽는 것은 이 한 번뿐</b>이라 고치면 재부팅해야 합니다.',null],
+    ['Linux 커널',5,'완성된 Device Tree 를 들고 ARM 코어에서 커널이 시작됩니다.','[    0.000000] Booting Linux on physical CPU 0x0\n[    0.000000] Machine model: Raspberry Pi 4 Model B Rev 1.5'],
+    ['드라이버 probe',9,'커널이 Device Tree 의 장치마다 맞는 드라이버를 붙입니다(probe). <b>Device Tree 에 없는 장치에는 드라이버가 붙지 않습니다.</b>',null],
+    ['/dev 장치 생성',11,'드라이버가 장치 파일을 만듭니다. 이제야 사용자 프로그램이 하드웨어에 닿을 "문"이 생겼습니다.',null],
+    ['systemd · sshd',18,'서비스들이 올라오고 SSH 서버가 22번 포트에서 기다립니다.','[  OK  ] Started ssh.service - OpenBSD Secure Shell server.'],
+    ['로그인 → ./내프로그램',30,'PuTTY 로 로그인해 프로그램을 실행합니다. 프로그램은 레지스터가 아니라 <code>/dev/gpiochip0</code> 같은 장치 파일을 열어 드라이버에게 부탁합니다.','pi@rpi-07:~ $ ./01_board_info'],
+  ];
+  let aIdx=-1, aTimer=null;
+  function aOut(i){
+    const pwm=$('#a-pwm').checked, i2c=$('#a-i2c').checked;
+    if(i===3) return '<span class="c">config.txt:</span>\n  dtparam=spi=on\n'+(i2c?'  dtparam=i2c_arm=on\n':'  <span class="c"># dtparam=i2c_arm=on (없음)</span>\n')+(pwm?'  dtoverlay=pwm-2chan\n':'  <span class="c"># dtoverlay=pwm-2chan (없음)</span>\n')+'  dtoverlay=disable-bt';
+    if(i===5) return '[    1.21] pinctrl-bcm2835 fe200000.gpio: GPIO 58 lines\n'+(i2c?'[    1.35] i2c_bcm2835 fe804000.i2c: probe\n':'')+'[    1.36] spi-bcm2835 fe204000.spi: probe\n'+(pwm?'[    1.40] pwm-bcm2835 fe20c000.pwm: probe\n':'')+'[    1.42] fe201000.serial: ttyAMA0 at MMIO 0xfe201000 (PL011)';
+    if(i===6) return '$ ls /dev/gpiochip0 /dev/spidev0.0 /dev/ttyAMA0'+(i2c?' /dev/i2c-1':'')+'\n/dev/gpiochip0  /dev/spidev0.0  /dev/ttyAMA0'+(i2c?'  /dev/i2c-1':'')+'\n$ ls /sys/class/pwm\n'+(pwm?'pwmchip0':'<span class="r">(비어 있음)</span>');
+    return PI[i][3];
+  }
+  function aDraw(){
+    const t=aIdx<0?0:PI[aIdx][1];
+    $('#a-esp').innerHTML=ESP.map(([n,et],k)=>{ let c=''; if(aIdx>=0&&t>=et){ c=(k===ESP.length-1)?'done':'on'; } return `<span class="chip ${c}">${n}</span>`; }).join('');
+    $('#a-pi').innerHTML=PI.map(([n],k)=>`<span class="chip ${k<aIdx?'on':(k===aIdx?(k===PI.length-1?'done':'now'):'')}">${n}</span>`).join('');
+    $('#a-t').textContent=t.toFixed(1)+' s';
+    $('#a-e').textContent=aIdx<0?'대기':(t>=0.4?'실행 중 (0.4 s)':'준비 중');
+    $('#a-p').textContent=aIdx===PI.length-1?'실행 (약 30 s)':(aIdx<0?'대기':'아직 못 씀');
+    const lines=[]; for(let k=(aIdx>0?1:0);k<=aIdx;k++){ const o=aOut(k); if(o) lines.push(o); }
+    $('#a-term').innerHTML=lines.join('\n')||'<span class="c">한 단계 를 눌러 전원을 넣으세요.</span>';
+    if(aIdx<0) note('#a-note','ESP32 와 Pi 4 에 동시에 전원을 넣는다고 생각하고 단계를 넘겨 보세요.');
+    else { let x=PI[aIdx][2]; if(aIdx>=3&&aIdx<=6&&!$('#a-pwm').checked) x+=' <b>pwm-2chan 이 없으므로 PWM 드라이버가 붙지 않아 /sys/class/pwm 이 비어 있습니다.</b>'; if(aIdx>=3&&aIdx<=6&&!$('#a-i2c').checked) x+=' <b>i2c_arm 이 꺼져 있어 /dev/i2c-1 이 생기지 않습니다.</b>'; if(aIdx===1) x+=' 같은 시각 ESP32 는 이미 펌웨어를 읽는 중입니다.'; if(aIdx===2) x+=' ESP32 는 벌써 <code>loop()</code> 에서 핀을 바꾸고 있습니다.'; note('#a-note',x,aIdx===PI.length-1?'ok':''); }
+  }
+  function aStep(){ if(aIdx<PI.length-1){ aIdx++; aDraw(); return true; } return false; }
+  $('#a-step').onclick=()=>{ clearInterval(aTimer); aTimer=null; $('#a-play').textContent='자동 재생'; aStep(); };
+  $('#a-play').onclick=()=>{ if(aTimer){ clearInterval(aTimer); aTimer=null; $('#a-play').textContent='자동 재생'; return; } if(aIdx>=PI.length-1) aIdx=-1; $('#a-play').textContent='멈춤'; aTimer=setInterval(()=>{ if(!aStep()){ clearInterval(aTimer); aTimer=null; $('#a-play').textContent='자동 재생'; } },1100); };
+  $('#a-reset').onclick=()=>{ clearInterval(aTimer); aTimer=null; $('#a-play').textContent='자동 재생'; aIdx=-1; aDraw(); };
+  ['#a-pwm','#a-i2c'].forEach(s=>$(s).addEventListener('change',()=>{ if(aIdx>3){ note('#a-note','config.txt 를 바꿨지만 이미 읽고 지나간 뒤입니다. <b>전원 끄기</b> 후 다시 부팅해야 반영됩니다 — 실제로 sudo reboot 가 필요한 이유입니다.','warn'); } else aDraw(); }));
+  aDraw();
+
+  /* ───────── 2 40핀 헤더 ───────── */
+  const PINS={1:['3V3','p3v'],2:['5V','p5v'],3:['GPIO2','alt','SDA1 (I2C1)'],4:['5V','p5v'],5:['GPIO3','alt','SCL1 (I2C1)'],6:['GND','gnd'],7:['GPIO4','gpio','GPCLK0'],8:['GPIO14','alt','TXD (UART)'],9:['GND','gnd'],10:['GPIO15','alt','RXD (UART)'],
+    11:['GPIO17','gpio'],12:['GPIO18','alt','PWM0'],13:['GPIO27','gpio'],14:['GND','gnd'],15:['GPIO22','gpio'],16:['GPIO23','gpio'],17:['3V3','p3v'],18:['GPIO24','gpio'],19:['GPIO10','alt','MOSI (SPI0)'],20:['GND','gnd'],
+    21:['GPIO9','alt','MISO (SPI0)'],22:['GPIO25','gpio'],23:['GPIO11','alt','SCLK (SPI0)'],24:['GPIO8','alt','CE0 (SPI0)'],25:['GND','gnd'],26:['GPIO7','alt','CE1 (SPI0)'],27:['ID_SD','id','HAT EEPROM'],28:['ID_SC','id','HAT EEPROM'],29:['GPIO5','gpio'],30:['GND','gnd'],
+    31:['GPIO6','gpio'],32:['GPIO12','gpio','PWM0 (대체)'],33:['GPIO13','gpio','PWM1 (대체)'],34:['GND','gnd'],35:['GPIO19','alt','PWM1'],36:['GPIO16','gpio'],37:['GPIO26','gpio'],38:['GPIO20','gpio'],39:['GND','gnd'],40:['GPIO21','gpio']};
+  const USE={2:'Day 4 PCF8591 SDA',3:'Day 4 PCF8591 SCL',4:'Day 5 DHT11 (커널 드라이버)',14:'Day 4 ESP32 RX 로',15:'Day 4 ESP32 TX 에서',17:'Day 1 LED 빨강 · Day 3 RGB R · Day 5 overlay LED',18:'Day 3 서보 · L293D EN (HW PWM0)',27:'Day 2 LED 노랑 · Day 3 RGB G',22:'Day 2 LED 초록 · Day 5 LCD D7',23:'Day 3 HC-SR04 TRIG',24:'Day 3 HC-SR04 ECHO (분압 필수)',10:'Day 4 74HC595 DS',9:'SPI 가 점유 (사용 안 함)',25:'Day 3 · 5 릴레이',11:'Day 4 74HC595 SHCP',8:'Day 4 74HC595 STCP',7:'SPI 가 점유 (사용 안 함)',5:'Day 1 버튼 A · Day 5 gpio-keys',6:'Day 2 버튼 B · PIR',12:'Day 3 스테퍼 · Day 5 LCD RS',13:'Day 2 액티브 부저',19:'Day 3 패시브 부저 (HW PWM1)',16:'Day 3 스테퍼 · Day 5 LCD E',26:'Day 5 LCD D6',20:'Day 3 L293D IN1 · Day 5 LCD D4',21:'Day 3 L293D IN2 · Day 5 LCD D5'};
+  const QUIZ=[['GPIO17 (오늘 LED)',p=>p===11],['GPIO5 (오늘 버튼)',p=>p===29],['GND 아무거나',p=>PINS[p][0]==='GND'],['하드웨어 PWM0 (GPIO18)',p=>p===12],['I2C1 SDA',p=>p===3],['UART TXD',p=>p===8],['SPI0 MOSI',p=>p===19],['3V3 아무거나',p=>PINS[p][0]==='3V3'],['GPIO19 (PWM1)',p=>p===35],['SPI0 CE0',p=>p===24]];
+  let hMode='explore', hSel=null, hQ=null, hScore=[0,0];
+  function hGrid(){
+    const g=$('#h-grid'); g.innerHTML='';
+    for(let col=0;col<20;col++){ for(const row of [0,1]){ const p=row===0?(col*2+2):(col*2+1); const [n,k]=PINS[p];
+      const b=document.createElement('button'); b.className='pin '+k; b.dataset.p=p; b.style.gridColumn=col+1; b.style.gridRow=row+1; b.title=`물리 ${p} · ${n}`; b.textContent=n.replace('GPIO','G'); b.setAttribute('aria-label',`물리 ${p}번 ${n}`); b.onclick=()=>hClick(p,b); g.appendChild(b); } }
+  }
+  function hInfo(p){ const [n,k,alt]=PINS[p]; const bcm=n.startsWith('GPIO')?n.slice(4):(n.startsWith('ID_')?(n==='ID_SD'?'0':'1'):'–');
+    $('#h-info').innerHTML=`<tr><th>물리 번호</th><td>${p} (${p%2?'아래쪽 홀수 줄':'위쪽 짝수 줄'})</td></tr><tr><th>이름</th><td>${n}</td></tr><tr><th>BCM 번호</th><td>${bcm}</td></tr><tr><th>대체 기능</th><td>${alt||'–'}</td></tr><tr><th>이 과목에서</th><td>${(bcm!=='–'&&k!=='id'&&USE[+bcm])||(k==='gnd'?'GND 레일로':(k==='p3v'?'센서 · PCF8591 전원':(k==='p5v'?'모터 · LCD 전원 (주의)':'–')))}</td></tr><tr><th>libgpiod 지정</th><td>${bcm!=='–'&&k!=='id'?`<code>gpioset -c gpiochip0 ${bcm}=1</code>`:'GPIO 아님'}</td></tr>`;
+    $('#h-sel').textContent=`물리 ${p} · ${n}`;
+    if(k==='p5v') note('#h-note','⚠ <b>5V 핀</b>입니다. GPIO 와 맞닿으면 SoC 가 망가집니다. 바로 옆 3번(GPIO2) · 6번(GND)과 단락되지 않게 조심하세요.','warn');
+    else if(k==='p3v') note('#h-note','3.3V 전원 핀입니다. PCF8591 · 센서 전원으로 쓰고, GPIO 출력처럼 끄고 켤 수는 없습니다.');
+    else if(k==='gnd') note('#h-note','GND 핀은 여러 개이고 모두 연결되어 있습니다. 오늘은 물리 9번을 브레드보드 GND 레일에 잇습니다.');
+    else if(k==='id') note('#h-note','HAT 보드의 EEPROM 을 읽는 전용 핀입니다. 실습에서 쓰지 않습니다.');
+    else if(k==='alt') note('#h-note',`평소에는 GPIO 지만 이 과목에서는 <b>${alt}</b> 로 씁니다. 기능은 우리가 레지스터로 바꾸지 않고 config.txt → Device Tree → 드라이버가 정합니다(5교시).`,'ok');
+    else note('#h-note',`일반 GPIO 입니다. 코드에는 물리 번호 ${p} 가 아니라 <b>BCM 번호 ${bcm}</b> 을 씁니다.`);
+  }
+  function hClick(p,b){
+    $$('.pin').forEach(x=>x.classList.remove('sel','hit','miss'));
+    if(hMode==='explore'){ b.classList.add('sel'); hInfo(p); return; }
+    if(!hQ) return; hScore[1]++; const ok=QUIZ[hQ.i][1](p);
+    if(ok){ hScore[0]++; b.classList.add('hit'); note('#h-note',`정답 — 물리 ${p}번 ${PINS[p][0]}.`,'ok'); }
+    else { b.classList.add('miss'); $$('.pin').forEach(x=>{ if(QUIZ[hQ.i][1](+x.dataset.p)) x.classList.add('hit'); }); note('#h-note',`아쉽습니다. 누른 곳은 물리 ${p}번 ${PINS[p][0]}. 초록색이 정답입니다.`,'warn'); }
+    hInfo(p); $('#h-score').textContent=`${hScore[0]} / ${hScore[1]}`; hQ=null; $('#h-next').style.display='';
+  }
+  function hNext(){ $$('.pin').forEach(x=>x.classList.remove('sel','hit','miss')); const i=Math.floor(Math.random()*QUIZ.length); hQ={i}; $('#h-q').textContent='찾을 핀: '+QUIZ[i][0]; $('#h-next').style.display='none'; note('#h-note','헤더에서 해당 핀을 누르세요.'); }
+  tabs('h-mode',b=>{ hMode=b.dataset.m; $$('.pin').forEach(x=>x.classList.remove('sel','hit','miss')); if(hMode==='quiz'){ hScore=[0,0]; $('#h-score').textContent='0 / 0'; hNext(); } else { $('#h-q').textContent=''; $('#h-next').style.display='none'; note('#h-note','핀을 하나 눌러 보세요.'); } });
+  $('#h-next').onclick=hNext; hGrid(); $('#h-info').innerHTML='<tr><th>안내</th><td>핀을 누르면 정보가 여기에 나옵니다.</td></tr>';
+
+  /* ───────── 3 SD 굽기 → USB 첫 접속 ───────── */
+  const STG=[['SD 굽기 · user-data','Imager 설정 + 첫 부팅 전 편집'],['첫 부팅 (USB 전원)','PC 포트로 전원 · 자동 재부팅'],['USB 랜카드 생성','Pi 가 gadget mode 로 PC 에 연결'],['Windows 드라이버','RNDIS 어댑터로 인식'],['주소 찾기','rpi-07.local / 10.12.194.1'],['SSH 접속','PuTTY → 22번 포트'],['로그인','사용자 · 비밀번호'],['Wi-Fi 후 개발 패키지','libgpiod 버전 (Day 2 예제)']];
+  function iDraw(st,msg){ $('#i-pipe').innerHTML=STG.map(([b,s],k)=>`<div class="stg ${st[k]||''}"><b>${k+1}. ${b}</b><span>${(msg&&msg[k])||s}</span></div>`).join(''); }
+  $('#i-run').onclick=()=>{
+    const os=$('#i-os').value, tab=$('#i-indent').value==='tab', cable=$('#i-cable').value, hub=$('#i-port').value==='hub';
+    const user=$('#i-user').checked, ssh=$('#i-ssh').checked, gad=$('#i-gadget').checked, drv=$('#i-drv').checked;
+    const st=[], msg=[]; let fail=null; const warnTxt=[];
+    const run=(k,cond,okm,badm,warn)=>{ if(fail!==null){ st[k]='skip'; return; } if(cond){ st[k]=warn?'warn':'ok'; msg[k]=okm; } else { st[k]='bad'; msg[k]=badm; fail=k; } };
+    const hasPkg=os==='new'||os==='desk';
+    // YAML 오류면 user-data 전체 무시 → gadget · 사용자 · SSH 모두 적용 안 됨
+    const yamlOk=!tab, effGad=gad&&yamlOk&&hasPkg, effUser=user&&yamlOk, effSsh=ssh&&yamlOk;
+    run(0,true,tab?'저장됨 (YAML 오류 포함)':'검증 완료',null,tab);
+    run(1,!hub,os==='desk'?'데스크톱 부팅 (느림)':'정상 부팅 · 1회 재부팅','전압 부족 → 재부팅 반복',os==='desk');
+    if(os==='desk') warnTxt.push('Desktop 이미지는 동작하지만 GUI 가 전력 · 메모리를 더 써서 PC USB 전원에서 불안정해지기 쉽습니다.');
+    run(2,cable==='data'&&effGad,'USB 장치 연결됨',cable!=='data'?'데이터 선 없음 — 전원만 들어감':(!hasPkg?'gadget 패키지 없는 이미지':(tab?'user-data 무시됨':'gadget mode 꺼짐')));
+    run(3,drv,'Raspberry Pi USB Remote NDIS','알 수 없는 장치 (느낌표)');
+    run(4,true,'rpi-07.local → 10.12.194.1');
+    run(5,effSsh,'호스트 키 Accept','Connection refused');
+    run(6,effUser,'pi@rpi-07:~ $','계정 없음 — 로그인 불가');
+    const v=os==='bw'?'1.6.3':'2.2.1';
+    run(7,os!=='bw',`libgpiod ${v}`,`libgpiod ${v} — v2 예제 컴파일 실패`);
+    iDraw(st,msg);
+    const T=[];
+    if(fail===1) T.push('<span class="c"># Pi: 빨간 PWR LED 가 깜빡이고 ACT 가 멈췄다 켜지기를 반복</span>','<span class="c"># Windows: "USB 장치가 연결됨 / 분리됨" 알림음이 계속 반복</span>');
+    else if(fail===2) T.push('<span class="c">PS C:\\&gt; Get-NetAdapter | Select Name, InterfaceDescription</span>','Name     InterfaceDescription','Wi-Fi    Intel(R) Wi-Fi 6 AX201','<span class="r">(Raspberry Pi 어댑터가 없음)</span>');
+    else if(fail===3) T.push('<span class="c">장치 관리자 → 기타 장치</span>','<span class="y">⚠ RNDIS  (드라이버 없음)</span>');
+    else { T.push('<span class="c">PS C:\\&gt; Get-NetAdapter | Select Name, InterfaceDescription</span>','이더넷 7  Raspberry Pi USB Remote NDIS Network Device','<span class="c">PS C:\\&gt; ssh pi@rpi-07.local</span>');
+      if(fail===5) T.push('<span class="r">ssh: connect to host rpi-07.local port 22: Connection refused</span>');
+      else if(fail===6) T.push('<span class="r">pi@rpi-07.local: Permission denied (publickey,password).</span>');
+      else { T.push('pi@rpi-07:~ $ ip -4 -o addr show usb0','2: usb0    inet 10.12.194.1/28 ...','<span class="c"># (4교시: nmcli 로 Wi-Fi 연결 후)</span>','pi@rpi-07:~ $ pkg-config --modversion libgpiod',v); if(fail===7) T.push('pi@rpi-07:~ $ make blink','<span class="r">blink.c:12:5: error: unknown type name ‘struct gpiod_request_config’</span>'); else T.push('<span class="g">Day 2 준비 완료</span>'); } }
+    $('#i-term').innerHTML=T.join('\n');
+    const N={1:'PC 포트(특히 무전원 허브)가 Pi 4 에 필요한 전류를 주지 못해 부팅 도중 전압이 떨어져 재부팅을 반복합니다. 허브를 빼고 PC 본체 뒷면 포트에 직접 꽂습니다.',
+      2:cable!=='data'?'<b>충전 전용 케이블</b>에는 데이터 선이 없어 전원만 들어갑니다. LED 는 정상인데 Windows 에 아무 장치도 생기지 않는 것이 특징입니다.':(!hasPkg?(os==='bw'?'Bookworm 이미지에는 <code>rpi-usb-gadget</code> 패키지가 없어 user-data 의 설정이 무시됩니다. libgpiod 도 1.6 이라 어차피 수업 이미지로 맞지 않습니다.':'2025-10-20 이전 Trixie 이미지에는 <code>rpi-usb-gadget</code> 이 기본으로 들어 있지 않습니다. 최신 이미지로 다시 굽습니다.'):(tab?'user-data 에 <b>탭</b>이 들어가 YAML 오류가 났습니다. cloud-init 은 오류 난 user-data 를 <b>통째로</b> 버리므로 gadget mode 뿐 아니라 사용자 · SSH 설정도 적용되지 않습니다. 스페이스 2칸으로 고쳐 <b>다시 구워야</b> 합니다 (첫 부팅은 이미 지나감).':'user-data 에 <code>enable_usb_gadget: true</code> 를 넣지 않아 USB-C 포트가 그냥 전원 입력으로 남았습니다. 첫 부팅이 지나면 cloud-init 이 다시 읽지 않으므로 다시 굽고 편집합니다.')),
+      3:'Pi 는 USB 랜카드로 연결됐지만 Windows 에 RNDIS 드라이버가 없어 "알 수 없는 장치" 로 남았습니다. <code>rpi-usb-gadget-driver-setup.exe</code> 를 한 번 설치합니다.',
+      5:'USB 랜카드와 주소까지는 정상이지만 <b>SSH 서버가 꺼져</b> 있어 22번 포트가 거절합니다(refused). Imager 에서 SSH 를 켜고 다시 굽습니다.',
+      6:'Imager 에서 사용자를 만들지 않으면 첫 부팅 때 모니터에서 계정을 만들라고 기다립니다. 모니터가 없으니 로그인할 계정이 없습니다.',
+      7:'Bookworm 의 libgpiod 는 <b>1.6</b> 이라 v2 API(<code>gpiod_request_config</code> 등)가 없습니다. 수업 예제는 모두 v2 라 Trixie 이미지가 필요합니다.'};
+    if(fail!==null) note('#i-note',N[fail],'warn'); else note('#i-note',(warnTxt.length?warnTxt.join(' ')+' ':'')+'8단계를 모두 통과했습니다. USB 로 접속한 이 상태에서 4교시에 Wi-Fi 를 설정합니다.',warnTxt.length?'':'ok');
+  };
+  iDraw([],null); $('#i-term').innerHTML='<span class="c">설정을 고르고 굽고 USB 로 부팅 을 누르세요.</span>'; note('#i-note','하나씩 바꿔 보면서 어느 단계에서 막히는지 먼저 예측해 보세요. 탭 들여쓰기는 의외로 큰 피해를 냅니다.');
+
+  /* ───────── 4 USB · Wi-Fi 접속 진단 ───────── */
+  const PATH={usb:[['pc','PC','PuTTY'],['cable','USB-C 케이블','데이터 선'],['usb0','usb0','gadget · 드라이버'],['addr','주소','10.12.194.1'],['sshd','sshd','포트 22'],['login','로그인','pi@rpi-07']],
+              wifi:[['pc','PC','PuTTY'],['ap','공유기','강의장 Wi-Fi'],['wlan0','wlan0','국가 KR · 비밀번호'],['mdns','mDNS','rpi-07.local'],['sshd','sshd','포트 22'],['login','로그인','pi@rpi-07']]};
+  const SYM={usb:[
+    ['정상',null,'',['PS C:\\> ssh pi@rpi-07.local','pi@rpi-07:~ $ ip -4 -o addr show usb0','2: usb0    inet 10.12.194.1/28'],'PC 와 Pi 둘만의 USB 망으로 접속했습니다. 40대가 모두 10.12.194.1 이어도 케이블마다 따로라서 서로 보이지 않습니다.'],
+    ['어댑터가 안 생김','cable','r',['PS C:\\> Get-NetAdapter','(Raspberry Pi 어댑터 없음)'],'케이블 구간에서 멈췄습니다. 충전 전용 케이블이거나, user-data 에 gadget 설정이 빠졌거나, 아직 부팅 중입니다. 데이터 케이블로 바꾸고 3분 기다린 뒤 user-data 를 확인합니다.'],
+    ['알 수 없는 장치','usb0','r',['장치 관리자 → 기타 장치','⚠ RNDIS (드라이버 없음)'],'Pi 는 USB 랜카드로 나타났지만 Windows 에 드라이버가 없습니다. rpi-usb-gadget-driver-setup.exe 를 설치합니다.'],
+    ['호스트를 찾을 수 없음','addr','a',['PS C:\\> ssh pi@rpi-07.local','ssh: Could not resolve hostname rpi-07.local','PS C:\\> ssh pi@10.12.194.1','pi@rpi-07:~ $'],'이름 풀이(mDNS)만 늦었습니다. USB 망의 Pi 는 항상 10.12.194.1 이므로 IP 로 바로 접속합니다.'],
+    ['Connection refused','sshd','r',['PS C:\\> ssh pi@10.12.194.1','ssh: connect to host 10.12.194.1 port 22: Connection refused'],'Pi 까지 닿았지만 22번 포트에서 받아 주는 sshd 가 없어 거절했습니다. Imager 에서 SSH 를 켜고 다시 굽습니다.'],
+    ['Access denied','login','r',['PS C:\\> ssh Pi@10.12.194.1','Permission denied, please try again.'],'SSH 서버까지 정상입니다. 사용자 이름(대소문자) 또는 비밀번호가 Imager 에 넣은 값과 다릅니다.'],
+    ['재부팅 반복','power','r',['pi@rpi-07:~ $ vcgencmd get_throttled','throttled=0x50005','client_loop: send disconnect: Connection reset'],'PC 포트 전력이 부족해 부하가 걸리면 전압이 떨어져 재부팅합니다. 허브를 빼고 본체 뒷면 포트에 직접 꽂습니다. Wi-Fi 로 갈아타면 어댑터 전원으로 해결됩니다.']],
+   wifi:[
+    ['정상',null,'',['PS C:\\> ssh pi@rpi-07.local','pi@rpi-07:~ $ hostname -I','192.168.0.37'],'강의장 Wi-Fi 를 거쳐 내 보드에 접속했습니다. 이제 USB 를 빼고 어댑터 전원으로 바꿔도 됩니다.'],
+    ['AP 목록이 비어 있음','wlan0','r',['pi@rpi-07:~ $ nmcli dev wifi list','(빈 목록)','pi@rpi-07:~ $ rfkill list wifi','Soft blocked: yes'],'무선 국가 코드가 없어 rfkill 로 막혀 있습니다. sudo raspi-config nonint do_wifi_country KR 후 다시 검색합니다.'],
+    ['Secrets were required','wlan0','r',['pi@rpi-07:~ $ sudo nmcli dev wifi connect "Class5G" password "class1234"','Error: Connection activation failed: Secrets were required, but not provided.'],'Wi-Fi 비밀번호가 틀렸습니다. 대소문자 · 특수문자를 확인하고 다시 connect 합니다.'],
+    ['Connection timed out','ap','r',['PS C:\\> ssh pi@192.168.0.37','ssh: connect to host 192.168.0.37 port 22: Connection timed out'],'패킷이 Pi 까지 가지 못합니다. PC 와 Pi 가 다른 SSID(2.4GHz / 5GHz 분리, 게스트 망)에 있거나 IP 를 잘못 적었습니다.'],
+    ['이름 충돌 (남의 보드)','mdns','a',['PS C:\\> ssh pi@rpi-07.local','WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!','(또는 접속은 되는데 ~/eio 폴더가 낯설다)','pi@rpi-07:~ $ journalctl -u avahi-daemon | grep -i conflict','Host name conflict, retrying with rpi-07-2   ← 내 보드 쪽 기록'],'Wi-Fi 에서는 40대가 한 망입니다. 같은 이름의 보드가 먼저 켜져 rpi-07.local 을 가져갔고, 내 보드는 mDNS 에서 rpi-07-2.local 로 밀렸습니다(hostname 자체는 그대로). USB 단계에서는 드러나지 않던 문제입니다. 좌석 번호로 이름을 고치고 재부팅합니다.'],
+    ['호스트 키 경고 (다시 구움)','sshd','a',['PS C:\\> ssh pi@rpi-07.local','WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!','Host key verification failed.'],'SD 를 다시 구우면 호스트 키가 새로 생깁니다. 내 보드가 맞다면(hostname 확인) PuTTY 에서 Accept, PowerShell 은 ssh-keygen -R rpi-07.local 후 다시 접속합니다.']]};
+  let cMode='usb', cSym=0, cAnim=null;
+  function cDraw(prog){
+    const S=$('#c-svg'); S.innerHTML=''; const P=PATH[cMode]; const sy=SYM[cMode][cSym]; const bad=sy[1], kind=sy[2];
+    S.appendChild(el('rect',{x:300,y:40,width:592,height:160,rx:12,fill:'#F6F8FB',stroke:bad==='power'?'#D6452E':'#C9D1DC','stroke-width':2,'stroke-dasharray':bad==='power'?'6 4':''}));
+    S.appendChild(el('text',{x:312,y:192,'font-size':12,fill:'#5B6B80'},'Raspberry Pi 4 (rpi-07)'+(cMode==='usb'?' — USB 망: 이 PC 와 둘만':' — Wi-Fi 망: 40대가 함께')));
+    const stopIdx=bad&&bad!=='power'?P.findIndex(n=>n[0]===bad):P.length;
+    P.forEach(([id,t,s],k)=>{ const x=10+k*148, y=95; let kd='n'; if(prog!==undefined){ if(k<stopIdx&&k<=prog) kd='g'; if(k===stopIdx&&prog>=k) kd=kind==='a'?'a':'r'; } if(bad==='power'&&prog>=5&&k>=2) kd='r'; box(S,x,y,126,52,t,s,kd); if(k<P.length-1){ const on=prog!==undefined&&k<Math.min(prog,stopIdx); arrow(S,x+126,y+26,x+148,y+26,on?'#178A67':'#C9D1DC'); } });
+  }
+  function cSyms(){ $('#c-sym').innerHTML=SYM[cMode].map((s,i)=>`<button class="${i===cSym?'on':''}" data-i="${i}">${s[0]}</button>`).join(''); tabs('c-sym',b=>{ cSym=+b.dataset.i; clearInterval(cAnim); cDraw(); $('#c-term').innerHTML='<span class="c">접속 시도 를 누르세요.</span>'; note('#c-note','증상: <b>'+SYM[cMode][cSym][0]+'</b> — 어디서 멈출지 먼저 예측해 보세요.'); }); }
+  tabs('c-mode',b=>{ cMode=b.dataset.m; cSym=0; clearInterval(cAnim); cSyms(); cDraw(); $('#c-term').innerHTML='<span class="c">접속 시도 를 누르세요.</span>'; note('#c-note',cMode==='usb'?'USB 단계: PC 와 Pi 를 USB-C 케이블로 직접 이은 상태입니다.':'Wi-Fi 단계: nmcli 로 Wi-Fi 를 연결한 뒤 강의장 망으로 접속하는 상태입니다. 이름 충돌은 여기서만 생깁니다.'); });
+  $('#c-go').onclick=()=>{ clearInterval(cAnim); let p=0; cDraw(0); $('#c-term').innerHTML=''; cAnim=setInterval(()=>{ p++; cDraw(p); if(p>=5){ clearInterval(cAnim); const sy=SYM[cMode][cSym]; $('#c-term').innerHTML=sy[3].map(l=>/^(PS|pi@|장치)/.test(l)&&!/←/.test(l)?`<span class="c">${esc(l)}</span>`:(/WARNING|refused|timed out|denied|Could not|reset|failed|0x50005|Error|없음|⚠|빈 목록|blocked|←/.test(l)?`<span class="r">${esc(l)}</span>`:esc(l))).join('\n'); note('#c-note',sy[4],sy[1]?'warn':'ok'); } },420); };
+  cSyms(); cDraw(); $('#c-term').innerHTML='<span class="c">접속 시도 를 누르세요.</span>'; note('#c-note','정상 흐름부터 보고, 증상을 하나씩 바꿔 보세요. ② Wi-Fi 전환 후의 "이름 충돌" 은 40명 교실에서 실제로 자주 생깁니다.');
+
+  /* ───────── 5 config.txt → /dev ───────── */
+  const CF=[['i2c','dtparam=i2c_arm=on','config',true],['spi','dtparam=spi=on','config',true],['uart','enable_uart=1','config',true],['pwm','dtoverlay=pwm-2chan','config',true],['bt','dtoverlay=disable-bt','config',true],['cmt','  ↳ pwm 줄 끝에 "# PWM" 주석 붙이기','opt',false],['cons','console=serial0,115200 (cmdline.txt)','cmd',false]];
+  const dEdit={}, dLive={}; CF.forEach(([k,,,v])=>{ dEdit[k]=v; dLive[k]=null; });
+  $('#d-checks').innerHTML=CF.map(([k,t])=>`<label class="toggle"><input type="checkbox" data-k="${k}" ${dEdit[k]?'checked':''}><span class="sw"></span><code>${t}</code></label>`).join('');
+  $$('#d-checks input').forEach(c=>c.addEventListener('change',()=>{ dEdit[c.dataset.k]=c.checked; dDraw(); }));
+  function dDraw(){
+    const L=['[all]']; const ln=(on,t,cls)=>L.push(on?`<span class="${cls||''}">${t}</span>`:`<span class="off">${t}</span>`);
+    ln(dEdit.i2c,'dtparam=i2c_arm=on'); ln(dEdit.spi,'dtparam=spi=on'); ln(dEdit.uart,'enable_uart=1');
+    ln(dEdit.pwm,'dtoverlay=pwm-2chan'+(dEdit.cmt?'  # PWM':''),dEdit.cmt?'bad':'add'); ln(dEdit.bt,'dtoverlay=disable-bt','add');
+    $('#d-cfg').innerHTML=L.join('\n')+'\n\n<span class="c" style="color:#5B6B80"># cmdline.txt:</span> '+(dEdit.cons?'<span class="bad">console=serial0,115200 </span>':'')+'console=tty1 root=PARTUUID=… rootwait';
+    const changed=Object.keys(dEdit).filter(k=>dLive[k]!==null&&dLive[k]!==dEdit[k]).length;
+    $('#d-pend').innerHTML=dLive.i2c===null?'아직 부팅 전입니다.':(changed?`<b style="color:var(--red)">변경 ${changed}개 — 재부팅해야 반영</b>`:'편집 내용 = 현재 부팅 상태');
+  }
+  function dBoot(){
+    Object.assign(dLive,dEdit); const s=dLive; const pwmOk=s.pwm&&!s.cmt;
+    const dev=['/dev/i2c-20','/dev/i2c-21']; if(s.i2c) dev.unshift('/dev/i2c-1'); if(s.spi) dev.push('/dev/spidev0.0','/dev/spidev0.1');
+    let ser=null; if(s.uart) ser=s.bt?'ttyAMA0':'ttyS0'; if(ser) dev.push('/dev/serial0');
+    const T=['<span class="c">pi@rpi-07:~ $ ls /dev/i2c-* /dev/spidev* /dev/serial0</span>',dev.join('  ')];
+    if(!ser) T.push('<span class="r">ls: cannot access \'/dev/serial0\': No such file or directory</span>');
+    T.push('<span class="c">pi@rpi-07:~ $ ls /sys/class/pwm/</span>',pwmOk?'pwmchip0':'<span class="r">(비어 있음)</span>');
+    if(ser) T.push('<span class="c">pi@rpi-07:~ $ readlink /dev/serial0</span>',ser==='ttyAMA0'?'<span class="g">ttyAMA0</span>':'<span class="y">ttyS0</span>');
+    if(s.pwm&&s.cmt) T.push('<span class="c">pi@rpi-07:~ $ sudo vclog --msg | grep -i overlay</span>','<span class="r">dterror: can\'t find overlay \'pwm-2chan  # PWM\'</span>');
+    $('#d-term').innerHTML=T.join('\n');
+    const P=[[2,s.i2c?'a0 · SDA1':'ip · 입력',s.i2c],[3,s.i2c?'a0 · SCL1':'ip · 입력',s.i2c],[8,s.spi?'op · CE0 (spi0 소유)':'ip · 입력',s.spi],[10,s.spi?'a0 · MOSI':'ip · 입력',s.spi],[11,s.spi?'a0 · SCLK':'ip · 입력',s.spi],
+      [14,ser==='ttyAMA0'?'a0 · TXD0 (PL011)':(ser?'a5 · TXD1 (mini UART)':'ip · 입력'),!!ser],[15,ser==='ttyAMA0'?'a0 · RXD0 (PL011)':(ser?'a5 · RXD1 (mini UART)':'ip · 입력'),!!ser],[18,pwmOk?'a5 · PWM0_0':'ip · 입력',pwmOk],[19,pwmOk?'a5 · PWM0_1':'ip · 입력',pwmOk]];
+    $('#d-pins').innerHTML='<tr><th>GPIO</th><th>pinctrl get</th></tr>'+P.map(([g,f,on])=>`<tr class="${on?'hot':''}"><td>${g}</td><td>${f}</td></tr>`).join('');
+    const msgs=[];
+    if(s.pwm&&s.cmt) msgs.push('<b>줄 끝 주석</b> 때문에 overlay 이름이 <code>pwm-2chan  # PWM</code> 으로 읽혀 PWM 이 생기지 않았습니다. 주석은 별도 줄에 씁니다.');
+    if(ser==='ttyS0') msgs.push('disable-bt 가 없어서 GPIO14 · 15 에 <b>mini UART(ttyS0)</b> 가 연결됐습니다. CPU 클럭이 바뀌면 보율이 흔들려 Day 4 통신이 깨질 수 있습니다.');
+    if(s.cons&&ser) msgs.push('cmdline.txt 에 <code>console=serial0</code> 이 남아 있어 커널 로그 · 로그인 프롬프트가 UART 로 나갑니다. <code>raspi-config nonint do_serial_cons 1</code> 로 끕니다.');
+    if(!s.i2c) msgs.push('I2C 가 꺼져 /dev/i2c-1 이 없습니다 — Day 4 PCF8591 을 쓸 수 없습니다.');
+    if(!msgs.length&&s.spi&&pwmOk&&ser==='ttyAMA0') note('#d-note','수업 기준 설정입니다. I2C · SPI · PWM · PL011 UART 가 모두 준비됐고, 해당 핀은 이제 일반 GPIO 가 아니라 각 드라이버가 씁니다.','ok');
+    else note('#d-note',msgs.join(' ')||'일부 기능이 꺼져 있습니다. 표에서 해당 핀이 입력(ip)으로 남은 것을 확인하세요.','warn');
+    dDraw();
+  }
+  $('#d-boot').onclick=dBoot; dDraw(); $('#d-term').innerHTML='<span class="c">sudo reboot 를 눌러 부팅하세요.</span>'; $('#d-pins').innerHTML=''; note('#d-note','기준 설정으로 한 번 부팅한 뒤, 줄을 하나씩 바꿔 가며 다시 부팅해 보세요.');
+
+  /* ───────── 6 권한 ───────── */
+  const DEVS=[['/dev/gpiochip0','crw-rw----','root','gpio','254, 0','GPIO'],['/dev/i2c-1','crw-rw----','root','i2c','89, 1','I2C'],['/dev/spidev0.0','crw-rw----','root','spi','153, 0','SPI'],['/dev/ttyAMA0','crw-rw----','root','dialout','204, 64','UART'],['/dev/mem','crw-r-----','root','kmem','1, 1','물리 메모리 전체'],['/sys/class/thermal/thermal_zone0/temp','-r--r--r--','root','root','–','온도 (누구나 읽기)']];
+  let pSess=['gpio','i2c','spi','dialout'];
+  function pCan(d){ if($('#p-sudo').checked) return true; const [p,m,,g]=d; if(m[7]==='r') return true; if(p==='/dev/mem') return false; return pSess.includes(g); }
+  function pDraw(){
+    const reg=$$('.g').filter(c=>c.checked).map(c=>c.value); const sudo=$('#p-sudo').checked;
+    const base=['pi','adm','cdrom','sudo','audio','video','plugdev','users','input','netdev'];
+    $('#p-id').innerHTML=sudo?'<span class="c">$ sudo id</span>\nuid=0(root) gid=0(root) groups=0(root)':`<span class="c">$ id</span>\nuid=1000(pi) gid=1000(pi) groups=${[...base,...pSess].join(',')}`+(reg.sort().join()!==[...pSess].sort().join()?`\n<span class="y">/etc/group 에는 [${reg.join(', ')}] — 아직 이 세션에 반영 안 됨 (다시 로그인 필요)</span>`:'');
+    $('#p-tab').innerHTML='<tr><th>장치</th><th>권한</th><th>소유자 · 그룹</th><th>주 · 부 번호</th><th>용도</th><th></th></tr>'+DEVS.map((d,i)=>`<tr><td><code>${d[0]}</code></td><td>${d[1]}</td><td>${d[2]} · ${d[3]}</td><td>${d[4]}</td><td>${d[5]}</td><td><button class="btn secondary" data-o="${i}" style="padding:4px 10px;font-size:12px">open()</button></td></tr>`).join('');
+    $$('#p-tab [data-o]').forEach(b=>b.onclick=()=>pOpen(+b.dataset.o));
+  }
+  function pOpen(i){ const d=DEVS[i]; const ok=pCan(d); const sudo=$('#p-sudo').checked; const flag=d[1][0]==='-'?'O_RDONLY':'O_RDWR';
+    $('#p-term').innerHTML=`<span class="c">openat(AT_FDCWD, "${d[0]}", ${flag})</span> = `+(ok?'<span class="g">3</span>':'<span class="r">-1 EACCES (Permission denied)</span>');
+    if(sudo) note('#p-note','root 는 권한 검사를 건너뛰어 모두 열립니다. 하지만 하드웨어 프로그램을 root 로 돌리면 버그 하나(잘못된 경로 · 잘못된 /dev/mem 주소)가 시스템 전체를 망가뜨릴 수 있습니다. 이 과목은 <b>그룹 권한 + 일반 사용자</b>가 원칙입니다.','warn');
+    else if(ok) note('#p-note',d[1][7]==='r'?'다른 사용자(o)에게도 r 권한이 있어 누구나 읽습니다.':`권한 <code>${d[1]}</code> 의 가운데 묶음(그룹 rw-)과 내 세션 그룹 <b>${d[3]}</b> 이 맞아 열렸습니다.`,'ok');
+    else if(d[0]==='/dev/mem') note('#p-note','/dev/mem 은 물리 메모리 전체라 kmem 그룹에도 읽기만, 일반 사용자는 접근 불가입니다. Day 2 레지스터 실습은 GPIO 영역만 열어 주는 <code>/dev/gpiomem</code> 을 씁니다.','warn');
+    else note('#p-note',`errno 13(EACCES). 이 세션에는 <b>${d[3]}</b> 그룹이 없습니다. <code>sudo usermod -aG ${d[3]} $USER</code> 후 <b>다시 로그인</b>해야 반영됩니다.`,'warn');
+  }
+  $$('.g').forEach(c=>c.addEventListener('change',()=>{ pDraw(); note('#p-note','/etc/group 은 바뀌었지만 지금 로그인한 세션의 그룹 목록은 그대로입니다. open() 을 눌러 확인한 뒤 <b>다시 로그인</b>을 누르세요.'); }));
+  $('#p-relog').onclick=()=>{ pSess=$$('.g').filter(c=>c.checked).map(c=>c.value); pDraw(); note('#p-note','다시 로그인했습니다. 이제 id 의 groups 에 새 그룹 목록이 반영됐습니다.','ok'); };
+  $('#p-sudo').addEventListener('change',()=>{ pDraw(); $('#p-term').innerHTML=''; });
+  pDraw(); note('#p-note','처음에는 Imager 가 만든 사용자 그대로입니다. gpio 를 끄고 다시 로그인한 뒤 /dev/gpiochip0 을 열어 보세요.');
+
+  /* ───────── 7 라인 요청과 busy ───────── */
+  const B={own:null, mode:null, blink:null, ledOn:false, released:false, t1:[], t2:[], pid:2381};
+  const P1='<span class="c">pi@rpi-07:~ $</span> ';
+  function bLed(){ const l=$('#b-led'); l.classList.remove('on','unk'); let t;
+    if(B.own==='w1'){ if(B.mode==='set'){ l.classList.add('on'); t='켜짐 — gpioset 이 라인을 쥐고 있음'; } else { if(B.ledOn) l.classList.add('on'); t='0.5초 토글 중'; } }
+    else if(B.released){ l.classList.add('unk'); t='요청 해제됨 — 상태 보장 안 됨'; } else t='꺼짐 (요청 없음)';
+    $('#b-ledtxt').textContent=t; }
+  function bLines(){ $('#b-lines').innerHTML='<tr><th>line</th><th>이름</th><th>방향</th><th>consumer</th></tr>'+
+    `<tr class="hot"><td>8</td><td>"GPIO8"</td><td>output active-low</td><td>spi0 CS0</td></tr><tr class="${B.own?'hot':''}"><td>17</td><td>"GPIO17"</td><td>${B.own?'output':'input'}</td><td>${B.own?'gpioset (pid '+B.pid+')':'–'}</td></tr>`; }
+  function bTerm(){ $('#b-t1').innerHTML=B.t1.join('\n')||P1; $('#b-t2').innerHTML=B.t2.join('\n')||P1; }
+  function bAll(){ bLed(); bLines(); bTerm(); }
+  function bStart(mode){ if(B.own==='w1'){ note('#b-note','창 1 은 이미 gpioset 이 실행 중이라 프롬프트가 돌아오지 않았습니다. 먼저 Ctrl+C 로 끝내세요.','warn'); return; }
+    B.own='w1'; B.mode=mode; B.released=false; B.pid++; B.t1.push(P1+(mode==='set'?'gpioset -c gpiochip0 17=1':'gpioset -c gpiochip0 -t 500ms 17=1'),'<span class="c">(실행 중 — 프롬프트가 돌아오지 않음)</span>');
+    if(mode==='toggle'){ B.ledOn=true; B.blink=setInterval(()=>{ B.ledOn=!B.ledOn; bLed(); },500); }
+    note('#b-note','gpioset 이 GPIO17 을 <b>요청(request)</b>해 소유자가 되었습니다. libgpiod v2 의 gpioset 은 라인을 쥔 채 기다립니다 — 끝나면 라인이 해제되기 때문입니다.','ok'); bAll(); }
+  function bStop(how){ if(B.own!=='w1'){ note('#b-note','창 1 에 실행 중인 gpioset 이 없습니다.'); return; } clearInterval(B.blink); B.own=null; B.released=true;
+    if(how==='int') B.t1.push('^C',P1); else { B.t1.push('Killed',P1); B.t2.push(P1+'kill -9 '+B.pid); }
+    note('#b-note',how==='int'?'Ctrl+C(SIGINT)로 gpioset 이 끝나며 fd 를 닫았고, <b>커널이 라인을 해제</b>했습니다. consumer 칸이 비었습니다.':'kill -9 는 프로그램이 정리할 기회도 주지 않지만, 프로세스가 사라지면 커널이 fd 를 닫고 라인을 해제합니다. sysfs 시절처럼 export 가 남지 않는 이유입니다.','ok'); bAll(); }
+  function bW2(cmd){ if(cmd==='info'){ B.t2.push(P1+'gpioinfo -c gpiochip0 17',`\tline  17:\t"GPIO17"\t${B.own?'output consumer="gpioset"':'input'}`); note('#b-note',B.own?'consumer="gpioset" — 지금 누가 이 라인을 가졌는지 보입니다.':'아무도 요청하지 않은 라인입니다.'); }
+    else if(cmd==='set0'||cmd==='get'){ const c=cmd==='set0'?'gpioset -c gpiochip0 17=0':'gpioget -c gpiochip0 17';
+      if(B.own){ B.t2.push(P1+c,`<span class="r">${cmd==='set0'?'gpioset':'gpioget'}: unable to request lines on chip '/dev/gpiochip0': Device or resource busy</span>`); note('#b-note','창 1 이 이미 소유한 라인이라 <b>busy(EBUSY)</b> 로 거절됐습니다. 읽기(gpioget)도 라인을 요청하므로 마찬가지입니다. MCU 에서는 아무도 막지 않던 충돌을 커널이 막습니다.','warn'); }
+      else { if(cmd==='set0'){ B.t2.push(P1+c,'<span class="c">(실행 중 … Ctrl+C 로 끝냈다고 가정)</span>','^C'); note('#b-note','라인이 비어 있어 바로 요청에 성공했습니다.','ok'); } else { B.t2.push(P1+c,'"17"=inactive'); note('#b-note','비어 있는 라인을 입력으로 요청해 읽었습니다. 끝나면 다시 해제됩니다.','ok'); } } }
+    else if(cmd==='set8'){ B.t2.push(P1+'gpioset -c gpiochip0 8=1',"<span class=\"r\">gpioset: unable to request lines on chip '/dev/gpiochip0': Device or resource busy</span>"); note('#b-note','GPIO8 은 5교시에 켠 SPI 드라이버(spi0 CS0)가 쥐고 있습니다. 커널 드라이버도 하나의 소유자입니다 — 그래서 버스 핀은 일반 GPIO 로 쓰지 않습니다.','warn'); }
+    bAll(); }
+  $('#b-w1').innerHTML='<button data-c="set">gpioset 17=1</button><button data-c="toggle">gpioset -t 500ms 17=1</button><button data-c="int">Ctrl+C</button><button data-c="kill">kill -9 (창 2 에서)</button>';
+  $('#b-w2').innerHTML='<button data-c="info">gpioinfo 17</button><button data-c="set0">gpioset 17=0</button><button data-c="get">gpioget 17</button><button data-c="set8">gpioset 8=1</button><button data-c="clr">화면 지우기</button>';
+  $$('#b-w1 button').forEach(b=>b.onclick=()=>{ const c=b.dataset.c; if(c==='set'||c==='toggle') bStart(c); else bStop(c==='int'?'int':'kill'); });
+  $$('#b-w2 button').forEach(b=>b.onclick=()=>{ if(b.dataset.c==='clr'){ B.t1=[]; B.t2=[]; bTerm(); return; } bW2(b.dataset.c); });
+  bAll(); note('#b-note','창 1 에서 gpioset 17=1 을 실행한 뒤, 창 2 에서 gpioinfo 와 gpioset 17=0 을 눌러 보세요.');
+
+  /* ───────── 8 pull-up 버튼과 엣지 ───────── */
+  const W={tr:[], level:1, pressed:false, rep:null, lastRep:0, pressEv:0, t0:performance.now(), pend:[], floatT:0, deb:null};
+  const now=()=>performance.now()-W.t0;
+  function wSet(t,v){ if(v===W.level) return; W.level=v; W.tr.push([t,v]); W.pend.push([t,v]); }
+  function wIdle(){ const b=$('#w-bias').value; return b==='up'?1:0; }
+  function wPress(down){
+    if(down===W.pressed) return; W.pressed=down; $('#w-btn').classList.toggle('down',down); const t=now(); if(down) W.pressEv=0;
+    const target=down?0:wIdle(); const bias=$('#w-bias').value;
+    if(bias==='none'&&!down){ wNote(); return; }
+    if(target===W.level){ wNote(); return; }
+    if($('#w-bounce').checked){ const seq=[0,1.1,1.9,3.2,4.4]; seq.forEach((d,i)=>wSet(t+d,i%2===0?target:1-target)); } else wSet(t,target);
+    wNote();
+  }
+  function wNote(){ const b=$('#w-bias').value;
+    if(b==='none') note('#w-note','<b>bias 없음</b> — 버튼을 누르지 않으면 핀이 어디에도 연결되지 않아(floating) 주변 잡음에 따라 값이 제멋대로 바뀌고, 누르지도 않았는데 이벤트가 생깁니다. 입력 핀에는 항상 pull-up 또는 pull-down 이 필요합니다.','warn');
+    else if(b==='down') note('#w-note','<b>pull-down</b> — 평소 0 이고, 버튼도 GND 로 당기므로 눌러도 0 입니다. 아무 변화가 없습니다. 버튼을 GND 쪽에 단 회로에는 <b>pull-up</b> 이 짝입니다 (3V3 쪽에 단다면 pull-down).','warn');
+    else if($('#w-bounce').checked&&!$('#w-deb').checked) note('#w-note','pull-up: 평소 1, 누르면 0 → 누르는 순간이 <b>falling</b>. 바운싱 때문에 한 번 눌러도 몇 ms 안에 엣지가 여러 개 찍히고, <b>떼는 순간</b>에도 접점이 떨려 falling 이 섞입니다. <b>-p 10ms</b> 를 켜 보세요.');
+    else if($('#w-deb').checked) note('#w-note','디바운스를 켜면 커널이 10ms 동안 값이 안정된 뒤에만 엣지를 보고합니다. 누를 때마다 이벤트가 정확히 하나씩 찍힙니다.','ok');
+    else note('#w-note','바운싱이 없는 이상적인 접점입니다. 실제 키트 버튼은 거의 항상 바운싱이 있습니다.'); }
+  function wTick(){
+    const t=now(), b=$('#w-bias').value;
+    if(b==='none'&&!W.pressed&&t>W.floatT){ wSet(t,1-W.level); W.floatT=t+40+Math.random()*260; }
+    // 이벤트 보고
+    const edge=$('#w-edge').value, deb=$('#w-deb').checked;
+    const want=v=>edge==='both'||(edge==='falling'&&v===0)||(edge==='rising'&&v===1);
+    if(!deb){ W.pend.forEach(([tt,v])=>{ if(want(v)) wRep(tt,v); }); W.pend=[]; W.repLevel=W.level; }
+    else { if(W.repLevel===undefined) W.repLevel=W.level; const last=W.tr.length?W.tr[W.tr.length-1][0]:0; if(t-last>=10&&W.level!==W.repLevel){ W.repLevel=W.level; if(want(W.level)) wRep(last,W.level); } W.pend=[]; }
+    W.tr=W.tr.filter(([tt])=>tt>t-3000-50);
+    wPlot(t); $('#w-val').textContent=W.level;
+  }
+  function wRep(tt,v){ const ns=(1260+tt/1000).toFixed(6)+String(Math.floor(Math.random()*1000)).padStart(3,'0'); const term=$('#w-term'); term.innerHTML+=`${ns}\t${v===0?'falling':'rising'}\t"5"\n`; term.scrollTop=term.scrollHeight; if(W.pressed||v===0) W.pressEv++; $('#w-cnt').textContent=W.pressEv; }
+  function wPlot(t){ const S=$('#w-svg'); S.innerHTML=''; const X=x=>20+(x-(t-3000))/3000*490, Y=v=>v?30:120;
+    S.appendChild(el('line',{x1:20,y1:30,x2:510,y2:30,stroke:'#EEF1F5'})); S.appendChild(el('line',{x1:20,y1:120,x2:510,y2:120,stroke:'#EEF1F5'}));
+    S.appendChild(el('text',{x:4,y:34,'font-size':10,fill:'#5B6B80'},'1')); S.appendChild(el('text',{x:4,y:124,'font-size':10,fill:'#5B6B80'},'0'));
+    S.appendChild(el('text',{x:24,y:20,'font-size':10,fill:'#5B6B80'},'3.3V')); S.appendChild(el('text',{x:24,y:138,'font-size':10,fill:'#5B6B80'},'0V (GND)'));
+    S.appendChild(el('text',{x:510,y:160,'font-size':10,fill:'#5B6B80','text-anchor':'end'},'← 최근 3초'));
+    let lv=W.tr.length?1-W.tr[0][1]:W.level; const first=W.tr.find(([tt])=>tt>=t-3000); if(W.tr.length){ const before=W.tr.filter(([tt])=>tt<t-3000); lv=before.length?before[before.length-1][1]:(first?1-first[1]:W.level); }
+    let d=`M20 ${Y(lv)}`; W.tr.filter(([tt])=>tt>=t-3000).forEach(([tt,v])=>{ d+=` L${X(tt).toFixed(1)} ${Y(lv)} L${X(tt).toFixed(1)} ${Y(v)}`; lv=v; }); d+=` L510 ${Y(lv)}`;
+    S.appendChild(el('path',{d,fill:'none',stroke:$('#w-bias').value==='none'?'#C98A12':'#2457C5','stroke-width':2.2})); }
+  function wReset(){ W.tr=[]; W.pend=[]; W.level=wIdle(); W.repLevel=W.level; $('#w-val').textContent=W.level; }
+  $('#w-bias').addEventListener('change',()=>{ wReset(); $('#w-cmd').textContent=($('#w-bias').value==='none'?'as-is':($('#w-bias').value==='up'?'pull-up':'pull-down'))+' -e '+$('#w-edge').value+($('#w-deb').checked?' -p 10ms':''); wNote(); });
+  ['#w-edge','#w-deb','#w-bounce'].forEach(s=>$(s).addEventListener('change',()=>{ $('#w-cmd').textContent=($('#w-bias').value==='none'?'as-is':($('#w-bias').value==='up'?'pull-up':'pull-down'))+' -e '+$('#w-edge').value+($('#w-deb').checked?' -p 10ms':''); wNote(); }));
+  $('#w-clear').onclick=()=>{ $('#w-term').innerHTML=''; W.pressEv=0; $('#w-cnt').textContent=0; };
+  const wb=$('#w-btn'); wb.addEventListener('mousedown',e=>{ e.preventDefault(); wPress(true); }); window.addEventListener('mouseup',()=>wPress(false));
+  wb.addEventListener('touchstart',e=>{ e.preventDefault(); wPress(true); },{passive:false}); wb.addEventListener('touchend',()=>wPress(false));
+  document.addEventListener('keydown',e=>{ if(e.code==='Space'&&cur===8&&!e.repeat){ e.preventDefault(); wPress(true); } });
+  document.addEventListener('keyup',e=>{ if(e.code==='Space'&&cur===8){ e.preventDefault(); wPress(false); } });
+  wReset(); setInterval(()=>{ if(cur===8) wTick(); },30); wNote();
+})();
+</script>
+</body>
+</html>
