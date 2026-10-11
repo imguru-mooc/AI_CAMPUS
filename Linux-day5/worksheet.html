@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux &amp; Shell Day 5 개념 워크시트 — 쓰레드 · 동기화</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:900px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.primary{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700;padding:9px 18px;font-size:14px}
+  button.submit{background:#3a2e12;border-color:var(--amber);color:var(--amber);font-weight:700;padding:9px 18px;font-size:14px}
+  button:disabled{opacity:.45;cursor:default}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  input[type=text]{background:#0a0f1c;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:14px}
+  .tabs{display:flex;flex-wrap:wrap;gap:6px}
+  .tabs button .s{font-family:var(--mono);font-size:11px;color:var(--dim);margin-left:6px}
+  .tabs button.graded .s{color:var(--green)}
+  .head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .head .t{color:var(--amber);font-size:17px}
+  .head .a{font-size:13px;color:var(--teal);font-family:var(--mono)}
+  .q{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#0e1628}
+  .q.unans{border-color:#5a3a1a}
+  .q .n{font-family:var(--mono);color:var(--dim);font-size:12px}
+  .q .p{margin:4px 0 10px;font-size:15px}
+  .q .p code,.opt code,.fb code,td code{font-family:var(--mono);color:var(--blue);background:#0a0f1c;padding:1px 5px;border-radius:4px}
+  .q pre.qc{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:6px;padding:10px 12px;margin:4px 0 12px;font-size:13.5px;line-height:1.5;white-space:pre;overflow-x:auto;color:#dbe4f3}
+  .q pre{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin:6px 0 10px;font-size:14px;white-space:pre;overflow-x:auto}
+  .opts{display:grid;gap:6px}
+  .opt{text-align:left;padding:8px 12px;font-size:14px;font-family:inherit}
+  .opt.sel{border-color:var(--amber);background:#1f1a0c}
+  .opt.ok{border-color:var(--green);color:var(--green);background:#0d2216}
+  .opt.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .opt:disabled{cursor:default;opacity:.9}
+  .fb{margin-top:8px;font-size:13px;color:var(--dim);border-left:3px solid var(--line);padding-left:10px}
+  .fb.ok{border-left-color:var(--green)}.fb.bad{border-left-color:var(--red)}
+  .fb .anim{color:var(--teal);font-family:var(--mono);font-size:12px;display:block;margin-top:3px}
+  .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  .code{font-family:var(--mono);font-size:20px;color:var(--amber);letter-spacing:1px}
+  .score{font-family:var(--mono);color:var(--green);font-size:16px}
+  .hint{color:var(--dim);font-size:13px}
+  details{color:var(--dim);font-size:13px}
+  details summary{cursor:pointer;color:var(--dim)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  /* dialog */
+  dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:0;max-width:820px;width:92vw;max-height:88vh}
+  dialog::backdrop{background:#000a}
+  .dg{padding:18px 20px}
+  .dg h3{color:var(--amber);margin:0 0 4px;font-size:20px}
+  .dg .meta{color:var(--dim);font-size:13px;margin-bottom:12px;font-family:var(--mono)}
+  .dg .sec{margin:14px 0 6px;color:var(--teal);font-weight:700;font-size:14px}
+  .dg table{width:100%;border-collapse:collapse;font-size:13px}
+  .dg th{text-align:left;color:var(--dim);font-weight:600;padding:5px 8px;border-bottom:1px solid var(--line);font-size:12px}
+  .dg td{padding:5px 8px;border-bottom:1px solid #16203a;vertical-align:top}
+  .dg td.r{font-family:var(--mono)}
+  .dg .ok{color:var(--green)}.dg .bad{color:var(--red)}.dg .none{color:var(--dim)}
+  .dg .sum{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0;font-family:var(--mono)}
+  .dgbar{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:10px 20px;display:flex;gap:8px;justify-content:flex-end;align-items:center}
+  .toast{color:var(--green);font-size:13px;margin-right:auto}
+  .body{overflow:auto;max-height:calc(88vh - 60px)}
+
+.q .n .ty{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600;font-family:inherit}
+.ty-mc{background:#1b2a4a;color:var(--blue)} .ty-ox{background:#2a2410;color:var(--amber)} .ty-match{background:#13302c;color:var(--teal)}
+.ty-order{background:#2a1a3a;color:var(--purple)} .ty-multi{background:#2a1616;color:#fca5a5}
+.oxrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:360px}
+.oxrow .opt{text-align:center;font-size:22px;font-weight:700;padding:10px}
+.reflist{display:grid;gap:4px;margin:2px 0 10px;padding:8px 12px;border:1px dashed var(--line);border-radius:8px;font-size:14px;color:var(--text)}
+.reflist b{color:var(--teal);font-family:var(--mono);margin-right:6px}
+.mrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
+.mrow:first-of-type{border-top:0}
+.mrow .l{font-size:14px} .mrow .l b{font-family:var(--mono);color:var(--dim);margin-right:6px}
+.mrow select{width:100%;background:#0a0f1c;color:var(--text);border:1px solid #2a3a5c;border-radius:6px;padding:6px 8px;font:inherit;font-size:13.5px}
+.mrow select.ok{border-color:var(--green);color:var(--green)} .mrow select.bad{border-color:var(--red);color:var(--red)}
+.steps{display:grid;gap:6px}
+.step{display:flex;gap:10px;align-items:center;text-align:left;padding:8px 12px;font-size:14px}
+.step .badge{flex:none;width:26px;height:26px;border-radius:50%;border:1px solid #2a3a5c;display:grid;place-items:center;font-family:var(--mono);font-size:13px;color:var(--dim)}
+.step.on{border-color:var(--purple)} .step.on .badge{background:var(--purple);border-color:var(--purple);color:#0b1220;font-weight:700}
+.step.ok{border-color:var(--green)} .step.ok .badge{background:var(--green);color:#0b1220;border-color:var(--green)}
+.step.bad{border-color:var(--red)} .step.bad .badge{background:var(--red);color:#0b1220;border-color:var(--red)}
+.seqbar{display:flex;gap:10px;align-items:center;margin-top:8px;font-family:var(--mono);font-size:13px;color:var(--dim)}
+.seqbar button{padding:4px 10px;font-size:12px}
+.multi .opt::before{content:"☐ ";color:var(--dim)} .multi .opt.sel::before{content:"☑ ";color:var(--amber)}
+.multi .opt.ok::before{content:"☑ ";color:var(--green)} .multi .opt.miss::before{content:"☐ ";color:var(--green)}
+.multi .opt.miss{border-color:var(--green);border-style:dashed}
+.typeinfo{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Linux &amp; Shell Day 5 개념 워크시트</h1>
+  <p class="sub">쓰레드 · 동기화 — pthread · race · mutex · 조건 변수 · 세마포어 · atomic · false sharing · edge_pipeline · 8교시 × 10문항 (객관식 5 · OX 2 · 선잇기 1 · 순서 맞추기 1 · 모두 고르기 1). 🎬 표시는 animation.html 의 애니메이션 번호입니다. 선잇기는 드롭다운으로, 순서 맞추기는 단계를 일어나는 순서대로 눌러서, 모두 고르기는 여러 개를 눌러서 답합니다. 답을 고른 뒤 아래 <b style="color:var(--teal)">채점하기</b>를 누르면 정오·해설과 결과 코드가 나타납니다. 채점 전에는 답을 바꿀 수 있고, 채점 후에는 잠깁니다. 모든 교시를 마치면 <b style="color:var(--amber)">제출</b>로 오답 정리를 열고, <b>캡처</b>로 복사해 노션에 붙여 넣으세요.</p>
+
+  <div class="panel">
+    <div class="row"><label style="color:var(--dim);font-size:13px">이름 <input type="text" id="name" placeholder="홍길동"></label><span class="hint">이름은 결과 코드 계산에만 쓰이며 저장되지 않습니다.</span></div>
+  </div>
+  <div class="panel"><h2>교시</h2><div class="tabs" id="tabs"></div></div>
+  <div class="panel" id="sheet"></div>
+  <div class="panel">
+    <div class="actions">
+      <button class="primary" id="gradeBtn">채점하기</button>
+      <span class="code" id="rcode">—</span><span class="score" id="rscore"></span><span class="hint" id="rhint"></span>
+      <button class="submit" id="submitBtn" style="margin-left:auto">제출</button>
+    </div>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <div class="body"><div class="dg" id="dgBody"></div></div>
+  <div class="dgbar"><span class="toast" id="toast"></span><button id="captureBtn" class="primary">📋 캡처 (노션용 복사)</button><button id="closeBtn">닫기</button></div>
+</dialog>
+
+<script>
+const $=s=>document.querySelector(s);
+const Q=[{"t": "1교시 · 쓰레드 기초", "anim": "D5-1 프로세스 vs 쓰레드", "qs": [{"ty": "mc", "p": "01_threads 에서 쓰레드 세 개가 출력한 g_value 의 주소가 모두 같았습니다. 그 이유는 무엇입니까?", "c": "쓰레드 1: PID=2731 TID=2732  &amp;g_value=0x55c1bd685014\n쓰레드 2: PID=2731 TID=2733  &amp;g_value=0x55c1bd685014", "o": ["g_value 가 스택에 있어서", "쓰레드들이 하나의 주소 공간을 공유해서", "ASLR 이 꺼져 있어서", "커널이 값을 복사해 같은 주소에 놓아서"], "a": 1, "w": "같은 프로세스의 쓰레드는 주소 공간 하나를 공유하므로 전역 변수의 주소와 값이 같습니다.", "an": "D5-1"}, {"ty": "ox", "p": "같은 프로세스의 쓰레드들은 전역 변수를 공유합니다.", "a": true, "w": "주소 공간이 하나라 전역 · 힙 · 열린 파일을 공유합니다. 스택과 레지스터만 쓰레드마다 따로입니다.", "an": "D5-1"}, {"ty": "mc", "p": "pthread_join(th, &amp;r) 이 하는 일로 알맞은 것은 무엇입니까?", "o": ["th 의 우선순위를 높인다", "th 를 다른 CPU 로 옮긴다", "th 가 끝나길 기다려 반환값을 받는다", "th 를 즉시 종료시키고 자원을 회수한다"], "a": 2, "w": "join 하지 않으면 끝난 쓰레드의 자원이 회수되지 않습니다. 프로세스의 wait 와 비슷한 역할입니다.", "an": "빈칸 1-1"}, {"ty": "match", "p": "항목과 프로세스 · 쓰레드 사이의 관계를 이으세요.", "left": ["주소 공간", "스택", "PID", "TID"], "right": ["쓰레드마다 따로", "같은 프로세스의 쓰레드는 같음", "쓰레드마다 다름", "쓰레드끼리 공유"], "a": [3, 0, 1, 2], "w": "주소 공간은 공유, 스택은 따로, PID 는 같고 TID 는 다릅니다.", "an": "1교시 1-2 표"}, {"ty": "mc", "p": "<code>ps -L -p PID</code> 의 LWP 열이 보여 주는 것은 무엇입니까?", "o": ["사용 중인 메모리 크기", "열린 파일 수", "프로세스의 부모 PID", "쓰레드마다의 TID"], "a": 3, "w": "LWP(Light Weight Process) 는 커널이 쓰레드에 붙인 ID, 즉 TID 입니다. /proc/PID/task 에도 쓰레드마다 디렉터리가 있습니다.", "an": "1교시 1-2"}, {"ty": "order", "p": "01_threads.c 의 main 에 적힌 코드 순서대로 놓으세요.", "steps": ["pthread_join 으로 세 쓰레드 회수", "fflush(stdout) 후 fork", "wait 로 자식 회수 후 부모 g_value 출력", "pthread_create 로 쓰레드 세 개 생성", "\"쓰레드가 모두 끝난 뒤 g_value\" 출력"], "a": [3, 0, 4, 1, 2], "w": "쓰레드 생성 → 회수 → 결과 → fork 비교 순서입니다.", "an": "1교시 예제 01"}, {"ty": "ox", "p": "같은 프로세스의 쓰레드들은 PID 가 서로 다릅니다.", "a": false, "w": "PID 는 같고 TID 가 다릅니다. ps -L 의 LWP 열이 TID 입니다.", "an": "1교시 1-2"}, {"ty": "mc", "p": "pthread 를 쓰는 C 프로그램을 빌드할 때 gcc 에 주는 옵션은 무엇입니까?", "o": ["-thread", "-mt", "-lthread", "-pthread"], "a": 3, "w": "-pthread 는 컴파일과 링크 양쪽에 필요한 설정을 함께 넣어 줍니다.", "an": "1교시 확인 3"}, {"ty": "multi", "p": "쓰레드에 대해 옳은 것을 모두 고르세요.", "o": ["/proc/PID/task 에 쓰레드마다 디렉터리가 있다", "쓰레드마다 다른 CPU 에 고정할 수 있다", "커널은 쓰레드마다 따로 스케줄한다", "쓰레드를 만들 때 페이지 테이블을 통째로 복사한다"], "a": [0, 1, 2], "w": "쓰레드는 주소 공간을 공유하므로 페이지 테이블을 복사하지 않습니다. 그래서 fork 보다 가볍습니다.", "an": "D5-1"}, {"ty": "mc", "p": "01_threads 의 마지막 출력에서 fork 부모의 g_value 가 30 그대로인 이유는 무엇입니까?", "c": "fork 자식: g_value = 1030\nfork 부모: g_value = 30 (자식이 바꿔도 그대로)", "o": ["fork 자식은 주소 공간의 복사본이라서", "g_value 가 const 라서", "부모가 wait 후 값을 다시 30 으로 돌려서", "자식이 값을 바꾸지 않아서"], "a": 0, "w": "fork 는 Copy-on-Write 로 주소 공간을 복사합니다. 쓰레드와 달리 자식의 변경은 부모에게 보이지 않습니다.", "an": "D5-1 · fork"}]}, {"t": "2교시 · race condition", "anim": "D5-2 race condition", "qs": [{"ty": "mc", "p": "./02_race 2 1000000 none 을 여러 번 실행했을 때의 결과로 알맞은 것은 무엇입니까?", "o": ["항상 2000000 이 나온다", "항상 0 이 나온다", "실행할 때마다 결과가 다를 수 있다", "항상 1000000 이 나온다"], "a": 2, "w": "끼어드는 시점이 매번 달라 잃어버리는 수도 달라집니다. 이것이 race condition 의 특징입니다.", "an": "2교시 2-1"}, {"ty": "ox", "p": "counter++ 는 CPU 명령 하나로 실행되므로 여러 쓰레드에서도 안전합니다.", "a": false, "w": "읽기 · 더하기 · 쓰기로 나뉘거나, 한 명령이어도 lock 없이는 여러 CPU 사이에서 원자적이지 않습니다.", "an": "D5-2"}, {"ty": "mc", "p": "아래 기계어에서 race 가 생길 수 있는 지점은 어디입니까?", "c": "mov    0x2de0(%rip),%rax     # 읽기\nadd    $0x1,%rax              # 더하기\nmov    %rax,0x2dd5(%rip)      # 쓰기", "o": ["ret 명령에서 돌아갈 때", "add 명령 자체가 가끔 틀린 값을 계산할 때", "컴파일할 때", "읽기와 쓰기 사이에 다른 쓰레드가 끼어들 때"], "a": 3, "w": "읽은 뒤 쓰기 전에 다른 쓰레드가 같은 값을 읽고 쓰면, 한 쪽의 더하기가 덮어써져 사라집니다.", "an": "D5-2"}, {"ty": "match", "p": "키워드 · 도구와 race 에 대한 성질을 이으세요.", "left": ["mutex", "atomic 연산", "volatile", "spinlock"], "right": ["CPU 의 원자적 명령 (lock add)", "매번 메모리 접근 — 원자성은 없음", "잠금 — 경쟁하면 돌면서 기다림", "잠금 — 경쟁하면 잠들어 기다림"], "a": [3, 0, 1, 2], "w": "volatile 은 race 를 막지 못합니다. 나머지 셋은 각자 다른 방식으로 막습니다.", "an": "2교시 2-1 · 5교시 5-2"}, {"ty": "mc", "p": "CPU 가 1개인 VM 에서도 race condition 이 생기는 이유는 무엇입니까?", "o": ["커널이 쓰레드 순서를 무작위로 바꿔서", "CPU 1개에서도 쓰레드 둘이 정말 동시에 실행되어서", "캐시가 두 개라서", "읽은 직후 선점되면 상대가 쓴 값이 나중에 덮어써져서"], "a": 3, "w": "동시에 실행되지 않아도 읽기와 쓰기 사이에서 선점되면 race 가 납니다. 그 사이 상대가 더한 값들이 통째로 사라집니다.", "an": "2교시 2-1"}, {"ty": "order", "p": "counter=5 에서 A 가 먼저 읽고 먼저 쓰는데도 값이 사라지는 경우의 순서를 놓으세요.", "steps": ["B 가 6 을 쓴다", "A 가 6 을 쓴다", "B 가 counter(5) 를 읽는다", "A 가 counter(5) 를 읽는다"], "a": [3, 2, 1, 0], "w": "A 가 쓰기 전에 B 가 읽은 것이 핵심입니다. 결과 6 — 정답 7 에서 하나가 사라졌습니다.", "an": "D5-2"}, {"ty": "ox", "p": "volatile 을 붙여도 race condition 은 막을 수 없습니다.", "a": true, "w": "volatile 은 매번 메모리에서 읽게 할 뿐 원자성을 주지 않습니다.", "an": "2교시 2-1"}, {"ty": "mc", "p": "공유 데이터를 고치는 코드 구간을 부르는 이름은 무엇입니까?", "o": ["시그널 핸들러", "임계 구역 (critical section)", "캐시 줄 (cache line)", "교착 구간 (deadlock section)"], "a": 1, "w": "임계 구역에는 한 번에 한 쓰레드만 들어가야 합니다. 그 도구가 mutex 입니다.", "an": "2교시 2-1"}, {"ty": "multi", "p": "race condition 을 막는 방법을 모두 고르세요.", "o": ["mutex 로 임계 구역을 감싼다", "atomic 연산을 쓴다", "변수에 volatile 을 붙인다", "spinlock 으로 감싼다"], "a": [0, 1, 3], "w": "volatile 은 원자성을 주지 않습니다.", "an": "5교시 5-2 표"}, {"ty": "mc", "p": "02_race 에서 counter 에 volatile 을 붙인 이유로 알맞은 것은 무엇입니까?", "c": "static volatile long counter = 0;", "o": ["race 가 잘 드러나게 매번 메모리를 쓰려고", "race 를 막으려고", "쓰레드마다 따로 갖게 하려고", "counter 를 레지스터에만 두어 race 를 막으려고"], "a": 0, "w": "volatile 은 원자성을 보장하지 않습니다. 컴파일러가 읽기·더하기·쓰기를 줄이지 않게 해 race 를 보여 주려는 것입니다.", "an": "2교시 2-1"}]}, {"t": "3교시 · mutex · deadlock", "anim": "D5-3 mutex · deadlock", "qs": [{"ty": "mc", "p": "02_race 를 mutex 모드로 실행하자 결과는 정확해졌지만 느려졌습니다. 이유로 알맞은 것은 무엇입니까?", "c": "none   … 실제 2000000  5.3 ms\nmutex  … 실제 2000000  39.0 ms", "o": ["lock · unlock 과 대기 비용이 더해져서", "mutex 가 디스크에 기록해서", "mutex 가 계산을 두 번 해서", "mutex 는 CPU 를 하나만 쓰도록 강제해서"], "a": 0, "w": "mutex 는 정확성을 위해 비용을 냅니다. 그래서 임계 구역은 꼭 필요한 줄만 감쌉니다.", "an": "3교시 3-1"}, {"ty": "ox", "p": "mutex 를 쓰면 결과는 정확해지지만 보호하지 않을 때보다 느려질 수 있습니다.", "a": true, "w": "잠금 · 해제와 경쟁 시 잠드는 비용 때문입니다(5.3 → 39 ms).", "an": "3교시 3-1"}, {"ty": "mc", "p": "03_deadlock 에서 교착이 생긴 원인은 무엇입니까?", "c": "t1: A 잡음 → B 기다림\nt2: B 잡음 → A 기다림", "o": ["mutex 를 PTHREAD_MUTEX_INITIALIZER 로 초기화하지 않아서", "두 쓰레드가 mutex 두 개를 반대 순서로 잡아서", "usleep 이 너무 길어서", "쓰레드가 하나뿐이라서"], "a": 1, "w": "서로 상대가 가진 잠금을 기다려 영원히 진행하지 못합니다.", "an": "D5-3"}, {"ty": "match", "p": "함수와 하는 일을 이으세요.", "left": ["pthread_mutex_lock", "pthread_mutex_unlock", "pthread_mutex_trylock", "PTHREAD_MUTEX_INITIALIZER"], "right": ["정적 mutex 초기화", "잠금 해제", "잠그거나 즉시 실패 (기다리지 않음)", "잠금 — 다른 쓰레드가 가졌으면 기다림"], "a": [3, 1, 2, 0], "w": "trylock 은 실패하면 기다리지 않고 바로 돌아옵니다.", "an": "3교시 3-2"}, {"ty": "mc", "p": "교착을 막는 가장 간단한 원칙은 무엇입니까?", "o": ["usleep 을 넣는다", "mutex 를 많이 만든다", "쓰레드를 SCHED_FIFO 로 바꿔 먼저 끝내게 한다", "모든 쓰레드가 잠금을 같은 순서로 잡는다"], "a": 3, "w": "잠금 순서가 같으면 원형 대기가 생기지 않습니다. trylock 으로 실패 시 내려놓는 방법도 있습니다.", "an": "3교시 3-2"}, {"ty": "order", "p": "03_deadlock 실행이 끝나기까지의 순서를 놓으세요. (앞 단계가 일어나야 다음 단계가 일어납니다)", "steps": ["3초가 지나 SIGALRM 핸들러가 교착을 알린다", "핸들러가 _exit(1) 로 프로세스를 끝낸다", "t1 은 B 를, t2 는 A 를 기다리며 둘 다 잠든다", "t1 은 A, t2 는 B 를 하나씩 잡는다", "main 이 alarm(3) 을 걸고 t1 · t2 를 만든다"], "a": [4, 3, 2, 0, 1], "w": "각자 하나씩 잡고 상대의 것을 기다리면 진행할 수 없고, 감시용 alarm 만 깨어납니다.", "an": "D5-3"}, {"ty": "ox", "p": "두 쓰레드가 mutex 두 개를 같은 순서로 잡으면 교착이 생깁니다.", "a": false, "w": "반대 순서일 때 생깁니다. 같은 순서로 통일하는 것이 해결책입니다.", "an": "D5-3"}, {"ty": "mc", "p": "임계 구역 안에서 하지 말아야 할 일로 가장 알맞은 것은 무엇입니까?", "o": ["오래 걸리는 계산이나 파일 I/O", "공유 변수 하나를 고치기", "카운터 증가", "공유 링 버퍼에서 값 하나 꺼내기"], "a": 0, "w": "잠금을 쥔 동안 오래 걸리면 다른 쓰레드가 모두 기다립니다. edge_pipeline 도 계산은 잠금 밖에서 합니다.", "an": "D5-7 · 처리 버그"}, {"ty": "multi", "p": "mutex 를 잘 쓰는 방법을 모두 고르세요.", "o": ["여러 mutex 는 항상 같은 순서로 잡는다", "잠금 안에서 파일 I/O 를 한다", "임계 구역은 꼭 필요한 줄만 감싼다", "lock 한 만큼 unlock 한다"], "a": [0, 2, 3], "w": "오래 걸리는 I/O 는 잠금 밖에서 합니다.", "an": "3교시 3-1"}, {"ty": "mc", "p": "교착에 빠진 프로세스에서 각 쓰레드가 어디서 멈췄는지 보는 방법은 무엇입니까?", "o": ["valgrind --leak-check=full", "strace -c ./prog", "gdb -p PID 후 thread apply all bt", "ps -o stat"], "a": 2, "w": "모든 쓰레드의 호출 스택을 출력하면 pthread_mutex_lock 에서 기다리는 쓰레드들이 보입니다.", "an": "3교시 3-2"}]}, {"t": "4교시 · 조건 변수", "anim": "D5-4 생산자 · 소비자", "qs": [{"ty": "mc", "p": "pthread_cond_wait(&amp;c, &amp;m) 의 동작으로 알맞은 것은 무엇입니까?", "o": ["m 을 영원히 푼다", "m 을 잡은 채로 잠들었다가 깨어나면 푼다", "c 를 초기화한다", "m 을 풀고 잠들고, 깨면 다시 잡는다"], "a": 3, "w": "잠들기 전에 mutex 를 풀어야 다른 쓰레드가 조건을 바꿀 수 있습니다. 돌아올 때는 다시 잠근 상태입니다.", "an": "4교시 4-1 표"}, {"ty": "ox", "p": "pthread_cond_wait 는 함께 넘긴 mutex 를 잡은 채로 잠듭니다.", "a": false, "w": "mutex 를 풀고 잠들어야 다른 쓰레드가 조건을 바꿀 수 있습니다. 깨어나면 다시 잡습니다.", "an": "4교시 4-1 표"}, {"ty": "mc", "p": "cond_wait 를 if 가 아니라 while 안에서 부르는 이유는 무엇입니까?", "c": "while (count == 0)\n    pthread_cond_wait(&amp;not_empty, &amp;m);", "o": ["mutex 를 두 번 잡아 교착을 막으려고", "if 는 컴파일 오류가 나서", "깨어난 사이 조건이 바뀌었을 수 있어서", "while 이 더 빨라서"], "a": 2, "w": "다른 소비자가 먼저 가져갔을 수 있고, spurious wakeup 도 허용됩니다. 깨어나면 반드시 다시 확인합니다.", "an": "4교시 4-1"}, {"ty": "match", "p": "함수와 하는 일을 이으세요.", "left": ["pthread_cond_wait", "pthread_cond_signal", "pthread_cond_broadcast"], "right": ["기다리는 쓰레드 모두 깨움", "mutex 를 풀고 잠듦 → 깨면 다시 잡음", "기다리는 쓰레드 하나 깨움"], "a": [1, 2, 0], "w": "종료 알림처럼 모두 깨워야 할 때 broadcast 를 씁니다.", "an": "4교시 4-1 표"}, {"ty": "mc", "p": "04_prodcons 를 기본(소비자가 느림)으로 실행했습니다. 기다린 횟수 결과로 알맞은 것은 무엇입니까?", "o": ["둘 다 기다리지 않는다", "생산자가 '가득 참' 에서 여러 번 기다린다", "교착에 빠진다", "소비자가 '비어 있음' 에서 여러 번 기다린다"], "a": 1, "w": "느린 쪽이 아니라 빠른 쪽이 기다립니다. 실측: 생산자 32번, 소비자 0번.", "an": "4교시 4-2"}, {"ty": "order", "p": "04_prodcons 의 소비자가 값 하나를 꺼내는 코드 순서를 놓으세요.", "steps": ["while (count == 0) pthread_cond_wait(&amp;not_empty, &amp;m)", "buf[head] 를 꺼내고 head · count 갱신", "pthread_mutex_unlock(&amp;m)", "pthread_cond_signal(&amp;not_full)", "pthread_mutex_lock(&amp;m)"], "a": [4, 0, 1, 3, 2], "w": "잠금 → 조건 확인(잠들기) → 꺼내기 → 상대 깨우기 → 해제.", "an": "빈칸 4-1"}, {"ty": "ox", "p": "생산자 · 소비자에서 기다리는 쪽은 상대보다 빠른 쪽입니다.", "a": true, "w": "빠른 생산자는 가득 참에서, 빠른 소비자는 비어 있음에서 기다립니다.", "an": "4교시 4-2"}, {"ty": "mc", "p": "조건 변수에서 기다리는 쓰레드 모두를 깨우는 함수는 무엇입니까?", "o": ["pthread_cond_broadcast", "pthread_mutex_unlock", "pthread_cond_wait", "pthread_cond_signal"], "a": 0, "w": "signal 은 하나, broadcast 는 모두 깨웁니다. edge_pipeline 은 종료할 때 broadcast 로 처리 쓰레드를 깨웁니다.", "an": "4교시 4-1 표"}, {"ty": "multi", "p": "조건 변수를 쓸 때 지켜야 할 것을 모두 고르세요.", "o": ["조건을 바꾼 쪽이 signal 이나 broadcast 한다", "항상 mutex 와 함께 쓴다", "cond_wait 앞에서 mutex 를 풀어 둔다", "깨어난 뒤 while 로 조건을 다시 확인한다"], "a": [0, 1, 3], "w": "mutex 는 잡은 상태로 cond_wait 를 부릅니다. 푸는 일은 cond_wait 가 합니다.", "an": "D5-4"}, {"ty": "mc", "p": "바쁜 대기(busy waiting) 대신 조건 변수를 쓰는 이유는 무엇입니까?", "c": "while (count == 0) ;   /* 바쁜 대기 */", "o": ["코드가 짧아서", "조건이 바뀌는 순간 더 빨리 깨어나려고", "기다리는 동안 CPU 를 쓰지 않으려고", "mutex 가 필요 없어서"], "a": 2, "w": "바쁜 대기는 조건이 바뀔 때까지 CPU 를 100 % 씁니다. 조건 변수는 잠들어 다른 쓰레드에게 CPU 를 넘깁니다.", "an": "D5-4"}]}, {"t": "5교시 · 세마포어 · atomic", "anim": "D5-5 세마포어 · atomic", "qs": [{"ty": "mc", "p": "sem_init(&amp;s, 0, 2) 로 만든 세마포어로 보호하면 동시에 몇 개의 쓰레드가 들어갈 수 있습니까?", "o": ["1개", "0개", "제한 없음", "2개"], "a": 3, "w": "초기값이 동시에 들어갈 수 있는 수입니다. 05_sem 의 최대 동시 실행도 2 였습니다.", "an": "D5-5"}, {"ty": "ox", "p": "초기값이 1 인 세마포어는 mutex 처럼 한 번에 하나만 들어가게 할 수 있습니다.", "a": true, "w": "이진 세마포어라 부릅니다. 다만 소유자 개념이 없어 mutex 와 쓰임이 다릅니다.", "an": "5교시 5-1"}, {"ty": "mc", "p": "세마포어 값이 0 일 때 sem_wait 를 부르면 어떻게 됩니까?", "o": ["누군가 sem_post 할 때까지 기다린다", "프로세스가 종료된다", "값이 -1 이 되고 기다리지 않고 바로 진행한다", "오류를 돌려주고 끝난다"], "a": 0, "w": "sem_wait 는 값이 양수가 될 때까지 잠듭니다. sem_post 가 값을 올리며 기다리던 쓰레드 하나를 깨웁니다.", "an": "5교시 5-1"}, {"ty": "match", "p": "도구와 알맞은 상황을 이으세요.", "left": ["mutex", "조건 변수", "세마포어", "atomic"], "right": ["카운터 · 플래그 하나", "여러 변수를 함께 고치는 구간", "\"~가 될 때까지\" 기다림", "동시에 N 개까지 제한"], "a": [1, 2, 3, 0], "w": "상황에 맞는 도구를 고르는 것이 동기화 설계입니다.", "an": "5교시 5-2 표"}, {"ty": "mc", "p": "카운터 하나를 여러 쓰레드가 더할 때 잠금 없이 정확하게 하는 방법은 무엇입니까?", "o": ["usleep 넣기", "volatile 로 선언해 매번 메모리에서 읽게 하기", "전역 대신 지역 변수 쓰기", "__atomic_fetch_add 같은 원자적 연산"], "a": 3, "w": "원자적 연산은 CPU 의 lock 명령으로 읽기·더하기·쓰기를 한 번에 합니다. volatile 은 원자성을 주지 않습니다.", "an": "5교시 5-2"}, {"ty": "order", "p": "05_sem 에서 작업 3 이 기다렸다가 실행되는 순서를 놓으세요. (초기값 2)", "steps": ["작업 3 이 깨어나 시작한다", "작업 1 이 끝나 sem_post 한다", "작업 3 이 sem_wait 에서 잠든다", "작업 1 · 2 가 sem_wait 를 통과한다 (값 0)"], "a": [3, 2, 1, 0], "w": "자리가 비어야(post) 기다리던 작업이 들어갑니다.", "an": "D5-5"}, {"ty": "ox", "p": "atomic 연산은 여러 변수를 함께 고치는 구간도 보호할 수 있습니다.", "a": false, "w": "atomic 은 변수 하나의 단순 연산용입니다. 여러 변수는 mutex 로 보호합니다.", "an": "5교시 5-2 표"}, {"ty": "mc", "p": "02_race 에서 atomic 이 mutex 보다 빨랐던 이유로 알맞은 것은 무엇입니까?", "c": "atomic … 13.0 ms\nmutex  … 39.0 ms", "o": ["mutex 가 디스크를 써서", "atomic 은 결과가 틀려서", "잠금 · 해제 없이 명령 하나로 처리해서", "atomic 은 CPU 를 두 개 써서"], "a": 2, "w": "atomic 은 잠그고 풀고 잠드는 과정이 없습니다. 다만 변수 하나의 단순 연산에만 쓸 수 있습니다.", "an": "D5-5 · 그래프"}, {"ty": "multi", "p": "02_race 실측(2 × 100만)에서 결과가 정확했던 방식을 모두 고르세요.", "o": ["none", "mutex", "spin", "atomic"], "a": [1, 2, 3], "w": "none 만 값을 잃었습니다. 정확한 셋 중 atomic 이 가장 빨랐습니다.", "an": "D5-5 · 그래프"}, {"ty": "mc", "p": "spinlock 이 알맞은 경우는 언제입니까?", "o": ["몇 초씩 걸리는 계산", "아주 짧고 잠들 수 없는 구간", "파일을 읽는 동안 디스크를 기다릴 때", "사용자 입력을 기다릴 때"], "a": 1, "w": "spinlock 은 잠들지 않고 돌며 기다리므로 아주 짧은 구간이나 커널 인터럽트 문맥에 씁니다.", "an": "5교시 5-2 표"}]}, {"t": "6교시 · 쓰레드와 스케줄링 · 캐시", "anim": "D5-6 false sharing", "qs": [{"ty": "mc", "p": "한 프로세스 안에서 센서 쓰레드만 SCHED_FIFO 로 바꾸는 함수는 무엇입니까?", "o": ["sched_setaffinity", "setpriority", "nice", "pthread_setschedparam"], "a": 3, "w": "pthread_setschedparam 은 특정 쓰레드의 정책과 우선순위를 바꿉니다. 프로세스 전체가 아닙니다.", "an": "6교시 6-1 표"}, {"ty": "ox", "p": "한 프로세스 안에서도 쓰레드마다 다른 스케줄링 정책을 줄 수 있습니다.", "a": true, "w": "pthread_setschedparam 으로 센서 쓰레드만 FIFO 로 줄 수 있습니다.", "an": "6교시 6-1"}, {"ty": "mc", "p": "x86 CPU 의 캐시 줄 크기는 일반적으로 얼마입니까?", "o": ["64 바이트", "4 바이트", "1 MB", "4096 바이트"], "a": 0, "w": "캐시는 64 바이트 단위로 메모리를 가져오고 CPU 사이에 주고받습니다.", "an": "6교시 6-2"}, {"ty": "match", "p": "ps -L -o 의 열과 의미를 이으세요.", "left": ["TID", "CLS", "RTPRIO", "PSR"], "right": ["실시간 우선순위", "쓰레드 ID", "마지막으로 실행된 CPU", "스케줄링 정책 (TS · FF · RR)"], "a": [1, 3, 0, 2], "w": "쓰레드별 정책과 위치를 한 번에 확인합니다.", "an": "6교시 6-1 표"}, {"ty": "mc", "p": "06_false_sharing 에서 a 와 b 를 64 바이트 떨어뜨리자 빨라진 이유는 무엇입니까?", "c": "&amp;T.a / &amp;T.b 거리 8 B   →  같은 캐시 라인 : 905 ms\n&amp;P.a / &amp;P.b 거리 64 B  →  64B 떨어뜨림   : 252 ms", "o": ["서로 다른 캐시 줄을 고쳐서", "덧셈 횟수가 줄어서", "CPU 가 하나만 일해서", "64B 떨어뜨리면 구조체 메모리가 줄어서"], "a": 0, "w": "같은 줄이면 쓸 때마다 줄이 상대 CPU 에서 무효화되고 이동합니다. 줄을 나누면 각자 자기 캐시에서 씁니다.", "an": "D5-6"}, {"ty": "order", "p": "false sharing 때 캐시 줄이 오가는 순서를 놓으세요.", "steps": ["줄이 CPU 1 로 이동해 b 를 쓴다", "CPU 0 이 다시 a 를 쓰려고 줄을 빼앗아 온다", "CPU 0 이 a 를 쓰려고 캐시 줄을 가져온다", "CPU 1 이 b 를 쓰려 하자 CPU 0 의 줄이 무효화된다"], "a": [2, 3, 0, 1], "w": "쓸 때마다 줄 전체가 이동합니다. 패딩으로 줄을 나누면 이동이 없습니다.", "an": "D5-6 · 단계 진행"}, {"ty": "ox", "p": "서로 다른 변수라면 같은 캐시 줄에 있어도 성능에 영향이 없습니다.", "a": false, "w": "false sharing 입니다. 두 CPU 가 같은 줄을 고치면 줄이 계속 오갑니다.", "an": "D5-6"}, {"ty": "mc", "p": "CPU 가 1개인 VM 에서 06_false_sharing 을 실행하면 두 결과가 비슷한 이유는 무엇입니까?", "o": ["패딩이 무시되어서", "두 쓰레드가 번갈아 실행되어 캐시 줄이 오갈 일이 없어서", "false sharing 은 쓰기에서만 생기는데 CPU 1개는 읽기만 해서", "CPU 1개에서는 캐시가 없어서"], "a": 1, "w": "false sharing 은 두 CPU 가 동시에 같은 줄을 고칠 때 생깁니다. vCPU 2개에서 측정합니다.", "an": "6교시 6-2"}, {"ty": "multi", "p": "false sharing 을 피하는 방법을 모두 고르세요.", "o": ["쓰레드별 카운터를 따로 두고 마지막에 합친다", "구조체 멤버 사이에 64B 패딩을 넣는다", "두 변수를 같은 구조체에 붙여 둔다", "__attribute__((aligned(64))) 로 정렬한다"], "a": [0, 1, 3], "w": "붙여 두면 오히려 같은 줄에 들어갑니다.", "an": "6교시 6-2"}, {"ty": "mc", "p": "쓰레드별 정책과 실행 중인 CPU 를 확인하는 명령은 무엇입니까?", "o": ["lsof -p PID", "free -h", "ps -L -o tid,cls,rtprio,psr,comm -p PID", "top -b -n1"], "a": 2, "w": "CLS 는 정책(TS=OTHER, FF=FIFO), RTPRIO 는 우선순위, PSR 은 마지막으로 실행된 CPU 입니다.", "an": "6교시 6-1 표"}]}, {"t": "7교시 · edge_pipeline", "anim": "D5-7 edge_pipeline", "qs": [{"ty": "mc", "p": "edge_pipeline 의 samples 열이 1초에 약 100 이 되는 이유는 무엇입니까?", "o": ["센서 주기가 10ms 라서", "이동 평균 창이 100 이라서", "CPU 가 100 % 라서", "링 버퍼가 100칸이라서"], "a": 0, "w": "1초 / 10ms = 100 입니다. 이보다 적으면 센서가 밀리거나 버려진 값이 있는 것입니다.", "an": "7교시 7-2 표"}, {"ty": "ox", "p": "edge_pipeline 의 처리 쓰레드는 링 버퍼가 비어 있으면 cond_wait 로 잠듭니다.", "a": true, "w": "바쁜 대기 없이 센서가 signal 할 때까지 잠듭니다.", "an": "D5-7"}, {"ty": "mc", "p": "처리 쓰레드가 값을 꺼낸 뒤 잠금을 풀고 나서 이동 평균을 계산하는 이유는 무엇입니까?", "o": ["fsync 를 하려고", "잠금이 계산을 빠르게 해서", "그동안 센서가 버퍼에 넣을 수 있게", "잠금 안에서 계산하면 결과가 틀려지기 때문에"], "a": 2, "w": "잠금을 쥔 채 계산하면 센서가 기다리고, 버퍼가 차서 값이 버려질 수 있습니다.", "an": "D5-7 · 처리 버그"}, {"ty": "match", "p": "edge_pipeline 의 부분과 쓰인 날의 기법을 이으세요.", "left": ["센서 쓰레드의 절대 주기 · FIFO", "main 의 mlockall", "기록 쓰레드의 fsync", "SIGINT 정상 종료"], "right": ["Day 3", "Day 2", "Day 1", "Day 4"], "a": [1, 0, 3, 2], "w": "5일의 기법이 한 프로그램에 모였습니다.", "an": "7교시 7-1"}, {"ty": "mc", "p": "dropped 열이 0 보다 커졌다면 무엇을 의미합니까?", "o": ["쓰레드가 종료됐다", "CSV 쓰기가 실패했다", "센서 값이 임계치를 넘어 알람이 울렸다", "버퍼가 가득 차 오래된 값을 버렸다"], "a": 3, "w": "처리가 생산 속도를 못 따라가 64칸이 가득 찬 것입니다. 처리 속도나 잠금 범위를 점검합니다.", "an": "7교시 7-2 표"}, {"ty": "order", "p": "edge_pipeline 에서 값 하나가 CSV 에 반영되기까지의 순서를 놓으세요.", "steps": ["링 버퍼에 넣고 signal 한다", "센서가 10ms 눈금에 깨어나 값을 만든다", "처리 쓰레드가 깨어나 꺼낸다", "기록 쓰레드가 1초마다 통계를 CSV 에 쓰고 fsync 한다", "잠금 밖에서 이동 평균 · 알람을 계산해 통계에 더한다"], "a": [1, 0, 2, 4, 3], "w": "생산 → 큐 → 소비 → 집계 → 기록.", "an": "D5-7"}, {"ty": "ox", "p": "edge_pipeline 의 링 버퍼가 가득 차면 센서 쓰레드도 공간이 날 때까지 기다립니다.", "a": false, "w": "센서는 주기를 지켜야 하므로 기다리지 않고 가장 오래된 값을 버립니다(dropped).", "an": "7교시 7-1"}, {"ty": "mc", "p": "부하(stress-ng) 상태에서 sudo ./edge_pipeline -r 의 max_lat_us 가 작게 유지되는 이유는 무엇입니까?", "o": ["센서가 FIFO · 고정 · mlockall 로 먼저 돌아서", "부하가 자동으로 꺼져서", "CSV 를 쓰지 않아서", "-r 이 센서 주기를 10ms 에서 100ms 로 늘려서"], "a": 0, "w": "Day 2(FIFO · 고정)와 Day 3(mlockall)의 기법이 센서 쓰레드에만 적용됩니다.", "an": "D5-7 · -r"}, {"ty": "multi", "p": "부하 상태에서 edge_pipeline 의 max_lat_us 를 줄이는 방법을 모두 고르세요.", "o": ["센서 쓰레드를 CPU 1 에 고정", "센서 쓰레드를 SCHED_FIFO 로", "mlockall 로 page fault 제거", "처리 쓰레드의 계산을 잠금 안으로 옮기기"], "a": [0, 1, 2], "w": "잠금 안에서 계산하면 오히려 센서가 기다려 지연과 dropped 가 늡니다.", "an": "D5-7"}, {"ty": "mc", "p": "기록 쓰레드가 매 값마다가 아니라 1초에 한 번 fsync 하는 이유는 무엇입니까?", "o": ["fsync 는 1초에 한 번만 호출할 수 있어서", "fsync 는 비싸서 필요한 만큼만 하려고", "CSV 가 1초마다 지워져서", "센서가 1초 주기라서"], "a": 1, "w": "Day 4 에서 매 write 마다 fsync 하면 50배 느려지는 것을 측정했습니다.", "an": "7교시 7-1"}]}, {"t": "8교시 · 정리", "anim": "D5-8 5일 지도", "qs": [{"ty": "mc", "p": "시그널 핸들러와 여러 쓰레드가 함께 확인하는 종료 플래그의 알맞은 선언은 무엇입니까?", "o": ["static volatile sig_atomic_t g_stop", "static char *g_stop", "static int g_stop", "static double g_stop"], "a": 0, "w": "sig_atomic_t 는 핸들러에서 원자적으로 쓸 수 있고, volatile 은 매번 메모리에서 읽게 합니다.", "an": "빈칸 8-1"}, {"ty": "ox", "p": "main 이 pthread_join 없이 바로 return 해도 쓰레드는 끝까지 실행됩니다.", "a": false, "w": "main 이 return 하면 프로세스가 끝나 모든 쓰레드가 함께 사라집니다.", "an": "빈칸 8-1"}, {"ty": "mc", "p": "edge_pipeline 에서 Ctrl+C 를 눌렀을 때 처리 쓰레드가 cond_wait 에서 깨어나는 이유는 무엇입니까?", "o": ["SIGINT 가 모든 쓰레드를 즉시 죽여서", "cond_wait 가 1초마다 저절로 깨어나서", "센서 쓰레드가 끝나며 broadcast 로 깨워서", "main 이 pthread_cancel 을 불러서"], "a": 2, "w": "g_stop 을 본 센서 쓰레드가 끝나기 전에 broadcast 하고, 처리 쓰레드는 while 조건에서 g_stop 을 확인하고 빠져나옵니다.", "an": "7교시 7-1"}, {"ty": "match", "p": "날짜와 결과물을 이으세요.", "left": ["Day 1", "Day 2", "Day 3", "Day 4", "Day 5"], "right": ["sysmon.c · mysysfs.ko", "jitter.c", "edge_pipeline.c", "myshell.c", "memlab.c"], "a": [3, 1, 4, 0, 2], "w": "5일 동안 만든 프로그램입니다.", "an": "D5-8"}, {"ty": "mc", "p": "5일 결과물과 장치에서의 쓰임이 바르게 짝지어진 것은 무엇입니까?", "o": ["jitter — 커널 모듈 작성", "memlab — 모델 가중치 mmap · 실시간 쓰레드 mlockall", "sysmon — race condition 을 재현하고 mutex 로 고치기", "myshell — CPU 사용률 측정"], "a": 1, "w": "myshell 은 프로세스 감시, jitter 는 스케줄 정책, sysmon 은 /proc · /sys 측정입니다.", "an": "D5-8"}, {"ty": "order", "p": "edge_pipeline 에서 Ctrl+C 이후 종료되는 순서를 놓으세요.", "steps": ["기록 쓰레드가 마지막 줄을 쓰고 CSV 를 닫음", "SIGINT 핸들러가 g_stop = 1", "센서 쓰레드가 루프를 빠져나와 broadcast", "main 의 pthread_join 세 번이 끝나고 종료", "처리 쓰레드가 깨어나 g_stop 을 보고 끝남"], "a": [1, 2, 4, 0, 3], "w": "플래그 → 깨우기 → 각자 정리 → join.", "an": "7교시 7-1"}, {"ty": "ox", "p": "시그널 핸들러와 쓰레드가 함께 보는 플래그는 volatile sig_atomic_t 로 선언합니다.", "a": true, "w": "원자적으로 읽고 쓸 수 있고 매번 메모리에서 읽힙니다.", "an": "8교시 확인 1"}, {"ty": "mc", "p": "수집 · 추론 · 기록을 쓰레드로 나누고 큐로 잇는 구조의 장점으로 알맞은 것은 무엇입니까?", "o": ["메모리를 쓰지 않는다", "항상 CPU 1개만 쓴다", "큐를 쓰면 mutex 같은 동기화가 전혀 필요 없다", "단계마다 정책 · CPU 를 달리할 수 있다"], "a": 3, "w": "센서는 FIFO, 추론은 OTHER 처럼 단계별로 다르게 다룰 수 있고, 큐가 속도 차이를 흡수합니다.", "an": "8교시 8-2"}, {"ty": "multi", "p": "온디바이스 AI 장치 설계에 알맞은 것을 모두 고르세요.", "o": ["모든 쓰레드를 FIFO 99 로", "모델 가중치는 mmap", "수집 · 추론 · 기록을 큐로 잇는 쓰레드 구조", "센서 · 제어 쓰레드만 FIFO + CPU 고정"], "a": [1, 2, 3], "w": "모두 FIFO 99 로 두면 커널 스레드와 서로를 굶깁니다.", "an": "8교시 8-2"}, {"ty": "mc", "p": "edge_pipeline 의 main 이 끝나기 전에 pthread_join 을 세 번 부르는 이유는 무엇입니까?", "o": ["쓰레드의 우선순위를 높이려고", "쓰레드 정리가 끝나길 기다리려고", "끝난 쓰레드를 다시 시작해 계속 측정하려고", "시그널을 막으려고"], "a": 1, "w": "join 없이 main 이 return 하면 프로세스가 끝나 기록 중인 CSV 가 잘릴 수 있습니다.", "an": "빈칸 8-1"}]}];
+
+const TYNAME={mc:'객관식',ox:'OX',match:'선잇기',order:'순서 맞추기',multi:'모두 고르기'};
+let tab=0;
+const ans=Q.map(s=>s.qs.map(q=>q.ty==='multi'?[]:(q.ty==='match'?q.left.map(()=>null):(q.ty==='order'?[]:null))));
+const graded=Q.map(()=>false);
+function hash(s){let h=5381;for(const c of s)h=((h<<5)+h+c.charCodeAt(0))>>>0;return h.toString(16).padStart(8,'0').slice(-4);}
+function codeFor(name,t,score){return `${t}${'ABCDEFGHIJK'[10-score]||'K'}-${hash(`${name.trim()}|${t}|${score}|linux-day5`)}`;}
+function strip(h){const d=document.createElement('div');d.innerHTML=h;return d.textContent;}
+const eqArr=(x,y)=>x.length===y.length&&x.every((v,i)=>v===y[i]);
+function answered(q,a){if(q.ty==='mc'||q.ty==='ox')return a!==null;if(q.ty==='multi')return a.length>0;if(q.ty==='match')return a.every(x=>x!==null);return a.length===q.steps.length;}
+function correct(q,a){if(!answered(q,a))return false;if(q.ty==='multi')return eqArr([...a].sort((x,y)=>x-y),q.a);if(q.ty==='match'||q.ty==='order')return eqArr(a,q.a);return a===q.a;}
+function scoreOf(i){return ans[i].filter((a,k)=>correct(Q[i].qs[k],a)).length;}
+function nAns(i){return ans[i].filter((a,k)=>answered(Q[i].qs[k],a)).length;}
+function txt(q,a){ /* 답을 문자열로 (오답 정리 · 해설용) */
+  if(!answered(q,a))return '미응답';
+  if(q.ty==='mc')return '①②③④'[a]+' '+strip(q.o[a]);
+  if(q.ty==='ox')return a?'O':'X';
+  if(q.ty==='multi')return [...a].sort((x,y)=>x-y).map(j=>'ABCDEFGH'[j]).join(', ');
+  if(q.ty==='match')return a.map((r,i)=>(i+1)+'-'+'ABCDEFGH'[r]).join(' · ');
+  return a.map(j=>'ABCDEFGH'[j]).join(' → ');}
+function renderTabs(){$('#tabs').innerHTML=Q.map((s,i)=>`<button class="${i===tab?'active':''} ${graded[i]?'graded':''}" data-i="${i}">${i+1}교시<span class="s">${graded[i]?scoreOf(i)+'/10':nAns(i)+'/10'}</span></button>`).join('');$('#tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{tab=+b.dataset.i;render();window.scrollTo({top:0});});}
+function body(q,k,a,g){
+  if(q.ty==='mc'){return `<div class="opts">${q.o.map((o,j)=>{let c='';if(g){if(j===q.a)c='ok';else if(j===a)c='bad';}else if(j===a)c='sel';return `<button class="opt ${c}" data-k="${k}" data-j="${j}" ${g?'disabled':''}>${'①②③④'[j]} ${o}</button>`;}).join('')}</div>`;}
+  if(q.ty==='ox'){return `<div class="oxrow">${[true,false].map(v=>{let c='';if(g){if(v===q.a)c='ok';else if(v===a)c='bad';}else if(v===a)c='sel';return `<button class="opt ${c}" data-k="${k}" data-v="${v?1:0}" ${g?'disabled':''}>${v?'O':'X'}</button>`;}).join('')}</div>`;}
+  if(q.ty==='multi'){return `<div class="opts multi">${q.o.map((o,j)=>{const on=a.includes(j),ri=q.a.includes(j);let c='';if(g){if(on&&ri)c='ok';else if(on&&!ri)c='bad';else if(!on&&ri)c='miss';}else if(on)c='sel';return `<button class="opt ${c}" data-k="${k}" data-m="${j}" ${g?'disabled':''}>${'ABCDEFGH'[j]}. ${o}</button>`;}).join('')}</div>`;}
+  if(q.ty==='match'){return `<div class="reflist">${q.right.map((r,j)=>`<div><b>${'ABCDEFGH'[j]}</b>${r}</div>`).join('')}</div>`+q.left.map((l,i)=>{let c='';if(g)c=a[i]===q.a[i]?'ok':'bad';return `<div class="mrow"><div class="l"><b>${i+1}.</b>${l}</div><select class="${c}" data-k="${k}" data-i="${i}" ${g?'disabled':''}><option value="">— 고르기 —</option>${q.right.map((r,j)=>`<option value="${j}" ${a[i]===j?'selected':''}>${'ABCDEFGH'[j]}. ${strip(r)}</option>`).join('')}</select></div>`;}).join('');}
+  /* order */
+  return `<div class="steps">${q.steps.map((s,j)=>{const pos=a.indexOf(j);let c=pos>=0?'on':'';if(g){c=(pos>=0&&a[pos]===q.a[pos])?'ok':'bad';}return `<button class="opt step ${c}" data-k="${k}" data-s="${j}" ${g?'disabled':''}><span class="badge">${pos>=0?pos+1:'ABCDEFGH'[j]}</span><span>${'ABCDEFGH'[j]}. ${s}</span></button>`;}).join('')}</div><div class="seqbar">순서: ${a.length?a.map(j=>'ABCDEFGH'[j]).join(' → '):'단계를 일어나는 순서대로 누르세요'}${g?'':` <button data-k="${k}" data-reset="1">다시</button>`}</div>`;
+}
+function render(){renderTabs();const s=Q[tab];const g=graded[tab];
+  $('#sheet').innerHTML=`<div class="head"><span class="t">${s.t}</span><span class="a">🎬 ${s.anim}</span></div>`+s.qs.map((q,k)=>{const a=ans[tab][k];const ok=correct(q,a);
+    return `<div class="q ${g&&!answered(q,a)?'unans':''}"><div class="n">문항 ${k+1}<span class="ty ty-${q.ty}">${TYNAME[q.ty]}</span></div><div class="p">${q.p}</div>${q.c?`<pre class="qc">${q.c}</pre>`:``}${body(q,k,a,g)}${g?`<div class="fb ${ok?'ok':'bad'}">${!answered(q,a)?'미응답. ':(ok?'정답. ':'오답. ')}${q.ty!=='mc'&&!ok?`<b>정답: ${txt(q,q.a)}</b> · `:''}${q.w}<span class="anim">확인: ${q.an}</span></div>`:''}</div>`;}).join('');
+  if(!g){
+    $('#sheet').querySelectorAll('[data-j]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,j=+b.dataset.j;ans[tab][k]=(ans[tab][k]===j?null:j);render();});
+    $('#sheet').querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,v=b.dataset.v==='1';ans[tab][k]=(ans[tab][k]===v?null:v);render();});
+    $('#sheet').querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,j=+b.dataset.m;const a=ans[tab][k];const p=a.indexOf(j);if(p>=0)a.splice(p,1);else a.push(j);render();});
+    $('#sheet').querySelectorAll('select[data-i]').forEach(sl=>sl.onchange=()=>{const k=+sl.dataset.k,i=+sl.dataset.i;ans[tab][k][i]=sl.value===''?null:+sl.value;renderTabs();updHint();});
+    $('#sheet').querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,j=+b.dataset.s;const a=ans[tab][k];const p=a.indexOf(j);if(p>=0)a.splice(p);else a.push(j);render();});
+    $('#sheet').querySelectorAll('[data-reset]').forEach(b=>b.onclick=()=>{ans[tab][+b.dataset.k]=[];render();});
+  }
+  $('#gradeBtn').disabled=g;$('#gradeBtn').textContent=g?'채점 완료':'채점하기';updHint();
+}
+function updHint(){const g=graded[tab];const nm=$('#name').value;
+  if(g){const sc=scoreOf(tab);$('#rscore').textContent=`${sc}/10`;if(nm.trim()){$('#rcode').textContent=codeFor(nm,tab+1,sc);$('#rhint').textContent='결과 코드';}else{$('#rcode').textContent='—';$('#rhint').textContent='이름을 입력하면 결과 코드가 나옵니다.';}}
+  else{$('#rcode').textContent='—';$('#rscore').textContent='';$('#rhint').textContent=`${tab+1}교시: ${nAns(tab)}/10 답했습니다. 채점하기를 누르면 잠깁니다.`;}}
+$('#gradeBtn').onclick=()=>{const n=nAns(tab);if(n<10&&!confirm(`아직 ${10-n}문항을 끝까지 답하지 않았습니다. 그래도 채점할까요? (미응답은 오답 처리)`))return;graded[tab]=true;render();};
+$('#name').addEventListener('input',updHint);
+
+/* ── 제출 대화상자 ── */
+let lastHtml='',lastText='';
+function buildReport(){
+  const nm=$('#name').value.trim()||'(이름 없음)';const ds=new Date().toLocaleString('ko-KR');
+  let h=`<h3>Linux & Shell Day 5 개념 워크시트 — 오답 정리</h3><div class="meta">${nm} · ${ds}</div>`;
+  let t=`Linux & Shell Day 5 개념 워크시트 — 오답 정리\n이름: ${nm}\n일시: ${ds}\n\n`;
+  Q.forEach((s,i)=>{if(!graded[i])return;
+    const wrong=s.qs.map((q,k)=>({q,k,a:ans[i][k]})).filter(x=>!correct(x.q,x.a));
+    h+=`<div class="sec">${s.t} — ${scoreOf(i)}/10</div>`;t+=`### ${s.t} — ${scoreOf(i)}/10\n`;
+    if(!wrong.length){h+=`<div class="ok" style="margin:4px 0 8px">오답 없음</div>`;t+=`오답 없음\n\n`;return;}
+    h+=`<table><tr><th>#</th><th>유형</th><th>문항</th><th>내 답</th><th>정답</th></tr>`;t+=`| # | 유형 | 문항 | 내 답 | 정답 |\n|---|---|---|---|---|\n`;
+    wrong.forEach(({q,k,a})=>{const my=txt(q,a),co=txt(q,q.a);const qt=strip(q.p).replace(/\s+/g,' ').slice(0,60);
+      h+=`<tr><td class="r">${k+1}</td><td>${TYNAME[q.ty]}</td><td>${qt}</td><td class="bad">${my}</td><td class="ok">${co}</td></tr>`;
+      t+=`| ${k+1} | ${TYNAME[q.ty]} | ${qt.replace(/\|/g,'/')} | ${my.replace(/\|/g,'/')} | ${co.replace(/\|/g,'/')} |\n`;});
+    h+=`</table>`;t+=`\n`;});
+  const ng=Q.map((s,i)=>graded[i]?null:i+1).filter(x=>x);
+  if(ng.length){h+=`<div class="meta" style="margin-top:10px">미채점: ${ng.join(', ')}교시</div>`;t+=`미채점: ${ng.join(', ')}교시\n`;}
+  lastHtml=h;lastText=t;return h;
+}
+$('#submitBtn').onclick=()=>{if(!graded.some(x=>x)){alert('먼저 한 교시 이상 채점하기를 눌러 주세요.');return;}$('#dgBody').innerHTML=buildReport();$('#toast').textContent='';$('#dlg').showModal();};
+$('#closeBtn').onclick=()=>$('#dlg').close();
+function copyRich(html,text){
+  // 1) copy 이벤트에 두 형식을 직접 실어 보내기 (사용자 클릭 안에서 동기 실행 — file:// 에서도 동작)
+  let done=false;
+  const onCopy=e=>{e.clipboardData.setData('text/html',html);e.clipboardData.setData('text/plain',text);e.preventDefault();done=true;};
+  document.addEventListener('copy',onCopy);
+  try{
+    const body=$('#dgBody');const sel=window.getSelection();const range=document.createRange();range.selectNodeContents(body);sel.removeAllRanges();sel.addRange(range);
+    document.execCommand('copy');
+    sel.removeAllRanges();
+  }catch(e){}
+  document.removeEventListener('copy',onCopy);
+  return done;
+}
+$('#captureBtn').onclick=async()=>{
+  const htmlDoc=`<meta charset="utf-8">`+lastHtml.replace(/ class="[^"]*"/g,'').replace(/<table>/g,'<table border="1" style="border-collapse:collapse">');
+  if(copyRich(htmlDoc,lastText)){$('#toast').textContent='복사됨 — 노션 페이지에서 Ctrl+V 로 붙여 넣으세요.';return;}
+  // 2) 비동기 Clipboard API
+  try{
+    if(navigator.clipboard&&window.ClipboardItem){
+      await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([htmlDoc],{type:'text/html'}),'text/plain':new Blob([lastText],{type:'text/plain'})})]);
+    }else{await navigator.clipboard.writeText(lastText);}
+    $('#toast').textContent='복사됨 — 노션 페이지에서 Ctrl+V 로 붙여 넣으세요.';return;
+  }catch(e){}
+  // 3) 최종: 텍스트 영역 선택 복사
+  try{
+    const ta=document.createElement('textarea');ta.value=lastText;ta.style.position='fixed';ta.style.opacity='0';$('#dlg').appendChild(ta);ta.focus();ta.select();
+    const ok=document.execCommand('copy');ta.remove();
+    $('#toast').textContent=ok?'텍스트(마크다운 표)로 복사됨 — 노션에서 Ctrl+V.':'복사 실패 — 대화상자 내용을 드래그해 Ctrl+C 로 복사하세요.';
+  }catch(e){$('#toast').textContent='복사 실패 — 대화상자 내용을 드래그해 Ctrl+C 로 복사하세요.';}
+};
+render();
+</script>
+</body>
+</html>
