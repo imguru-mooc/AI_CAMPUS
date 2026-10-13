@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Embedded I/O 제어 2일차 — 눈으로 보는 8가지 (GPIO 출력 · 입력 · 이벤트)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EEF1F5;
+    --panel:#FFFFFF;
+    --ink:#1B2A41;
+    --ink-soft:#5B6B80;
+    --line:#C9D1DC;
+    --blue:#2457C5;
+    --blue-soft:#DCE6FA;
+    --red:#D6452E;
+    --red-soft:#FBE3DF;
+    --green:#178A67;
+    --green-soft:#DDF2EA;
+    --amber:#C98A12;
+    --amber-soft:#FBF0D3;
+    --mono:'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    --sans:'IBM Plex Sans KR', 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    --t:.35s;
+  }
+  @media (prefers-reduced-motion: reduce){ :root{ --t:0s; } *{ animation:none !important; transition:none !important; } }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; }
+  body{
+    font-family:var(--sans); color:var(--ink); background:var(--paper);
+    background-image:
+      linear-gradient(rgba(27,42,65,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(27,42,65,.045) 1px, transparent 1px);
+    background-size:24px 24px;
+    font-size:16px; line-height:1.55;
+  }
+  code, .mono{ font-family:var(--mono); }
+
+  .app{ display:grid; grid-template-columns:260px 1fr; min-height:100vh; }
+  nav{
+    background:var(--ink); color:#fff; padding:28px 20px;
+    position:sticky; top:0; height:100vh; overflow:auto;
+  }
+  nav h1{ font-size:15px; font-weight:500; margin:0 0 4px; letter-spacing:.01em; color:#AEBBD1; }
+  nav .day{ font-size:26px; font-weight:600; margin:0 0 26px; line-height:1.2; }
+  nav ol{ list-style:none; margin:0; padding:0; counter-reset:lesson; }
+  nav li{ margin:0; }
+  nav button{
+    all:unset; display:grid; grid-template-columns:32px 1fr; gap:10px; align-items:baseline;
+    width:100%; padding:9px 10px; border-radius:6px; cursor:pointer; font-size:14.5px; line-height:1.35;
+    color:#D9E1EC;
+  }
+  nav button::before{ counter-increment:lesson; content:counter(lesson) "교시"; font-family:var(--mono); font-size:11px; color:#8A9BB5; }
+  nav button:hover{ background:rgba(255,255,255,.07); }
+  nav button[aria-current="true"]{ background:var(--blue); color:#fff; }
+  nav button[aria-current="true"]::before{ color:#C9D8F7; }
+  nav button:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
+  nav .hint{ margin-top:28px; font-size:12.5px; color:#8A9BB5; line-height:1.5; }
+  nav .hint kbd{ font-family:var(--mono); background:rgba(255,255,255,.12); padding:1px 5px; border-radius:3px; }
+
+  main{ padding:36px 44px 80px; max-width:1100px; }
+  section.lesson{ display:none; }
+  section.lesson.active{ display:block; }
+  .lesson header{ margin-bottom:22px; }
+  .lesson h2{ font-size:30px; font-weight:600; margin:0 0 6px; line-height:1.25; }
+  .lesson header p{ margin:0; color:var(--ink-soft); font-size:16px; max-width:64ch; }
+
+  .stage{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:26px;
+    box-shadow:0 1px 0 rgba(27,42,65,.06);
+  }
+  .controls{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:20px; }
+  .controls label{ font-size:14px; color:var(--ink-soft); display:flex; align-items:center; gap:6px; }
+  button.btn{
+    font:inherit; font-size:14px; font-weight:500; padding:8px 14px; border-radius:6px; cursor:pointer;
+    border:1px solid var(--ink); background:var(--ink); color:#fff;
+  }
+  button.btn.secondary{ background:#fff; color:var(--ink); border-color:var(--line); }
+  button.btn:disabled{ opacity:.4; cursor:default; }
+  button.btn:focus-visible, select:focus-visible, input:focus-visible{ outline:2px solid var(--blue); outline-offset:2px; }
+  select, input[type=number], input[type=text]{
+    font:inherit; font-size:14px; padding:7px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink);
+  }
+  input[type=number], input[type=text]{ font-family:var(--mono); }
+  .toggle{ display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+  .toggle input{ position:absolute; opacity:0; width:0; height:0; }
+  .toggle .sw{ width:38px; height:22px; border-radius:11px; background:var(--line); position:relative; transition:background var(--t); }
+  .toggle .sw::after{ content:""; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition:transform var(--t); }
+  .toggle input:checked + .sw{ background:var(--blue); }
+  .toggle input:checked + .sw::after{ transform:translateX(16px); }
+  .toggle input:focus-visible + .sw{ outline:2px solid var(--blue); outline-offset:2px; }
+
+  .note{ margin-top:18px; padding:14px 16px; border-left:3px solid var(--blue); background:var(--blue-soft); border-radius:0 6px 6px 0; font-size:14.5px; }
+  .note.warn{ border-color:var(--red); background:var(--red-soft); }
+  .note.ok{ border-color:var(--green); background:var(--green-soft); }
+  .note code{ background:rgba(255,255,255,.7); padding:1px 5px; border-radius:3px; }
+
+  pre.code{
+    font-family:var(--mono); font-size:13.5px; background:#F6F8FB; border:1px solid var(--line); border-radius:6px;
+    padding:14px 16px; margin:0; overflow:auto; line-height:1.55; white-space:pre;
+  }
+  pre.code .dim{ color:#9AA7B8; }
+  pre.code .hi{ background:var(--amber-soft); }
+  pre.code .err{ background:var(--red-soft); color:var(--red); }
+
+    .readout{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-top:16px; }
+  .readout div{ padding:12px 14px; border:1px solid var(--line); border-radius:6px; background:#F6F8FB; }
+  .readout b{ display:block; font-size:12.5px; font-weight:500; color:var(--ink-soft); margin-bottom:2px; }
+  .readout span{ font-family:var(--mono); font-size:17px; font-weight:600; }
+  /* ---------- shared ---------- */
+  .mcell{ display:inline-flex; flex-direction:column; align-items:center; min-width:70px; border:2px solid var(--ink); border-radius:6px; background:#fff; overflow:hidden; transition:all var(--t); }
+  .mcell .a{ font-family:var(--mono); font-size:10px; color:var(--ink-soft); background:#F6F8FB; width:100%; text-align:center; padding:3px 4px; border-bottom:1px solid var(--line); }
+  .mcell .v{ font-family:var(--mono); font-size:20px; font-weight:600; padding:8px 6px; }
+  .mcell .n{ font-family:var(--mono); font-size:11px; color:var(--blue); padding:0 4px 6px; }
+  .mcell.hi{ border-color:var(--blue); background:var(--blue-soft); }
+  .mcell.bad{ border-color:var(--red); background:var(--red-soft); }
+  .mcell.ok{ border-color:var(--green); background:var(--green-soft); }
+  .mcell.dim{ opacity:.35; }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+  .lab{ font-size:12.5px; color:var(--ink-soft); margin:14px 0 6px; }
+  .term{ font-family:var(--mono); font-size:13.5px; background:var(--ink); color:#D9E1EC; padding:12px 16px; border-radius:6px; min-height:60px; white-space:pre-wrap; margin-top:16px; }
+  .term .r{ color:#FF9B8A; } .term .g{ color:#7FE0B8; } .term .y{ color:#FFD27F; } .term .c{ color:#8A9BB5; }
+  svg text{ font-family:var(--mono); }
+  .shake{ animation:shake .4s; } @keyframes shake{ 0%,100%{transform:none} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+  .pop-in{ animation:popin .3s ease-out; } @keyframes popin{ from{ transform:scale(.8); opacity:0; } }
+  .fade-out{ animation:fadeout .4s forwards; } @keyframes fadeout{ to{ opacity:0; transform:translateY(-8px); } }
+  .two{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:24px; }
+  .tabs2{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tabs2 button{ font:inherit; font-size:13px; padding:7px 12px; border-radius:6px; border:1px solid var(--line); background:#fff; cursor:pointer; }
+  .tabs2 button.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .fig svg{ width:100%; height:auto; background:#fff; border:1px solid var(--line); border-radius:6px; display:block; }
+  .fig text{ font-size:11px; fill:var(--ink-soft); }
+  .qslots{ display:flex; gap:6px; margin:10px 0; }
+  .qslots span{ flex:1; height:46px; border:2px solid var(--line); border-radius:6px; display:grid; place-items:center; font-family:var(--mono); font-size:13px; background:#fff; transition:all var(--t); }
+  .qslots span.full{ background:var(--blue-soft); border-color:var(--blue); }
+  .fs{ display:grid; grid-template-columns:repeat(16,1fr); gap:3px; }
+  .fs span{ height:22px; border-radius:3px; background:#EEF1F5; transition:background var(--t); }
+  .fs span.used{ background:#8FB0EA; } .fs span.dirty{ background:var(--amber); } .fs span.hot{ outline:2px solid var(--red); }
+  .crash{ font-family:var(--mono); font-size:12.5px; background:#0E1726; color:#D9E1EC; border-radius:8px; padding:12px 14px; line-height:1.7; }
+  .crash span.ln{ display:block; cursor:pointer; border-radius:3px; padding:0 4px; }
+  .crash span.ln:hover{ background:#22324A; } .crash span.ln.on{ background:#3A2A10; color:#FFD27A; }
+  .flow{ position:relative; }
+  table.rt{ border-collapse:collapse; width:100%; font-family:var(--mono); font-size:12.5px; }
+  table.rt th, table.rt td{ border:1px solid var(--line); padding:6px 8px; text-align:left; }
+  table.rt th{ background:var(--paper); font-family:var(--sans); }
+  table.rt tr.hot td{ background:var(--blue-soft); font-weight:700; }
+  @media (max-width:900px){ .two{ grid-template-columns:1fr; } }
+  /* ── Embedded I/O Day 1 추가 스타일 ── */
+  .lanes{ display:grid; grid-template-columns:110px 1fr; gap:10px 14px; align-items:center; }
+  .lanes .ln{ font-size:13px; font-weight:600; color:var(--ink-soft); }
+  .chips{ display:flex; gap:6px; flex-wrap:wrap; }
+  .chip{ font-family:var(--mono); font-size:12px; padding:7px 10px; border-radius:6px; border:2px solid var(--line); background:#fff; color:var(--ink-soft); transition:all var(--t); }
+  .chip.on{ border-color:var(--blue); background:var(--blue-soft); color:var(--ink); }
+  .chip.now{ border-color:var(--amber); background:var(--amber-soft); color:var(--ink); font-weight:600; }
+  .chip.done{ border-color:var(--green); background:var(--green-soft); color:var(--ink); }
+  .chip.bad{ border-color:var(--red); background:var(--red-soft); color:var(--ink); }
+  .hdr{ display:grid; grid-template-columns:repeat(20, 1fr); grid-template-rows:repeat(2, 38px); gap:4px; background:#1B2A41; padding:10px; border-radius:8px; }
+  .pin{ all:unset; cursor:pointer; border-radius:6px; display:grid; place-items:center; font-family:var(--mono); font-size:10.5px; font-weight:600; color:#1B2A41; background:#C9D1DC; position:relative; }
+  .pin:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
+  .pin.p5v{ background:#F28B82; } .pin.p3v{ background:#FFD27F; } .pin.gnd{ background:#5B6B80; color:#fff; }
+  .pin.gpio{ background:#B9CCF2; } .pin.alt{ background:#9FD9C4; } .pin.id{ background:#E3E7ED; color:#8A9BB5; }
+  .pin.sel{ outline:3px solid #fff; transform:scale(1.08); }
+  .pin.hit{ background:var(--green); color:#fff; } .pin.miss{ background:var(--red); color:#fff; }
+  .pinlegend{ display:flex; gap:14px; flex-wrap:wrap; font-size:12.5px; color:var(--ink-soft); margin:10px 0 0; }
+  .pinlegend span::before{ content:""; display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:5px; vertical-align:-2px; background:var(--c); }
+  .pipe{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px; }
+  .stg{ border:2px solid var(--line); border-radius:8px; padding:10px 12px; background:#fff; min-height:74px; transition:all var(--t); }
+  .stg b{ display:block; font-size:13px; margin-bottom:4px; } .stg span{ font-size:12.5px; color:var(--ink-soft); }
+  .stg.ok{ border-color:var(--green); background:var(--green-soft); } .stg.bad{ border-color:var(--red); background:var(--red-soft); } .stg.warn{ border-color:var(--amber); background:var(--amber-soft); } .stg.skip{ opacity:.35; }
+  .cfg{ font-family:var(--mono); font-size:13px; background:#F6F8FB; border:1px solid var(--line); border-radius:6px; padding:12px 14px; white-space:pre; overflow:auto; line-height:1.6; }
+  .cfg .off{ color:#9AA7B8; text-decoration:line-through; } .cfg .add{ background:var(--green-soft); } .cfg .bad{ background:var(--red-soft); }
+  .checks{ display:grid; gap:8px; }
+  .led{ width:54px; height:54px; border-radius:50%; background:#5B2A24; border:3px solid #3A1A16; display:inline-block; transition:all .12s; vertical-align:middle; }
+  .led.on{ background:#FF5A3C; box-shadow:0 0 22px 6px rgba(255,90,60,.55); border-color:#C0392B; }
+  .led.unk{ background:repeating-linear-gradient(45deg,#5B2A24,#5B2A24 6px,#7A3A30 6px,#7A3A30 12px); }
+  .twoterm{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:18px; }
+  .twoterm .term{ min-height:150px; margin-top:8px; }
+  .tbtns{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tbtns button{ font:inherit; font-family:var(--mono); font-size:12px; padding:6px 10px; border-radius:6px; border:1px solid var(--line); background:#fff; cursor:pointer; }
+  .tbtns button:hover{ border-color:var(--ink); }
+  .pressbtn{ font:inherit; font-size:15px; font-weight:600; width:140px; height:64px; border-radius:12px; border:3px solid var(--ink); background:#fff; cursor:pointer; user-select:none; box-shadow:0 4px 0 var(--ink); transition:transform .05s, box-shadow .05s; }
+  .pressbtn.down{ transform:translateY(4px); box-shadow:0 0 0 var(--ink); background:var(--amber-soft); }
+  .wave svg{ width:100%; height:auto; background:#fff; border:1px solid var(--line); border-radius:6px; display:block; }
+  table.rt td.okc{ color:var(--green); font-weight:700; } table.rt td.badc{ color:var(--red); font-weight:700; }
+  @media (max-width:900px){ .pipe{ grid-template-columns:1fr 1fr; } .twoterm{ grid-template-columns:1fr; } }
+  /* ── Day 2 추가 ── */
+  .codepane{ font-family:var(--mono); font-size:12.5px; background:#F6F8FB; border:1px solid var(--line); border-radius:6px; padding:10px 0; overflow:auto; line-height:1.55; }
+  .codepane .cl{ display:block; padding:0 14px; white-space:pre; color:#5B6B80; }
+  .codepane .cl.done{ color:#1B2A41; }
+  .codepane .cl.on{ background:var(--amber-soft); color:#1B2A41; font-weight:600; box-shadow:inset 3px 0 0 var(--amber); }
+  .ledrow{ display:flex; gap:22px; align-items:flex-end; }
+  .ledbox{ text-align:center; font-size:12.5px; color:var(--ink-soft); }
+  .ledbox .led{ width:46px; height:46px; display:block; margin:0 auto 6px; }
+  .led.y{ background:#5A4A1E; border-color:#3B3014; } .led.y.on{ background:#FFC93C; box-shadow:0 0 22px 6px rgba(255,201,60,.55); border-color:#C98A12; }
+  .led.gr{ background:#1F4A33; border-color:#14301F; } .led.gr.on{ background:#3DDC84; box-shadow:0 0 22px 6px rgba(61,220,132,.5); border-color:#178A67; }
+  .bits{ display:grid; grid-template-columns:repeat(32,1fr); gap:2px; font-family:var(--mono); font-size:10px; }
+  .bits div{ border:1px solid var(--line); text-align:center; padding:4px 0; background:#fff; border-radius:3px; }
+  .bits div.n{ border:none; background:none; color:#8A9BB5; font-size:9px; padding:0; }
+  .bits div.hi{ background:var(--amber-soft); border-color:var(--amber); font-weight:700; }
+  .bits div.one{ background:var(--blue-soft); border-color:var(--blue); color:var(--blue); font-weight:700; }
+  .bigbtn{ font:inherit; font-size:15px; font-weight:600; padding:14px 22px; border-radius:12px; border:3px solid var(--ink); background:#fff; cursor:pointer; box-shadow:0 4px 0 var(--ink); }
+  .bigbtn:active{ transform:translateY(4px); box-shadow:0 0 0 var(--ink); }
+  .gamebox{ display:grid; place-items:center; height:200px; border-radius:12px; font-size:30px; font-weight:700; color:#fff; background:#1B2A41; user-select:none; cursor:pointer; transition:background .08s; }
+  .gamebox.ready{ background:#5B6B80; } .gamebox.go{ background:#D6452E; } .gamebox.foul{ background:#C98A12; } .gamebox.res{ background:#178A67; }
+  .gamebox small{ display:block; font-size:14px; font-weight:500; opacity:.85; text-align:center; margin-top:6px; }
+  .cpubar{ height:14px; background:#EEF1F5; border-radius:7px; overflow:hidden; } .cpubar i{ display:block; height:100%; background:var(--red); transition:width .2s; }
+
+</style>
+</head>
+<body>
+<div class="app">
+  <nav aria-label="교시 선택">
+    <h1>Embedded I/O 제어 · Raspberry Pi 4</h1>
+    <p class="day">2일차<br>눈으로 보는 8가지</p>
+    <ol id="navlist">
+      <li><button data-go="1" aria-current="true">객체 흐름과 반납</button></li>
+      <li><button data-go="2">신호등과 active-low</button></li>
+      <li><button data-go="3">레지스터 비트 계산기</button></li>
+      <li><button data-go="4">폴링 간격과 디바운스</button></li>
+      <li><button data-go="5">busy loop vs poll</button></li>
+      <li><button data-go="6">epoll 이벤트 루프</button></li>
+      <li><button data-go="7">반응속도 게임</button></li>
+      <li><button data-go="8">타임스탬프 vs 깨어난 시각</button></li>
+    </ol>
+    <p class="hint">키보드 <kbd>←</kbd> <kbd>→</kbd> 로 교시 이동<br><a href="lecture.html" style="color:#AEBBD1">강의 자료</a> · <a href="worksheet.html" style="color:#AEBBD1">워크시트</a></p>
+  </nav>
+  <main>
+
+  <section class="lesson active" id="l1">
+    <header><h2>libgpiod v2 — 객체를 쌓아 요청하고, 반드시 반납한다</h2><p><b>다음 단계</b>를 누르면 01_blink.c 가 한 줄씩 실행됩니다. 오른쪽은 그 순간 커널이 보는 GPIO17 의 상태입니다. 루프까지 간 뒤 세 가지 종료 방법을 눌러 결과를 비교하세요.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <button class="btn" id="o-step">다음 단계</button>
+        <button class="btn secondary" id="o-reset">처음부터</button>
+        <span style="width:16px"></span>
+        <button class="btn secondary" id="o-sig1">Ctrl+C (핸들러 있음)</button>
+        <button class="btn secondary" id="o-sig2">Ctrl+C (핸들러 없음)</button>
+        <button class="btn secondary" id="o-kill">kill -9</button>
+      </div>
+      <div class="two">
+        <div class="codepane" id="o-code"></div>
+        <div>
+          <table class="rt" id="o-state"></table>
+          <div style="display:flex;gap:16px;align-items:center;margin-top:14px"><span class="led" id="o-led"></span><div><b>GPIO17 LED</b><div id="o-ledtxt" style="font-size:13px;color:var(--ink-soft)">꺼짐</div></div></div>
+          <div class="term" id="o-term" style="min-height:90px"></div>
+        </div>
+      </div>
+      <div class="note" id="o-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l2">
+    <header><h2>상태표로 신호등 — 논리값과 실제 전압은 다를 수 있다</h2><p>02_traffic.c 의 상태표를 재생합니다. <b>active-low</b> 설정과 <b>LED 배선 방식</b>을 바꿔 보세요. 코드가 쓰는 값(논리값), 핀의 전압, LED 가 실제로 켜지는지가 각각 어떻게 달라지는지 보입니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <button class="btn" id="t-play">재생</button>
+        <button class="btn secondary" id="t-step">한 단계</button>
+        <label class="toggle"><input type="checkbox" id="t-al"><span class="sw"></span>active-low 로 요청</label>
+        <label>배선 <select id="t-wire"><option value="src" selected>GPIO → 220Ω → LED → GND</option><option value="sink">3V3 → 220Ω → LED → GPIO</option></select></label>
+      </div>
+      <div class="two">
+        <div>
+          <table class="rt" id="t-table"></table>
+          <div class="term" id="t-term" style="min-height:60px"></div>
+        </div>
+        <div>
+          <div class="ledrow" style="justify-content:center;margin:10px 0 18px">
+            <div class="ledbox"><span class="led" id="t-r"></span>빨강 GPIO17</div>
+            <div class="ledbox"><span class="led y" id="t-y"></span>노랑 GPIO27</div>
+            <div class="ledbox"><span class="led gr" id="t-g"></span>초록 GPIO22</div>
+          </div>
+          <table class="rt" id="t-pins"></table>
+        </div>
+      </div>
+      <div class="note" id="t-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l3">
+    <header><h2>GPFSEL · GPSET · GPCLR — 핀 번호에서 비트 위치까지</h2><p>핀과 기능을 고르면 어느 레지스터의 몇 번 비트를 바꿔야 하는지, C 코드로는 어떻게 쓰는지 계산합니다. <b>GPSET0 쓰기</b> · <b>GPCLR0 쓰기</b>로 GPLEV0 이 바뀌는 것을 보세요. GPIO17 이면 LED 가 반응합니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>핀 <select id="r-pin"></select></label>
+        <label>기능 <select id="r-fn"><option value="0">000 입력</option><option value="1" selected>001 출력</option><option value="4">100 ALT0</option><option value="2">010 ALT5</option></select></label>
+        <button class="btn" id="r-fsel">GPFSEL 쓰기</button>
+        <button class="btn secondary" id="r-set">GPSET0 쓰기</button>
+        <button class="btn secondary" id="r-clr">GPCLR0 쓰기</button>
+      </div>
+      <div class="lab" id="r-l1">GPFSEL</div><div class="bits" id="r-fbits"></div>
+      <div class="lab" id="r-l2">GPLEV0 (핀 0~31 현재 레벨)</div><div class="bits" id="r-lbits"></div>
+      <div class="two" style="margin-top:14px">
+        <div class="term" id="r-code" style="margin-top:0"></div>
+        <div><table class="rt" id="r-info"></table><div style="display:flex;gap:14px;align-items:center;margin-top:12px"><span class="led" id="r-led"></span><span id="r-ledtxt" style="font-size:13px;color:var(--ink-soft)">GPIO17 LED</span></div></div>
+      </div>
+      <div class="note" id="r-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l4">
+    <header><h2>폴링은 "가끔 보기" — 간격과 디바운스가 결과를 바꾼다</h2><p><b>버튼 누르기</b>는 접점이 떨리는(바운싱) 진짜 버튼 신호를, <b>짧은 펄스</b>는 2 ms 짜리 신호를 만듭니다. 폴링 간격과 디바운스를 바꿔 같은 신호를 몇 번으로 세는지 비교하세요. 점은 프로그램이 값을 읽은 순간입니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>폴링 간격 <select id="p-int"><option value="1" selected>1 ms</option><option value="5">5 ms</option><option value="10">10 ms</option><option value="50">50 ms</option></select></label>
+        <label>디바운스 <select id="p-deb"><option value="0">없음</option><option value="5">5 ms 연속</option><option value="20" selected>20 ms 연속</option></select></label>
+        <button class="btn" id="p-press">버튼 누르기 (120 ms)</button>
+        <button class="btn secondary" id="p-pulse">짧은 펄스 (2 ms)</button>
+        <button class="btn secondary" id="p-tilt">기울기 센서 (심한 바운싱)</button>
+      </div>
+      <div class="fig"><svg viewBox="0 0 900 230" id="p-svg"></svg></div>
+      <div class="readout"><div><b>실제 누름</b><span id="p-true">0</span></div><div><b>프로그램이 센 횟수</b><span id="p-cnt">0</span></div><div><b>1초당 읽기 (시스템 콜)</b><span id="p-rate">1000</span></div><div><b>확정까지 지연</b><span id="p-lat">–</span></div></div>
+      <div class="note" id="p-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l5">
+    <header><h2>같은 버튼, 세 가지 기다리는 법 — CPU 는 누가 쓰나</h2><p>세 프로그램이 같은 버튼을 기다립니다. 막대는 CPU 를 쓰는 시간입니다. <b>버튼 누르기</b>(또는 <kbd>Space</kbd>)로 이벤트를 만들고, 누가 언제 알아차리는지, CPU 를 얼마나 쓰는지 비교하세요.</p></header>
+    <div class="stage">
+      <div class="controls"><button class="bigbtn" id="b-press">버튼 누르기</button><label class="toggle"><input type="checkbox" id="b-run" checked><span class="sw"></span>시간 흐름</label></div>
+      <div class="fig"><svg viewBox="0 0 900 260" id="b-svg"></svg></div>
+      <table class="rt" id="b-tab" style="margin-top:12px"></table>
+      <div class="note" id="b-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l6">
+    <header><h2>epoll — 준비된 fd 만 돌려주는 하나의 루프</h2><p>07_evloop.c 의 네 fd 입니다. 타이머는 0.5초마다 저절로 울립니다. 버튼 · PIR · 키보드를 눌러 이벤트를 만들고 <b>epoll_wait</b> 가 무엇을 돌려주는지 보세요. 마지막 토글은 흔한 실수를 재현합니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <button class="btn secondary" id="e-btn">버튼 A 누름</button>
+        <button class="btn secondary" id="e-pir">PIR 움직임</button>
+        <button class="btn secondary" id="e-s">키보드 s ⏎</button>
+        <button class="btn secondary" id="e-both">버튼 + PIR 동시</button>
+        <label class="toggle"><input type="checkbox" id="e-noread"><span class="sw"></span>실수: timerfd 를 read 하지 않음</label>
+      </div>
+      <div class="fig"><svg viewBox="0 0 900 250" id="e-svg"></svg></div>
+      <div class="two">
+        <div class="readout" style="margin-top:12px"><div><b>epoll_wait 반환 (1초당)</b><span id="e-rate">0</span></div><div><b>버튼 · 움직임 · 타이머</b><span id="e-cnt">0 · 0 · 0</span></div></div>
+        <div style="display:flex;gap:14px;align-items:center;margin-top:12px"><span class="led" id="e-led"></span><span style="font-size:13px;color:var(--ink-soft)">GPIO17 — 타이머로 깜빡임</span></div>
+      </div>
+      <div class="term" id="e-term" style="min-height:120px;max-height:160px;overflow:auto"></div>
+      <div class="note" id="e-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l7">
+    <header><h2>반응속도 게임 — react.c 와 같은 규칙으로 직접 해 보기</h2><p>화면을 누르거나 <kbd>Space</kbd>(2인 모드: A = <kbd>A</kbd>, B = <kbd>L</kbd>)를 누르세요. "준비" 후 2~5초 무작위로 빨간색이 되면 최대한 빨리 누릅니다. 빨개지기 전에 누르면 부정 출발. 오른쪽에 상태 머신이 따라 움직입니다.</p></header>
+    <div class="stage">
+      <div class="controls"><div class="tabs2" id="g-mode"><button class="on" data-m="1">1인 · 5라운드</button><button data-m="2">2인 대전</button></div><button class="btn secondary" id="g-reset">다시 시작</button></div>
+      <div class="two">
+        <div><div class="gamebox" id="g-box">눌러서 시작<small>Space / 클릭</small></div><div class="term" id="g-term" style="min-height:110px"></div></div>
+        <div><div class="fig"><svg viewBox="0 0 420 300" id="g-svg"></svg></div><div class="readout"><div><b>평균</b><span id="g-avg">–</span></div><div><b>최고</b><span id="g-best">–</span></div><div><b>부정 출발</b><span id="g-foul">0</span></div></div></div>
+      </div>
+      <div class="note" id="g-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l8">
+    <header><h2>커널 타임스탬프 vs 깨어난 뒤 잰 시각</h2><p>사람의 실제 반응을 220 ms 로 고정하고, 두 방법으로 잰 값을 비교합니다. <b>CPU 부하</b>(yes 프로세스 수)를 올리면 프로그램이 poll 에서 깨어나는 시각이 늦어집니다. 커널 타임스탬프는 영향을 받을까요?</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>CPU 부하 <select id="k-load"><option value="0" selected>없음</option><option value="2">yes × 2</option><option value="4">yes × 4 (코어 전부)</option><option value="8">yes × 8 (과부하)</option></select></label>
+        <button class="btn" id="k-one">한 번 측정</button>
+        <button class="btn secondary" id="k-ten">10번 측정</button>
+        <button class="btn secondary" id="k-clr">지우기</button>
+      </div>
+      <div class="fig"><svg viewBox="0 0 900 220" id="k-svg"></svg></div>
+      <table class="rt" id="k-tab" style="margin-top:12px"></table>
+      <div class="note" id="k-note"></div>
+    </div>
+  </section>
+
+  </main>
+</div>
+<script>
+(function(){
+  'use strict';
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+  const NS='http://www.w3.org/2000/svg';
+  const el=(n,a,t)=>{ const e=document.createElementNS(NS,n); for(const k in a) e.setAttribute(k,a[k]); if(t!==undefined) e.textContent=t; return e; };
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  let cur=1;
+  function go(n){ cur=Math.max(1,Math.min(8,n)); $$('.lesson').forEach(s=>s.classList.toggle('active',s.id==='l'+cur)); $$('#navlist button').forEach(b=>b.setAttribute('aria-current',b.dataset.go==cur?'true':'false')); history.replaceState(null,'','#l'+cur); window.scrollTo({top:0}); }
+  $$('#navlist button').forEach(b=>b.addEventListener('click',()=>go(+b.dataset.go)));
+  document.addEventListener('keydown',e=>{ if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName))return; if(e.key==='ArrowRight')go(cur+1); if(e.key==='ArrowLeft')go(cur-1); });
+  if(/^#l[1-8]$/.test(location.hash)) go(+location.hash[2]);
+  function tabs(id,fn){ $$('#'+id+' button').forEach(b=>b.addEventListener('click',()=>{ $$('#'+id+' button').forEach(x=>x.classList.toggle('on',x===b)); fn(b); })); }
+  function box(S,x,y,w,h,title,sub,kind){ const col={n:['#fff','#1B2A41'],b:['#DCE6FA','#2457C5'],g:['#DDF2EA','#178A67'],r:['#FBE3DF','#D6452E'],a:['#FBF0D3','#C98A12'],d:['#F6F8FB','#C9D1DC']}[kind||'n'];
+    S.appendChild(el('rect',{x,y,width:w,height:h,rx:8,fill:col[0],stroke:col[1],'stroke-width':2}));
+    const t=el('text',{x:x+w/2,y:y+(sub?h/2-4:h/2+5),'text-anchor':'middle','font-size':14,'font-weight':600,fill:'#1B2A41'},title); S.appendChild(t);
+    if(sub){ String(sub).split('\n').forEach((ln,i)=>S.appendChild(el('text',{x:x+w/2,y:y+h/2+14+i*14,'text-anchor':'middle','font-size':11.5,fill:col[1]},ln))); } }
+  function arrow(S,x1,y1,x2,y2,color,label){ const id='m'+color.replace('#',''); if(!S.querySelector('#'+id)){ const d=el('defs',{}); const m=el('marker',{id,viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'}); m.appendChild(el('path',{d:'M0,0L10,5L0,10z',fill:color})); d.appendChild(m); S.appendChild(d); }
+    S.appendChild(el('line',{x1,y1,x2,y2,stroke:color,'stroke-width':2.2,'marker-end':`url(#${id})`}));
+    if(label){ const mx=(x1+x2)/2,my=(y1+y2)/2; S.appendChild(el('rect',{x:mx-label.length*3.6-6,y:my-10,width:label.length*7.2+12,height:18,rx:4,fill:'#fff',stroke:color})); S.appendChild(el('text',{x:mx,y:my+3,'text-anchor':'middle','font-size':11,fill:color},label)); } }
+
+    const note=(id,html,kind)=>{ const n=$(id); n.className='note'+(kind?' '+kind:''); n.innerHTML=html; };
+  const ledSet=(id,on,unk)=>{ const l=$(id); l.classList.toggle('on',!!on); l.classList.toggle('unk',!!unk); };
+
+  /* ───────── 1 객체 흐름과 반납 ───────── */
+  const OL=[
+    ['struct gpiod_chip *chip = gpiod_chip_open("/dev/gpiochip0");', 'chip', '① 칩 열기 — /dev/gpiochip0 의 fd 를 얻었습니다. 아직 어떤 라인도 요청하지 않았습니다.'],
+    ['gpiod_line_settings_set_direction(settings, GPIOD_LINE_DIRECTION_OUTPUT);', 'set', '② settings — "출력, 초기값 0" 이라는 <b>설정 재료</b>만 만들었습니다. 커널은 아직 아무것도 모릅니다.'],
+    ['gpiod_line_config_add_line_settings(line_cfg, &offset, 1, settings);', 'lcfg', '③ line_config — "17번 라인에 이 설정" 이라고 묶었습니다. 여전히 내 프로세스 메모리 안의 재료일 뿐입니다.'],
+    ['gpiod_request_config_set_consumer(req_cfg, "blink");', 'rcfg', '④ request_config — 요청자의 이름을 정했습니다. gpioinfo 의 consumer 칸에 보일 이름입니다.'],
+    ['req = gpiod_chip_request_lines(chip, req_cfg, line_cfg);', 'req', '⑤ <b>여기서 처음으로 커널에 요청</b>합니다. 성공하면 GPIO17 이 출력이 되고 소유자가 blink 로 기록됩니다. 이제부터 다른 프로세스의 요청은 busy.'],
+    ['while (!g_stop) { set_value(req, 17, on); nanosleep(0.5s); }', 'loop', '루프 — 0.5초마다 값을 뒤집습니다. 위의 세 종료 방법 중 하나를 눌러 보세요.'],
+    ['set_value(req, 17, INACTIVE); gpiod_line_request_release(req);', 'rel', '⑥ 정리 — LED 를 끄고 반납했습니다. consumer 가 비고 라인은 다시 입력 상태로 돌아갑니다.'],
+  ];
+  const O={step:-1, blink:null, led:false, unk:false, dead:false};
+  function oState(){ const s=O.step, dead=O.dead;
+    const owned=!dead&&s>=4&&s<6, rel=s>=6||dead;
+    $('#o-state').innerHTML=`<tr><th>항목</th><th>값</th></tr>
+      <tr class="${s===0?'hot':''}"><td>/dev/gpiochip0 fd</td><td>${s>=0&&!rel?'열림':(rel?'닫힘':'–')}</td></tr>
+      <tr class="${s>=1&&s<=3?'hot':''}"><td>내 메모리의 설정 재료</td><td>${s>=3?'settings · line_config · request_config':s>=2?'settings · line_config':s>=1?'settings':'–'}</td></tr>
+      <tr class="${s===4?'hot':''}"><td>커널: GPIO17 방향</td><td>${owned?'output':'input'}</td></tr>
+      <tr class="${s===4?'hot':''}"><td>커널: consumer</td><td>${owned?'"blink"':'–'}</td></tr>
+      <tr><td>다른 프로세스의 gpioset 17</td><td>${owned?'<span style="color:var(--red)">busy</span>':'성공'}</td></tr>`;
+    ledSet('#o-led',O.led,O.unk);
+    $('#o-ledtxt').textContent=O.unk?'상태 보장 안 됨 (켜진 채 남을 수 있음)':(O.led?'켜짐':'꺼짐');
+    $('#o-code').innerHTML=OL.map((l,i)=>`<span class="cl ${i===s?'on':(i<s?'done':'')}">${esc(l[0])}</span>`).join('');
+  }
+  function oStep(){ if(O.dead||O.step>=OL.length-1) return; if(O.step===5) return note('#o-note','루프는 스스로 끝나지 않습니다. 위의 종료 방법 중 하나를 누르세요.','warn');
+    O.step++; if(O.step===5){ O.blink=setInterval(()=>{ O.led=!O.led; ledSet('#o-led',O.led); $('#o-ledtxt').textContent=O.led?'켜짐':'꺼짐'; },500); $('#o-term').innerHTML='<span class="c">pi@rpi-07:~/eio/day2/src $</span> ./01_blink\nGPIO17 깜빡임 시작 (Ctrl+C 로 종료)'; }
+    note('#o-note',OL[O.step][2],O.step===4?'ok':''); oState(); }
+  function oEnd(kind){ if(O.step!==5) return note('#o-note','먼저 <b>다음 단계</b>로 루프까지 진행하세요.','warn'); clearInterval(O.blink);
+    if(kind==='sig1'){ O.step=6; O.led=false; $('#o-term').innerHTML+='\n^C\n라인 반납 완료'; note('#o-note','핸들러가 <code>g_stop = 1</code> 만 세우고 돌아옵니다. SA_RESTART 가 없어 nanosleep 이 바로 깨어나고, 루프를 빠져나와 <b>LED 를 끄고 반납</b>합니다. 이것이 정상 종료입니다.','ok'); }
+    else { O.dead=true; O.unk=true; $('#o-term').innerHTML+=kind==='kill'?'\nKilled':'\n^C'; note('#o-note',(kind==='kill'?'kill -9 는 어떤 정리 기회도 주지 않습니다. ':'핸들러가 없으면 SIGINT 의 기본 동작으로 프로세스가 즉시 죽습니다. ')+'프로세스가 사라지면 커널이 fd 를 닫고 <b>라인은 해제</b>되지만(consumer 가 비고 busy 도 풀림), "끄고 나가기" 는 실행되지 않았습니다. LED 는 마지막 값 그대로 남을 수 있고 보장되지 않습니다.','warn'); }
+    oState(); }
+  $('#o-step').onclick=oStep; $('#o-sig1').onclick=()=>oEnd('sig1'); $('#o-sig2').onclick=()=>oEnd('sig2'); $('#o-kill').onclick=()=>oEnd('kill');
+  $('#o-reset').onclick=()=>{ clearInterval(O.blink); Object.assign(O,{step:-1,led:false,unk:false,dead:false}); $('#o-term').innerHTML='<span class="c">다음 단계 를 누르세요.</span>'; note('#o-note','①~⑤ 가운데 커널이 실제로 무언가를 하는 단계는 어디일지 먼저 예측해 보세요.'); oState(); };
+  $('#o-reset').onclick();
+
+  /* ───────── 2 신호등 ───────── */
+  const TS=[[0,0,1,'초록'],[0,1,0,'노랑'],[1,0,0,'빨강'],[1,1,0,'빨강+노랑']];
+  let tI=0, tTimer=null;
+  function tDraw(){ const al=$('#t-al').checked, sink=$('#t-wire').value==='sink'; const st=TS[tI];
+    $('#t-table').innerHTML='<tr><th>#</th><th>상태</th><th>R</th><th>Y</th><th>G</th></tr>'+TS.map((r,i)=>`<tr class="${i===tI?'hot':''}"><td>${i}</td><td>${r[3]}</td><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('');
+    const names=[['R','GPIO17','#t-r'],['Y','GPIO27','#t-y'],['G','GPIO22','#t-g']]; let rows='<tr><th>라인</th><th>코드가 쓴 값</th><th>핀 전압</th><th>LED</th></tr>'; let wrong=0;
+    names.forEach(([n,g,id],k)=>{ const logic=st[k]; const v=(al?!logic:logic)?3.3:0; const lit=sink?(v===0):(v===3.3); if(lit!==!!logic) wrong++; ledSet(id,lit); rows+=`<tr><td>${g}</td><td>${logic?'ACTIVE (1)':'INACTIVE (0)'}</td><td>${v?'3.3 V':'0 V'}</td><td>${lit?'켜짐':'꺼짐'}</td></tr>`; });
+    $('#t-pins').innerHTML=rows;
+    $('#t-term').innerHTML=`enum gpiod_line_value v[3] = { ${st.slice(0,3).map(x=>x?'ACTIVE':'INACTIVE').join(', ')} };\ngpiod_line_request_set_values(req, v);   <span class="c">/* 순서 = offsets {17, 27, 22} */</span>`;
+    if(!al&&!sink) note('#t-note','기본 조합: active-high 요청 + GPIO→LED→GND 배선. 논리 1 = 3.3V = 켜짐으로 표와 LED 가 일치합니다.','ok');
+    else if(al&&sink) note('#t-note','LED 를 3V3 쪽에 달면(sink 배선) 핀이 <b>0V</b> 일 때 전류가 흘러 켜집니다. 이때 <b>active-low</b> 로 요청하면 코드는 여전히 "1 = 켜짐" 으로 쓰고, 전압 반전은 커널이 해 줍니다. 표와 LED 가 다시 일치합니다.','ok');
+    else note('#t-note',`배선과 active 설정이 맞지 않아 LED ${wrong}개가 표와 반대로 켜져 있습니다. ${al?'active-low 는 논리 1 을 0V 로 내보냅니다.':'sink 배선에서는 0V 일 때 켜집니다.'} 배선에 맞춰 설정을 고르세요.`,'warn'); }
+  $('#t-step').onclick=()=>{ tI=(tI+1)%TS.length; tDraw(); };
+  $('#t-play').onclick=()=>{ if(tTimer){ clearInterval(tTimer); tTimer=null; $('#t-play').textContent='재생'; return; } $('#t-play').textContent='멈춤'; tTimer=setInterval(()=>{ tI=(tI+1)%TS.length; tDraw(); },900); };
+  ['#t-al','#t-wire'].forEach(s=>$(s).addEventListener('change',tDraw)); tDraw();
+
+  /* ───────── 3 레지스터 비트 계산기 ───────── */
+  const R={fsel:new Array(6).fill(0), lev:0};
+  $('#r-pin').innerHTML=Array.from({length:28},(_,i)=>`<option value="${i}" ${i===17?'selected':''}>GPIO${i}</option>`).join('');
+  function fnOf(p){ return (R.fsel[Math.floor(p/10)]>>>((p%10)*3))&7; }
+  function rDraw(msg,kind){ const p=+$('#r-pin').value, fn=+$('#r-fn').value; const reg=Math.floor(p/10), sh=(p%10)*3; const val=R.fsel[reg]>>>0;
+    $('#r-l1').innerHTML=`GPFSEL${reg} (오프셋 0x${(reg*4).toString(16).padStart(2,'0').toUpperCase()}) — 비트 ${sh}~${sh+2} 이 GPIO${p}`;
+    let h=''; for(let b=31;b>=0;b--) h+=`<div class="n">${b%4===0||b===31?b:''}</div>`; for(let b=31;b>=0;b--){ const one=(val>>>b)&1; const hi=b>=sh&&b<=sh+2; h+=`<div class="${hi?'hi':''} ${one?'one':''}">${b>=30?'–':one}</div>`; } $('#r-fbits').innerHTML=h;
+    let l=''; for(let b=31;b>=0;b--) l+=`<div class="n">${b%4===0||b===31?b:''}</div>`; for(let b=31;b>=0;b--){ const one=(R.lev>>>b)&1; l+=`<div class="${b===p?'hi':''} ${one?'one':''}">${b>27?'–':one}</div>`; } $('#r-lbits').innerHTML=l;
+    const cur=fnOf(p); const fname={0:'입력',1:'출력',4:'ALT0',2:'ALT5'}[cur]||('0b'+cur.toString(2).padStart(3,'0'));
+    $('#r-info').innerHTML=`<tr><th>항목</th><th>GPIO${p}</th></tr><tr><td>GPFSEL 번호</td><td>${p} / 10 = ${reg}</td></tr><tr><td>시작 비트</td><td>(${p} % 10) × 3 = ${sh}</td></tr><tr><td>현재 기능</td><td>${fname}</td></tr><tr><td>GPSET0 · GPCLR0 비트</td><td>${p} → 1u &lt;&lt; ${p} = 0x${(1<<p>>>0).toString(16).toUpperCase()}</td></tr><tr><td>GPLEV0 읽은 값</td><td>${(R.lev>>>p)&1}</td></tr>`;
+    $('#r-code').innerHTML=`<span class="c">/* GPIO${p} 기능 = ${['000','001','010','011','100'][fn]||fn} */</span>\nv  = gpio[${reg}];             <span class="c">// GPFSEL${reg}</span>\nv &= ~(7u &lt;&lt; ${sh});\nv |=  (${fn}u &lt;&lt; ${sh});\ngpio[${reg}] = v;\n\ngpio[0x1C/4] = 1u &lt;&lt; ${p};   <span class="c">// GPSET0 → High</span>\ngpio[0x28/4] = 1u &lt;&lt; ${p};   <span class="c">// GPCLR0 → Low</span>`;
+    ledSet('#r-led',fnOf(17)===1&&((R.lev>>>17)&1)); $('#r-ledtxt').textContent='GPIO17 LED — '+(fnOf(17)===1?((R.lev>>>17)&1?'켜짐':'꺼짐'):'GPIO17 이 출력이 아니라 반응 없음');
+    if(msg) note('#r-note',msg,kind); }
+  $('#r-fsel').onclick=()=>{ const p=+$('#r-pin').value, fn=+$('#r-fn').value, reg=Math.floor(p/10), sh=(p%10)*3; R.fsel[reg]=((R.fsel[reg]&~(7<<sh))|(fn<<sh))>>>0; if(fn!==1) R.lev&=~(1<<p); rDraw(`GPFSEL${reg} 의 비트 ${sh}~${sh+2} 만 바꿨습니다. <b>읽기-수정-쓰기</b>라서 같은 레지스터의 다른 9개 핀 설정은 그대로 남습니다 (표의 다른 칸이 변하지 않음).`,'ok'); };
+  $('#r-set').onclick=()=>{ const p=+$('#r-pin').value; if(fnOf(p)!==1) return rDraw(`GPIO${p} 가 아직 출력이 아닙니다. GPSET0 은 출력으로 설정된 핀에만 효과가 있습니다. 먼저 기능 001 을 GPFSEL 에 쓰세요.`,'warn'); R.lev|=(1<<p); rDraw(`GPSET0 에 <code>1u &lt;&lt; ${p}</code> 를 썼습니다. 다른 비트는 0 이라 다른 핀은 그대로 — 읽을 필요 없이 쓰기 한 번입니다.`,'ok'); };
+  $('#r-clr').onclick=()=>{ const p=+$('#r-pin').value; R.lev&=~(1<<p); rDraw(`GPCLR0 에 <code>1u &lt;&lt; ${p}</code> 를 썼습니다. Low 로 만드는 것도 "1 을 쓰는" 동작입니다 (GPCLR 레지스터라서).`,'ok'); };
+  ['#r-pin','#r-fn'].forEach(s=>$(s).addEventListener('change',()=>rDraw()));
+  rDraw('처음에는 모든 핀이 입력(000)입니다. GPIO17 을 출력으로 바꾸고 GPSET0 을 써 보세요. 그다음 핀을 22 로 바꿔 계산이 어떻게 달라지는지 보세요.');
+
+  /* ───────── 4 폴링 간격과 디바운스 ───────── */
+  const P={sig:[], truth:0, W:600};   // sig: [t_ms, level] 0~600ms 창
+  function pGen(kind){ const s=[[0,1]]; let t=60;
+    if(kind==='pulse'){ s.push([t,0],[t+2,1]); }
+    else { const nb=kind==='tilt'?9:4, span=kind==='tilt'?14:5; for(let i=0;i<nb;i++){ s.push([t+i*span/nb,i%2?1:0]); } s.push([t+span,0]); const up=t+(kind==='tilt'?90:120); for(let i=0;i<nb;i++){ s.push([up+i*span/nb,i%2?0:1]); } s.push([up+span,1]); }
+    P.sig=s; P.truth=1; pRun(); }
+  function lvlAt(t){ let v=1; for(const [tt,l] of P.sig){ if(tt<=t) v=l; else break; } return v; }
+  function pRun(){ const iv=+$('#p-int').value, deb=+$('#p-deb').value; const need=deb?Math.max(1,Math.round(deb/iv)):0;
+    const S=$('#p-svg'); S.innerHTML=''; const X=t=>30+t/P.W*850, Y=v=>v?50:130;
+    S.appendChild(el('text',{x:4,y:54,'font-size':10},'1')); S.appendChild(el('text',{x:4,y:134,'font-size':10},'0'));
+    let d=`M${X(0)} ${Y(1)}`, lv=1; for(const [t,l] of P.sig){ d+=` L${X(t)} ${Y(lv)} L${X(t)} ${Y(l)}`; lv=l; } d+=` L${X(P.W)} ${Y(lv)}`;
+    S.appendChild(el('path',{d,fill:'none',stroke:'#2457C5','stroke-width':2}));
+    let stable=1, last=1, same=0, cnt=0, firstDown=null, conf=null; const marks=[];
+    for(let t=0;t<=P.W;t+=iv){ const v=lvlAt(t); S.appendChild(el('circle',{cx:X(t),cy:Y(v),r:iv>=10?3:1.6,fill:'#C98A12'}));
+      if(firstDown===null&&v===0) firstDown=t;
+      if(!need){ if(v!==stable){ if(v===0){ cnt++; marks.push(t); if(conf===null) conf=t; } stable=v; } }
+      else { same=(v===last)?same+1:0; last=v; if(same>=need&&v!==stable){ stable=v; if(v===0){ cnt++; marks.push(t); if(conf===null) conf=t; } } } }
+    marks.forEach((t,i)=>{ S.appendChild(el('line',{x1:X(t),y1:150,x2:X(t),y2:175,stroke:'#D6452E','stroke-width':2})); S.appendChild(el('text',{x:X(t)+3,y:190,'font-size':10,fill:'#D6452E'},'#'+(i+1))); });
+    S.appendChild(el('text',{x:30,y:215,'font-size':11},'0 ms')); S.appendChild(el('text',{x:850,y:215,'font-size':11,'text-anchor':'end'},P.W+' ms')); S.appendChild(el('text',{x:400,y:215,'font-size':11},'● = 프로그램이 읽은 순간 · 빨간 선 = "눌림" 으로 센 곳'));
+    $('#p-true').textContent=P.truth; $('#p-cnt').textContent=cnt; $('#p-rate').textContent=Math.round(1000/iv); $('#p-lat').textContent=(conf!==null&&P.sig.length>1)?((conf-P.sig[1][0]).toFixed(0)+' ms'):'–';
+    const pulse=P.sig.length===3;
+    if(!P.truth) note('#p-note','버튼 신호를 만들어 보세요.');
+    else if(pulse&&cnt===0) note('#p-note',`2 ms 짜리 펄스가 ${iv} ms 간격의 읽기 사이로 빠져나가 <b>한 번도 보지 못했습니다</b>${need?' (또는 디바운스가 짧은 펄스를 걸러냄)':''}. 폴링은 "가끔 보기" 라서 짧은 신호를 놓칩니다. 5교시의 엣지 이벤트는 커널이 인터럽트로 잡아 큐에 넣으므로 놓치지 않습니다.`,'warn');
+    else if(cnt>1) note('#p-note',`실제로는 1번 눌렀는데 ${cnt}번으로 셌습니다. 바운싱 구간의 0/1 을 그대로 믿었기 때문입니다. 디바운스를 켜거나 늘려 보세요.`,'warn');
+    else if(cnt===1) note('#p-note',`정확히 1번으로 셌습니다. 대신 확정까지 약 ${(conf-P.sig[1][0]).toFixed(0)} ms 늦습니다 — 디바운스와 폴링 간격의 대가입니다. 1초당 ${Math.round(1000/iv)} 번 시스템 콜을 하는 것도 비용입니다.`,'ok');
+    else note('#p-note','한 번도 세지 못했습니다. 디바운스 시간이 누름 시간보다 길거나, 간격이 너무 깁니다.','warn'); }
+  $('#p-press').onclick=()=>pGen('press'); $('#p-pulse').onclick=()=>pGen('pulse'); $('#p-tilt').onclick=()=>pGen('tilt');
+  ['#p-int','#p-deb'].forEach(s=>$(s).addEventListener('change',pRun)); P.sig=[[0,1]]; P.truth=0; pRun();
+
+  /* ───────── 5 busy loop vs poll ───────── */
+  const B={t:0, events:[], last:performance.now()}; const WIN=3000;
+  const PROC=[['busy','busy loop (sleep 없음)','#D6452E'],['p1','폴링 1 ms (05)','#C98A12'],['ev','poll() 이벤트 (06)','#178A67']];
+  const BS={busy:{cpu:100,lat:[]},p1:{cpu:1.3,lat:[]},ev:{cpu:0,lat:[]}};
+  function bPress(){ const t=B.t; B.events.push(t); BS.busy.lat.push(0.001+Math.random()*0.002); BS.p1.lat.push(Math.random()*1.0+0.05); BS.ev.lat.push(0.04+Math.random()*0.08); bTab(); note('#b-note','세 프로그램 모두 버튼을 알아차렸습니다. 차이는 <b>기다리는 동안</b> 입니다: busy loop 는 코어 하나를 통째로, 1 ms 폴링은 1초에 1000번 깨어나고, poll() 은 이벤트가 올 때만 깨어납니다. 알아차리는 지연은 셋 다 1 ms 안쪽입니다.','ok'); }
+  function bTab(){ const avg=a=>a.length?(a.reduce((x,y)=>x+y,0)/a.length).toFixed(3)+' ms':'–';
+    $('#b-tab').innerHTML='<tr><th>방식</th><th>CPU</th><th>1초당 깨어남</th><th>알아차리는 지연 (평균)</th><th>시각 정보</th></tr>'+
+      `<tr><td>busy loop</td><td>100 %</td><td>쉬지 않음</td><td>${avg(BS.busy.lat)}</td><td>읽은 순간</td></tr>`+
+      `<tr><td>폴링 1 ms</td><td>약 1~2 %</td><td>약 1000</td><td>${avg(BS.p1.lat)}</td><td>읽은 순간 (최대 1 ms 늦음)</td></tr>`+
+      `<tr class="hot"><td>poll() 이벤트</td><td>0 %</td><td>이벤트 수만큼</td><td>${avg(BS.ev.lat)}</td><td>커널 타임스탬프 (ns)</td></tr>`; }
+  function bDraw(){ const S=$('#b-svg'); S.innerHTML=''; const X0=200, X1=880, Xt=t=>X0+(t-(B.t-WIN))/WIN*(X1-X0);
+    PROC.forEach(([id,name,col],k)=>{ const y=30+k*70; S.appendChild(el('text',{x:10,y:y+24,'font-size':12.5,'font-weight':600,fill:'#1B2A41'},name));
+      S.appendChild(el('rect',{x:X0,y,width:X1-X0,height:36,fill:'#F6F8FB',stroke:'#E3E7ED'}));
+      if(id==='busy') S.appendChild(el('rect',{x:X0,y:y+4,width:X1-X0,height:28,fill:col,opacity:.75}));
+      if(id==='p1'){ const st=Math.ceil((B.t-WIN)/20)*20; for(let t=st;t<=B.t;t+=20) S.appendChild(el('rect',{x:Xt(t),y:y+4,width:1.4,height:28,fill:col})); S.appendChild(el('text',{x:X1-4,y:y+48,'font-size':9.5,'text-anchor':'end'},'(실제로는 1 ms 마다 — 그림은 20 ms 간격으로 줄임)')); }
+      B.events.filter(t=>t>B.t-WIN).forEach(t=>{ S.appendChild(el('line',{x1:Xt(t),y1:y-4,x2:Xt(t),y2:y+40,stroke:'#2457C5','stroke-width':1.5,'stroke-dasharray':'3 3'})); if(id==='ev') S.appendChild(el('rect',{x:Xt(t),y:y+4,width:4,height:28,fill:col})); }); });
+    S.appendChild(el('text',{x:X0,y:250,'font-size':11},'← 3초 전')); S.appendChild(el('text',{x:X1,y:250,'font-size':11,'text-anchor':'end'},'지금')); S.appendChild(el('text',{x:520,y:250,'font-size':11,'text-anchor':'middle'},'색칠 = CPU 사용 · 파란 점선 = 버튼 이벤트')); }
+  function bTick(){ const now=performance.now(); if($('#b-run').checked&&cur===5) B.t+=now-B.last; B.last=now; if(cur===5) bDraw(); requestAnimationFrame(bTick); }
+  $('#b-press').onclick=bPress; document.addEventListener('keydown',e=>{ if(e.code==='Space'&&cur===5&&!e.repeat){ e.preventDefault(); bPress(); } });
+  B.t=WIN; bTab(); requestAnimationFrame(bTick); note('#b-note','버튼을 몇 번 눌러 보세요. busy loop 줄은 아무 일이 없어도 꽉 차 있습니다.');
+
+  /* ───────── 6 epoll 이벤트 루프 ───────── */
+  const E={pend:{btn:0,pir:0,tim:0,stdin:0}, cnt:{btn:0,pir:0,tim:0}, ret:[], led:false, lastReady:[]};
+  const FDS=[['btn','버튼 A','GPIO5 fd'],['pir','PIR','GPIO6 fd'],['tim','timerfd','0.5초'],['stdin','stdin','키보드']];
+  function eDraw(){ const S=$('#e-svg'); S.innerHTML='';
+    FDS.forEach(([k,t,s],i)=>{ const y=16+i*56; box(S,20,y,170,44,t,s+(E.pend[k]?'  ● 준비됨':''),E.pend[k]?'a':'n'); arrow(S,190,y+22,330,125,E.pend[k]?'#C98A12':'#C9D1DC'); });
+    box(S,330,90,190,70,'epoll_wait()',E.lastReady.length?`반환 n = ${E.lastReady.length}`:'잠듦 (대기)',E.lastReady.length?'b':'d');
+    arrow(S,520,125,600,125,'#2457C5');
+    box(S,600,60,280,130,'switch (data.u32)',E.lastReady.length?E.lastReady.map(k=>({btn:'TAG_BTN → 횟수 +1',pir:'TAG_PIR → 로그',tim:'TAG_TIMER → LED 토글',stdin:'TAG_STDIN → 명령'})[k]).join('\n'):'준비된 fd 만 처리',E.lastReady.length?'g':'n'); }
+  function eLog(s){ const t=$('#e-term'); t.innerHTML+=s+'\n'; t.scrollTop=t.scrollHeight; }
+  function eWait(){ const ready=Object.keys(E.pend).filter(k=>E.pend[k]); if(!ready.length){ E.lastReady=[]; eDraw(); return; }
+    E.ret.push(performance.now()); E.lastReady=ready;
+    ready.forEach(k=>{ if(k==='btn'){ E.cnt.btn++; eLog(`[버튼] ${E.cnt.btn} 번째`); E.pend.btn=0; }
+      if(k==='pir'){ E.cnt.pir++; eLog('[PIR ] 움직임 감지'); E.pend.pir=0; }
+      if(k==='tim'){ E.cnt.tim++; E.led=!E.led; ledSet('#e-led',E.led); if(!$('#e-noread').checked) E.pend.tim=0; }
+      if(k==='stdin'){ eLog(`[통계] 버튼 ${E.cnt.btn} · 움직임 ${E.cnt.pir} · 타이머 ${E.cnt.tim}`); E.pend.stdin=0; } });
+    $('#e-cnt').textContent=`${E.cnt.btn} · ${E.cnt.pir} · ${E.cnt.tim}`; eDraw(); }
+  setInterval(()=>{ if(cur!==6) return; E.pend.tim=1; eWait(); },500);
+  setInterval(()=>{ if(cur!==6) return; if($('#e-noread').checked&&E.pend.tim){ for(let i=0;i<40;i++) eWait(); } const now=performance.now(); E.ret=E.ret.filter(t=>t>now-1000); const r=$('#e-noread').checked&&E.pend.tim?'수십만 (계속 즉시 반환)':E.ret.length; $('#e-rate').textContent=r;
+    if($('#e-noread').checked) note('#e-note','timerfd 를 <b>read 하지 않으면</b> 만료 횟수가 남아 fd 가 계속 "준비됨" 상태입니다. epoll 은 기본이 level-triggered 라서 epoll_wait 가 <b>잠들지 않고 즉시 계속 반환</b> — busy loop 가 되어 CPU 100% 입니다. GPIO 이벤트도 read_edge_events 로 꺼내지 않으면 같은 일이 생깁니다.','warn'); },200);
+  $('#e-btn').onclick=()=>{ E.pend.btn=1; eWait(); }; $('#e-pir').onclick=()=>{ E.pend.pir=1; eWait(); }; $('#e-s').onclick=()=>{ E.pend.stdin=1; eWait(); };
+  $('#e-both').onclick=()=>{ E.pend.btn=1; E.pend.pir=1; eWait(); note('#e-note','두 fd 가 동시에 준비되면 epoll_wait 는 <b>n = 2</b> 를 돌려주고, 루프가 둘 다 처리합니다. 한 번 깨어나 여러 개를 처리하는 것이 이벤트 루프의 효율입니다.','ok'); };
+  $('#e-noread').addEventListener('change',()=>{ if(!$('#e-noread').checked){ E.pend.tim=0; note('#e-note','다시 정상입니다. 준비된 fd 를 처리(read)하면 epoll_wait 는 다음 이벤트까지 잠듭니다.','ok'); } });
+  eDraw(); note('#e-note','아무것도 누르지 않으면 epoll_wait 는 0.5초마다 타이머 때문에만 깨어납니다. 버튼과 PIR 을 눌러 보세요.');
+
+  /* ───────── 7 반응속도 게임 ───────── */
+  const G={mode:1, st:'idle', round:0, rounds:5, t_on:0, timer:null, res:[], fouls:0, win:{A:0,B:0}};
+  const GN=[['idle','시작 전',30,20],['ready','READY\n2~5초 대기',30,110],['go','GO\nLED 켜짐',220,110],['result','RESULT\nms 계산',220,210],['foul','FOUL\n부저 0.8초',30,210],['timeout','TIMEOUT\n3초',220,20]];
+  function gSvg(){ const S=$('#g-svg'); S.innerHTML='';
+    arrow(S,100,64,100,108,'#8A9BB5'); arrow(S,170,140,218,140,'#8A9BB5','지연 끝'); arrow(S,100,170,100,208,'#8A9BB5','지연 중 누름'); arrow(S,290,170,290,208,'#8A9BB5','누름'); arrow(S,290,108,290,66,'#8A9BB5','3초');
+    GN.forEach(([k,t,x,y])=>{ const [a,b]=t.split('\n'); box(S,x,y,140,44,a,b||'',G.st===k?(k==='go'?'r':k==='foul'?'a':k==='result'?'g':'b'):'n'); }); }
+  function gLog(s){ const t=$('#g-term'); t.innerHTML+=s+'\n'; t.scrollTop=t.scrollHeight; }
+  function gSet(st,txt,sm){ G.st=st; const b=$('#g-box'); b.className='gamebox '+({ready:'ready',go:'go',foul:'foul',result:'res',timeout:'foul'}[st]||''); b.innerHTML=txt+(sm?`<small>${sm}</small>`:''); gSvg(); }
+  function gStats(){ const ok=G.res.length; $('#g-avg').textContent=ok?Math.round(G.res.reduce((a,b)=>a+b,0)/ok)+' ms':'–'; $('#g-best').textContent=ok?Math.min(...G.res)+' ms':'–'; $('#g-foul').textContent=G.fouls; }
+  function gNext(){ clearTimeout(G.timer); if(G.round>=G.rounds){ gSet('idle','끝!',G.mode===2?`A ${G.win.A} : ${G.win.B} B`:`평균 ${$('#g-avg').textContent}`); gLog('== 결과 == '+(G.mode===2?`A ${G.win.A} : ${G.win.B} B`:`평균 ${$('#g-avg').textContent} · 최고 ${$('#g-best').textContent}`)); G.round=0; note('#g-note','react_log.csv 에 한 줄이 추가되는 시점입니다. 다시 하려면 눌러서 시작하세요.','ok'); return; }
+    G.round++; const d=2000+Math.floor(Math.random()*3000); gSet('ready','준비...',`라운드 ${G.round}/${G.rounds}`); gLog(`[${G.round}/${G.rounds}] 준비...  (지연 ${d} ms)`);
+    G.timer=setTimeout(()=>{ G.t_on=performance.now(); gSet('go','지금!',G.mode===2?'A 키 / L 키':'Space / 클릭'); G.timer=setTimeout(()=>{ gSet('timeout','시간 초과','3초'); gLog('  시간 초과'); G.timer=setTimeout(gNext,1200); },3000); },d); }
+  function gPress(who){ if(G.st==='idle'){ if(G.round===0){ G.res=[]; G.fouls=0; G.win={A:0,B:0}; $('#g-term').innerHTML=''; gStats(); } gNext(); return; }
+    if(G.st==='ready'){ clearTimeout(G.timer); G.fouls++; if(G.mode===2) G.win[who==='A'?'B':'A']++; gSet('foul','부정 출발!',G.mode===2?who+' 반칙':'LED 가 켜지기 전에 누름'); gLog(`  부정 출발! (${who})`); gStats(); note('#g-note','wait_press(지연) 가 1 을 돌려준 경우입니다. react.c 는 부저를 0.8초 울리고 이 라운드를 무효로 합니다.','warn'); G.timer=setTimeout(gNext,1300); return; }
+    if(G.st==='go'){ clearTimeout(G.timer); const ms=Math.round(performance.now()-G.t_on); G.res.push(ms); if(G.mode===2) G.win[who]++; gSet('result',ms+' ms',G.mode===2?who+' 승':''); gLog(`  ${G.mode===2?who+' 승 · ':''}${ms} ms`); gStats(); note('#g-note','react.c 에서는 이 값을 <code>(커널 타임스탬프 − t_on) / 1e6</code> 으로 계산합니다. 브라우저는 커널 타임스탬프가 없어 이벤트 시각으로 대신합니다.','ok'); G.timer=setTimeout(gNext,1300); } }
+  $('#g-box').onclick=()=>gPress('A');
+  document.addEventListener('keydown',e=>{ if(cur!==7||e.repeat) return; if(e.code==='Space'){ e.preventDefault(); gPress('A'); } if(G.mode===2&&e.code==='KeyA') gPress('A'); if(G.mode===2&&e.code==='KeyL') gPress('B'); });
+  tabs('g-mode',b=>{ G.mode=+b.dataset.m; $('#g-reset').onclick(); });
+  $('#g-reset').onclick=()=>{ clearTimeout(G.timer); G.round=0; G.res=[]; G.fouls=0; G.win={A:0,B:0}; $('#g-term').innerHTML=''; gStats(); gSet('idle','눌러서 시작',G.mode===2?'A 키 또는 L 키':'Space / 클릭'); note('#g-note','오른쪽 상태 머신은 react.c 의 라운드 흐름과 같습니다. 부정 출발도 일부러 해 보세요.'); };
+  $('#g-reset').onclick();
+
+  /* ───────── 8 커널 타임스탬프 vs 깨어난 시각 ───────── */
+  const K={rows:[]}; const TRUE=220;
+  function wakeLat(load){ // ms
+    if(load===0) return 0.04+Math.random()*0.12;
+    if(load===2) return 0.05+Math.random()*0.4;
+    if(load===4) return Math.random()<0.6?0.1+Math.random()*1.5:2+Math.random()*6;
+    return Math.random()<0.4?0.5+Math.random()*3:4+Math.random()*26; }
+  function kOne(){ const load=+$('#k-load').value; const kts=TRUE+0.004+Math.random()*0.006; const wl=wakeLat(load); K.rows.push({load,k:kts,u:TRUE+wl}); if(K.rows.length>30) K.rows.shift(); kDraw(); }
+  function kDraw(){ const S=$('#k-svg'); S.innerHTML=''; const X=v=>140+(v-215)/(250-215)*720;
+    [215,220,225,230,240,250].forEach(v=>{ S.appendChild(el('line',{x1:X(v),y1:20,x2:X(v),y2:190,stroke:'#EEF1F5'})); S.appendChild(el('text',{x:X(v),y:208,'font-size':10,'text-anchor':'middle'},v+' ms')); });
+    S.appendChild(el('line',{x1:X(TRUE),y1:16,x2:X(TRUE),y2:194,stroke:'#1B2A41','stroke-width':1.5,'stroke-dasharray':'4 3'})); S.appendChild(el('text',{x:X(TRUE)+4,y:14,'font-size':10,fill:'#1B2A41'},'실제 반응 220 ms'));
+    S.appendChild(el('text',{x:8,y:70,'font-size':12,'font-weight':600,fill:'#178A67'},'커널 타임스탬프')); S.appendChild(el('text',{x:8,y:150,'font-size':12,'font-weight':600,fill:'#D6452E'},'깨어난 뒤 now_ns()'));
+    K.rows.forEach((r,i)=>{ const j=(i%6)*4; S.appendChild(el('circle',{cx:X(Math.min(r.k,250)),cy:56+j,r:4,fill:'#178A67',opacity:.8})); S.appendChild(el('circle',{cx:X(Math.min(r.u,250)),cy:136+j,r:4,fill:r.u>250?'#7A1F12':'#D6452E',opacity:.8})); });
+    const st=a=>{ if(!a.length) return ['–','–']; const m=a.reduce((x,y)=>x+y,0)/a.length; const sd=Math.sqrt(a.reduce((x,y)=>x+(y-m)*(y-m),0)/a.length); return [(m).toFixed(2)+' ms',sd.toFixed(2)+' ms']; };
+    const [km,ks]=st(K.rows.map(r=>r.k)), [um,us]=st(K.rows.map(r=>r.u)); const maxU=K.rows.length?Math.max(...K.rows.map(r=>r.u)).toFixed(1)+' ms':'–';
+    $('#k-tab').innerHTML=`<tr><th>방법</th><th>평균</th><th>표준편차</th><th>최대</th><th>코드</th></tr><tr class="hot"><td>커널 타임스탬프</td><td>${km}</td><td>${ks}</td><td>${K.rows.length?Math.max(...K.rows.map(r=>r.k)).toFixed(2)+' ms':'–'}</td><td>gpiod_edge_event_get_timestamp_ns(ev)</td></tr><tr><td>깨어난 뒤 시각</td><td>${um}</td><td>${us}</td><td>${maxU}</td><td>now_ns()  /* poll 이 돌아온 직후 */</td></tr>`;
+    const load=+$('#k-load').value;
+    if(!K.rows.length) note('#k-note','부하 없음에서 몇 번 측정한 뒤, 부하를 올려 다시 측정해 보세요.');
+    else if(load>=4) note('#k-note','부하가 크면 프로세스가 poll 에서 깨어나 CPU 를 받기까지 <b>수 ms ~ 수십 ms</b> 기다립니다. 깨어난 뒤 잰 시각은 그만큼 늦고 들쭉날쭉합니다. 커널 타임스탬프는 <b>인터럽트를 받은 순간</b> 찍히므로 그대로입니다. react.c 가 타임스탬프를 쓰는 이유입니다. (값은 수업용 모의 수치 — 실제 보드에서 8-4 로 확인)','warn');
+    else note('#k-note','부하가 없으면 둘의 차이는 0.1 ms 안팎으로 작습니다. 이제 부하를 올려 보세요.','ok'); }
+  $('#k-one').onclick=kOne; $('#k-ten').onclick=()=>{ for(let i=0;i<10;i++) kOne(); }; $('#k-clr').onclick=()=>{ K.rows=[]; kDraw(); };
+  $('#k-load').addEventListener('change',kDraw); kDraw();
+})();
+</script>
+</body>
+</html>
