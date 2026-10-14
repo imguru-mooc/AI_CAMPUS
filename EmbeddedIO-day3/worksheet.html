@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Embedded I/O 제어 Day 3 개념 워크시트 — PWM · 모터 · 타이밍</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:900px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.primary{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700;padding:9px 18px;font-size:14px}
+  button.submit{background:#3a2e12;border-color:var(--amber);color:var(--amber);font-weight:700;padding:9px 18px;font-size:14px}
+  button:disabled{opacity:.45;cursor:default}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  input[type=text]{background:#0a0f1c;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:14px}
+  .tabs{display:flex;flex-wrap:wrap;gap:6px}
+  .tabs button .s{font-family:var(--mono);font-size:11px;color:var(--dim);margin-left:6px}
+  .tabs button.graded .s{color:var(--green)}
+  .head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .head .t{color:var(--amber);font-size:17px}
+  .head .a{font-size:13px;color:var(--teal);font-family:var(--mono)}
+  .q{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#0e1628}
+  .q.unans{border-color:#5a3a1a}
+  .q .n{font-family:var(--mono);color:var(--dim);font-size:12px}
+  .q .p{margin:4px 0 10px;font-size:15px}
+  .q .p code,.opt code,.fb code,td code{font-family:var(--mono);color:var(--blue);background:#0a0f1c;padding:1px 5px;border-radius:4px}
+  .q pre.qc{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:6px;padding:10px 12px;margin:4px 0 12px;font-size:13.5px;line-height:1.5;white-space:pre;overflow-x:auto;color:#dbe4f3}
+  .q pre{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin:6px 0 10px;font-size:14px;white-space:pre;overflow-x:auto}
+  .opts{display:grid;gap:6px}
+  .opt{text-align:left;padding:8px 12px;font-size:14px;font-family:inherit}
+  .opt.sel{border-color:var(--amber);background:#1f1a0c}
+  .opt.ok{border-color:var(--green);color:var(--green);background:#0d2216}
+  .opt.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .opt:disabled{cursor:default;opacity:.9}
+  .fb{margin-top:8px;font-size:13px;color:var(--dim);border-left:3px solid var(--line);padding-left:10px}
+  .fb.ok{border-left-color:var(--green)}.fb.bad{border-left-color:var(--red)}
+  .fb .anim{color:var(--teal);font-family:var(--mono);font-size:12px;display:block;margin-top:3px}
+  .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  .code{font-family:var(--mono);font-size:20px;color:var(--amber);letter-spacing:1px}
+  .score{font-family:var(--mono);color:var(--green);font-size:16px}
+  .hint{color:var(--dim);font-size:13px}
+  details{color:var(--dim);font-size:13px}
+  details summary{cursor:pointer;color:var(--dim)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  /* dialog */
+  dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:0;max-width:820px;width:92vw;max-height:88vh}
+  dialog::backdrop{background:#000a}
+  .dg{padding:18px 20px}
+  .dg h3{color:var(--amber);margin:0 0 4px;font-size:20px}
+  .dg .meta{color:var(--dim);font-size:13px;margin-bottom:12px;font-family:var(--mono)}
+  .dg .sec{margin:14px 0 6px;color:var(--teal);font-weight:700;font-size:14px}
+  .dg table{width:100%;border-collapse:collapse;font-size:13px}
+  .dg th{text-align:left;color:var(--dim);font-weight:600;padding:5px 8px;border-bottom:1px solid var(--line);font-size:12px}
+  .dg td{padding:5px 8px;border-bottom:1px solid #16203a;vertical-align:top}
+  .dg td.r{font-family:var(--mono)}
+  .dg .ok{color:var(--green)}.dg .bad{color:var(--red)}.dg .none{color:var(--dim)}
+  .dg .sum{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0;font-family:var(--mono)}
+  .dgbar{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:10px 20px;display:flex;gap:8px;justify-content:flex-end;align-items:center}
+  .toast{color:var(--green);font-size:13px;margin-right:auto}
+  .body{overflow:auto;max-height:calc(88vh - 60px)}
+
+.q .n .ty{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600;font-family:inherit}
+.ty-mc{background:#1b2a4a;color:var(--blue)} .ty-ox{background:#2a2410;color:var(--amber)} .ty-match{background:#13302c;color:var(--teal)}
+.ty-order{background:#2a1a3a;color:var(--purple)} .ty-multi{background:#2a1616;color:#fca5a5}
+.oxrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:360px}
+.oxrow .opt{text-align:center;font-size:22px;font-weight:700;padding:10px}
+.reflist{display:grid;gap:4px;margin:2px 0 10px;padding:8px 12px;border:1px dashed var(--line);border-radius:8px;font-size:14px;color:var(--text)}
+.reflist b{color:var(--teal);font-family:var(--mono);margin-right:6px}
+.mrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
+.mrow:first-of-type{border-top:0}
+.mrow .l{font-size:14px} .mrow .l b{font-family:var(--mono);color:var(--dim);margin-right:6px}
+.mrow select{width:100%;background:#0a0f1c;color:var(--text);border:1px solid #2a3a5c;border-radius:6px;padding:6px 8px;font:inherit;font-size:13.5px}
+.mrow select.ok{border-color:var(--green);color:var(--green)} .mrow select.bad{border-color:var(--red);color:var(--red)}
+.steps{display:grid;gap:6px}
+.step{display:flex;gap:10px;align-items:center;text-align:left;padding:8px 12px;font-size:14px}
+.step .badge{flex:none;width:26px;height:26px;border-radius:50%;border:1px solid #2a3a5c;display:grid;place-items:center;font-family:var(--mono);font-size:13px;color:var(--dim)}
+.step.on{border-color:var(--purple)} .step.on .badge{background:var(--purple);border-color:var(--purple);color:#0b1220;font-weight:700}
+.step.ok{border-color:var(--green)} .step.ok .badge{background:var(--green);color:#0b1220;border-color:var(--green)}
+.step.bad{border-color:var(--red)} .step.bad .badge{background:var(--red);color:#0b1220;border-color:var(--red)}
+.seqbar{display:flex;gap:10px;align-items:center;margin-top:8px;font-family:var(--mono);font-size:13px;color:var(--dim)}
+.seqbar button{padding:4px 10px;font-size:12px}
+.multi .opt::before{content:"☐ ";color:var(--dim)} .multi .opt.sel::before{content:"☑ ";color:var(--amber)}
+.multi .opt.ok::before{content:"☑ ";color:var(--green)} .multi .opt.miss::before{content:"☐ ";color:var(--green)}
+.multi .opt.miss{border-color:var(--green);border-style:dashed}
+.typeinfo{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Embedded I/O 제어 Day 3 개념 워크시트</h1>
+  <p class="sub">PWM · 모터 · 타이밍 — 소프트웨어 PWM · jitter · SCHED_FIFO · sysfs 하드웨어 PWM · 서보 · 패시브 부저 · L293D · 릴레이 · 스테퍼 · HC-SR04 · 거리 경보기 · 8교시 × 10문항 (객관식 5 · OX 2 · 선잇기 1 · 순서 맞추기 1 · 모두 고르기 1). 🎬 표시는 animation.html 의 애니메이션 번호입니다. 선잇기는 드롭다운으로, 순서 맞추기는 단계를 일어나는 순서대로 눌러서, 모두 고르기는 여러 개를 눌러서 답합니다. 답을 고른 뒤 아래 <b style="color:var(--teal)">채점하기</b>를 누르면 정오·해설과 결과 코드가 나타납니다. 채점 전에는 답을 바꿀 수 있고, 채점 후에는 잠깁니다. 모든 교시를 마치면 <b style="color:var(--amber)">제출</b>로 오답 정리를 열고, <b>캡처</b>로 복사해 노션에 붙여 넣으세요.</p>
+
+  <div class="panel">
+    <div class="row"><label style="color:var(--dim);font-size:13px">이름 <input type="text" id="name" placeholder="홍길동"></label><span class="hint">이름은 결과 코드 계산에만 쓰이며 저장되지 않습니다.</span></div>
+  </div>
+  <div class="panel"><h2>교시</h2><div class="tabs" id="tabs"></div></div>
+  <div class="panel" id="sheet"></div>
+  <div class="panel">
+    <div class="actions">
+      <button class="primary" id="gradeBtn">채점하기</button>
+      <span class="code" id="rcode">—</span><span class="score" id="rscore"></span><span class="hint" id="rhint"></span>
+      <button class="submit" id="submitBtn" style="margin-left:auto">제출</button>
+    </div>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <div class="body"><div class="dg" id="dgBody"></div></div>
+  <div class="dgbar"><span class="toast" id="toast"></span><button id="captureBtn" class="primary">📋 캡처 (노션용 복사)</button><button id="closeBtn">닫기</button></div>
+</dialog>
+
+<script>
+const $=s=>document.querySelector(s);
+const Q=[{"t": "1교시 · 소프트웨어 PWM 과 jitter", "anim": "D3-1 부하와 흔들리는 파형", "qs": [{"ty": "mc", "p": "주기 5 ms, 듀티 20% 인 PWM 의 주파수와 켜짐 시간으로 알맞은 것은 무엇입니까?", "o": ["200 Hz, 4 ms", "200 Hz, 1 ms", "20 Hz, 1 ms", "500 Hz, 0.2 ms"], "w": "주파수 = 1 / 5 ms = 200 Hz, 켜짐 = 5 ms × 20% = 1 ms 입니다.", "an": "1교시 1-1", "a": 1}, {"ty": "mc", "p": "usleep(on); usleep(off); 를 반복하는 소프트웨어 PWM 의 문제로 알맞은 것은 무엇입니까?", "o": ["듀티를 0% 나 100% 로 만들 수 없다", "root 권한이 없으면 실행되지 않는다", "GPIO17 이외의 핀에서는 쓸 수 없다", "깨어나는 지연이 매 주기 더해져 쌓인다"], "w": "상대 시간으로 자면 늦은 만큼 다음 주기도 밀려 오차가 누적됩니다.", "an": "1교시 1-2 표", "a": 3}, {"ty": "mc", "p": "아래 코드에서 next 를 갱신하는 방법이 절대 시각 방식인 이유는 무엇입니까?", "o": ["\"지금\" 이 아니라 이전 목표에 주기를 더하므로", "CLOCK_REALTIME 을 쓰기 때문에", "next 가 전역 변수이기 때문에", "주기를 µs 대신 ns 로 쓰기 때문에"], "w": "다음 목표 = 이전 목표 + PERIOD. 한 번 늦게 깨어나도 다음 목표 시각은 밀리지 않습니다.", "an": "D3-1 · 잠들기", "c": "ts_add(&next, PERIOD_NS);\nclock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next, NULL);", "a": 0}, {"ty": "mc", "p": "yes 4개로 부하를 건 뒤 01_swpwm 의 히스토그램에서 가장 크게 변하는 것은 무엇입니까?", "o": ["평균 주파수가 절반으로 떨어진다", "듀티 값이 자동으로 바뀐다", "GPIO17 요청이 busy 로 실패한다", "1 ms 이상 늦게 깨어난 횟수가 늘어난다"], "w": "스케줄링 지연으로 꼬리(≥1ms)가 크게 늘어납니다. 절대 시각이라 평균 주파수는 유지됩니다.", "an": "1교시 1-4", "a": 3}, {"ty": "mc", "p": "PWM 품질을 판단할 때 jitter 의 평균보다 최대값을 봐야 하는 이유는 무엇입니까?", "o": ["최대값이 평균보다 항상 정확하게 측정되므로", "평균은 커널이 따로 계산해 주지 않으므로", "최대값이 작을수록 CPU 를 덜 쓰기 때문에", "한 번의 큰 지연이 눈에 보이는 깜빡임이 되므로"], "w": "켜짐 1 ms 인데 한 번 5 ms 늦으면 그 주기는 완전히 틀어집니다. 드문 큰 지연이 품질을 결정합니다.", "an": "D3-1 · 히스토그램", "a": 3}, {"ty": "ox", "p": "clock_nanosleep 에 TIMER_ABSTIME 을 주면 부하가 있어도 깨어나는 지연이 0 이 된다.", "a": false, "w": "누적 오차는 막지만 개별 지연(jitter)은 그대로 생깁니다.", "an": "1교시 1-4"}, {"ty": "ox", "p": "부하 실험이 끝나면 killall yes 로 부하 프로세스를 정리해야 한다.", "a": true, "w": "그대로 두면 다음 실습 측정이 모두 부하 상태가 됩니다.", "an": "1교시 1-4"}, {"ty": "match", "p": "jitter 원인과 설명을 이으세요.", "left": ["스케줄링 지연", "페이지 폴트", "타이머 해상도", "상대 시간 sleep"], "right": ["처음 쓰는 메모리를 준비하느라 멈춤", "깨우는 신호 자체가 늦음", "지연이 다음 주기에 누적됨", "다른 프로세스와 CPU 를 나눠 씀"], "a": [3, 0, 1, 2], "w": "1-4 표와 1-2 비교 표의 내용입니다.", "an": "1교시 1-2 · 1-4"}, {"ty": "order", "p": "01_swpwm.c 의 한 주기 순서대로 놓으세요.", "steps": ["끌 시각까지 절대 시각으로 잔다", "LED 를 끈다", "LED 를 켠다", "next 에 주기를 더하고 잔다", "끌 시각 = next + on_ns 계산"], "a": [2, 4, 0, 1, 3], "w": "켜기 → 끌 시각 계산 → 대기 → 끄기 → 다음 주기 대기입니다.", "an": "1교시 1-1 빈칸"}, {"ty": "multi", "p": "1교시에서 확인한 사실을 모두 고르세요.", "o": ["GPIO 는 0 V 아니면 3.3 V 만 낸다", "듀티가 클수록 LED 가 밝아 보인다", "부하가 커지면 깜빡임이 생긴다", "소프트웨어 PWM 은 GPIO18 에서만 된다"], "a": [0, 1, 2], "w": "소프트웨어 PWM 은 아무 GPIO 에서나 됩니다. 핀이 정해진 것은 하드웨어 PWM 입니다.", "an": "1교시 1-1 · 1-4"}]}, {"t": "2교시 · RGB LED 와 실시간 우선순위", "anim": "D3-2 색 섞기와 SCHED_FIFO", "qs": [{"ty": "mc", "p": "02_rgb.c 가 R · G · B 세 채널을 쓰레드 하나로 처리하는 이유는 무엇입니까?", "o": ["쓰레드는 프로세스당 하나만 만들 수 있어서", "세 핀을 따로 요청할 수 없어서", "주기가 같아 깨어나는 횟수를 줄일 수 있어서", "SCHED_FIFO 는 쓰레드 하나만 허용해서"], "w": "같은 주기의 시작에 셋을 함께 켜고, 끌 시각 순서대로 끄면 한 쓰레드로 충분합니다.", "an": "2교시 2-2", "a": 2}, {"ty": "mc", "p": "R=80, G=30, B=10 (주기 10 ms) 일 때 02_rgb 가 LED 를 끄는 순서는 무엇입니까?", "o": ["R → G → B", "G → B → R", "B → G → R", "세 개를 동시에 끈다"], "w": "듀티가 짧은 채널부터 끕니다: B 1 ms → G 3 ms → R 8 ms.", "an": "D3-2 · 끄는 순서", "a": 2}, {"ty": "mc", "p": "아래 설정에서 마지막 줄을 빼면 어떻게 됩니까?", "o": ["쓰레드 생성이 권한과 관계없이 항상 실패한다", "FIFO 설정이 무시되고 부모 정책을 물려받는다", "우선순위가 자동으로 최고값 99 가 된다", "mlockall 로 고정한 메모리도 함께 풀린다"], "w": "EXPLICIT_SCHED 가 없으면 attr 의 정책 · 우선순위가 무시됩니다.", "an": "2교시 2-3 표", "c": "pthread_attr_setschedpolicy(&at, SCHED_FIFO);\npthread_attr_setschedparam(&at, &sp);\npthread_attr_setinheritsched(&at, PTHREAD_EXPLICIT_SCHED);", "a": 1}, {"ty": "mc", "p": "일반 사용자로 ./02_rgb -f 를 실행했더니 \"pthread_create: Operation not permitted\" 가 났습니다. 알맞은 해결은 무엇입니까?", "o": ["sudo setcap cap_sys_nice,cap_ipc_lock+ep ./02_rgb", "sudo chmod 4777 ./02_rgb && ./02_rgb -f", "sudo usermod -aG gpio,video,input,audio,render $USER", "sudo raspi-config nonint do_realtime_sched 0"], "w": "실행 파일 하나에 실시간 우선순위(cap_sys_nice)와 메모리 고정(cap_ipc_lock) 권한만 줍니다.", "an": "D3-2 · setcap 없이", "a": 0}, {"ty": "mc", "p": "mlockall(MCL_CURRENT | MCL_FUTURE) 가 jitter 를 줄이는 이유는 무엇입니까?", "o": ["쓰레드의 우선순위를 가장 높은 값으로 올려서", "CPU 클럭을 최대 주파수로 고정해 두어서", "다른 프로세스가 쓰던 메모리를 빼앗아 와서", "메모리를 RAM 에 고정해 페이지 폴트를 막아서"], "w": "페이지 폴트가 생기면 커널이 페이지를 준비하는 동안 쓰레드가 멈춥니다.", "an": "2교시 2-3 표", "a": 3}, {"ty": "ox", "p": "SCHED_FIFO 쓰레드는 깨어나면 SCHED_OTHER 프로세스보다 먼저 CPU 를 받는다.", "a": true, "w": "실시간 정책은 일반 정책보다 항상 우선합니다.", "an": "2교시 2-3 표"}, {"ty": "ox", "p": "make 로 다시 빌드해도 setcap 으로 준 권한은 실행 파일에 그대로 남는다.", "a": false, "w": "새 파일이 만들어지면 권한이 사라지므로 빌드 후 다시 setcap 합니다.", "an": "D3-2 · setcap 없이"}, {"ty": "match", "p": "호출과 하는 일을 이으세요.", "left": ["pthread_attr_setschedpolicy", "pthread_attr_setschedparam", "pthread_attr_setinheritsched", "mlockall"], "right": ["우선순위 숫자 지정", "메모리를 RAM 에 고정", "정책을 FIFO 로", "attr 설정을 실제로 적용하게 함"], "a": [2, 0, 3, 1], "w": "2-3 표의 네 줄입니다.", "an": "2교시 2-3 표"}, {"ty": "order", "p": "2-4 비교 실험 순서대로 놓으세요.", "steps": ["killall yes 로 정리", "./01_swpwm 20 -f 로 FIFO 측정", "yes × 4 로 부하 걸기", "setcap 으로 01_swpwm 에 권한 주기", "./01_swpwm 20 으로 기본 정책 측정"], "a": [3, 2, 4, 1, 0], "w": "권한 → 부하 → 기본 측정 → FIFO 측정 → 정리입니다.", "an": "2교시 2-4"}, {"ty": "multi", "p": "SCHED_FIFO 를 쓸 때 주의할 점을 모두 고르세요.", "o": ["쓰레드가 잠들지 않고 돌면 다른 작업이 멈춘다", "권한(cap_sys_nice)이 필요하다", "sched_rt_runtime_us 가 시스템 완전 정지를 막아 준다", "우선순위가 높을수록 소비 전력이 줄어든다"], "a": [0, 1, 2], "w": "우선순위와 소비 전력은 관계가 없습니다.", "an": "2교시 2-3 · 2-4"}]}, {"t": "3교시 · 하드웨어 PWM", "anim": "D3-3 sysfs PWM 조작판", "qs": [{"ty": "mc", "p": "하드웨어 PWM 이 부하(yes × 4)에도 흔들리지 않는 이유는 무엇입니까?", "o": ["실시간 우선순위로 자동 실행되어서", "sysfs 가 커널 공간에서 더 빨라서", "GPIO18 이 다른 핀보다 전압이 높아서", "파형을 SoC 안의 PWM 회로가 만들어서"], "w": "한 번 period · duty 를 써 두면 CPU 와 관계없이 회로가 파형을 유지합니다.", "an": "3교시 3-1", "a": 3}, {"ty": "mc", "p": "1 kHz, 듀티 25% 를 sysfs 에 쓸 때 알맞은 값은 무엇입니까?", "o": ["period 1000000, duty_cycle 250000", "period 1000, duty_cycle 250", "period 1000000, duty_cycle 25", "period 1000, duty_cycle 250000"], "w": "sysfs PWM 값은 모두 ns 입니다. 1 kHz = 1 ms = 1 000 000 ns.", "an": "D3-3 · 파일 표", "a": 0}, {"ty": "mc", "p": "export 직후 아래 순서로 쓰면 어떤 일이 생깁니까?", "o": ["duty 를 쓸 때 Invalid argument 가 난다", "period 를 쓸 때 Permission denied 가 난다", "enable 을 쓸 때 Device busy 가 난다", "오류 없이 25% 파형이 나온다"], "w": "export 직후 period 는 0 이라 duty(250000) > period 가 되어 거절됩니다. period 를 먼저 씁니다.", "an": "D3-3 · duty 먼저", "c": "echo 0 > /sys/class/pwm/pwmchip0/export\necho 250000  > pwm0/duty_cycle\necho 1000000 > pwm0/period", "a": 0}, {"ty": "mc", "p": "지금 period 1000000 · duty 900000 입니다. 주기를 500000 으로 줄이려면 어떤 순서가 맞습니까?", "o": ["period 를 먼저 줄이고 duty 를 쓴다", "enable 을 0 으로 해야만 바꿀 수 있다", "duty 를 먼저 줄이고 period 를 쓴다", "unexport 후 다시 export 해야 한다"], "w": "주기를 줄일 때는 duty 먼저, 늘릴 때는 period 먼저 — 항상 duty ≤ period 를 지킵니다.", "an": "3교시 순서 함정", "a": 2}, {"ty": "mc", "p": "pwm_sysfs.h 의 pwm_open() 이 export 뒤 최대 1초 기다리는 이유는 무엇입니까?", "o": ["PWM 회로가 안정되도록 잠시 예열해야 해서", "커널이 period 기본값을 계산하는 데 걸려서", "udev 가 파일 권한을 바꾸는 데 시간이 걸려서", "같은 채널을 쓰던 프로세스가 끝나기를 기다려서"], "w": "export 직후 잠깐은 period 파일이 root 전용이라 Permission denied 가 날 수 있습니다.", "an": "3교시 3-3 표", "a": 2}, {"ty": "ox", "p": "pwm-2chan 오버레이를 쓰면 하드웨어 PWM 채널은 GPIO18 · GPIO19 두 개다.", "a": true, "w": "PWM0 = GPIO18, PWM1 = GPIO19 입니다.", "an": "3교시 3-1 표"}, {"ty": "ox", "p": "polarity 는 enable 이 1 인 동안에도 언제든 바꿀 수 있다.", "a": false, "w": "polarity 는 enable 이 0 일 때만 바꿀 수 있습니다.", "an": "3교시 3-3 표"}, {"ty": "match", "p": "sysfs 파일과 역할을 이으세요.", "left": ["export", "period", "duty_cycle", "enable"], "right": ["켜짐 시간 (ns)", "출력 시작 · 정지", "채널 디렉터리 만들기", "주기 (ns)"], "a": [2, 3, 0, 1], "w": "3-3 파일 표의 내용입니다.", "an": "3교시 3-3 표"}, {"ty": "order", "p": "셸로 GPIO18 에 파형을 내는 순서대로 놓으세요.", "steps": ["echo 1 > pwm0/enable", "echo 1000000 > pwm0/period", "echo 0 > export", "echo 250000 > pwm0/duty_cycle", "ls pwmchip0 로 pwm0 확인"], "a": [2, 4, 1, 3, 0], "w": "export → 확인 → period → duty → enable 입니다.", "an": "D3-3"}, {"ty": "multi", "p": "하드웨어 PWM 과 비교한 소프트웨어 PWM 의 특징을 모두 고르세요.", "o": ["아무 GPIO 핀에서나 만들 수 있다", "부하가 걸리면 깜빡인다", "주기마다 쓰레드가 깨어나야 한다", "파형이 칩의 카운터로 만들어진다"], "a": [0, 1, 2], "w": "칩의 카운터로 만드는 것은 하드웨어 PWM 입니다.", "an": "3교시 3-5 표"}]}, {"t": "4교시 · 서보와 패시브 부저", "anim": "D3-4 펄스 폭 → 각도, 주기 → 음정", "qs": [{"ty": "mc", "p": "SG90 서보를 90° 로 두려면 어떤 값을 써야 합니까? (주기 20 ms)", "o": ["duty_cycle 10000000", "period 1500000", "duty_cycle 1500000", "period 90000000"], "w": "1.5 ms = 1 500 000 ns 의 펄스 폭이 대략 90° 입니다. 주기는 20 ms 그대로입니다.", "an": "4교시 4-1 표", "a": 2}, {"ty": "mc", "p": "서보에서 정보를 싣는 값은 무엇입니까?", "o": ["주기 (period, 주파수)", "극성 (polarity)", "펄스 폭 (duty_cycle)", "켜기 · 끄기 (enable)"], "w": "서보는 50 Hz 주기를 고정하고 펄스 폭으로 각도를 정합니다.", "an": "4교시 4-5 비교 표", "a": 2}, {"ty": "mc", "p": "서보가 0° 끝에서 \"징—\" 소리를 내며 떨립니다. 알맞은 조치는 무엇입니까?", "o": ["주기를 10 ms 로 줄인다", "듀티를 50% 로 고정한다", "서보 전원을 3V3 으로 바꾼다", "최소 펄스 폭 보정값을 조금 올린다"], "w": "기계적 끝을 넘는 펄스입니다. 보정 인자로 최소 · 최대 펄스 폭을 맞춥니다.", "an": "D3-4 · 범위 밖", "a": 3}, {"ty": "mc", "p": "라(A4, 440 Hz) 를 낼 때 패시브 부저에 쓸 period 에 가장 가까운 값은 무엇입니까?", "o": ["440000 ns", "4400000 ns", "227272 ns", "2272727 ns"], "w": "period = 10⁹ / 440 ≈ 2 272 727 ns, duty 는 그 절반입니다.", "an": "4교시 4-4 표", "a": 3}, {"ty": "mc", "p": "아래 tone() 이 높은 음으로 바뀔 때 pwm_set() 이 duty 를 먼저 쓰는 이유는 무엇입니까?", "o": ["주기가 줄어들어 duty ≤ period 를 지키려고", "duty 를 먼저 써야 소리가 커져서", "period 는 enable 뒤에만 쓸 수 있어서", "duty 가 음 높이를 정하기 때문에"], "w": "높은 음 = 짧은 주기. 새 period 가 기존 duty 보다 작아질 수 있어 duty 를 먼저 줄입니다.", "an": "D3-4 · 부저", "c": "long period = 1000000000L / hz;\npwm_set(&g_p, period, period / 2);", "a": 0}, {"ty": "ox", "p": "액티브 부저는 주파수를 주지 않아도 전원만으로 소리가 나지만, 패시브 부저는 PWM 주파수가 있어야 소리가 난다.", "a": true, "w": "패시브 부저는 내부 발진 회로가 없습니다.", "an": "4교시 4-4"}, {"ty": "ox", "p": "높은 도(523 Hz) 의 period 는 낮은 도(262 Hz) 의 period 의 약 두 배다.", "a": false, "w": "주파수가 두 배이므로 주기는 약 절반입니다.", "an": "D3-4 · 부저"}, {"ty": "match", "p": "부품과 고정 · 변경 값을 이으세요.", "left": ["서보 — 고정", "서보 — 변경", "부저 — 고정", "부저 — 변경"], "right": ["duty 50%", "period (주파수)", "period 20 ms", "duty_cycle (펄스 폭)"], "a": [2, 3, 0, 1], "w": "4-5 비교 표 그대로입니다.", "an": "4교시 4-5 비교 표"}, {"ty": "order", "p": "05_melody.c 가 한 음을 내는 순서대로 놓으세요.", "steps": ["다음 음으로", "ms 만큼 기다린다", "enable 0 으로 끊는다", "pwm_set(period, period/2)", "enable 1"], "a": [3, 4, 1, 2, 0], "w": "설정 → 켜기 → 길이만큼 대기 → 끄기(음 사이 구분) → 다음 음입니다.", "an": "4교시 4-5"}, {"ty": "multi", "p": "서보 실습에서 맞는 것을 모두 고르세요.", "o": ["서보 전원은 5V 에서 받는다", "신호선은 3.3V 로도 동작한다", "서보마다 끝점 펄스 폭이 조금씩 다르다", "펄스 폭이 클수록 회전 속도가 빨라진다"], "a": [0, 1, 2], "w": "취미용 서보에서 펄스 폭은 속도가 아니라 목표 각도입니다.", "an": "4교시 4-1 · 4-2"}]}, {"t": "5교시 · DC 모터와 릴레이", "anim": "D3-5 L293D 진리표", "qs": [{"ty": "mc", "p": "DC 모터를 GPIO 에 바로 연결하면 안 되는 가장 큰 이유는 무엇입니까?", "o": ["모터가 3.3V 에서는 반대로 돌아서", "모터 전류가 핀 허용 전류보다 훨씬 커서", "GPIO 는 PWM 을 낼 수 없어서", "모터 선이 너무 짧아서"], "w": "GPIO 는 핀당 16 mA 정도인데 모터는 수백 mA 를 씁니다. 역기전력 스파이크도 있습니다.", "an": "5교시 5-1 표", "a": 1}, {"ty": "mc", "p": "L293D 에서 IN1 = 1, IN2 = 1, EN = 1 일 때 모터는 어떻게 됩니까?", "o": ["브레이크 — 빠르게 멈춘다", "정회전한다", "역회전한다", "관성으로 천천히 멈춘다"], "w": "두 단자가 같은 전위로 묶여 회전 에너지가 코일에서 소모됩니다.", "an": "5교시 5-2 표", "a": 0}, {"ty": "mc", "p": "06_dcmotor.c 가 PWM 주기를 50 µs(20 kHz) 로 잡은 이유는 무엇입니까?", "o": ["모터가 20 kHz 근처에서만 회전하기 때문에", "서보와 같은 PWM 주기를 함께 쓰기 위해서", "L293D 가 그보다 느린 주기를 거절해서", "모터 소리를 들리지 않는 대역으로 올리려고"], "w": "수 kHz 이하의 PWM 은 모터 코일이 소리를 냅니다. 20 kHz 는 거의 들리지 않습니다.", "an": "5교시 5-4", "a": 3}, {"ty": "mc", "p": "회전 중에 아래 코드처럼 방향을 바로 바꾸면 생기는 문제는 무엇입니까?", "o": ["모터가 영구히 그 방향으로 고정된다", "EN 의 PWM 이 자동으로 꺼진다", "역기전력과 전원이 더해져 큰 전류가 흐른다", "GPIO20 요청이 busy 가 된다"], "w": "속도 0 → 브레이크 → 대기 → 반대 방향 순서로 바꿉니다.", "an": "D3-5 · 바로 역전", "c": "/* 정회전 중 */\nset IN1=0 IN2=1;   /* 곧바로 역회전 */", "a": 2}, {"ty": "mc", "p": "릴레이가 ON 일 때 COM 과 연결되는 단자는 무엇입니까?", "o": ["NC", "NO", "VCC", "IN"], "w": "NO(Normally Open) 는 평소 열려 있다가 릴레이가 ON 이면 COM 과 닫힙니다.", "an": "5교시 5-5 표", "a": 1}, {"ty": "ox", "p": "릴레이는 GPIO 쪽 회로와 접점 쪽 회로가 전기적으로 분리되어 있다.", "a": true, "w": "전자석이 기계 접점을 당기므로 두 회로가 분리됩니다.", "an": "5교시 5-5"}, {"ty": "ox", "p": "키트 릴레이 모듈은 수업 중 220V 상용 전원 장치를 켜는 데 써도 된다.", "a": false, "w": "오늘은 접점 쪽에 3V3 LED 회로만 연결합니다. 감전 위험이 있습니다.", "an": "5교시 5-5"}, {"ty": "match", "p": "IN1 · IN2 와 동작을 이으세요 (EN=1).", "left": ["1 · 0", "0 · 1", "1 · 1", "0 · 0"], "right": ["역회전", "자유 정지", "정회전", "브레이크"], "a": [2, 0, 3, 1], "w": "5-2 진리표입니다.", "an": "5교시 5-2 표"}, {"ty": "order", "p": "06_dcmotor.c 의 방향 전환(버튼 6) 순서대로 놓으세요.", "steps": ["속도 복구", "EN 듀티 0", "IN 을 반대 방향으로", "브레이크(11)", "잠깐 대기"], "a": [1, 3, 4, 2, 0], "w": "속도 0 → 브레이크 → 대기 → 반대 방향 → 속도 복구입니다.", "an": "D3-5 · 버튼 6"}, {"ty": "multi", "p": "모터 실습 중 전원이 부족하다는 신호를 모두 고르세요.", "o": ["모터가 돌 때 Pi 가 재부팅된다", "vcgencmd get_throttled 가 0x0 이 아니다", "PuTTY 연결이 끊긴다", "모터가 정회전만 한다"], "a": [0, 1, 2], "w": "정회전만 하는 것은 배선 · 코드 문제입니다. 전원 부족이면 바로 멈추고 강사에게 알립니다.", "an": "5교시 5-4 주의"}]}, {"t": "6교시 · 스테퍼 모터", "anim": "D3-6 코일 순서와 탈조", "qs": [{"ty": "mc", "p": "28BYJ-48 을 하프 스텝으로 90° 돌리려면 몇 스텝이 필요합니까? (1회전 4096)", "o": ["512", "1024", "2048", "90"], "w": "4096 × 90 / 360 = 1024 스텝입니다.", "an": "6교시 6-1 표", "a": 1}, {"ty": "mc", "p": "하프 스텝 순서표의 특징으로 알맞은 것은 무엇입니까?", "o": ["언제나 코일 4개를 모두 함께 켠다", "코일을 1개씩만 차례로 4단계로 켠다", "코일 1개 · 2개를 번갈아 켜 8단계로 돈다", "IN1 과 IN3 을 짝지어 항상 같이 켠다"], "w": "하나 → 둘 → 하나를 번갈아 켜서 풀 스텝보다 두 배 세밀합니다.", "an": "6교시 6-2", "a": 2}, {"ty": "mc", "p": "아래 코드에서 + 8 을 하는 이유는 무엇입니까?", "o": ["한 번에 8스텝씩 건너뛰며 빨리 돌려고", "dir 이 −1 일 때 음수가 되지 않게", "4096 스텝을 8 로 나눠 각도를 구하려고", "코일 8개를 차례대로 하나씩 켜려고"], "w": "idx 0 에서 dir −1 이면 −1 이 되므로 + 8 후 % 8 로 7 이 되게 합니다.", "an": "6교시 빈칸", "c": "phase = (phase + dir + 8) % 8;", "a": 1}, {"ty": "mc", "p": "스텝 간격을 1.0 ms 로 줄였더니 모터가 떨기만 하고 돌지 않습니다. 이 현상은 무엇입니까?", "o": ["역기전력", "탈조", "채터링", "브라운아웃"], "w": "자기장이 너무 빨리 돌아 회전자가 따라오지 못하는 상태입니다.", "an": "D3-6 · 탈조", "a": 1}, {"ty": "mc", "p": "탈조를 막는 사다리꼴 가감속의 동작으로 알맞은 것은 무엇입니까?", "o": ["천천히 출발해 빨라졌다가 천천히 멈춘다", "처음부터 가장 빠른 간격으로 돈다", "스텝마다 방향을 번갈아 바꾼다", "멈출 때 코일을 모두 켠 채로 둔다"], "w": "08_stepper.c 는 4 ms 에서 시작해 램프 구간 동안 목표 간격까지 줄이고 끝에서 다시 늘립니다.", "an": "6교시 6-4", "a": 0}, {"ty": "ox", "p": "스테퍼 모터는 탈조가 생겨도 프로그램이 스스로 알아챌 수 있다.", "a": false, "w": "위치 센서가 없어 명령한 스텝 수만 압니다.", "an": "D3-6 · 탈조"}, {"ty": "ox", "p": "회전이 끝나면 코일을 모두 끄는 것이 좋다.", "a": true, "w": "켜 둔 채면 모터가 뜨거워지고 전류를 계속 씁니다.", "an": "6교시 6-4 표"}, {"ty": "match", "p": "부품과 역할을 이으세요.", "left": ["28BYJ-48", "ULN2003", "기어 1:64", "IN1~IN4"], "right": ["코일 전류를 켜는 트랜지스터 4개", "4상 5V 스테퍼 모터", "한 스텝 각도를 아주 작게 만듦", "GPIO12 · 16 · 20 · 21 에서 오는 신호"], "a": [1, 0, 2, 3], "w": "6-1 표와 6-3 배선입니다.", "an": "6교시 6-1 · 6-3"}, {"ty": "order", "p": "하프 스텝 정방향 0 → 4 단계의 코일 상태를 순서대로 놓으세요.", "steps": ["IN2", "IN1", "IN2 · IN3", "IN1 · IN2", "IN3"], "a": [1, 3, 0, 2, 4], "w": "1000 → 1100 → 0100 → 0110 → 0010 입니다.", "an": "6교시 6-2 표"}, {"ty": "multi", "p": "08_stepper.c 에서 지키는 것을 모두 고르세요.", "o": ["코일 4개 값을 한 번에 바꾼다", "절대 시각으로 스텝 간격을 유지한다", "다 돌면 코일을 끈다", "스텝마다 GPIO 를 새로 요청한다"], "a": [0, 1, 2], "w": "라인은 처음에 한 번 요청하고 set_values 로 한 번에 바꿉니다.", "an": "6교시 6-4 표"}]}, {"t": "7교시 · 초음파 거리 측정", "anim": "D3-7 Echo 폭과 분압", "qs": [{"ty": "mc", "p": "Echo 가 HIGH 였던 시간이 2900 µs 입니다. 거리는 약 몇 cm 입니까?", "o": ["약 100 cm", "약 50 cm", "약 29 cm", "약 10 cm"], "w": "2900 × 0.0343 / 2 ≈ 49.7 cm 입니다.", "an": "7교시 7-1 표", "a": 1}, {"ty": "mc", "p": "거리 공식에서 2 로 나누는 이유는 무엇입니까?", "o": ["소리가 물체까지 갔다가 돌아오므로", "Trig 와 Echo 두 핀을 쓰므로", "µs 를 ms 로 바꾸려고", "센서가 초음파를 두 번 쏘므로"], "w": "Echo 폭은 왕복 시간이므로 편도 거리는 절반입니다.", "an": "D3-7", "a": 0}, {"ty": "mc", "p": "Echo(5V) 를 GPIO24 로 받을 때 알맞은 분압은 무엇입니까?", "o": ["Echo 쪽 2 kΩ, GND 쪽 1 kΩ", "Echo 쪽 220 Ω, GND 쪽 없음", "저항 없이 직결", "Echo 쪽 1 kΩ, GND 쪽 2 kΩ"], "w": "5 × 2 / (1 + 2) ≈ 3.33 V 입니다. 반대로 꽂으면 1.67 V 로 HIGH 를 놓칠 수 있습니다.", "an": "7교시 7-2", "a": 3}, {"ty": "mc", "p": "Echo 폭을 get_value 로 읽으며 now_ns() 로 재면 안 되는 이유는 무엇입니까?", "o": ["get_value 로는 5V 신호인 Echo 를 읽을 수 없어서", "now_ns() 는 µs 보다 작은 단위를 지원하지 않아서", "읽기 간격과 스케줄링 지연이 큰 오차가 되어서", "Echo 가 HIGH 인 동안에는 GPIO 값이 잠겨서"], "w": "1 cm = 약 58 µs 입니다. 커널 이벤트 타임스탬프 차이로 재면 µs 수준으로 정확합니다.", "an": "7교시 7-3 표", "a": 2}, {"ty": "mc", "p": "5번 잰 값이 아래와 같을 때 09_sonar 의 출력은 무엇입니까?", "o": ["32.9 cm", "4.8 cm", "40.0 cm", "39.8 cm"], "w": "정렬하면 [4.8, 39.8, 40.0, 40.0, 40.0] 이고 가운데(index 2) 는 40.0 입니다. 평균이었다면 튀는 값 4.8 에 끌려 32.9 가 됩니다.", "an": "D3-7 · 중앙값", "c": "[40.0, 40.0, 4.8, 39.8, 40.0]", "a": 2}, {"ty": "ox", "p": "측정과 측정 사이에 60 ms 정도 쉬는 것은 이전 메아리가 다음 측정에 섞이지 않게 하려는 것이다.", "a": true, "w": "센서 데이터시트 권장 간격입니다.", "an": "7교시 7-4 표"}, {"ty": "ox", "p": "물체가 너무 멀어 반사가 안 돌아오면 Echo 는 영원히 HIGH 로 남는다.", "a": false, "w": "센서가 약 38 ms 뒤 스스로 내립니다. 09_sonar 는 60 ms 마감도 둡니다.", "an": "7교시 7-1 표"}, {"ty": "match", "p": "09_sonar.c 의 장치와 이유를 이으세요.", "left": ["측정 전 이벤트 버리기", "60 ms 마감", "5회 중앙값", "10 µs Trig 펄스"], "right": ["측정 시작 신호", "물체가 없을 때 무한 대기 방지", "튀는 값 하나에 흔들리지 않음", "지난 측정의 늦은 메아리 제거"], "a": [3, 1, 2, 0], "w": "7-4 표와 7-1 동작입니다.", "an": "7교시 7-1 · 7-4"}, {"ty": "order", "p": "HC-SR04 한 번 측정의 순서대로 놓으세요.", "steps": ["반사파가 오면 Echo 를 LOW 로", "Trig 에 10 µs HIGH", "falling − rising 시간으로 거리 계산", "40 kHz 8번 발사 후 Echo 를 HIGH 로", "물체에 반사"], "a": [1, 3, 4, 0, 2], "w": "Trig → 발사 · Echo HIGH → 반사 → Echo LOW → 계산입니다.", "an": "7교시 7-1"}, {"ty": "multi", "p": "분압 저항으로 쓸 수 있는 조합을 모두 고르세요. (Echo 쪽 : GND 쪽)", "o": ["1 kΩ : 2 kΩ", "10 kΩ : 20 kΩ", "1 kΩ : 1 kΩ + 1 kΩ (직렬)", "2 kΩ : 1 kΩ"], "a": [0, 1, 2], "w": "1 : 2 비율이면 약 3.3 V 가 됩니다. 2 : 1 은 1.67 V 로 너무 낮습니다.", "an": "7교시 7-2"}]}, {"t": "8교시 · 미니 프로젝트 — 거리 경보기", "anim": "D3-8 경보기 시뮬레이터", "qs": [{"ty": "mc", "p": "거리 30 cm 일 때 alarm.c 의 LED 와 부저는 어떻게 동작합니까?", "o": ["노랑, 300 ms 마다 삑", "빨강, 연속음", "초록, 조용", "노랑, 30 ms 마다 삑"], "w": "20~50 cm 는 노랑, 간격 = 거리 × 10 ms = 300 ms 입니다.", "an": "8교시 8-1 표", "a": 0}, {"ty": "mc", "p": "거리 8 cm 일 때 서보 차단기의 각도는 무엇입니까?", "o": ["90° (올림)", "180°", "8°", "0° (내림)"], "w": "10 cm 미만이면 차단기를 내립니다(0°).", "an": "8교시 8-1 표", "a": 3}, {"ty": "mc", "p": "측정을 별도 쓰레드(sensor_thread)로 분리한 이유는 무엇입니까?", "o": ["쓰레드가 하나면 GPIO 를 요청할 수 없어서", "측정이 최대 60 ms 기다려 부저 박자가 끊기므로", "하드웨어 PWM 은 쓰레드에서만 쓸 수 있어서", "중앙값 계산이 메인 루프에서 불가능해서"], "w": "측정 대기가 출력 루프를 막지 않도록 나눕니다.", "an": "8교시 8-2", "a": 1}, {"ty": "mc", "p": "아래 코드에서 mutex 를 쓰는 이유는 무엇입니까?", "o": ["부저 PWM 을 보호하려고", "두 쓰레드가 g_cm 을 함께 읽고 써서", "LED 요청을 공유하려고", "sleep_ms 를 정확하게 하려고"], "w": "공유 변수는 짧게 잠그고 복사해서 씁니다 (Linux & Shell Day 3).", "an": "8교시 8-2", "c": "pthread_mutex_lock(&g_mx);\ndouble d = g_cm;\npthread_mutex_unlock(&g_mx);", "a": 1}, {"ty": "mc", "p": "부하(yes × 4)를 걸어도 부저 음정 · 서보 위치가 흔들리지 않는 이유는 무엇입니까?", "o": ["파형을 하드웨어 PWM 이 만들어서", "메인 루프가 SCHED_FIFO 라서", "mutex 가 CPU 를 예약해서", "중앙값 필터가 지연을 없애서"], "w": "파형은 칩이 만들고, 프로그램은 값이 바뀔 때만 sysfs 에 씁니다.", "an": "8교시 8-5 표", "a": 0}, {"ty": "ox", "p": "alarm.c 의 부저는 박자를 만들 때마다 period 를 새로 쓴다.", "a": false, "w": "2 kHz 주기는 처음 한 번만 쓰고, 박자는 enable 0/1 로 만듭니다.", "an": "D3-8"}, {"ty": "ox", "p": "부하 중에는 경보 반응이 조금 늦어질 수 있다.", "a": true, "w": "측정 쓰레드와 메인 루프는 여전히 일반 쓰레드입니다.", "an": "8교시 8-5 표"}, {"ty": "match", "p": "거리와 동작을 이으세요.", "left": ["80 cm", "35 cm", "15 cm", "5 cm"], "right": ["빨강 · 빠른 삑", "빨강 · 연속음 · 차단기 내림", "초록 · 조용", "노랑 · 350 ms 삑"], "a": [2, 3, 0, 1], "w": "8-1 규칙 표입니다.", "an": "8교시 8-1 표"}, {"ty": "order", "p": "alarm.c 메인 루프 한 바퀴의 순서대로 놓으세요.", "steps": ["20 ms 잔다", "LED 구간 정하기", "mutex 로 g_cm 복사", "서보 차단기 갱신", "부저 켜기 · 끄기 결정"], "a": [2, 1, 4, 3, 0], "w": "거리 복사 → LED → 부저 → 서보 → 대기입니다.", "an": "8교시 8-4"}, {"ty": "multi", "p": "도전 과제로 제시된 것을 모두 고르세요.", "o": ["15 cm 이상에서 다시 올리는 히스테리시스", "측정 쓰레드를 SCHED_FIFO 로", "버튼 A 로 무음 모드", "I2C 로 거리 센서 바꾸기"], "a": [0, 1, 2], "w": "I2C 는 Day 4 내용입니다.", "an": "8교시 8-6"}]}];
+
+const TYNAME={mc:'객관식',ox:'OX',match:'선잇기',order:'순서 맞추기',multi:'모두 고르기'};
+let tab=0;
+const ans=Q.map(s=>s.qs.map(q=>q.ty==='multi'?[]:(q.ty==='match'?q.left.map(()=>null):(q.ty==='order'?[]:null))));
+const graded=Q.map(()=>false);
+function hash(s){let h=5381;for(const c of s)h=((h<<5)+h+c.charCodeAt(0))>>>0;return h.toString(16).padStart(8,'0').slice(-4);}
+function codeFor(name,t,score){return `${t}${'ABCDEFGHIJK'[10-score]||'K'}-${hash(`${name.trim()}|${t}|${score}|eio-day3`)}`;}
+function strip(h){const d=document.createElement('div');d.innerHTML=h;return d.textContent;}
+const eqArr=(x,y)=>x.length===y.length&&x.every((v,i)=>v===y[i]);
+function answered(q,a){if(q.ty==='mc'||q.ty==='ox')return a!==null;if(q.ty==='multi')return a.length>0;if(q.ty==='match')return a.every(x=>x!==null);return a.length===q.steps.length;}
+function correct(q,a){if(!answered(q,a))return false;if(q.ty==='multi')return eqArr([...a].sort((x,y)=>x-y),q.a);if(q.ty==='match'||q.ty==='order')return eqArr(a,q.a);return a===q.a;}
+function scoreOf(i){return ans[i].filter((a,k)=>correct(Q[i].qs[k],a)).length;}
+function nAns(i){return ans[i].filter((a,k)=>answered(Q[i].qs[k],a)).length;}
+function txt(q,a){ /* 답을 문자열로 (오답 정리 · 해설용) */
+  if(!answered(q,a))return '미응답';
+  if(q.ty==='mc')return '①②③④'[a]+' '+strip(q.o[a]);
+  if(q.ty==='ox')return a?'O':'X';
+  if(q.ty==='multi')return [...a].sort((x,y)=>x-y).map(j=>'ABCDEFGH'[j]).join(', ');
+  if(q.ty==='match')return a.map((r,i)=>(i+1)+'-'+'ABCDEFGH'[r]).join(' · ');
+  return a.map(j=>'ABCDEFGH'[j]).join(' → ');}
+function renderTabs(){$('#tabs').innerHTML=Q.map((s,i)=>`<button class="${i===tab?'active':''} ${graded[i]?'graded':''}" data-i="${i}">${i+1}교시<span class="s">${graded[i]?scoreOf(i)+'/10':nAns(i)+'/10'}</span></button>`).join('');$('#tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{tab=+b.dataset.i;render();window.scrollTo({top:0});});}
+function body(q,k,a,g){
+  if(q.ty==='mc'){return `<div class="opts">${q.o.map((o,j)=>{let c='';if(g){if(j===q.a)c='ok';else if(j===a)c='bad';}else if(j===a)c='sel';return `<button class="opt ${c}" data-k="${k}" data-j="${j}" ${g?'disabled':''}>${'①②③④'[j]} ${o}</button>`;}).join('')}</div>`;}
+  if(q.ty==='ox'){return `<div class="oxrow">${[true,false].map(v=>{let c='';if(g){if(v===q.a)c='ok';else if(v===a)c='bad';}else if(v===a)c='sel';return `<button class="opt ${c}" data-k="${k}" data-v="${v?1:0}" ${g?'disabled':''}>${v?'O':'X'}</button>`;}).join('')}</div>`;}
+  if(q.ty==='multi'){return `<div class="opts multi">${q.o.map((o,j)=>{const on=a.includes(j),ri=q.a.includes(j);let c='';if(g){if(on&&ri)c='ok';else if(on&&!ri)c='bad';else if(!on&&ri)c='miss';}else if(on)c='sel';return `<button class="opt ${c}" data-k="${k}" data-m="${j}" ${g?'disabled':''}>${'ABCDEFGH'[j]}. ${o}</button>`;}).join('')}</div>`;}
+  if(q.ty==='match'){return `<div class="reflist">${q.right.map((r,j)=>`<div><b>${'ABCDEFGH'[j]}</b>${r}</div>`).join('')}</div>`+q.left.map((l,i)=>{let c='';if(g)c=a[i]===q.a[i]?'ok':'bad';return `<div class="mrow"><div class="l"><b>${i+1}.</b>${l}</div><select class="${c}" data-k="${k}" data-i="${i}" ${g?'disabled':''}><option value="">— 고르기 —</option>${q.right.map((r,j)=>`<option value="${j}" ${a[i]===j?'selected':''}>${'ABCDEFGH'[j]}. ${strip(r)}</option>`).join('')}</select></div>`;}).join('');}
+  /* order */
+  return `<div class="steps">${q.steps.map((s,j)=>{const pos=a.indexOf(j);let c=pos>=0?'on':'';if(g){c=(pos>=0&&a[pos]===q.a[pos])?'ok':'bad';}return `<button class="opt step ${c}" data-k="${k}" data-s="${j}" ${g?'disabled':''}><span class="badge">${pos>=0?pos+1:'ABCDEFGH'[j]}</span><span>${'ABCDEFGH'[j]}. ${s}</span></button>`;}).join('')}</div><div class="seqbar">순서: ${a.length?a.map(j=>'ABCDEFGH'[j]).join(' → '):'단계를 일어나는 순서대로 누르세요'}${g?'':` <button data-k="${k}" data-reset="1">다시</button>`}</div>`;
+}
+function render(){renderTabs();const s=Q[tab];const g=graded[tab];
+  $('#sheet').innerHTML=`<div class="head"><span class="t">${s.t}</span><span class="a">🎬 ${s.anim}</span></div>`+s.qs.map((q,k)=>{const a=ans[tab][k];const ok=correct(q,a);
+    return `<div class="q ${g&&!answered(q,a)?'unans':''}"><div class="n">문항 ${k+1}<span class="ty ty-${q.ty}">${TYNAME[q.ty]}</span></div><div class="p">${q.p}</div>${q.c?`<pre class="qc">${q.c}</pre>`:``}${body(q,k,a,g)}${g?`<div class="fb ${ok?'ok':'bad'}">${!answered(q,a)?'미응답. ':(ok?'정답. ':'오답. ')}${q.ty!=='mc'&&!ok?`<b>정답: ${txt(q,q.a)}</b> · `:''}${q.w}<span class="anim">확인: ${q.an}</span></div>`:''}</div>`;}).join('');
+  if(!g){
+    $('#sheet').querySelectorAll('[data-j]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,j=+b.dataset.j;ans[tab][k]=(ans[tab][k]===j?null:j);render();});
+    $('#sheet').querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,v=b.dataset.v==='1';ans[tab][k]=(ans[tab][k]===v?null:v);render();});
+    $('#sheet').querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,j=+b.dataset.m;const a=ans[tab][k];const p=a.indexOf(j);if(p>=0)a.splice(p,1);else a.push(j);render();});
+    $('#sheet').querySelectorAll('select[data-i]').forEach(sl=>sl.onchange=()=>{const k=+sl.dataset.k,i=+sl.dataset.i;ans[tab][k][i]=sl.value===''?null:+sl.value;renderTabs();updHint();});
+    $('#sheet').querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,j=+b.dataset.s;const a=ans[tab][k];const p=a.indexOf(j);if(p>=0)a.splice(p);else a.push(j);render();});
+    $('#sheet').querySelectorAll('[data-reset]').forEach(b=>b.onclick=()=>{ans[tab][+b.dataset.k]=[];render();});
+  }
+  $('#gradeBtn').disabled=g;$('#gradeBtn').textContent=g?'채점 완료':'채점하기';updHint();
+}
+function updHint(){const g=graded[tab];const nm=$('#name').value;
+  if(g){const sc=scoreOf(tab);$('#rscore').textContent=`${sc}/10`;if(nm.trim()){$('#rcode').textContent=codeFor(nm,tab+1,sc);$('#rhint').textContent='결과 코드';}else{$('#rcode').textContent='—';$('#rhint').textContent='이름을 입력하면 결과 코드가 나옵니다.';}}
+  else{$('#rcode').textContent='—';$('#rscore').textContent='';$('#rhint').textContent=`${tab+1}교시: ${nAns(tab)}/10 답했습니다. 채점하기를 누르면 잠깁니다.`;}}
+$('#gradeBtn').onclick=()=>{const n=nAns(tab);if(n<10&&!confirm(`아직 ${10-n}문항을 끝까지 답하지 않았습니다. 그래도 채점할까요? (미응답은 오답 처리)`))return;graded[tab]=true;render();};
+$('#name').addEventListener('input',updHint);
+
+/* ── 제출 대화상자 ── */
+let lastHtml='',lastText='';
+function buildReport(){
+  const nm=$('#name').value.trim()||'(이름 없음)';const ds=new Date().toLocaleString('ko-KR');
+  let h=`<h3>Embedded I/O 제어 Day 3 개념 워크시트 — 오답 정리</h3><div class="meta">${nm} · ${ds}</div>`;
+  let t=`Embedded I/O 제어 Day 3 개념 워크시트 — 오답 정리\n이름: ${nm}\n일시: ${ds}\n\n`;
+  Q.forEach((s,i)=>{if(!graded[i])return;
+    const wrong=s.qs.map((q,k)=>({q,k,a:ans[i][k]})).filter(x=>!correct(x.q,x.a));
+    h+=`<div class="sec">${s.t} — ${scoreOf(i)}/10</div>`;t+=`### ${s.t} — ${scoreOf(i)}/10\n`;
+    if(!wrong.length){h+=`<div class="ok" style="margin:4px 0 8px">오답 없음</div>`;t+=`오답 없음\n\n`;return;}
+    h+=`<table><tr><th>#</th><th>유형</th><th>문항</th><th>내 답</th><th>정답</th></tr>`;t+=`| # | 유형 | 문항 | 내 답 | 정답 |\n|---|---|---|---|---|\n`;
+    wrong.forEach(({q,k,a})=>{const my=txt(q,a),co=txt(q,q.a);const qt=strip(q.p).replace(/\s+/g,' ').slice(0,60);
+      h+=`<tr><td class="r">${k+1}</td><td>${TYNAME[q.ty]}</td><td>${qt}</td><td class="bad">${my}</td><td class="ok">${co}</td></tr>`;
+      t+=`| ${k+1} | ${TYNAME[q.ty]} | ${qt.replace(/\|/g,'/')} | ${my.replace(/\|/g,'/')} | ${co.replace(/\|/g,'/')} |\n`;});
+    h+=`</table>`;t+=`\n`;});
+  const ng=Q.map((s,i)=>graded[i]?null:i+1).filter(x=>x);
+  if(ng.length){h+=`<div class="meta" style="margin-top:10px">미채점: ${ng.join(', ')}교시</div>`;t+=`미채점: ${ng.join(', ')}교시\n`;}
+  lastHtml=h;lastText=t;return h;
+}
+$('#submitBtn').onclick=()=>{if(!graded.some(x=>x)){alert('먼저 한 교시 이상 채점하기를 눌러 주세요.');return;}$('#dgBody').innerHTML=buildReport();$('#toast').textContent='';$('#dlg').showModal();};
+$('#closeBtn').onclick=()=>$('#dlg').close();
+function copyRich(html,text){
+  // 1) copy 이벤트에 두 형식을 직접 실어 보내기 (사용자 클릭 안에서 동기 실행 — file:// 에서도 동작)
+  let done=false;
+  const onCopy=e=>{e.clipboardData.setData('text/html',html);e.clipboardData.setData('text/plain',text);e.preventDefault();done=true;};
+  document.addEventListener('copy',onCopy);
+  try{
+    const body=$('#dgBody');const sel=window.getSelection();const range=document.createRange();range.selectNodeContents(body);sel.removeAllRanges();sel.addRange(range);
+    document.execCommand('copy');
+    sel.removeAllRanges();
+  }catch(e){}
+  document.removeEventListener('copy',onCopy);
+  return done;
+}
+$('#captureBtn').onclick=async()=>{
+  const htmlDoc=`<meta charset="utf-8">`+lastHtml.replace(/ class="[^"]*"/g,'').replace(/<table>/g,'<table border="1" style="border-collapse:collapse">');
+  if(copyRich(htmlDoc,lastText)){$('#toast').textContent='복사됨 — 노션 페이지에서 Ctrl+V 로 붙여 넣으세요.';return;}
+  // 2) 비동기 Clipboard API
+  try{
+    if(navigator.clipboard&&window.ClipboardItem){
+      await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([htmlDoc],{type:'text/html'}),'text/plain':new Blob([lastText],{type:'text/plain'})})]);
+    }else{await navigator.clipboard.writeText(lastText);}
+    $('#toast').textContent='복사됨 — 노션 페이지에서 Ctrl+V 로 붙여 넣으세요.';return;
+  }catch(e){}
+  // 3) 최종: 텍스트 영역 선택 복사
+  try{
+    const ta=document.createElement('textarea');ta.value=lastText;ta.style.position='fixed';ta.style.opacity='0';$('#dlg').appendChild(ta);ta.focus();ta.select();
+    const ok=document.execCommand('copy');ta.remove();
+    $('#toast').textContent=ok?'텍스트(마크다운 표)로 복사됨 — 노션에서 Ctrl+V.':'복사 실패 — 대화상자 내용을 드래그해 Ctrl+C 로 복사하세요.';
+  }catch(e){$('#toast').textContent='복사 실패 — 대화상자 내용을 드래그해 Ctrl+C 로 복사하세요.';}
+};
+render();
+</script>
+</body>
+</html>

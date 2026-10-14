@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Embedded I/O 제어 3일차 — 눈으로 보는 8가지 (PWM · 모터 · 타이밍)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EEF1F5;
+    --panel:#FFFFFF;
+    --ink:#1B2A41;
+    --ink-soft:#5B6B80;
+    --line:#C9D1DC;
+    --blue:#2457C5;
+    --blue-soft:#DCE6FA;
+    --red:#D6452E;
+    --red-soft:#FBE3DF;
+    --green:#178A67;
+    --green-soft:#DDF2EA;
+    --amber:#C98A12;
+    --amber-soft:#FBF0D3;
+    --mono:'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    --sans:'IBM Plex Sans KR', 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    --t:.35s;
+  }
+  @media (prefers-reduced-motion: reduce){ :root{ --t:0s; } *{ animation:none !important; transition:none !important; } }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; }
+  body{
+    font-family:var(--sans); color:var(--ink); background:var(--paper);
+    background-image:
+      linear-gradient(rgba(27,42,65,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(27,42,65,.045) 1px, transparent 1px);
+    background-size:24px 24px;
+    font-size:16px; line-height:1.55;
+  }
+  code, .mono{ font-family:var(--mono); }
+
+  .app{ display:grid; grid-template-columns:260px 1fr; min-height:100vh; }
+  nav{
+    background:var(--ink); color:#fff; padding:28px 20px;
+    position:sticky; top:0; height:100vh; overflow:auto;
+  }
+  nav h1{ font-size:15px; font-weight:500; margin:0 0 4px; letter-spacing:.01em; color:#AEBBD1; }
+  nav .day{ font-size:26px; font-weight:600; margin:0 0 26px; line-height:1.2; }
+  nav ol{ list-style:none; margin:0; padding:0; counter-reset:lesson; }
+  nav li{ margin:0; }
+  nav button{
+    all:unset; display:grid; grid-template-columns:32px 1fr; gap:10px; align-items:baseline;
+    width:100%; padding:9px 10px; border-radius:6px; cursor:pointer; font-size:14.5px; line-height:1.35;
+    color:#D9E1EC;
+  }
+  nav button::before{ counter-increment:lesson; content:counter(lesson) "교시"; font-family:var(--mono); font-size:11px; color:#8A9BB5; }
+  nav button:hover{ background:rgba(255,255,255,.07); }
+  nav button[aria-current="true"]{ background:var(--blue); color:#fff; }
+  nav button[aria-current="true"]::before{ color:#C9D8F7; }
+  nav button:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
+  nav .hint{ margin-top:28px; font-size:12.5px; color:#8A9BB5; line-height:1.5; }
+  nav .hint kbd{ font-family:var(--mono); background:rgba(255,255,255,.12); padding:1px 5px; border-radius:3px; }
+
+  main{ padding:36px 44px 80px; max-width:1100px; }
+  section.lesson{ display:none; }
+  section.lesson.active{ display:block; }
+  .lesson header{ margin-bottom:22px; }
+  .lesson h2{ font-size:30px; font-weight:600; margin:0 0 6px; line-height:1.25; }
+  .lesson header p{ margin:0; color:var(--ink-soft); font-size:16px; max-width:64ch; }
+
+  .stage{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:26px;
+    box-shadow:0 1px 0 rgba(27,42,65,.06);
+  }
+  .controls{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:20px; }
+  .controls label{ font-size:14px; color:var(--ink-soft); display:flex; align-items:center; gap:6px; }
+  button.btn{
+    font:inherit; font-size:14px; font-weight:500; padding:8px 14px; border-radius:6px; cursor:pointer;
+    border:1px solid var(--ink); background:var(--ink); color:#fff;
+  }
+  button.btn.secondary{ background:#fff; color:var(--ink); border-color:var(--line); }
+  button.btn:disabled{ opacity:.4; cursor:default; }
+  button.btn:focus-visible, select:focus-visible, input:focus-visible{ outline:2px solid var(--blue); outline-offset:2px; }
+  select, input[type=number], input[type=text]{
+    font:inherit; font-size:14px; padding:7px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink);
+  }
+  input[type=number], input[type=text]{ font-family:var(--mono); }
+  .toggle{ display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+  .toggle input{ position:absolute; opacity:0; width:0; height:0; }
+  .toggle .sw{ width:38px; height:22px; border-radius:11px; background:var(--line); position:relative; transition:background var(--t); }
+  .toggle .sw::after{ content:""; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition:transform var(--t); }
+  .toggle input:checked + .sw{ background:var(--blue); }
+  .toggle input:checked + .sw::after{ transform:translateX(16px); }
+  .toggle input:focus-visible + .sw{ outline:2px solid var(--blue); outline-offset:2px; }
+
+  .note{ margin-top:18px; padding:14px 16px; border-left:3px solid var(--blue); background:var(--blue-soft); border-radius:0 6px 6px 0; font-size:14.5px; }
+  .note.warn{ border-color:var(--red); background:var(--red-soft); }
+  .note.ok{ border-color:var(--green); background:var(--green-soft); }
+  .note code{ background:rgba(255,255,255,.7); padding:1px 5px; border-radius:3px; }
+
+  pre.code{
+    font-family:var(--mono); font-size:13.5px; background:#F6F8FB; border:1px solid var(--line); border-radius:6px;
+    padding:14px 16px; margin:0; overflow:auto; line-height:1.55; white-space:pre;
+  }
+  pre.code .dim{ color:#9AA7B8; }
+  pre.code .hi{ background:var(--amber-soft); }
+  pre.code .err{ background:var(--red-soft); color:var(--red); }
+
+    .readout{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-top:16px; }
+  .readout div{ padding:12px 14px; border:1px solid var(--line); border-radius:6px; background:#F6F8FB; }
+  .readout b{ display:block; font-size:12.5px; font-weight:500; color:var(--ink-soft); margin-bottom:2px; }
+  .readout span{ font-family:var(--mono); font-size:17px; font-weight:600; }
+  /* ---------- shared ---------- */
+  .mcell{ display:inline-flex; flex-direction:column; align-items:center; min-width:70px; border:2px solid var(--ink); border-radius:6px; background:#fff; overflow:hidden; transition:all var(--t); }
+  .mcell .a{ font-family:var(--mono); font-size:10px; color:var(--ink-soft); background:#F6F8FB; width:100%; text-align:center; padding:3px 4px; border-bottom:1px solid var(--line); }
+  .mcell .v{ font-family:var(--mono); font-size:20px; font-weight:600; padding:8px 6px; }
+  .mcell .n{ font-family:var(--mono); font-size:11px; color:var(--blue); padding:0 4px 6px; }
+  .mcell.hi{ border-color:var(--blue); background:var(--blue-soft); }
+  .mcell.bad{ border-color:var(--red); background:var(--red-soft); }
+  .mcell.ok{ border-color:var(--green); background:var(--green-soft); }
+  .mcell.dim{ opacity:.35; }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+  .lab{ font-size:12.5px; color:var(--ink-soft); margin:14px 0 6px; }
+  .term{ font-family:var(--mono); font-size:13.5px; background:var(--ink); color:#D9E1EC; padding:12px 16px; border-radius:6px; min-height:60px; white-space:pre-wrap; margin-top:16px; }
+  .term .r{ color:#FF9B8A; } .term .g{ color:#7FE0B8; } .term .y{ color:#FFD27F; } .term .c{ color:#8A9BB5; }
+  svg text{ font-family:var(--mono); }
+  .shake{ animation:shake .4s; } @keyframes shake{ 0%,100%{transform:none} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+  .pop-in{ animation:popin .3s ease-out; } @keyframes popin{ from{ transform:scale(.8); opacity:0; } }
+  .fade-out{ animation:fadeout .4s forwards; } @keyframes fadeout{ to{ opacity:0; transform:translateY(-8px); } }
+  .two{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:24px; }
+  .tabs2{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tabs2 button{ font:inherit; font-size:13px; padding:7px 12px; border-radius:6px; border:1px solid var(--line); background:#fff; cursor:pointer; }
+  .tabs2 button.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .fig svg{ width:100%; height:auto; background:#fff; border:1px solid var(--line); border-radius:6px; display:block; }
+  .fig text{ font-size:11px; fill:var(--ink-soft); }
+  .qslots{ display:flex; gap:6px; margin:10px 0; }
+  .qslots span{ flex:1; height:46px; border:2px solid var(--line); border-radius:6px; display:grid; place-items:center; font-family:var(--mono); font-size:13px; background:#fff; transition:all var(--t); }
+  .qslots span.full{ background:var(--blue-soft); border-color:var(--blue); }
+  .fs{ display:grid; grid-template-columns:repeat(16,1fr); gap:3px; }
+  .fs span{ height:22px; border-radius:3px; background:#EEF1F5; transition:background var(--t); }
+  .fs span.used{ background:#8FB0EA; } .fs span.dirty{ background:var(--amber); } .fs span.hot{ outline:2px solid var(--red); }
+  .crash{ font-family:var(--mono); font-size:12.5px; background:#0E1726; color:#D9E1EC; border-radius:8px; padding:12px 14px; line-height:1.7; }
+  .crash span.ln{ display:block; cursor:pointer; border-radius:3px; padding:0 4px; }
+  .crash span.ln:hover{ background:#22324A; } .crash span.ln.on{ background:#3A2A10; color:#FFD27A; }
+  .flow{ position:relative; }
+  table.rt{ border-collapse:collapse; width:100%; font-family:var(--mono); font-size:12.5px; }
+  table.rt th, table.rt td{ border:1px solid var(--line); padding:6px 8px; text-align:left; }
+  table.rt th{ background:var(--paper); font-family:var(--sans); }
+  table.rt tr.hot td{ background:var(--blue-soft); font-weight:700; }
+  @media (max-width:900px){ .two{ grid-template-columns:1fr; } }
+
+  /* ── Embedded I/O Day 1 추가 스타일 ── */
+  .lanes{ display:grid; grid-template-columns:110px 1fr; gap:10px 14px; align-items:center; }
+  .lanes .ln{ font-size:13px; font-weight:600; color:var(--ink-soft); }
+  .chips{ display:flex; gap:6px; flex-wrap:wrap; }
+  .chip{ font-family:var(--mono); font-size:12px; padding:7px 10px; border-radius:6px; border:2px solid var(--line); background:#fff; color:var(--ink-soft); transition:all var(--t); }
+  .chip.on{ border-color:var(--blue); background:var(--blue-soft); color:var(--ink); }
+  .chip.now{ border-color:var(--amber); background:var(--amber-soft); color:var(--ink); font-weight:600; }
+  .chip.done{ border-color:var(--green); background:var(--green-soft); color:var(--ink); }
+  .chip.bad{ border-color:var(--red); background:var(--red-soft); color:var(--ink); }
+  .hdr{ display:grid; grid-template-columns:repeat(20, 1fr); grid-template-rows:repeat(2, 38px); gap:4px; background:#1B2A41; padding:10px; border-radius:8px; }
+  .pin{ all:unset; cursor:pointer; border-radius:6px; display:grid; place-items:center; font-family:var(--mono); font-size:10.5px; font-weight:600; color:#1B2A41; background:#C9D1DC; position:relative; }
+  .pin:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
+  .pin.p5v{ background:#F28B82; } .pin.p3v{ background:#FFD27F; } .pin.gnd{ background:#5B6B80; color:#fff; }
+  .pin.gpio{ background:#B9CCF2; } .pin.alt{ background:#9FD9C4; } .pin.id{ background:#E3E7ED; color:#8A9BB5; }
+  .pin.sel{ outline:3px solid #fff; transform:scale(1.08); }
+  .pin.hit{ background:var(--green); color:#fff; } .pin.miss{ background:var(--red); color:#fff; }
+  .pinlegend{ display:flex; gap:14px; flex-wrap:wrap; font-size:12.5px; color:var(--ink-soft); margin:10px 0 0; }
+  .pinlegend span::before{ content:""; display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:5px; vertical-align:-2px; background:var(--c); }
+  .pipe{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px; }
+  .stg{ border:2px solid var(--line); border-radius:8px; padding:10px 12px; background:#fff; min-height:74px; transition:all var(--t); }
+  .stg b{ display:block; font-size:13px; margin-bottom:4px; } .stg span{ font-size:12.5px; color:var(--ink-soft); }
+  .stg.ok{ border-color:var(--green); background:var(--green-soft); } .stg.bad{ border-color:var(--red); background:var(--red-soft); } .stg.warn{ border-color:var(--amber); background:var(--amber-soft); } .stg.skip{ opacity:.35; }
+  .cfg{ font-family:var(--mono); font-size:13px; background:#F6F8FB; border:1px solid var(--line); border-radius:6px; padding:12px 14px; white-space:pre; overflow:auto; line-height:1.6; }
+  .cfg .off{ color:#9AA7B8; text-decoration:line-through; } .cfg .add{ background:var(--green-soft); } .cfg .bad{ background:var(--red-soft); }
+  .checks{ display:grid; gap:8px; }
+  .led{ width:54px; height:54px; border-radius:50%; background:#5B2A24; border:3px solid #3A1A16; display:inline-block; transition:all .12s; vertical-align:middle; }
+  .led.on{ background:#FF5A3C; box-shadow:0 0 22px 6px rgba(255,90,60,.55); border-color:#C0392B; }
+  .led.unk{ background:repeating-linear-gradient(45deg,#5B2A24,#5B2A24 6px,#7A3A30 6px,#7A3A30 12px); }
+  .twoterm{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:18px; }
+  .twoterm .term{ min-height:150px; margin-top:8px; }
+  .tbtns{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tbtns button{ font:inherit; font-family:var(--mono); font-size:12px; padding:6px 10px; border-radius:6px; border:1px solid var(--line); background:#fff; cursor:pointer; }
+  .tbtns button:hover{ border-color:var(--ink); }
+  .pressbtn{ font:inherit; font-size:15px; font-weight:600; width:140px; height:64px; border-radius:12px; border:3px solid var(--ink); background:#fff; cursor:pointer; user-select:none; box-shadow:0 4px 0 var(--ink); transition:transform .05s, box-shadow .05s; }
+  .pressbtn.down{ transform:translateY(4px); box-shadow:0 0 0 var(--ink); background:var(--amber-soft); }
+  .wave svg{ width:100%; height:auto; background:#fff; border:1px solid var(--line); border-radius:6px; display:block; }
+  table.rt td.okc{ color:var(--green); font-weight:700; } table.rt td.badc{ color:var(--red); font-weight:700; }
+  @media (max-width:900px){ .pipe{ grid-template-columns:1fr 1fr; } .twoterm{ grid-template-columns:1fr; } }
+  /* ── Day 2 추가 ── */
+  .codepane{ font-family:var(--mono); font-size:12.5px; background:#F6F8FB; border:1px solid var(--line); border-radius:6px; padding:10px 0; overflow:auto; line-height:1.55; }
+  .codepane .cl{ display:block; padding:0 14px; white-space:pre; color:#5B6B80; }
+  .codepane .cl.done{ color:#1B2A41; }
+  .codepane .cl.on{ background:var(--amber-soft); color:#1B2A41; font-weight:600; box-shadow:inset 3px 0 0 var(--amber); }
+  .ledrow{ display:flex; gap:22px; align-items:flex-end; }
+  .ledbox{ text-align:center; font-size:12.5px; color:var(--ink-soft); }
+  .ledbox .led{ width:46px; height:46px; display:block; margin:0 auto 6px; }
+  .led.y{ background:#5A4A1E; border-color:#3B3014; } .led.y.on{ background:#FFC93C; box-shadow:0 0 22px 6px rgba(255,201,60,.55); border-color:#C98A12; }
+  .led.gr{ background:#1F4A33; border-color:#14301F; } .led.gr.on{ background:#3DDC84; box-shadow:0 0 22px 6px rgba(61,220,132,.5); border-color:#178A67; }
+  .bits{ display:grid; grid-template-columns:repeat(32,1fr); gap:2px; font-family:var(--mono); font-size:10px; }
+  .bits div{ border:1px solid var(--line); text-align:center; padding:4px 0; background:#fff; border-radius:3px; }
+  .bits div.n{ border:none; background:none; color:#8A9BB5; font-size:9px; padding:0; }
+  .bits div.hi{ background:var(--amber-soft); border-color:var(--amber); font-weight:700; }
+  .bits div.one{ background:var(--blue-soft); border-color:var(--blue); color:var(--blue); font-weight:700; }
+  .bigbtn{ font:inherit; font-size:15px; font-weight:600; padding:14px 22px; border-radius:12px; border:3px solid var(--ink); background:#fff; cursor:pointer; box-shadow:0 4px 0 var(--ink); }
+  .bigbtn:active{ transform:translateY(4px); box-shadow:0 0 0 var(--ink); }
+  .gamebox{ display:grid; place-items:center; height:200px; border-radius:12px; font-size:30px; font-weight:700; color:#fff; background:#1B2A41; user-select:none; cursor:pointer; transition:background .08s; }
+  .gamebox.ready{ background:#5B6B80; } .gamebox.go{ background:#D6452E; } .gamebox.foul{ background:#C98A12; } .gamebox.res{ background:#178A67; }
+  .gamebox small{ display:block; font-size:14px; font-weight:500; opacity:.85; text-align:center; margin-top:6px; }
+  .cpubar{ height:14px; background:#EEF1F5; border-radius:7px; overflow:hidden; } .cpubar i{ display:block; height:100%; background:var(--red); transition:width .2s; }
+
+  /* ── Day 3 ── */
+  .readout span{ font-size:15px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav aria-label="교시 선택">
+    <h1>Embedded I/O 제어 · Raspberry Pi 4</h1>
+    <p class="day">3일차<br>눈으로 보는 8가지</p>
+    <ol id="navlist">
+      <li><button data-go="1" aria-current="true">부하와 흔들리는 파형</button></li>
+      <li><button data-go="2">색 섞기와 SCHED_FIFO</button></li>
+      <li><button data-go="3">sysfs PWM 조작판</button></li>
+      <li><button data-go="4">펄스 폭 → 각도, 주기 → 음정</button></li>
+      <li><button data-go="5">L293D 진리표</button></li>
+      <li><button data-go="6">코일 순서와 탈조</button></li>
+      <li><button data-go="7">Echo 폭과 분압</button></li>
+      <li><button data-go="8">경보기 시뮬레이터</button></li>
+    </ol>
+    <p class="hint">키보드 <kbd>←</kbd> <kbd>→</kbd> 로 교시 이동<br><a href="lecture.html" style="color:#AEBBD1">강의 자료</a> · <a href="worksheet.html" style="color:#AEBBD1">워크시트</a></p>
+  </nav>
+  <main>
+
+  <section class="lesson active" id="l1">
+    <header><h2>소프트웨어 PWM — 부하가 걸리면 파형이 흔들린다</h2><p>01_swpwm.c 가 GPIO17 에 만드는 200 Hz 파형입니다. <b>CPU 부하</b>와 <b>잠드는 방식</b>을 바꾸고 <b>측정</b>을 눌러 보세요. 위는 실제 핀 파형, 아래는 목표 시각에서 얼마나 늦게 깨어났는지(jitter) 의 히스토그램입니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>듀티 <input type="range" id="s-duty" min="0" max="100" value="30" style="width:140px"><b id="s-dutyv">30%</b></label>
+        <label>부하 <select id="s-load"><option value="0" selected>없음</option><option value="2">yes × 2</option><option value="4">yes × 4 (코어 전부)</option><option value="8">yes × 8 + 디스크 I/O</option></select></label>
+        <label>잠들기 <select id="s-mode"><option value="abs" selected>TIMER_ABSTIME (절대 시각)</option><option value="rel">usleep(남은 시간) (상대 시간)</option></select></label>
+        <button class="btn" id="s-run">1초 측정 (200주기)</button>
+        <button class="btn secondary" id="s-clr">지우기</button>
+      </div>
+      <div class="ledrow" style="margin-bottom:12px"><div class="ledbox"><span class="led" id="s-led"></span>GPIO17 LED</div><div class="readout" style="flex:1;margin-top:0">
+        <div><b>주기 / 목표 on 시간</b><span id="s-per">5.000 ms / 1.500 ms</span></div>
+        <div><b>평균 지연</b><span id="s-avg">–</span></div>
+        <div><b>최대 지연</b><span id="s-max">–</span></div>
+        <div><b>실제 주파수</b><span id="s-hz">–</span></div>
+      </div></div>
+      <div class="fig"><svg viewBox="0 0 900 150" id="s-wave"></svg></div>
+      <div class="lab">jitter 히스토그램 (목표보다 늦게 깨어난 시간, µs)</div>
+      <div class="fig"><svg viewBox="0 0 900 170" id="s-hist"></svg></div>
+      <div class="note" id="s-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l2">
+    <header><h2>RGB LED — 세 채널 듀티로 색을 섞고, 우선순위로 깜빡임을 줄인다</h2><p>02_rgb.c 는 쓰레드 하나가 100 Hz 주기마다 세 핀을 함께 켜고, 듀티가 짧은 순서대로 끕니다. 슬라이더로 색을 섞어 보고, <b>부하</b>를 켠 채 <b>스케줄링 정책</b>을 바꿔 깜빡임을 비교하세요.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>R <input type="range" id="c-r" min="0" max="100" value="80" style="width:110px"><b id="c-rv">80</b></label>
+        <label>G <input type="range" id="c-g" min="0" max="100" value="30" style="width:110px"><b id="c-gv">30</b></label>
+        <label>B <input type="range" id="c-b" min="0" max="100" value="10" style="width:110px"><b id="c-bv">10</b></label>
+        <label class="toggle"><input type="checkbox" id="c-load"><span class="sw"></span>부하 yes × 4</label>
+        <label>정책 <select id="c-pol"><option value="other" selected>SCHED_OTHER (기본)</option><option value="fifo">SCHED_FIFO 50 + mlockall</option><option value="fifo-noperm">SCHED_FIFO (setcap 없이)</option></select></label>
+        <button class="btn secondary" id="c-hue">hue 페이드</button>
+      </div>
+      <div class="two">
+        <div>
+          <div style="display:flex;gap:18px;align-items:center">
+            <div id="c-sw" style="width:120px;height:120px;border-radius:50%;border:4px solid #1B2A41;transition:background .1s"></div>
+            <div class="readout" style="flex:1;margin-top:0;grid-template-columns:1fr">
+              <div><b>끄는 순서 (짧은 듀티부터)</b><span id="c-ord">–</span></div>
+              <div><b>최대 지연 (최근 1초)</b><span id="c-jit">–</span></div>
+            </div>
+          </div>
+          <div class="term" id="c-term" style="min-height:70px"></div>
+        </div>
+        <div class="fig"><svg viewBox="0 0 440 230" id="c-wave"></svg></div>
+      </div>
+      <div class="note" id="c-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l3">
+    <header><h2>/sys/class/pwm — 순서대로 쓰면 하드웨어가 파형을 만든다</h2><p>버튼은 셸에서 실제로 입력할 명령입니다. 순서를 지키면 GPIO18 에 파형이 나오고, 순서를 틀리면 리눅스가 돌려주는 오류를 그대로 보여 줍니다. 파형이 나온 뒤에는 <b>부하</b>를 켜도 흔들리지 않는지 보세요.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>period (ns) <input type="number" id="h-per" value="1000000" step="100000" style="width:130px"></label>
+        <label>duty_cycle (ns) <input type="number" id="h-duty" value="250000" step="50000" style="width:130px"></label>
+        <button class="btn secondary" id="h-reset">처음부터</button>
+        <label class="toggle"><input type="checkbox" id="h-load"><span class="sw"></span>부하 yes × 4</label>
+      </div>
+      <div class="tbtns" id="h-cmds">
+        <button data-c="ls">ls /sys/class/pwm/pwmchip0</button>
+        <button data-c="export">echo 0 &gt; export</button>
+        <button data-c="period">echo $PER &gt; pwm0/period</button>
+        <button data-c="duty">echo $DUTY &gt; pwm0/duty_cycle</button>
+        <button data-c="enable">echo 1 &gt; pwm0/enable</button>
+        <button data-c="disable">echo 0 &gt; pwm0/enable</button>
+        <button data-c="unexport">echo 0 &gt; unexport</button>
+      </div>
+      <div class="two">
+        <div class="term" id="h-term" style="min-height:190px;max-height:260px;overflow:auto"></div>
+        <div>
+          <table class="rt" id="h-state"></table>
+          <div style="display:flex;gap:16px;align-items:center;margin-top:12px"><span class="led" id="h-led"></span><div><b>GPIO18 LED</b><div id="h-ledtxt" style="font-size:13px;color:var(--ink-soft)">꺼짐</div></div></div>
+        </div>
+      </div>
+      <div class="fig" style="margin-top:12px"><svg viewBox="0 0 900 120" id="h-wave"></svg></div>
+      <div class="note" id="h-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l4">
+    <header><h2>서보는 펄스 폭에, 부저는 주기에 정보를 싣는다</h2><p>같은 sysfs PWM 이지만 바꾸는 값이 다릅니다. <b>서보</b> 탭에서는 주기 20 ms 를 고정하고 펄스 폭으로 각도를 정하고, <b>부저</b> 탭에서는 듀티를 절반으로 두고 주기로 음 높이를 정합니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <div class="tabs2" id="v-tabs"><button class="on" data-t="servo">서보 (pwm0)</button><button data-t="buz">패시브 부저 (pwm1)</button></div>
+      </div>
+      <div id="v-servo">
+        <div class="controls">
+          <label>펄스 폭 <input type="range" id="v-pw" min="300" max="2700" step="10" value="1500" style="width:220px"><b id="v-pwv">1.50 ms</b></label>
+          <label>보정 최소 <input type="number" id="v-min" value="500" step="10" style="width:80px"> µs</label>
+          <label>보정 최대 <input type="number" id="v-max" value="2500" step="10" style="width:80px"> µs</label>
+          <button class="btn secondary" data-a="0">0°</button><button class="btn secondary" data-a="90">90°</button><button class="btn secondary" data-a="180">180°</button>
+        </div>
+        <div class="two">
+          <div class="fig"><svg viewBox="0 0 420 240" id="v-arm"></svg></div>
+          <div>
+            <div class="fig"><svg viewBox="0 0 420 120" id="v-wave"></svg></div>
+            <div class="term" id="v-term" style="min-height:70px"></div>
+          </div>
+        </div>
+      </div>
+      <div id="v-buz" hidden>
+        <div class="controls">
+          <div class="tbtns" id="v-notes"></div>
+          <label class="toggle"><input type="checkbox" id="v-snd"><span class="sw"></span>소리 내기</label>
+          <button class="btn secondary" id="v-star">작은 별 재생</button>
+        </div>
+        <div class="two">
+          <div class="fig"><svg viewBox="0 0 420 120" id="v-bwave"></svg></div>
+          <div class="term" id="v-bterm" style="min-height:90px;margin-top:0"></div>
+        </div>
+      </div>
+      <div class="note" id="v-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l5">
+    <header><h2>L293D — IN1 · IN2 가 방향, EN 의 듀티가 속도</h2><p>스위치를 눌러 진리표의 네 줄을 하나씩 만들어 보세요. 회전 중에 바로 반대 방향으로 바꾸면 어떤 일이 생기는지, 06_dcmotor.c 는 왜 브레이크를 거쳐 가는지 확인합니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label class="toggle"><input type="checkbox" id="m-in1" checked><span class="sw"></span>IN1 (GPIO20)</label>
+        <label class="toggle"><input type="checkbox" id="m-in2"><span class="sw"></span>IN2 (GPIO21)</label>
+        <label>EN 듀티 (PWM0 20 kHz) <input type="range" id="m-en" min="0" max="100" value="60" style="width:160px"><b id="m-env">60%</b></label>
+        <button class="btn secondary" id="m-flip">버튼 6: 방향 전환 (안전 순서)</button>
+      </div>
+      <div class="two">
+        <div>
+          <table class="rt" id="m-tt"></table>
+          <div class="lab">모터 전류 (모의)</div>
+          <div class="cpubar"><i id="m-cur" style="width:0"></i></div>
+          <div class="term" id="m-term" style="min-height:80px"></div>
+        </div>
+        <div class="fig"><svg viewBox="0 0 420 260" id="m-svg"></svg></div>
+      </div>
+      <div class="note" id="m-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l6">
+    <header><h2>28BYJ-48 — 코일을 순서대로 켜야 돌고, 너무 빠르면 놓친다</h2><p>순서표의 한 줄이 한 스텝입니다. <b>한 스텝</b>으로 코일과 회전자를 따라가 본 뒤, 스텝 간격을 줄여 <b>연속 회전</b>시켜 보세요. 회전자가 따라오지 못하면 <b>탈조</b>입니다. 가감속을 켜면 어떻게 달라질까요?</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>방식 <select id="st-mode"><option value="half" selected>하프 스텝 (8단계, 4096/회전)</option><option value="full">풀 스텝 2상 (4단계, 2048/회전)</option><option value="wave">웨이브 1상 (4단계, 2048/회전)</option></select></label>
+        <label>간격 <input type="range" id="st-dly" min="4" max="60" value="30" style="width:150px"><b id="st-dlyv">3.0 ms</b></label>
+        <label class="toggle"><input type="checkbox" id="st-ramp"><span class="sw"></span>가감속 (4 ms → 목표)</label>
+        <button class="btn secondary" id="st-step">한 스텝</button>
+        <button class="btn" id="st-run">90° 회전</button>
+      </div>
+      <div class="two">
+        <div>
+          <table class="rt" id="st-tab"></table>
+          <div class="readout">
+            <div><b>명령한 스텝</b><span id="st-cmd">0</span></div>
+            <div><b>실제로 간 스텝</b><span id="st-act">0</span></div>
+          </div>
+        </div>
+        <div class="fig"><svg viewBox="0 0 420 260" id="st-svg"></svg></div>
+      </div>
+      <div class="note" id="st-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l7">
+    <header><h2>HC-SR04 — Echo 가 높은 시간이 곧 거리, 그 5V 는 나눠서 받는다</h2><p>물체 거리를 바꾸고 <b>측정</b>을 눌러 보세요. Trig 10 µs 펄스 뒤 Echo 가 얼마나 오래 HIGH 인지, 그것이 몇 cm 인지 계산합니다. 아래에서 분압 저항을 골라 GPIO24 에 걸리는 전압도 확인합니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>물체 거리 <input type="range" id="u-d" min="2" max="300" value="40" style="width:220px"><b id="u-dv">40 cm</b></label>
+        <label class="toggle"><input type="checkbox" id="u-noise"><span class="sw"></span>가끔 튀는 값 (반사 실패)</label>
+        <label class="toggle"><input type="checkbox" id="u-med"><span class="sw"></span>중앙값 5회</label>
+        <button class="btn" id="u-go">측정</button>
+      </div>
+      <div class="fig"><svg viewBox="0 0 900 150" id="u-wave"></svg></div>
+      <div class="readout">
+        <div><b>Echo HIGH 폭</b><span id="u-us">–</span></div>
+        <div><b>µs × 0.0343 / 2</b><span id="u-cm">–</span></div>
+        <div><b>출력값</b><span id="u-out">–</span></div>
+      </div>
+      <div class="two" style="margin-top:16px">
+        <div>
+          <div class="controls" style="margin-bottom:8px">
+            <label>R1 (Echo 쪽) <select id="u-r1"><option value="0">없음 (직결)</option><option value="1000" selected>1 kΩ</option><option value="2000">2 kΩ</option><option value="10000">10 kΩ</option></select></label>
+            <label>R2 (GND 쪽) <select id="u-r2"><option value="1000">1 kΩ</option><option value="2000" selected>2 kΩ</option><option value="4700">4.7 kΩ</option><option value="20000">20 kΩ</option></select></label>
+          </div>
+          <div class="term" id="u-term" style="min-height:70px"></div>
+        </div>
+        <div class="fig"><svg viewBox="0 0 420 200" id="u-div"></svg></div>
+      </div>
+      <div class="note" id="u-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l8">
+    <header><h2>거리 경보기 — 측정 쓰레드 하나, 출력 루프 하나</h2><p>물체(상자)를 <b>끌어서</b> 옮기거나 슬라이더를 움직여 보세요. alarm.c 의 sensor_thread 가 잰 거리 g_cm 을 main 루프가 읽어 LED 구간, 부저 박자, 서보 차단기를 정합니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>거리 <input type="range" id="a-d" min="3" max="120" value="80" style="width:260px"><b id="a-dv">80 cm</b></label>
+        <label class="toggle"><input type="checkbox" id="a-snd"><span class="sw"></span>소리 내기</label>
+        <label class="toggle"><input type="checkbox" id="a-nomutex"><span class="sw"></span>mutex 빼기</label>
+      </div>
+      <div class="fig"><svg viewBox="0 0 900 230" id="a-svg"></svg></div>
+      <div class="two" style="margin-top:12px">
+        <table class="rt" id="a-tab"></table>
+        <div class="term" id="a-term" style="min-height:120px;max-height:160px;overflow:auto;margin-top:0"></div>
+      </div>
+      <div class="note" id="a-note"></div>
+    </div>
+  </section>
+
+  </main>
+</div>
+<script>
+(function(){
+  'use strict';
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+  const NS='http://www.w3.org/2000/svg';
+  const el=(n,a,t)=>{ const e=document.createElementNS(NS,n); for(const k in a) e.setAttribute(k,a[k]); if(t!==undefined) e.textContent=t; return e; };
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  let cur=1;
+  function go(n){ cur=Math.max(1,Math.min(8,n)); $$('.lesson').forEach(s=>s.classList.toggle('active',s.id==='l'+cur)); $$('#navlist button').forEach(b=>b.setAttribute('aria-current',b.dataset.go==cur?'true':'false')); history.replaceState(null,'','#l'+cur); window.scrollTo({top:0}); }
+  $$('#navlist button').forEach(b=>b.addEventListener('click',()=>go(+b.dataset.go)));
+  document.addEventListener('keydown',e=>{ if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName))return; if(e.key==='ArrowRight')go(cur+1); if(e.key==='ArrowLeft')go(cur-1); });
+  if(/^#l[1-8]$/.test(location.hash)) go(+location.hash[2]);
+  function tabs(id,fn){ $$('#'+id+' button').forEach(b=>b.addEventListener('click',()=>{ $$('#'+id+' button').forEach(x=>x.classList.toggle('on',x===b)); fn(b); })); }
+  function box(S,x,y,w,h,title,sub,kind){ const col={n:['#fff','#1B2A41'],b:['#DCE6FA','#2457C5'],g:['#DDF2EA','#178A67'],r:['#FBE3DF','#D6452E'],a:['#FBF0D3','#C98A12'],d:['#F6F8FB','#C9D1DC']}[kind||'n'];
+    S.appendChild(el('rect',{x,y,width:w,height:h,rx:8,fill:col[0],stroke:col[1],'stroke-width':2}));
+    const t=el('text',{x:x+w/2,y:y+(sub?h/2-4:h/2+5),'text-anchor':'middle','font-size':14,'font-weight':600,fill:'#1B2A41'},title); S.appendChild(t);
+    if(sub){ String(sub).split('\n').forEach((ln,i)=>S.appendChild(el('text',{x:x+w/2,y:y+h/2+14+i*14,'text-anchor':'middle','font-size':11.5,fill:col[1]},ln))); } }
+  function arrow(S,x1,y1,x2,y2,color,label){ const id='m'+color.replace('#',''); if(!S.querySelector('#'+id)){ const d=el('defs',{}); const m=el('marker',{id,viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'}); m.appendChild(el('path',{d:'M0,0L10,5L0,10z',fill:color})); d.appendChild(m); S.appendChild(d); }
+    S.appendChild(el('line',{x1,y1,x2,y2,stroke:color,'stroke-width':2.2,'marker-end':`url(#${id})`}));
+    if(label){ const mx=(x1+x2)/2,my=(y1+y2)/2; S.appendChild(el('rect',{x:mx-label.length*3.6-6,y:my-10,width:label.length*7.2+12,height:18,rx:4,fill:'#fff',stroke:color})); S.appendChild(el('text',{x:mx,y:my+3,'text-anchor':'middle','font-size':11,fill:color},label)); } }
+
+    const note=(id,html,kind)=>{ const n=$(id); n.className='note'+(kind?' '+kind:''); n.innerHTML=html; };
+  const ledSet=(id,on,lvl)=>{ const l=$(id); l.classList.toggle('on',!!on); l.style.opacity=on&&lvl!==undefined?(0.35+0.65*lvl):''; };
+  const clr=S=>{ while(S.firstChild) S.removeChild(S.firstChild); };
+  const txt=(S,x,y,s,a)=>S.appendChild(el('text',Object.assign({x,y,'font-size':11,fill:'#5B6B80'},a||{}),s));
+  const line=(S,x1,y1,x2,y2,c,w,d)=>S.appendChild(el('line',{x1,y1,x2,y2,stroke:c||'#1B2A41','stroke-width':w||2,'stroke-dasharray':d||''}));
+  const poly=(S,pts,c,w,d)=>S.appendChild(el('polyline',{points:pts.map(p=>p.join(',')).join(' '),fill:'none',stroke:c||'#2457C5','stroke-width':w||2.2,'stroke-dasharray':d||''}));
+  const fmtus=u=>u>=1000?(u/1000).toFixed(2)+' ms':Math.round(u)+' µs';
+  const rexp=m=>-Math.log(1-Math.random())*m;
+  let AC=null; function beep(hz,ms,vol){ try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); const o=AC.createOscillator(), g=AC.createGain(); o.type='square'; o.frequency.value=hz; g.gain.value=vol||0.04; o.connect(g); g.connect(AC.destination); o.start(); o.stop(AC.currentTime+ms/1000); }catch(e){} }
+  const vis=n=>cur===n;
+
+  /* ───────── 1 소프트웨어 PWM 과 jitter ───────── */
+  const LOADM={0:[18,0,0],2:[45,0.01,600],4:[160,0.04,2500],8:[520,0.08,9000]}; /* 평균 지연 µs, 큰 지연 확률, 큰 지연 최대 µs */
+  const S1={lat:[]};
+  function sLat(){ const [m,p,big]=LOADM[$('#s-load').value]; let u=40+rexp(m); if(Math.random()<p) u+=big*(0.3+0.7*Math.random()); return u; }
+  function s1Draw(){ const d=+$('#s-duty').value; $('#s-dutyv').textContent=d+'%'; $('#s-per').textContent=`5.000 ms / ${(5*d/100).toFixed(3)} ms`;
+    ledSet('#s-led',d>0,d/100);
+    const W=$('#s-wave'); clr(W); const X0=40, PX=860/30; /* 30 ms */
+    txt(W,4,40,'목표',{'font-size':11}); txt(W,4,112,'실제',{'font-size':11});
+    for(let t=0;t<=30;t+=5){ line(W,X0+t*PX,8,X0+t*PX,142,'#E3E7ED',1); txt(W,X0+t*PX-8,148,t+'ms',{'font-size':9}); }
+    const ideal=[], act=[]; const on=5*d/100;
+    for(let k=0;k<6;k++){ const t0=k*5; ideal.push([X0+t0*PX,46],[X0+t0*PX,18],[X0+(t0+on)*PX,18],[X0+(t0+on)*PX,46]); }
+    poly(W,ideal,'#9AA7B8',2,'4 3');
+    if(S1.lat.length){ const rel=$('#s-mode').value==='rel'; let drift=0;
+      for(let k=0;k<6;k++){ const a=S1.lat[k*2]/1000, b=S1.lat[k*2+1]/1000; const t0=k*5+drift+a; const t1=k*5+drift+on+(rel?a+b:b); if(rel) drift+=a+b;
+        const xs=Math.min(X0+t0*PX,900), xe=Math.min(X0+Math.max(t1,t0)*PX,900); act.push([xs,124],[xs,92],[xe,92],[xe,124]); }
+      poly(W,act,'#2457C5',2.4); }
+    else txt(W,X0+300,112,'측정을 누르면 실제 파형이 그려집니다',{'font-size':12}); }
+  function s1Hist(){ const H=$('#s-hist'); clr(H); const B=[[0,50],[50,100],[100,200],[200,500],[500,1000],[1000,2000],[2000,5000],[5000,1e9]], L=['<50µs','50–100','100–200','200–500','0.5–1ms','1–2ms','2–5ms','>5ms'];
+    const c=B.map(b=>S1.lat.filter(u=>u>=b[0]&&u<b[1]).length), mx=Math.max(1,...c);
+    B.forEach((b,i)=>{ const x=30+i*108, h=c[i]/mx*120; H.appendChild(el('rect',{x,y:140-h,width:90,height:h,rx:3,fill:i>=5?'#D6452E':i>=3?'#C98A12':'#2457C5'})); txt(H,x+20,160,L[i],{'font-size':11}); if(c[i]) txt(H,x+38,134-h,c[i],{'font-size':11,'font-weight':700,fill:'#1B2A41'}); });
+    line(H,24,140,890,140,'#C9D1DC',1); }
+  function s1Run(){ S1.lat=Array.from({length:400},sLat); const m=S1.lat.reduce((a,b)=>a+b,0)/S1.lat.length, mx=Math.max(...S1.lat); const rel=$('#s-mode').value==='rel';
+    $('#s-avg').textContent=fmtus(m); $('#s-max').textContent=fmtus(mx);
+    const hz=rel?1e6/(5000+2*m):200; $('#s-hz').textContent=hz.toFixed(1)+' Hz';
+    s1Draw(); s1Hist(); const load=+$('#s-load').value;
+    if(rel) note('#s-note',`상대 시간으로 자면 늦은 만큼 <b>다음 주기도 밀립니다</b>. 지연이 쌓여 실제 주파수가 ${hz.toFixed(1)} Hz 로 떨어졌습니다. 01_swpwm.c 처럼 <code>next += period; clock_nanosleep(..., TIMER_ABSTIME, &next, NULL)</code> 로 바꾸면 한 번 늦어도 다음 목표는 그대로입니다.`,'warn');
+    else if(load>=4) note('#s-note',`부하가 코어 수 이상이면 깨어날 시각이 되어도 <b>CPU 를 바로 못 받습니다</b>. 최대 지연 ${fmtus(mx)} — 듀티 30% 의 on 시간(1.5 ms) 보다 클 수도 있어 LED 가 눈에 띄게 깜빡입니다. 평균 주파수는 절대 시각 덕분에 200 Hz 를 지킵니다. 2교시에서 SCHED_FIFO 로 줄여 봅니다. (모의 수치 — 실제 값은 1-4 실습으로 확인)`,'warn');
+    else if(load>0) note('#s-note','부하가 조금 생기자 히스토그램의 꼬리가 길어졌습니다. 평균보다 <b>최대값</b>이 PWM 품질을 결정합니다.');
+    else note('#s-note','부하가 없으면 대부분 100 µs 안에 깨어납니다. 이제 부하를 yes × 4 로 올려 다시 측정해 보세요.','ok'); }
+  $('#s-duty').addEventListener('input',s1Draw); $('#s-run').onclick=s1Run; $('#s-clr').onclick=()=>{ S1.lat=[]; ['#s-avg','#s-max','#s-hz'].forEach(i=>$(i).textContent='–'); s1Draw(); s1Hist(); note('#s-note','듀티를 정하고 <b>1초 측정</b>을 눌러 보세요.'); };
+  ['#s-load','#s-mode'].forEach(i=>$(i).addEventListener('change',()=>{ if(S1.lat.length) s1Run(); }));
+  $('#s-clr').onclick();
+
+  /* ───────── 2 RGB 와 SCHED_FIFO ───────── */
+  const C2={hue:null,flick:0,jit:0};
+  function c2Draw(){ const r=+$('#c-r').value,g=+$('#c-g').value,b=+$('#c-b').value; $('#c-rv').textContent=r; $('#c-gv').textContent=g; $('#c-bv').textContent=b;
+    const pol=$('#c-pol').value, load=$('#c-load').checked, dead=pol==='fifo-noperm';
+    const sw=$('#c-sw'); const k=dead?0:1; sw.style.background=`rgb(${Math.round(r*2.55*k)},${Math.round(g*2.55*k)},${Math.round(b*2.55*k)})`;
+    const ord=[['R',r],['G',g],['B',b]].filter(x=>x[1]>0&&x[1]<100).sort((a,b)=>a[1]-b[1]).map(x=>`${x[0]}(${x[1]/10} ms)`);
+    $('#c-ord').textContent=dead?'–':(ord.length?ord.join(' → '):'끌 채널 없음');
+    const W=$('#c-wave'); clr(W); const X0=40, PX=380/20;
+    for(let t=0;t<=20;t+=5){ line(W,X0+t*PX,6,X0+t*PX,206,'#E3E7ED',1); txt(W,X0+t*PX-8,222,t+'ms',{'font-size':9}); }
+    [['R',r,'#D6452E'],['G',g,'#178A67'],['B',b,'#2457C5']].forEach(([n,v,c],i)=>{ const y0=60+i*66, y1=y0-40; txt(W,8,y0-14,n,{'font-size':14,'font-weight':700,fill:c});
+      if(dead){ poly(W,[[X0,y0],[X0+380,y0]],c); return; }
+      const pts=[]; for(let k2=0;k2<2;k2++){ const t0=k2*10, j=(load&&pol==='other'&&k2===1)?C2.jit/1000:0; const on=v/10;
+        if(v===0){ pts.push([X0+t0*PX,y0],[X0+(t0+10)*PX,y0]); continue; }
+        if(v===100){ pts.push([X0+t0*PX,y1],[X0+(t0+10)*PX,y1]); continue; }
+        pts.push([X0+t0*PX,y0],[X0+t0*PX,y1],[X0+Math.min(t0+on+j,t0+10)*PX,y1],[X0+Math.min(t0+on+j,t0+10)*PX,y0],[X0+(t0+10)*PX,y0]); }
+      poly(W,pts,c); });
+    if(load&&pol==='other'&&!dead) txt(W,X0+10*PX+6,20,'↑ 이 주기에 늦게 꺼짐 → 색이 순간 변함',{'font-size':10,fill:'#D6452E'}); }
+  function c2Tick(){ if(!vis(2)) return; const pol=$('#c-pol').value, load=$('#c-load').checked;
+    if(pol==='fifo-noperm'){ $('#c-jit').textContent='–'; return; }
+    let j; if(!load) j=30+rexp(20); else if(pol==='other') j=(Math.random()<0.35?1500+Math.random()*6000:200+rexp(300)); else j=25+rexp(15);
+    C2.jit=j; $('#c-jit').textContent=fmtus(j);
+    const sw=$('#c-sw'); if(load&&pol==='other'&&j>1500){ sw.style.filter='brightness(1.6)'; setTimeout(()=>sw.style.filter='',70); }
+    if(C2.hue!==null){ C2.hue=(C2.hue+6)%360; const h=C2.hue/60, x=1-Math.abs(h%2-1); const m=[[1,x,0],[x,1,0],[0,1,x],[0,x,1],[x,0,1],[1,0,x]][Math.floor(h)%6]; $('#c-r').value=Math.round(m[0]*100); $('#c-g').value=Math.round(m[1]*100); $('#c-b').value=Math.round(m[2]*100); }
+    c2Draw(); }
+  function c2Note(){ const pol=$('#c-pol').value, load=$('#c-load').checked; const T=$('#c-term');
+    if(pol==='fifo-noperm'){ T.innerHTML='<span class="c">$</span> ./02_rgb -f\n<span class="r">pthread_create: Operation not permitted</span>\n<span class="c">$</span> sudo setcap cap_sys_nice,cap_ipc_lock+ep ./02_rgb   <span class="c"># 한 번만</span>';
+      note('#c-note','일반 사용자는 실시간 우선순위를 요구할 수 없어 pthread_create 가 <b>EPERM</b> 을 돌려줍니다. sudo 로 전체 권한을 주는 대신 <code>setcap</code> 으로 이 실행 파일에 <b>필요한 권한 두 개만</b> 줍니다. 다시 빌드하면 권한이 사라지니 make 뒤에 다시 붙이세요.','warn'); return; }
+    T.innerHTML=pol==='fifo'?'<span class="c">$</span> ./02_rgb -f\n<span class="g">SCHED_FIFO 50, mlockall 적용</span>\nCtrl+C 로 종료':'<span class="c">$</span> ./02_rgb\nSCHED_OTHER 로 실행 (-f 로 FIFO)\nCtrl+C 로 종료';
+    if(!load) note('#c-note','부하가 없으면 정책에 상관없이 깔끔합니다. <b>부하 yes × 4</b> 를 켜 보세요. 세 채널을 한 쓰레드에서 같은 시각에 켜므로 듀티 비율 = 색 비율이 됩니다.');
+    else if(pol==='other') note('#c-note','부하 중 SCHED_OTHER — yes 프로세스와 CPU 를 <b>나눠 쓰느라</b> 끄는 시각이 수 ms 씩 늦어집니다. 짧은 듀티 채널일수록 비율이 크게 틀어져 색이 번쩍입니다. 정책을 SCHED_FIFO 로 바꿔 보세요.','warn');
+    else note('#c-note','SCHED_FIFO 쓰레드는 깨어날 때 <b>일반 프로세스를 즉시 밀어냅니다</b>. mlockall 은 페이지 폴트로 멈추는 일을 막습니다. 대신 FIFO 쓰레드가 잠들지 않고 돌면 다른 작업이 멈추므로 반드시 sleep 하는 루프로 만듭니다.','ok'); }
+  ['#c-r','#c-g','#c-b'].forEach(i=>$(i).addEventListener('input',()=>{ C2.hue=null; $('#c-hue').textContent='hue 페이드'; c2Draw(); }));
+  ['#c-load','#c-pol'].forEach(i=>$(i).addEventListener('change',()=>{ c2Note(); c2Draw(); }));
+  $('#c-hue').onclick=()=>{ if(C2.hue===null){ C2.hue=0; $('#c-hue').textContent='페이드 멈춤'; } else { C2.hue=null; $('#c-hue').textContent='hue 페이드'; } };
+  setInterval(c2Tick,120); c2Note(); c2Draw();
+
+  /* ───────── 3 sysfs PWM ───────── */
+  const H={ex:false,per:0,duty:0,en:false};
+  const HP='/sys/class/pwm/pwmchip0';
+  function hLog(cmd,out,bad){ const T=$('#h-term'); T.innerHTML+=`<span class="c">$</span> ${esc(cmd)}\n`+(out?`<span class="${bad?'r':'g'}">${esc(out)}</span>\n`:''); T.scrollTop=T.scrollHeight; }
+  function hDraw(){ $('#h-state').innerHTML=`<tr><th>파일</th><th>값</th></tr>
+    <tr><td>pwm0/ 디렉터리</td><td>${H.ex?'있음':'<span style="color:var(--red)">없음</span>'}</td></tr>
+    <tr><td>pwm0/period</td><td>${H.ex?H.per:'–'}</td></tr><tr><td>pwm0/duty_cycle</td><td>${H.ex?H.duty:'–'}</td></tr><tr><td>pwm0/enable</td><td>${H.ex?(H.en?1:0):'–'}</td></tr>
+    <tr class="${H.en?'hot':''}"><td>주파수 / 듀티</td><td>${H.ex&&H.per?(1e9/H.per).toFixed(1)+' Hz / '+(H.duty/H.per*100).toFixed(1)+'%':'–'}</td></tr>`;
+    const lv=H.en&&H.per?H.duty/H.per:0; ledSet('#h-led',lv>0,lv); $('#h-ledtxt').textContent=H.en?`밝기 ${(lv*100).toFixed(0)}%`:'꺼짐';
+    const W=$('#h-wave'); clr(W); txt(W,4,20,'GPIO18'); const X0=60;
+    if(!(H.en&&H.per)){ poly(W,[[X0,90],[890,90]],'#9AA7B8'); txt(W,X0+300,70,'enable 이 1 이 되어야 파형이 나옵니다',{'font-size':12}); return; }
+    const span=Math.max(H.per*4,1); const PX=830/span; const pts=[]; const load=$('#h-load').checked;
+    for(let t=0;t<span;t+=H.per){ const on=H.duty; pts.push([X0+t*PX,90],[X0+t*PX,30],[X0+(t+on)*PX,30],[X0+(t+on)*PX,90]); }
+    pts.push([890,90]); poly(W,pts,'#2457C5',2.4); txt(W,X0,110,`4주기 = ${(span/1e6).toFixed(3)} ms`,{'font-size':10});
+    if(load) txt(W,X0+420,110,'부하 중에도 같은 파형 — 하드웨어가 만듭니다',{'font-size':11,fill:'#178A67'}); }
+  function hCmd(c){ const per=+$('#h-per').value, duty=+$('#h-duty').value; const P=HP+'/pwm0';
+    const nofile=f=>hLog(`echo … > pwm0/${f}`,`bash: ${P}/${f}: No such file or directory`,true);
+    if(c==='ls'){ hLog('ls '+HP,`device  export  npwm  power  subsystem  uevent  unexport${H.ex?'  pwm0':''}`); }
+    else if(c==='export'){ if(H.ex){ hLog('echo 0 > '+HP+'/export','bash: echo: write error: Device or resource busy',true); note('#h-note','이미 export 된 채널을 다시 export 하면 <b>EBUSY</b>. 이전 실행이 unexport 하지 않고 죽었을 때도 이렇게 보입니다. 그대로 써도 되고, unexport 후 다시 해도 됩니다.','warn'); return; }
+      H.ex=true; H.per=0; H.duty=0; H.en=false; hLog('echo 0 > '+HP+'/export',''); note('#h-note','pwm0/ 디렉터리가 생겼습니다. 처음 export 직후에는 udev 가 권한(gpio 그룹)을 바꿀 때까지 잠깐 <b>Permission denied</b> 가 날 수 있어, pwm_sysfs.h 의 pwm_open() 은 최대 1초 기다립니다. 이제 <b>period</b> 를 쓰세요.'); }
+    else if(c==='period'){ if(!H.ex) return nofile('period'); hLog(`echo ${per} > pwm0/period`,'');
+      if(per<=0||per<H.duty){ $('#h-term').innerHTML+='<span class="r">bash: echo: write error: Invalid argument</span>\n';
+        note('#h-note',`새 period(${per}) 가 현재 duty_cycle(${H.duty}) 보다 작아 <b>EINVAL</b>. 커널은 언제나 <b>duty ≤ period</b> 를 지킵니다. 주기를 줄일 때는 <b>duty 를 먼저</b> 줄이세요 — pwm_set() 이 이 순서를 자동으로 고릅니다.`,'warn'); return; }
+      H.per=per; note('#h-note',`주기 ${per} ns = ${(1e9/per).toFixed(1)} Hz. 이제 duty_cycle 을 쓰세요.`); }
+    else if(c==='duty'){ if(!H.ex) return nofile('duty_cycle'); hLog(`echo ${duty} > pwm0/duty_cycle`,'');
+      if(duty<0||duty>H.per){ const T=$('#h-term'); T.innerHTML+='<span class="r">bash: echo: write error: Invalid argument</span>\n';
+        note('#h-note',H.per===0?'export 직후 period 는 <b>0</b> 입니다. duty 를 먼저 쓰면 duty > period 가 되어 EINVAL — <b>period 를 먼저</b> 쓰세요.':`duty(${duty}) 가 period(${H.per}) 보다 큽니다. 주기를 늘릴 때는 <b>period 를 먼저</b> 늘리세요.`,'warn'); return; }
+      H.duty=duty; note('#h-note',`듀티 ${(duty/H.per*100).toFixed(1)}%. ${H.en?'enable 상태에서 바로 반영됩니다.':'이제 enable 에 1 을 쓰세요.'}`,H.en?'ok':''); }
+    else if(c==='enable'){ if(!H.ex) return nofile('enable'); hLog('echo 1 > pwm0/enable','');
+      if(!H.per){ $('#h-term').innerHTML+='<span class="r">bash: echo: write error: Invalid argument</span>\n'; note('#h-note','period 가 0 이면 켤 수 없습니다.','warn'); return; }
+      H.en=true; note('#h-note','이제 PWM 하드웨어가 파형을 만듭니다. CPU 는 손을 뗐습니다 — <b>부하</b>를 켜 보세요. duty_cycle 을 바꿔 다시 쓰면 바로 반영됩니다.','ok'); }
+    else if(c==='disable'){ if(!H.ex) return nofile('enable'); H.en=false; hLog('echo 0 > pwm0/enable',''); note('#h-note','파형이 멈췄습니다. 값(period · duty) 은 남아 있어 다시 1 을 쓰면 그대로 재개됩니다.'); }
+    else if(c==='unexport'){ hLog('echo 0 > '+HP+'/unexport',H.ex?'':'bash: echo: write error: Invalid argument',!H.ex); H.ex=false; H.en=false; H.per=0; H.duty=0; note('#h-note','채널을 반납했습니다. 프로그램의 pwm_close() 가 disable → unexport 를 합니다.'); }
+    hDraw(); }
+  $$('#h-cmds button').forEach(b=>b.addEventListener('click',()=>hCmd(b.dataset.c)));
+  $('#h-load').addEventListener('change',()=>{ hDraw(); if($('#h-load').checked&&H.en) note('#h-note','yes × 4 를 돌려도 파형이 그대로입니다. 소프트웨어 PWM(1교시) 과 달리 <b>타이밍을 하드웨어 카운터</b>가 만들기 때문입니다. 대신 쓸 수 있는 핀이 GPIO12/13/18/19 로 정해져 있고, pwm-2chan 은 18 · 19 두 채널입니다.','ok'); });
+  $('#h-reset').onclick=()=>{ Object.assign(H,{ex:false,per:0,duty:0,en:false}); $('#h-term').innerHTML='<span class="c"># dtoverlay=pwm-2chan 적용 후 재부팅한 상태</span>\n'; hDraw(); note('#h-note','순서: <b>export → period → duty_cycle → enable</b>. 일부러 duty 를 먼저 써 보거나, 파형이 나온 뒤 period 를 duty 보다 작게 바꿔 써 보세요.'); };
+  $('#h-reset').onclick();
+
+  /* ───────── 4 서보 · 부저 ───────── */
+  const V={tab:'servo',ang:90,star:null};
+  function vServo(){ const pw=+$('#v-pw').value, mn=+$('#v-min').value, mx=+$('#v-max').value; $('#v-pwv').textContent=(pw/1000).toFixed(2)+' ms';
+    let a=(pw-mn)/(mx-mn)*180, hit=false; if(a<0){ a=0; hit=true; } if(a>180){ a=180; hit=true; } V.ang=a;
+    const S=$('#v-arm'); clr(S); const cx=210, cy=190;
+    S.appendChild(el('path',{d:`M ${cx-150} ${cy} A 150 150 0 0 1 ${cx+150} ${cy}`,fill:'none',stroke:'#E3E7ED','stroke-width':16}));
+    [0,45,90,135,180].forEach(t=>{ const r=(180-t)*Math.PI/180; txt(S,cx+168*Math.cos(r)-10,cy-168*Math.sin(r)+4,t+'°',{'font-size':11}); });
+    S.appendChild(el('rect',{x:cx-50,y:cy-14,width:100,height:44,rx:6,fill:'#1B2A41'})); txt(S,cx-16,cy+26,'SG90',{fill:'#fff','font-size':12});
+    const r=(180-a)*Math.PI/180; line(S,cx,cy,cx+130*Math.cos(r),cy-130*Math.sin(r),hit?'#D6452E':'#2457C5',12);
+    S.appendChild(el('circle',{cx,cy,r:12,fill:'#fff',stroke:'#1B2A41','stroke-width':3}));
+    txt(S,14,24,`각도 ≈ ${a.toFixed(0)}°`,{'font-size':15,'font-weight':700,fill:'#1B2A41'});
+    const W=$('#v-wave'); clr(W); const X0=20, PX=380/40; /* 40 ms = 2주기 */
+    const pts=[]; for(let k=0;k<2;k++){ const t0=k*20; pts.push([X0+t0*PX,90],[X0+t0*PX,30],[X0+(t0+pw/1000)*PX,30],[X0+(t0+pw/1000)*PX,90]); } pts.push([X0+40*PX,90]); poly(W,pts,'#2457C5');
+    txt(W,X0,110,'0'); txt(W,X0+20*PX-10,110,'20 ms'); txt(W,X0+40*PX-30,110,'40 ms'); txt(W,X0+pw/1000*PX+4,26,`${(pw/1000).toFixed(2)} ms`,{'font-size':10,fill:'#2457C5'});
+    $('#v-term').innerHTML=`period     = <span class="y">20000000</span>  <span class="c"># 고정 (50 Hz)</span>\nduty_cycle = <span class="y">${pw*1000}</span>  <span class="c"># 듀티 ${(pw/200).toFixed(1)}%</span>`;
+    if(hit) note('#v-note',`보정 범위(${mn}–${mx} µs) 밖입니다. 서보가 기계적 끝에 닿아 <b>웅— 소리를 내며 떨고 전류를 계속 먹습니다</b>. 04_servo.c 는 angle_to_ns() 에서 각도를 0–180 으로 자르고, 보정 인자로 개체마다 다른 끝점을 맞춥니다.`,'warn');
+    else note('#v-note','주기는 20 ms 그대로, <b>펄스 폭(duty_cycle) 만</b> 바꿨습니다. 듀티 %로 보면 2.5–12.5% 의 좁은 범위입니다. 서보마다 끝점이 조금씩 다르니 0° · 180° 에서 떨지 않는 최소 · 최대값을 찾아 보정하세요.'); }
+  $('#v-pw').addEventListener('input',vServo); ['#v-min','#v-max'].forEach(i=>$(i).addEventListener('input',vServo));
+  $$('#v-servo [data-a]').forEach(b=>b.addEventListener('click',()=>{ const mn=+$('#v-min').value, mx=+$('#v-max').value; $('#v-pw').value=Math.round(mn+(+b.dataset.a)/180*(mx-mn)); vServo(); }));
+  const NOTES=[['도',262],['레',294],['미',330],['파',349],['솔',392],['라',440],['시',494],['높은 도',523]];
+  $('#v-notes').innerHTML=NOTES.map(n=>`<button data-hz="${n[1]}">${n[0]} ${n[1]}</button>`).join('');
+  function vNote(hz,nm){ const per=Math.round(1e9/hz);
+    const W=$('#v-bwave'); clr(W); const X0=20, PX=380/10; const pts=[]; for(let t=0;t<10;t+=1000/hz){ pts.push([X0+t*PX,90],[X0+t*PX,30],[X0+Math.min(t+500/hz,10)*PX,30],[X0+Math.min(t+500/hz,10)*PX,90]); } poly(W,pts,'#2457C5',1.6);
+    txt(W,X0,110,'0'); txt(W,X0+380-34,110,'10 ms'); txt(W,X0+150,20,`${nm} ${hz} Hz — 10 ms 에 ${(hz/100).toFixed(1)}주기`,{'font-size':11,fill:'#1B2A41'});
+    $('#v-bterm').innerHTML=`<span class="c"># tone(${hz}, ms)</span>\nperiod     = <span class="y">${per}</span>  <span class="c"># 1e9 / ${hz}</span>\nduty_cycle = <span class="y">${Math.round(per/2)}</span>  <span class="c"># period / 2</span>\nenable     = 1  …  ms 뒤 0`;
+    if($('#v-snd').checked) beep(hz,260,0.05);
+    note('#v-note','부저는 반대로 <b>듀티는 50% 그대로, 주기(period)</b> 가 음 높이를 정합니다. 높은 도(523 Hz) 는 도(262 Hz) 의 두 배 주파수 = 절반 주기입니다. 주기를 줄이므로 tone() 은 pwm_set() 으로 duty 를 먼저 줄입니다.'); }
+  $$('#v-notes button').forEach(b=>b.addEventListener('click',()=>vNote(+b.dataset.hz,b.textContent.split(' ')[0])));
+  $('#v-star').onclick=()=>{ if(V.star) return; const seq=[0,0,4,4,5,5,4,-1,3,3,2,2,1,1,0]; let i=0; V.star=setInterval(()=>{ if(i>=seq.length||!vis(4)){ clearInterval(V.star); V.star=null; return; } const k=seq[i++]; if(k>=0) vNote(NOTES[k][1],NOTES[k][0]); },330); };
+  tabs('v-tabs',b=>{ V.tab=b.dataset.t; $('#v-servo').hidden=V.tab!=='servo'; $('#v-buz').hidden=V.tab!=='buz'; if(V.tab==='servo') vServo(); else vNote(440,'라'); });
+  vServo();
+
+  /* ───────── 5 L293D ───────── */
+  const M={v:0,ang:0,cur:0,spike:0,last:performance.now(),busy:false};
+  function mMode(){ const a=$('#m-in1').checked, b=$('#m-in2').checked; return a&&!b?'fwd':!a&&b?'rev':a&&b?'brake':'coast'; }
+  function mTable(){ const md=mMode(), en=+$('#m-en').value; $('#m-env').textContent=en+'%';
+    const R=[['1','0','fwd','정회전 (속도 = EN 듀티)'],['0','1','rev','역회전'],['1','1','brake','브레이크 — 두 단자를 같은 전위로 묶어 급정지'],['0','0','coast','프리런 — 전원만 끊김, 관성으로 천천히 멈춤']];
+    $('#m-tt').innerHTML='<tr><th>IN1</th><th>IN2</th><th>동작</th></tr>'+R.map(r=>`<tr class="${r[2]===md?'hot':''}"><td>${r[0]}</td><td>${r[1]}</td><td>${r[3]}</td></tr>`).join(''); }
+  function mTarget(){ const md=mMode(), en=+$('#m-en').value/100; return md==='fwd'?en:md==='rev'?-en:0; }
+  function mChange(){ const md=mMode(), tg=mTarget();
+    if((md==='fwd'||md==='rev')&&Math.sign(tg)*Math.sign(M.v)<0&&Math.abs(M.v)>0.25){ M.spike=1; $('#m-term').innerHTML+=`<span class="r">! 회전 중 바로 역전: 역기전력 + 공급 전압 → 전류 급증</span>\n`;
+      note('#m-note','회전하던 모터에 반대 전압을 바로 걸면 <b>역기전력과 전원 전압이 더해져</b> 순간 전류가 크게 튑니다. L293D(채널당 0.6 A) 가 뜨거워지고 Pi 전원이 흔들려 리셋될 수 있습니다. <b>버튼 6</b> 처럼 속도 0 → 브레이크 → 잠깐 대기 → 반대 방향 순서로 바꾸세요.','warn'); }
+    else if(md==='brake') note('#m-note','IN1 = IN2 = 1: 모터 두 단자가 같은 전위로 묶여 <b>회전 에너지가 모터 자신의 코일에서 소모</b>되며 빠르게 멈춥니다.');
+    else if(md==='coast') note('#m-note','IN1 = IN2 = 0: 출력이 둘 다 LOW 라 전류가 흐르지 않고 관성으로 천천히 멈춥니다. (EN 을 0 으로 해도 출력이 꺼져 프리런)');
+    else note('#m-note',`EN 핀에 20 kHz PWM 을 주어 평균 전압을 조절합니다. 20 kHz 는 사람 귀에 들리지 않아 모터가 '삐—' 울지 않습니다. 듀티가 너무 낮으면 정지 마찰을 못 이겨 안 돌기도 합니다.`); mTable(); }
+  ['#m-in1','#m-in2'].forEach(i=>$(i).addEventListener('change',()=>{ $('#m-term').innerHTML+=`IN1=${+$('#m-in1').checked} IN2=${+$('#m-in2').checked}\n`; mChange(); $('#m-term').scrollTop=1e6; }));
+  $('#m-en').addEventListener('input',()=>{ mTable(); });
+  $('#m-flip').onclick=()=>{ if(M.busy) return; M.busy=true; const T=$('#m-term'); const was=mMode(); const to=was==='rev'?'fwd':'rev'; const en=$('#m-en').value;
+    T.innerHTML+='<span class="y">[버튼 6]</span> pwm_set_duty(&en, 0)\n'; $('#m-en').value=0; mTable();
+    setTimeout(()=>{ T.innerHTML+='set IN1=1 IN2=1  (브레이크)\n'; $('#m-in1').checked=true; $('#m-in2').checked=true; mTable(); },250);
+    setTimeout(()=>{ T.innerHTML+='sleep_ms(200)\n'; },500);
+    setTimeout(()=>{ $('#m-in1').checked=to==='fwd'; $('#m-in2').checked=to==='rev'; T.innerHTML+=`set IN1=${+$('#m-in1').checked} IN2=${+$('#m-in2').checked}  (${to==='fwd'?'정회전':'역회전'})\npwm_set_duty(&en, ${en}%)\n`; $('#m-en').value=en; mTable(); M.busy=false; T.scrollTop=1e6;
+      note('#m-note','속도 0 → 브레이크 → 200 ms → 반대 방향 → 속도 복구. 전류 막대가 크게 튀지 않은 것을 확인하세요. 06_dcmotor.c 의 set_dir() 가 이 순서입니다.','ok'); },1200); };
+  function mAnim(t){ const dt=Math.min(0.05,(t-M.last)/1000); M.last=t; const md=mMode(), tg=mTarget();
+    const k=md==='brake'?6:md==='coast'?0.6:2.2; M.v+=(tg-M.v)*Math.min(1,k*dt); M.ang=(M.ang+M.v*720*dt)%360;
+    const want=(md==='fwd'||md==='rev')?Math.abs(tg-M.v)*0.9+Math.abs(tg)*0.15:(md==='brake'?Math.abs(M.v)*0.8:0);
+    M.spike=Math.max(0,M.spike-dt*1.2); M.cur=Math.min(1,want+M.spike);
+    if(vis(5)){ const ci=$('#m-cur'); ci.style.width=(M.cur*100).toFixed(0)+'%'; ci.style.background=M.cur>0.7?'var(--red)':M.cur>0.4?'var(--amber)':'var(--green)';
+      const S=$('#m-svg'); clr(S); box(S,10,30,150,90,'L293D','EN1 ← PWM0\nIN1←20  IN2←21','b');
+      arrow(S,150,60,240,60,'#1B2A41','OUT1'); arrow(S,150,100,240,100,'#1B2A41','OUT2');
+      S.appendChild(el('circle',{cx:310,cy:80,r:62,fill:'#F6F8FB',stroke:'#1B2A41','stroke-width':3}));
+      for(let i=0;i<3;i++){ const r=(M.ang+i*120)*Math.PI/180; line(S,310,80,310+52*Math.cos(r),80+52*Math.sin(r),'#2457C5',8); }
+      S.appendChild(el('circle',{cx:310,cy:80,r:10,fill:'#1B2A41'}));
+      txt(S,250,175,`속도 ${(M.v*100).toFixed(0)}%  ${M.v>0.02?'↻ 정회전':M.v<-0.02?'↺ 역회전':'정지'}`,{'font-size':14,'font-weight':700,fill:'#1B2A41'});
+      txt(S,20,175,'모터 전원: 외부 5V (VCC2)',{'font-size':11}); txt(S,20,195,'Pi 3V3 은 VCC1(논리)에만',{'font-size':11});
+      txt(S,20,230,`PWM0 20 kHz, 듀티 ${$('#m-en').value}% → 평균 전압 ≈ ${(5*$('#m-en').value/100).toFixed(1)} V (모의)`,{'font-size':11}); }
+    requestAnimationFrame(mAnim); }
+  mTable(); mChange(); requestAnimationFrame(mAnim);
+
+  /* ───────── 6 스테퍼 ───────── */
+  const SEQ={half:[[1,0,0,0],[1,1,0,0],[0,1,0,0],[0,1,1,0],[0,0,1,0],[0,0,1,1],[0,0,0,1],[1,0,0,1]],full:[[1,1,0,0],[0,1,1,0],[0,0,1,1],[1,0,0,1]],wave:[[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]};
+  const SPR={half:4096,full:2048,wave:2048}; const LIM={half:[2.0,1.2],full:[3.0,2.0],wave:[3.6,2.6]}; /* [가감속 없음, 있음] 최소 간격 ms — 수업용 모의 수치 */
+  const ST={idx:0,cmd:0,act:0,field:0,shaft:0,run:null,phase:0};
+  const COL=['#2457C5','#D6452E','#C98A12','#178A67'];
+  function stDraw(){ const md=$('#st-mode').value, sq=SEQ[md], row=sq[ST.idx%sq.length]; $('#st-dlyv').textContent=($('#st-dly').value/10).toFixed(1)+' ms';
+    $('#st-tab').innerHTML='<tr><th>idx</th><th>IN1 (12)</th><th>IN2 (16)</th><th>IN3 (20)</th><th>IN4 (21)</th></tr>'+sq.map((r,i)=>`<tr class="${i===ST.idx%sq.length?'hot':''}"><td>${i}</td>${r.map(v=>`<td>${v}</td>`).join('')}</tr>`).join('');
+    $('#st-cmd').textContent=ST.cmd; $('#st-act').textContent=ST.act;
+    const S=$('#st-svg'); clr(S); const cx=110, cy=120; txt(S,40,20,'모터 안쪽: 자기장 방향',{'font-size':12,fill:'#1B2A41'});
+    for(let c=0;c<4;c++){ const a=c*90-90, r=a*Math.PI/180; const on=row[c]; S.appendChild(el('rect',{x:cx+72*Math.cos(r)-16,y:cy+72*Math.sin(r)-16,width:32,height:32,rx:6,fill:on?COL[c]:'#fff',stroke:COL[c],'stroke-width':3})); txt(S,cx+72*Math.cos(r)-10,cy+72*Math.sin(r)+4,'IN'+(c+1),{'font-size':10,fill:on?'#fff':COL[c]}); }
+    const fa=(ST.field-90)*Math.PI/180; S.appendChild(el('circle',{cx,cy,r:40,fill:'#F6F8FB',stroke:'#C9D1DC','stroke-width':2}));
+    line(S,cx,cy,cx+36*Math.cos(fa),cy+36*Math.sin(fa),ST.phase?'#D6452E':'#1B2A41',7);
+    if(ST.phase) txt(S,cx+40,cy+110,'회전자 떨림 (탈조)',{'font-size':12,fill:'#D6452E','font-weight':700});
+    const ox=320, oy=120; txt(S,250,20,'출력축 (기어 1/64)',{'font-size':12,fill:'#1B2A41'});
+    S.appendChild(el('circle',{cx:ox,cy:oy,r:70,fill:'#fff',stroke:'#1B2A41','stroke-width':3}));
+    for(let t=0;t<360;t+=90){ const r=(t-90)*Math.PI/180; line(S,ox+62*Math.cos(r),oy+62*Math.sin(r),ox+70*Math.cos(r),oy+70*Math.sin(r),'#9AA7B8',2); }
+    const sa=(ST.shaft-90)*Math.PI/180; line(S,ox,oy,ox+58*Math.cos(sa),oy+58*Math.sin(sa),'#178A67',6); S.appendChild(el('circle',{cx:ox,cy:oy,r:7,fill:'#1B2A41'}));
+    txt(S,ox-24,oy+96,ST.shaft.toFixed(1)+'°',{'font-size':14,'font-weight':700,fill:'#1B2A41'});
+    txt(S,20,250,`한 스텝 = 출력축 ${(360/SPR[md]).toFixed(4)}°  · 1회전 ${SPR[md]} 스텝`,{'font-size':11}); }
+  function stOne(ok){ const md=$('#st-mode').value; const n=SEQ[md].length; ST.idx=(ST.idx+1)%n; ST.cmd++; ST.field=(ST.field+360/n)%360; if(ok){ ST.act++; ST.shaft=(ST.shaft+360/SPR[md])%360; } }
+  $('#st-step').onclick=()=>{ if(ST.run) return; ST.phase=0; stOne(true); stDraw(); const md=$('#st-mode').value;
+    note('#st-note',md==='half'?'하프 스텝은 <b>코일 1개 → 2개 → 1개</b> 를 번갈아 켜서 자기장을 45° 씩 돌립니다. 8줄이 한 바퀴(자기장), 출력축은 기어 때문에 아주 조금만 움직입니다. 다음 줄 = <code>(idx + dir + 8) % 8</code>.':md==='full'?'풀 스텝 2상은 언제나 코일 2개를 켜서 <b>토크가 가장 큽니다</b>. 대신 해상도가 하프 스텝의 절반입니다.':'웨이브는 코일 1개씩만 켜서 전류는 적지만 <b>토크가 약해</b> 빠른 간격에서 먼저 탈조합니다.'); };
+  $('#st-run').onclick=()=>{ if(ST.run) return; const md=$('#st-mode').value; const total=SPR[md]/4; const tgt=$('#st-dly').value/10; const ramp=$('#st-ramp').checked;
+    const lim=LIM[md][ramp?1:0]; const stall=tgt<lim; const slip=tgt<LIM[md][1]?0.02:0.08+Math.random()*0.12;
+    ST.phase=0; let done=0; const startAct=ST.act, R=Math.min(200,total/2);
+    const per=Math.max(1,Math.round(total/90)); /* 화면 프레임당 스텝 수 */
+    ST.run=setInterval(()=>{ for(let k=0;k<per&&done<total;k++,done++){ let d=tgt; if(ramp){ const p=Math.min(done,total-1-done); if(p<R) d=4-(4-tgt)*p/R; }
+        const ok=!stall||(ramp? d>=lim : done<6)||Math.random()<slip; if(!ok) ST.phase=1; stOne(ok); }
+      stDraw(); if(done>=total){ clearInterval(ST.run); ST.run=null; const moved=ST.act-startAct;
+        if(moved<total*0.98) note('#st-note',`<b>탈조</b>: ${total} 스텝을 명령했지만 출력축은 ${moved} 스텝(${(moved*360/SPR[md]).toFixed(1)}°) 만 갔습니다. 자기장이 너무 빨리 돌아 회전자가 따라오지 못하고 제자리에서 떨었습니다. 스테퍼에는 위치 센서가 없어 <b>프로그램은 이를 모릅니다</b>. ${ramp?'가감속으로도 부족하니 간격을 늘리세요.':'<b>가감속</b>을 켜 보세요.'} (임계값은 수업용 모의 수치 — 키트 모터와 전원에 따라 다릅니다)`,'warn');
+        else note('#st-note',ramp&&tgt<LIM[md][0]?`가감속 덕분에 ${tgt.toFixed(1)} ms 에서도 따라왔습니다. 4 ms 로 천천히 출발해 ${R} 스텝에 걸쳐 목표 간격까지 줄이고, 끝에서 다시 늘립니다 — 08_stepper.c 의 램프입니다.`:`${total} 스텝 = 90° 를 정확히 돌았습니다. 4096 × 90 / 360 = 1024 (하프 스텝 기준). 간격을 더 줄여 보세요.`,'ok'); } },25); };
+  ['#st-mode','#st-dly','#st-ramp'].forEach(i=>$(i).addEventListener(i==='#st-dly'?'input':'change',()=>{ if(i==='#st-mode') ST.idx=0; stDraw(); }));
+  stDraw(); note('#st-note','<b>한 스텝</b>을 몇 번 눌러 코일 순서를 확인한 뒤, 간격 3.0 ms 로 <b>90° 회전</b>, 다시 1.2 ms 로 줄여 회전해 보세요.');
+
+  /* ───────── 7 HC-SR04 ───────── */
+  const U={};
+  function uOnce(d){ const nz=$('#u-noise').checked; if(nz&&Math.random()<0.25) return Math.random()<0.5?38000:Math.round(150+Math.random()*400); return d*2/0.0343*(1+(Math.random()-0.5)*0.01); }
+  function uWave(us){ const W=$('#u-wave'); clr(W); const X0=70, PX=820/20000; txt(W,4,40,'Trig 23'); txt(W,4,115,'Echo 24');
+    for(let t=0;t<=20000;t+=5000){ line(W,X0+t*PX,10,X0+t*PX,135,'#E3E7ED',1); txt(W,X0+t*PX-12,148,t/1000+' ms',{'font-size':9}); }
+    poly(W,[[X0-30,50],[X0,50],[X0,22],[X0+6,22],[X0+6,50],[890,50]],'#C98A12'); txt(W,X0+10,20,'10 µs',{'font-size':10,fill:'#C98A12'});
+    for(let i=0;i<8;i++) line(W,X0+14+i*4,62,X0+14+i*4,72,'#9AA7B8',1.5); txt(W,X0+50,72,'40 kHz × 8',{'font-size':9});
+    if(us===undefined){ poly(W,[[X0-30,125],[890,125]],'#2457C5'); return; }
+    const s=X0+0.45*PX*1000, e=Math.min(890,s+us*PX); poly(W,[[X0-30,125],[s,125],[s,92],[e,92],[e,125],[890,125]],'#2457C5',2.4);
+    txt(W,s+4,88,'rising 타임스탬프',{'font-size':10,fill:'#2457C5'}); txt(W,Math.min(e+4,840),140,'falling',{'font-size':10,fill:'#2457C5'});
+    if(us>=38000) txt(W,s+300,110,'반사가 안 돌아옴 → 약 38 ms 뒤 타임아웃',{'font-size':11,fill:'#D6452E'}); }
+  function uMeasure(){ const d=+$('#u-d').value; const med=$('#u-med').checked; const n=med?5:1; const xs=Array.from({length:n},()=>uOnce(d));
+    const cm=xs.map(u=>u*0.0343/2); const last=xs[n-1]; uWave(last);
+    $('#u-us').textContent=Math.round(last)+' µs'; $('#u-cm').textContent=(last*0.0343/2).toFixed(1)+' cm';
+    let out; if(med){ const s=[...cm].sort((a,b)=>a-b); out=s[2]; $('#u-out').textContent=out.toFixed(1)+' cm (중앙값)'; } else { out=cm[0]; $('#u-out').textContent=out.toFixed(1)+' cm'; }
+    const bad=Math.abs(out-d)>3;
+    if(med) note('#u-note',`5번 잰 값: [${cm.map(c=>c.toFixed(1)).join(', ')}] → 정렬해서 가운데(index 2) = <b>${out.toFixed(1)} cm</b>. 튀는 값이 1~2개 섞여도 중앙값은 흔들리지 않습니다. 평균이었다면 ${(cm.reduce((a,b)=>a+b,0)/n).toFixed(1)} cm 가 됩니다. 측정 사이에는 60 ms 이상 쉬어 이전 메아리가 섞이지 않게 합니다.`,bad?'warn':'ok');
+    else if(bad) note('#u-note',`실제 ${d} cm 인데 ${out.toFixed(1)} cm 가 나왔습니다. 소리가 비스듬히 튕겨 나가거나 흡음재에 먹히면 이렇게 튑니다. <b>중앙값 5회</b>를 켜 보세요.`,'warn');
+    else note('#u-note',`Echo 폭 ${Math.round(last)} µs × 0.0343 cm/µs ÷ 2 (왕복) = ${(last*0.0343/2).toFixed(1)} cm. 09_sonar.c 는 이 폭을 Echo 의 rising · falling <b>커널 타임스탬프 차이</b>로 잽니다 — 깨어난 시각으로 재면 1 µs 늦을 때마다 0.017 cm, 1 ms 늦으면 17 cm 가 틀어집니다.`); }
+  function uDiv(){ const r1=+$('#u-r1').value, r2=+$('#u-r2').value; const v=5*r2/(r1+r2); const S=$('#u-div'); clr(S);
+    const rk=r=>r>=1000?(r/1000)+'kΩ':r+'Ω';
+    box(S,10,20,90,46,'Echo','5 V 출력','a'); line(S,100,43,150,43);
+    if(r1){ S.appendChild(el('rect',{x:150,y:33,width:60,height:20,fill:'#fff',stroke:'#1B2A41','stroke-width':2})); txt(S,160,28,'R1 '+rk(r1),{'font-size':11,fill:'#1B2A41'}); } else line(S,150,43,210,43,'#D6452E',3);
+    line(S,210,43,260,43); S.appendChild(el('circle',{cx:260,cy:43,r:5,fill:'#1B2A41'})); line(S,260,43,310,43);
+    const danger=v>3.45, low=v<2.0; box(S,310,20,100,46,'GPIO24',v.toFixed(2)+' V',danger?'r':low?'a':'g');
+    line(S,260,43,260,100); S.appendChild(el('rect',{x:250,y:100,width:20,height:50,fill:'#fff',stroke:'#1B2A41','stroke-width':2})); txt(S,276,130,'R2 '+rk(r2),{'font-size':11,fill:'#1B2A41'}); line(S,260,150,260,175); line(S,240,175,280,175,'#1B2A41',3); txt(S,248,192,'GND',{'font-size':10});
+    $('#u-term').innerHTML=`V = 5 × R2 / (R1 + R2)\n  = 5 × ${r2} / (${r1} + ${r2})\n  = <span class="${danger?'r':low?'y':'g'}">${v.toFixed(2)} V</span>`;
+    return {v,danger,low}; }
+  function uAll(){ $('#u-dv').textContent=$('#u-d').value+' cm'; const r=uDiv(); if(r.danger){ note('#u-note',`GPIO24 에 <b>${r.v.toFixed(2)} V</b> — Pi 의 GPIO 는 3.3 V 전용이라 이 전압을 계속 받으면 핀(또는 SoC) 이 손상될 수 있습니다. Echo 쪽에 큰 저항(R1), GND 쪽에 2배 저항(R2) 을 두어 3.3 V 근처로 낮추세요.`,'warn'); return false; }
+    if(r.low){ note('#u-note',`${r.v.toFixed(2)} V 는 안전하지만 HIGH 로 확실히 읽기에는 낮습니다. 여유 있게 HIGH 로 읽히도록 2 V 이상, 3.3 V 이하가 되게 비율을 맞추세요. (1 kΩ : 2 kΩ → 3.33 V)`,'warn'); return true; } return true; }
+  $('#u-go').onclick=()=>{ if(uAll()) uMeasure(); };
+  $('#u-d').addEventListener('input',()=>{ $('#u-dv').textContent=$('#u-d').value+' cm'; });
+  ['#u-r1','#u-r2'].forEach(i=>$(i).addEventListener('change',()=>{ if(uAll()) note('#u-note',`분압 ${uDiv().v.toFixed(2)} V — GPIO 에 안전하고 HIGH 로 읽힙니다. 키트에 2 kΩ 이 없으면 1 kΩ 두 개를 직렬로 쓰세요.`,'ok'); }));
+  uWave(); uAll(); note('#u-note','거리를 정하고 <b>측정</b>을 눌러 보세요. 그다음 R1 을 <b>없음 (직결)</b> 으로 바꿔 보세요.');
+
+  /* ───────── 8 경보기 ───────── */
+  const A={d:80,lastBeep:0,beepOn:false,lastPrint:0,lastSense:0,drag:false,gate:90};
+  const ax=d=>200+(Math.min(120,Math.max(3,d))-3)/117*640;
+  function aZone(d){ return d>=50?2:d>=20?1:0; }
+  function aDraw(){ const d=A.d, z=aZone(d); const S=$('#a-svg'); clr(S);
+    box(S,10,30,120,70,'Pi 4','alarm.c','b'); box(S,140,48,46,34,'SR04','','a');
+    for(let i=1;i<=3;i++){ const r=i*16; S.appendChild(el('path',{d:`M ${186+r*0.2} ${65-r} Q ${186+r} 65 ${186+r*0.2} ${65+r}`,fill:'none',stroke:'#C9D1DC','stroke-width':2})); }
+    line(S,190,140,860,140,'#C9D1DC',1); for(let c=0;c<=120;c+=10){ const x=ax(Math.max(3,c)); line(S,x,136,x,144,'#9AA7B8',1); txt(S,x-8,158,c,{'font-size':10}); }
+    [[50,'#178A67'],[20,'#C98A12'],[10,'#D6452E']].forEach(([c,col])=>{ line(S,ax(c),20,ax(c),136,col,1.5,'4 3'); txt(S,ax(c)+3,30,c+' cm',{'font-size':10,fill:col}); });
+    const bx=ax(d); const obj=el('rect',{x:bx,y:40,width:56,height:96,rx:6,fill:'#5B6B80',stroke:'#1B2A41','stroke-width':2,style:'cursor:grab'}); obj.id='a-obj'; S.appendChild(obj); txt(S,bx+8,92,'물체',{fill:'#fff','font-size':12});
+    [['#178A67',2,'초록 22'],['#C98A12',1,'노랑 27'],['#D6452E',0,'빨강 17']].forEach(([c,k,l],i)=>{ S.appendChild(el('circle',{cx:40+i*56,cy:190,r:13,fill:z===k?c:'#E3E7ED',stroke:c,'stroke-width':2})); txt(S,22+i*56,220,l,{'font-size':9}); });
+    S.appendChild(el('circle',{cx:230,cy:190,r:16,fill:A.beepOn?'#1B2A41':'#fff',stroke:'#1B2A41','stroke-width':2})); txt(S,206,220,'부저 PWM1',{'font-size':9});
+    if(A.beepOn) for(let i=1;i<=2;i++) S.appendChild(el('path',{d:`M ${252+i*7} ${178} Q ${260+i*9} 190 ${252+i*7} 202`,fill:'none',stroke:'#1B2A41','stroke-width':2}));
+    const gx=340, gy=212; S.appendChild(el('rect',{x:gx-8,y:gy-6,width:16,height:16,fill:'#1B2A41'})); const ga=(A.gate)*Math.PI/180; line(S,gx,gy,gx+44*Math.cos(ga),gy-44*Math.sin(ga),A.gate<45?'#D6452E':'#178A67',7);
+    txt(S,gx+56,gy+4,A.gate<45?'서보 0° — 차단기 내림':'서보 90° — 차단기 올림',{'font-size':11,fill:'#1B2A41'});
+    $('#a-tab').innerHTML=`<tr><th>출력</th><th>지금</th><th>규칙</th></tr>
+      <tr class="${z===2?'hot':''}"><td>LED</td><td>${['빨강','노랑','초록'][z]}</td><td>≥50 초록 · 20–50 노랑 · &lt;20 빨강</td></tr>
+      <tr class="${d<50?'hot':''}"><td>부저</td><td>${d<10?'연속음':d<50?Math.round(d*10)+' ms 마다 50 ms':'꺼짐'}</td><td>간격 = 거리 × 10 ms, &lt;10 연속</td></tr>
+      <tr class="${d<10?'hot':''}"><td>서보</td><td>${d<10?'0°':'90°'}</td><td>&lt;10 cm 이면 내림</td></tr>`; }
+  function aSet(d){ A.d=Math.round(d*10)/10; $('#a-d').value=Math.round(A.d); $('#a-dv').textContent=Math.round(A.d)+' cm'; }
+  function aNote(){ const d=A.d; if($('#a-nomutex').checked) note('#a-note','mutex 를 빼도 이 시뮬레이터에서는 <b>겉보기엔 잘 돌아갑니다</b>. 그게 데이터 경쟁(data race) 의 함정입니다. g_cm 이 구조체(거리 + 측정 시각) 로 커지거나 컴파일러가 읽기를 루프 밖으로 빼면, 반쯤 갱신된 값이나 영원히 안 바뀌는 값을 읽게 됩니다. 공유 변수는 <b>짧게 잠그고 복사해서</b> 씁니다.','warn');
+    else if(d<10) note('#a-note','10 cm 미만: 빨강 + <b>연속음</b> + 차단기 내림. 하드웨어 PWM 이라 main 루프가 20 ms 마다 잠들어도 서보 펄스와 부저 음은 끊기지 않습니다.','warn');
+    else if(d<50) note('#a-note',`${Math.round(d)} cm: 삑 간격 ${Math.round(d*10)} ms. 가까워질수록 빨라집니다. 부저는 PWM1 을 enable 0/1 로 껐다 켜며 박자를 만듭니다 — 주기(2 kHz) 는 처음 한 번만 설정합니다.`);
+    else note('#a-note','멀리 있으면 초록 LED 만. 상자를 끌어 가까이 가져와 보세요.','ok'); }
+  function aTick(){ const now=performance.now(); const d=A.d; const T=$('#a-term');
+    if(now-A.lastSense>180){ A.lastSense=now; }
+    let want=false; if(d<10) want=true; else if(d<50){ const gap=d*10; if(now-A.lastBeep>=gap) A.lastBeep=now; want=(now-A.lastBeep)<50; }
+    if(want&&!A.beepOn&&$('#a-snd').checked&&vis(8)) beep(2000,d<10?120:50,0.03);
+    A.beepOn=want; const tg=d<10?0:90; A.gate+= (tg-A.gate)*0.25;
+    if(vis(8)){ aDraw(); if(now-A.lastPrint>500){ A.lastPrint=now; const m=$('#a-nomutex').checked; T.textContent+=`${m?'':'lock → '}d = g_cm${m?'':' → unlock'}  ${d.toFixed(1).padStart(5)} cm  ${['빨강','노랑','초록'][aZone(d)]}${d<10?'  ▼ 차단기 내림':''}\n`; const ls=T.textContent.split('\n'); if(ls.length>40) T.textContent=ls.slice(-40).join('\n'); T.scrollTop=1e6; } } }
+  $('#a-d').addEventListener('input',()=>{ aSet(+$('#a-d').value); aNote(); });
+  $('#a-nomutex').addEventListener('change',aNote);
+  const asvg=$('#a-svg');
+  function aPt(e){ const r=asvg.getBoundingClientRect(); const x=(e.clientX-r.left)/r.width*900; return 3+(x-28-200)/640*117; }
+  asvg.addEventListener('pointerdown',e=>{ if(e.target&&e.target.id==='a-obj'){ A.drag=true; asvg.setPointerCapture(e.pointerId); } });
+  asvg.addEventListener('pointermove',e=>{ if(A.drag){ aSet(Math.min(120,Math.max(3,aPt(e)))); aNote(); } });
+  asvg.addEventListener('pointerup',()=>{ A.drag=false; });
+  aSet(80); aNote(); setInterval(aTick,40);
+})();
+</script>
+</body>
+</html>
