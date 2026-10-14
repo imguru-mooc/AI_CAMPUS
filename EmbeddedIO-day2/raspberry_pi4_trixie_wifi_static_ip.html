@@ -1,0 +1,231 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Raspberry Pi 4B | Trixie Wi-Fi · 고정 IP 설정 가이드</title><style>
+:root{color-scheme:light;--bg:#f4f7fb;--ink:#142b42;--muted:#63758b;--surface:#fff;--line:#dae4ef;--accent:#007e94;--accentsoft:#e1f6f7;--dark:#102335;--code:#14283d;--shadow:0 8px 28px rgba(22,46,78,.07)}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,'Noto Sans KR','Malgun Gothic',sans-serif;line-height:1.75}a{color:inherit;text-decoration:none}.hero{background:linear-gradient(120deg,#0c273e 0%,#134a63 60%,#147783 100%);color:white;padding:52px max(24px,calc((100vw - 1150px)/2)) 62px}.eyebrow{color:#8fe6dd;font-size:12px;font-weight:800;letter-spacing:2px}.hero h1{font-size:clamp(27px,3.4vw,43px);line-height:1.25;max-width:790px;margin:12px 0}.hero p{color:#c4d8e5;max-width:700px;margin:0}.chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:24px}.chips span{border:1px solid #ffffff40;border-radius:22px;padding:6px 12px;background:#ffffff14;font-size:12px;font-weight:700}.layout{max-width:1190px;margin:-25px auto 80px;padding:0 20px;display:grid;grid-template-columns:255px minmax(0,1fr);align-items:start;gap:24px}.sidebar{position:sticky;top:20px;background:white;box-shadow:var(--shadow);border:1px solid var(--line);border-radius:16px;padding:18px;max-height:calc(100vh - 40px);overflow:auto}.sidebar b{display:block;font-size:13px;color:#71849b;letter-spacing:1px;margin:5px 8px 12px}.sidebar a{display:flex;align-items:baseline;gap:11px;padding:9px;border-radius:9px;font-size:13px;color:#3d536b}.sidebar a span{font-size:11px;font-weight:800;color:#00849c}.sidebar a:hover{background:var(--accentsoft);color:#004957}.doc{background:var(--surface);padding:clamp(22px,4vw,45px);border-radius:18px;border:1px solid var(--line);box-shadow:var(--shadow);min-width:0}.doc h1{display:none}.doc h2{display:flex;align-items:center;gap:12px;font-size:22px;line-height:1.4;border-top:1px solid var(--line);padding-top:36px;margin:42px 0 18px;scroll-margin-top:28px}.doc h2:first-of-type{border-top:0;margin-top:0;padding-top:5px}.section-number{display:inline-flex;justify-content:center;align-items:center;flex:none;background:#dbf3f5;color:#087d8e;border-radius:10px;font-size:13px;min-width:39px;height:36px}.doc h3{font-size:17px;margin:25px 0 12px}.doc p,.doc li{font-size:14px}.doc p{margin:12px 0}.doc ul{padding-left:24px}.doc table{border-collapse:collapse;width:100%;font-size:13px;margin:18px 0}.doc th,.doc td{text-align:left;border-bottom:1px solid #e4edf3;padding:11px 13px}.doc th{background:#eff6fa;color:#2b5b74;font-weight:800}.doc tr:nth-child(even) td{background:#fafcfe}.doc code:not(pre code){background:#edf2f6;color:#b13858;border-radius:5px;padding:2px 5px;overflow-wrap:anywhere}.doc blockquote{margin:22px 0;background:#fff8e9;border-left:4px solid #e9a83e;padding:12px 17px;border-radius:0 9px 9px 0;color:#745323}.doc blockquote p{margin:4px 0}.code-card{background:var(--code);border-radius:12px;overflow:hidden;margin:15px 0 21px}.code-top{display:flex;align-items:center;justify-content:space-between;background:#0c1b2b;color:#96b5c8;padding:7px 14px;font-size:10px;letter-spacing:1.2px;font-weight:800}.copy{background:#244b61;border:1px solid #3b6d83;color:white;border-radius:7px;padding:5px 12px;cursor:pointer;font-weight:700;font-size:11px;letter-spacing:0}.copy:hover{background:#326e82}pre{margin:0;padding:17px 19px;overflow-x:auto;color:#daf1f7;line-height:1.7;font-size:12.5px;tab-size:4}pre code{font-family:'Cascadia Code','Consolas',monospace}.toolbar{display:flex;justify-content:flex-end;gap:9px;margin-bottom:19px}.toolbar button{border:1px solid var(--line);background:white;padding:10px 14px;border-radius:9px;color:#234e67;cursor:pointer;font-weight:700}.footer{text-align:center;color:#71849b;font-size:12px;padding:10px 20px 34px}@media(max-width:900px){.layout{display:block;margin-top:-25px}.sidebar{position:relative;top:auto;max-height:none;margin-bottom:18px}.sidebar nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.sidebar nav{grid-template-columns:1fr}.hero{padding:40px 22px 55px}.doc{padding:20px}.doc h2{font-size:18px}.doc table{font-size:12px}.doc th,.doc td{padding:8px}}@media print{body{background:#fff}.hero{padding:20px;color:#123;background:#fff}.hero p{color:#456}.chips{display:none}.layout{display:block;margin:0;padding:0}.sidebar,.toolbar,.copy{display:none}.doc{padding:0;border:0;box-shadow:none}.doc h2{break-after:avoid}.code-card{break-inside:avoid;print-color-adjust:exact}.footer{display:none}}
+</style></head><body><header class="hero"><div class="eyebrow">RASPBERRY PI OS · TRIXIE 64-BIT LITE</div><h1>Wi-Fi 자동 연결<br>고정 IP 설정 가이드</h1><p>연결 프로필 생성 · nmap 활성 장비 검색 · 미사용 IP 후보 확인 · 부팅 자동 연결과 SSH까지</p><div class="chips"><span>SSID · hyundai_02</span><span>네트워크 · 192.168.20.0/24</span><span>목표 IP · 192.168.20.100</span></div></header><div class="layout"><aside class="sidebar"><b>CONTENTS / 목차</b><nav><a href="#section-1"><span>01</span>1. 네트워크 설정 정보</a>
+<a href="#section-2"><span>02</span>2. Wi-Fi 활성화 및 연결</a>
+<a href="#section-3"><span>03</span>3. Wi-Fi 연결 프로필 확인 및 생성 (unknown connection 해결)</a>
+<a href="#section-4"><span>04</span>4. nmap으로 활성 장비 검색</a>
+<a href="#section-5"><span>05</span>5. 미사용 IP 후보 검색</a>
+<a href="#section-6"><span>06</span>6. 고정 IP 및 부팅 시 자동 연결 설정</a>
+<a href="#section-7"><span>07</span>7. 부팅 시 NetworkManager 및 SSH 자동 실행</a>
+<a href="#section-8"><span>08</span>8. 재부팅 후 확인</a></nav></aside><main><div class="toolbar"><button onclick="window.print()">🖨️ 인쇄 / PDF 저장</button><button onclick="window.scrollTo({top:0,behavior:'smooth'})">↑ 맨 위로</button></div><article class="doc"><h1>Raspberry Pi 4B — Wi-Fi 자동 연결, nmap 활성 장비 검색 및 고정 IP 설정</h1>
+<p><strong>대상 OS:</strong> Raspberry Pi OS Trixie 64-bit Lite</p>
+<h2 id="section-1"><span class="section-number">01</span>1. 네트워크 설정 정보</h2>
+<table>
+<thead>
+<tr>
+  <th>항목</th>
+  <th>설정값</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Wi-Fi SSID</td>
+  <td><code>hyundai_02</code></td>
+</tr>
+<tr>
+  <td>Wi-Fi 비밀번호</td>
+  <td><code>hyundai02!</code></td>
+</tr>
+<tr>
+  <td>네트워크 대역</td>
+  <td><code>192.168.20.0/24</code></td>
+</tr>
+<tr>
+  <td>고정 IP 후보</td>
+  <td><code>192.168.20.100</code></td>
+</tr>
+<tr>
+  <td>게이트웨이</td>
+  <td><code>192.168.20.1</code> (예시: 실제 값 확인)</td>
+</tr>
+<tr>
+  <td>Wi-Fi 인터페이스</td>
+  <td><code>wlan0</code></td>
+</tr>
+<tr>
+  <td>DNS</td>
+  <td><code>8.8.8.8</code>, <code>1.1.1.1</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>주의: IP, 서브넷, 게이트웨이는 현재 네트워크 정보와 일치해야 합니다. <code>192.168.20.100</code>은 다른 장비와 중복되지 않고 DHCP 예약/할당과 충돌하지 않는 경우에만 사용하세요.</p>
+</blockquote>
+<h2 id="section-2"><span class="section-number">02</span>2. Wi-Fi 활성화 및 연결</h2>
+<div class="code-card"><div class="code-top"><span>TERMINAL · BASH</span><button type="button" class="copy" onclick="copyCode(this)">복사</button></div><pre><code># Wi-Fi 활성화
+sudo rfkill unblock wifi
+sudo nmcli radio wifi on
+
+# Wi-Fi 연결 (비밀번호를 대화식으로 입력)
+sudo nmcli --ask device wifi connect 'hyundai_02' ifname wlan0
+</code></pre></div>
+<p>비밀번호 입력 시 <code>hyundai02!</code>를 입력합니다.</p>
+<p>현재 IP, 라우팅 정보 및 연결 프로필 확인:</p>
+<div class="code-card"><div class="code-top"><span>TERMINAL · BASH</span><button type="button" class="copy" onclick="copyCode(this)">복사</button></div><pre><code>ip -4 addr show wlan0
+ip route
+nmcli connection show
+</code></pre></div>
+<h2 id="section-3"><span class="section-number">03</span>3. Wi-Fi 연결 프로필 확인 및 생성 (<code>unknown connection</code> 해결)</h2>
+<p><code>nmcli connection modify 'hyundai_02'</code> 명령에서 다음 오류가 발생한다면:</p>
+<div class="code-card"><div class="code-top"><span>TERMINAL · TEXT</span><button type="button" class="copy" onclick="copyCode(this)">복사</button></div><pre><code>Error: unknown connection 'hyundai_02'.
+</code></pre></div>
+<p>이는 <strong>SSID가 보이더라도 <code>hyundai_02</code>라는 이름의 NetworkManager 연결 프로필이 존재하지 않는다는 뜻</strong>입니다. SSID(무선 네트워크 이름)와 연결 프로필 이름은 서로 다를 수 있습니다.</p>
+<h3>① 현재 장치와 프로필 확인</h3>
+<div class="code-card"><div class="code-top"><span>TERMINAL · BASH</span><button type="button" class="copy" onclick="copyCode(this)">복사</button></div><pre><code>nmcli device status
+nmcli connection show
+nmcli -g GENERAL.CONNECTION device show wlan0
+nmcli -f IN-USE,SSID,SIGNAL,SECURITY device wifi list ifname wlan0
+</code></pre></div>
+<p>예를 들어 <code>nmcli connection show</code> 결과의 <code>NAME</code>이 <code>preconfigured</code>라면, 실제 연결에 사용되는 프로필 이름은 <code>hyundai_02</code>가 아닌 <code>preconfigured</code>일 수 있습니다. 기존 프로필이 정상적으로 Wi-Fi에 연결되어 있다면, <strong>새 프로필을 중복 생성하지 말고 기존 프로필 이름으로</strong> 이후 <code>connection modify</code> 명령을 실행하세요.</p>
+<h3>② 프로필이 없으면 먼저 일반 연결 시도</h3>
+<div class="code-card"><div class="code-top"><span>TERMINAL · BASH</span><button type="button" class="copy" onclick="copyCode(this)">복사</button></div><pre><code>sudo nmcli radio wifi on
+sudo nmcli device wifi rescan ifname wlan0
+sudo nmcli --ask device wifi connect 'hyundai_02' ifname wlan0
+</code></pre></div>
+<p>비밀번호를 물으면 <code>hyundai02!</code>를 입력합니다. 성공하면 다음으로 생성된 프로필 이름을 확인합니다.</p>
+<div class="code-card"><div class="code-top"><span>TERMINAL · BASH</span><button type="button" class="copy" onclick="copyCode(this)">복사</button></div><pre><code>nmcli connection show
+nmcli -g GENERAL.CONNECTION device show wlan0
+</code></pre></div>
+<h3>③ 연결 명령이 실패했고 프로필도 없을 때 직접 생성</h3>
+<p><strong>아래 명령은 <code>hyundai_02</code>라는 이름의 연결 프로필이 없는 경우에만 사용합니다.</strong> 이미 있다면 중복 생성하지 마세요.</p>
+<div class="code-card"><div class="code-top"><span>TERMINAL · BASH</span><button type="button" class="copy" onclick="copyCode(this)">복사</button></div><pre><code>sudo nmcli connection add \
+    type wifi \
+    con-name 'hyundai_02' \
+    ifname wlan0 \
+    ssid 'hyundai_02' \
+    wifi-sec.key-mgmt wpa-psk \
+    wifi-sec.psk 'hyundai02!' \
+    ipv4.method auto \
+    connection.autoconnect yes
+</code></pre></div>
+<blockquote>
+<p>위 명령은 WPA/WPA2-Personal(PSK) 방식의 일반 Wi-Fi를 가정합니다. WPA3 전용 또는 기업용 802.1X 네트워크라면 보안 설정이 달라집니다. 비밀번호를 명령어에 직접 입력하면 셸 기록에 남을 수 있으므로 공유 환경에서는 주의하세요.</p>
+</blockquote>
+<p>먼저 <strong>DHCP 방식으로 접속이 정상 동작하는지</strong> 확인합니다.</p>
+<div class="code-card"><div class="code-top"><span>TERMINAL · BASH</span><button type="button" class="copy" onclick="copyCode(this)">복사</button></div><pre><code>sudo nmcli connection up 'hyundai_02'
+ip -4 addr show wlan0
+ip route
+</code></pre></div>
+<p>연결에 성공한 이후에만 아래 고정 IP 단계로 진행하세요. 현재 네트워크가 실제로 <code>192.168.20.0/24</code>이고 게이트웨이가 <code>192.168.20.1</code>인지 확인해야 합니다.</p>
+<h3>④ 연결 실패 시 오류 로그 확인</h3>
+<div class="code-card"><div class="code-top"><span>TERMINAL · BASH</span><button type="button" class="copy" onclick="copyCode(this)">복사</button></div><pre><code>sudo journalctl -u NetworkManager -b --no-pager -n 50
+</code></pre></div>
+<table>
+<thead>
+<tr>
+  <th>오류</th>
+  <th>확인 사항</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>unknown connection</code></td>
+  <td>프로필 이름이 다른지 또는 프로필이 없는지 확인</td>
+</tr>
+<tr>
+  <td><code>Secrets were required</code></td>
+  <td>비밀번호나 인증 설정 확인</td>
+</tr>
+<tr>
+  <td><code>No network with SSID</code></td>
+  <td>SSID 검색 가능 여부, 신호, 국가 설정 확인</td>
+</tr>
+<tr>
+  <td><code>Activation failed</code></td>
+  <td>상세 로그에서 인증·DHCP 등 실패 원인 확인</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="section-4"><span class="section-number">04</span>4. nmap으로 활성 장비 검색</h2>
+<h3>① nmap 설치</h3>
+<div class="code-card"><div class="code-top"><span>TERMINAL · BASH</span><button type="button" class="copy" onclick="copyCode(this)">복사</button></div><pre><code>sudo apt update
+sudo apt install -y nmap
+</code></pre></div>
+<h3>② 현재 Wi-Fi 대역의 활성 장비 검색</h3>
+<div class="code-card"><div class="code-top"><span>TERMINAL · BASH</span><button type="button" class="copy" onclick="copyCode(this)">복사</button></div><pre><code>sudo nmap -sn 192.168.20.0/24
+</code></pre></div>
+<ul>
+<li><code>-sn</code>: 포트 스캔 없이 활성 호스트 탐색</li>
+<li><code>192.168.20.0/24</code>: <code>192.168.20.*</code> 대역 탐색</li>
+</ul>
+<p>예상 결과:</p>
+<div class="code-card"><div class="code-top"><span>TERMINAL · TEXT</span><button type="button" class="copy" onclick="copyCode(this)">복사</button></div><pre><code>Nmap scan report for 192.168.20.1
+Host is up
+
+Nmap scan report for 192.168.20.20
+Host is up
+
+Nmap scan report for 192.168.20.50
+Host is up
+
+Nmap scan report for 192.168.20.101
+Host is up
+</code></pre></div>
+<h3>③ 활성 장비 IP만 출력</h3>
+<div class="code-card"><div class="code-top"><span>TERMINAL · BASH</span><button type="button" class="copy" onclick="copyCode(this)">복사</button></div><pre><code>sudo nmap -sn -n 192.168.20.0/24 -oG - \
+    | awk '/Up$/{print $2}' \
+    | sort -V
+</code></pre></div>
+<p>예상 출력:</p>
+<div class="code-card"><div class="code-top"><span>TERMINAL · TEXT</span><button type="button" class="copy" onclick="copyCode(this)">복사</button></div><pre><code>192.168.20.1
+192.168.20.20
+192.168.20.50
+192.168.20.101
+</code></pre></div>
+<h2 id="section-5"><span class="section-number">05</span>5. 미사용 IP 후보 검색</h2>
+<p>먼저 nmap에 응답한 IP를 파일로 저장합니다.</p>
+<div class="code-card"><div class="code-top"><span>TERMINAL · BASH</span><button type="button" class="copy" onclick="copyCode(this)">복사</button></div><pre><code>sudo nmap -sn -n 192.168.20.0/24 -oG - \
+    | awk '/Up$/{print $2}' \
+    | sort -V &gt; /tmp/used_ips.txt
+</code></pre></div>
+<p>응답하지 않은 IP 후보를 표시합니다.</p>
+<div class="code-card"><div class="code-top"><span>TERMINAL · BASH</span><button type="button" class="copy" onclick="copyCode(this)">복사</button></div><pre><code>for i in $(seq 2 254); do
+    ip=&quot;192.168.20.$i&quot;
+    if ! grep -Fxq &quot;$ip&quot; /tmp/used_ips.txt; then
+        echo &quot;$ip&quot;
+    fi
+done
+</code></pre></div>
+<blockquote>
+<p><strong>중요:</strong> 검색되지 않은 주소가 반드시 비어 있는 것은 아닙니다. 전원이 꺼져 있거나 응답을 차단하는 기기, DHCP 예약 주소는 나타나지 않을 수 있습니다. 공유기 관리자 페이지에서 DHCP 할당 범위와 예약 목록을 확인하고 고정 IP를 선정하세요.</p>
+</blockquote>
+<h2 id="section-6"><span class="section-number">06</span>6. 고정 IP 및 부팅 시 자동 연결 설정</h2>
+<p><code>192.168.20.100</code> 사용이 가능하고 <strong>연결 프로필 이름이 <code>hyundai_02</code>인 것을 확인한 경우</strong> (다른 이름이면 해당 프로필 이름으로 변경):</p>
+<div class="code-card"><div class="code-top"><span>TERMINAL · BASH</span><button type="button" class="copy" onclick="copyCode(this)">복사</button></div><pre><code>sudo nmcli connection modify 'hyundai_02' \
+    ipv4.method manual \
+    ipv4.addresses '192.168.20.100/24' \
+    ipv4.gateway '192.168.20.1' \
+    ipv4.dns '8.8.8.8 1.1.1.1' \
+    connection.autoconnect yes
+</code></pre></div>
+<p>설정 적용:</p>
+<div class="code-card"><div class="code-top"><span>TERMINAL · BASH</span><button type="button" class="copy" onclick="copyCode(this)">복사</button></div><pre><code>sudo nmcli connection up 'hyundai_02'
+</code></pre></div>
+<blockquote>
+<p>Wi-Fi로 SSH에 접속한 상태에서 IP를 변경하면 연결이 끊길 수 있습니다. 이후 새 IP로 재접속하세요.</p>
+</blockquote>
+<h2 id="section-7"><span class="section-number">07</span>7. 부팅 시 NetworkManager 및 SSH 자동 실행</h2>
+<div class="code-card"><div class="code-top"><span>TERMINAL · BASH</span><button type="button" class="copy" onclick="copyCode(this)">복사</button></div><pre><code>sudo systemctl enable --now NetworkManager
+sudo systemctl enable --now ssh
+</code></pre></div>
+<p>부팅 자동 실행 여부 확인:</p>
+<div class="code-card"><div class="code-top"><span>TERMINAL · BASH</span><button type="button" class="copy" onclick="copyCode(this)">복사</button></div><pre><code>systemctl is-enabled NetworkManager
+systemctl is-enabled ssh
+</code></pre></div>
+<p>재부팅:</p>
+<div class="code-card"><div class="code-top"><span>TERMINAL · BASH</span><button type="button" class="copy" onclick="copyCode(this)">복사</button></div><pre><code>sudo reboot
+</code></pre></div>
+<h2 id="section-8"><span class="section-number">08</span>8. 재부팅 후 확인</h2>
+<p>라즈베리파이에서:</p>
+<div class="code-card"><div class="code-top"><span>TERMINAL · BASH</span><button type="button" class="copy" onclick="copyCode(this)">복사</button></div><pre><code>ip -4 addr show wlan0
+nmcli connection show --active
+ip route
+</code></pre></div>
+<p>Windows 11 PowerShell에서:</p>
+<div class="code-card"><div class="code-top"><span>TERMINAL · POWERSHELL</span><button type="button" class="copy" onclick="copyCode(this)">복사</button></div><pre><code>ssh 사용자명@192.168.20.100
+</code></pre></div>
+<p><code>사용자명</code>은 Raspberry Pi OS 설치 시 만든 계정으로 변경합니다.</p>
+<hr />
+<p><strong>최종 동작:</strong> 전원을 켜면 <code>hyundai_02</code> Wi-Fi에 자동으로 연결하고, <code>192.168.20.100</code> 고정 IP로 SSH에 접속할 수 있습니다(네트워크 설정과 IP 충돌 여부 확인 필요).</p>
+</article></main></div><div class="footer">Raspberry Pi 4B · Raspberry Pi OS Trixie · NetworkManager CLI Guide</div><script>async function copyCode(b){const code=b.closest('.code-card').querySelector('code').innerText;try{await navigator.clipboard.writeText(code)}catch(e){const t=document.createElement('textarea');t.value=code;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove()}b.innerText='복사됨 ✓';setTimeout(()=>b.innerText='복사',1600)}</script></body></html>
