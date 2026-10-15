@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Embedded I/O 제어 Day 4 개념 워크시트 — 버스 통신: I2C · SPI · UART</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:900px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.primary{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700;padding:9px 18px;font-size:14px}
+  button.submit{background:#3a2e12;border-color:var(--amber);color:var(--amber);font-weight:700;padding:9px 18px;font-size:14px}
+  button:disabled{opacity:.45;cursor:default}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  input[type=text]{background:#0a0f1c;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:14px}
+  .tabs{display:flex;flex-wrap:wrap;gap:6px}
+  .tabs button .s{font-family:var(--mono);font-size:11px;color:var(--dim);margin-left:6px}
+  .tabs button.graded .s{color:var(--green)}
+  .head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .head .t{color:var(--amber);font-size:17px}
+  .head .a{font-size:13px;color:var(--teal);font-family:var(--mono)}
+  .q{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#0e1628}
+  .q.unans{border-color:#5a3a1a}
+  .q .n{font-family:var(--mono);color:var(--dim);font-size:12px}
+  .q .p{margin:4px 0 10px;font-size:15px}
+  .q .p code,.opt code,.fb code,td code{font-family:var(--mono);color:var(--blue);background:#0a0f1c;padding:1px 5px;border-radius:4px}
+  .q pre.qc{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:6px;padding:10px 12px;margin:4px 0 12px;font-size:13.5px;line-height:1.5;white-space:pre;overflow-x:auto;color:#dbe4f3}
+  .q pre{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin:6px 0 10px;font-size:14px;white-space:pre;overflow-x:auto}
+  .opts{display:grid;gap:6px}
+  .opt{text-align:left;padding:8px 12px;font-size:14px;font-family:inherit}
+  .opt.sel{border-color:var(--amber);background:#1f1a0c}
+  .opt.ok{border-color:var(--green);color:var(--green);background:#0d2216}
+  .opt.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .opt:disabled{cursor:default;opacity:.9}
+  .fb{margin-top:8px;font-size:13px;color:var(--dim);border-left:3px solid var(--line);padding-left:10px}
+  .fb.ok{border-left-color:var(--green)}.fb.bad{border-left-color:var(--red)}
+  .fb .anim{color:var(--teal);font-family:var(--mono);font-size:12px;display:block;margin-top:3px}
+  .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  .code{font-family:var(--mono);font-size:20px;color:var(--amber);letter-spacing:1px}
+  .score{font-family:var(--mono);color:var(--green);font-size:16px}
+  .hint{color:var(--dim);font-size:13px}
+  details{color:var(--dim);font-size:13px}
+  details summary{cursor:pointer;color:var(--dim)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  /* dialog */
+  dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:0;max-width:820px;width:92vw;max-height:88vh}
+  dialog::backdrop{background:#000a}
+  .dg{padding:18px 20px}
+  .dg h3{color:var(--amber);margin:0 0 4px;font-size:20px}
+  .dg .meta{color:var(--dim);font-size:13px;margin-bottom:12px;font-family:var(--mono)}
+  .dg .sec{margin:14px 0 6px;color:var(--teal);font-weight:700;font-size:14px}
+  .dg table{width:100%;border-collapse:collapse;font-size:13px}
+  .dg th{text-align:left;color:var(--dim);font-weight:600;padding:5px 8px;border-bottom:1px solid var(--line);font-size:12px}
+  .dg td{padding:5px 8px;border-bottom:1px solid #16203a;vertical-align:top}
+  .dg td.r{font-family:var(--mono)}
+  .dg .ok{color:var(--green)}.dg .bad{color:var(--red)}.dg .none{color:var(--dim)}
+  .dg .sum{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0;font-family:var(--mono)}
+  .dgbar{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:10px 20px;display:flex;gap:8px;justify-content:flex-end;align-items:center}
+  .toast{color:var(--green);font-size:13px;margin-right:auto}
+  .body{overflow:auto;max-height:calc(88vh - 60px)}
+
+.q .n .ty{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600;font-family:inherit}
+.ty-mc{background:#1b2a4a;color:var(--blue)} .ty-ox{background:#2a2410;color:var(--amber)} .ty-match{background:#13302c;color:var(--teal)}
+.ty-order{background:#2a1a3a;color:var(--purple)} .ty-multi{background:#2a1616;color:#fca5a5}
+.oxrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:360px}
+.oxrow .opt{text-align:center;font-size:22px;font-weight:700;padding:10px}
+.reflist{display:grid;gap:4px;margin:2px 0 10px;padding:8px 12px;border:1px dashed var(--line);border-radius:8px;font-size:14px;color:var(--text)}
+.reflist b{color:var(--teal);font-family:var(--mono);margin-right:6px}
+.mrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
+.mrow:first-of-type{border-top:0}
+.mrow .l{font-size:14px} .mrow .l b{font-family:var(--mono);color:var(--dim);margin-right:6px}
+.mrow select{width:100%;background:#0a0f1c;color:var(--text);border:1px solid #2a3a5c;border-radius:6px;padding:6px 8px;font:inherit;font-size:13.5px}
+.mrow select.ok{border-color:var(--green);color:var(--green)} .mrow select.bad{border-color:var(--red);color:var(--red)}
+.steps{display:grid;gap:6px}
+.step{display:flex;gap:10px;align-items:center;text-align:left;padding:8px 12px;font-size:14px}
+.step .badge{flex:none;width:26px;height:26px;border-radius:50%;border:1px solid #2a3a5c;display:grid;place-items:center;font-family:var(--mono);font-size:13px;color:var(--dim)}
+.step.on{border-color:var(--purple)} .step.on .badge{background:var(--purple);border-color:var(--purple);color:#0b1220;font-weight:700}
+.step.ok{border-color:var(--green)} .step.ok .badge{background:var(--green);color:#0b1220;border-color:var(--green)}
+.step.bad{border-color:var(--red)} .step.bad .badge{background:var(--red);color:#0b1220;border-color:var(--red)}
+.seqbar{display:flex;gap:10px;align-items:center;margin-top:8px;font-family:var(--mono);font-size:13px;color:var(--dim)}
+.seqbar button{padding:4px 10px;font-size:12px}
+.multi .opt::before{content:"☐ ";color:var(--dim)} .multi .opt.sel::before{content:"☑ ";color:var(--amber)}
+.multi .opt.ok::before{content:"☑ ";color:var(--green)} .multi .opt.miss::before{content:"☐ ";color:var(--green)}
+.multi .opt.miss{border-color:var(--green);border-style:dashed}
+.typeinfo{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Embedded I/O 제어 Day 4 개념 워크시트</h1>
+  <p class="sub">버스 통신 — I2C · PCF8591 · 제어 바이트 · I2C_RDWR · 아날로그 센서 · SPI · 74HC595 · 멀티플렉싱 · 도트 매트릭스 · 이중 버퍼 · UART · termios · 센서 게이트웨이 · 8교시 × 10문항 (객관식 5 · OX 2 · 선잇기 1 · 순서 맞추기 1 · 모두 고르기 1). 🎬 표시는 animation.html 의 애니메이션 번호입니다. 선잇기는 드롭다운으로, 순서 맞추기는 단계를 일어나는 순서대로 눌러서, 모두 고르기는 여러 개를 눌러서 답합니다. 답을 고른 뒤 아래 <b style="color:var(--teal)">채점하기</b>를 누르면 정오·해설과 결과 코드가 나타납니다. 채점 전에는 답을 바꿀 수 있고, 채점 후에는 잠깁니다. 모든 교시를 마치면 <b style="color:var(--amber)">제출</b>로 오답 정리를 열고, <b>캡처</b>로 복사해 노션에 붙여 넣으세요.</p>
+
+  <div class="panel">
+    <div class="row"><label style="color:var(--dim);font-size:13px">이름 <input type="text" id="name" placeholder="홍길동"></label><span class="hint">이름은 결과 코드 계산에만 쓰이며 저장되지 않습니다.</span></div>
+  </div>
+  <div class="panel"><h2>교시</h2><div class="tabs" id="tabs"></div></div>
+  <div class="panel" id="sheet"></div>
+  <div class="panel">
+    <div class="actions">
+      <button class="primary" id="gradeBtn">채점하기</button>
+      <span class="code" id="rcode">—</span><span class="score" id="rscore"></span><span class="hint" id="rhint"></span>
+      <button class="submit" id="submitBtn" style="margin-left:auto">제출</button>
+    </div>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <div class="body"><div class="dg" id="dgBody"></div></div>
+  <div class="dgbar"><span class="toast" id="toast"></span><button id="captureBtn" class="primary">📋 캡처 (노션용 복사)</button><button id="closeBtn">닫기</button></div>
+</dialog>
+
+<script>
+const $=s=>document.querySelector(s);
+const Q=[{"t": "1교시 · I2C 와 PCF8591", "anim": "D4-1 I2C 트랜잭션", "qs": [{"ty": "mc", "p": "Linux 에서 I2C 장치의 상대 주소를 정하는 호출은 무엇입니까?", "o": ["write(fd, \"0x48\", 4)", "ioctl(fd, I2C_SLAVE, 0x48)", "open(\"/dev/i2c-1/0x48\")", "tcsetattr(fd, 0x48, &t)"], "w": "버스 파일을 연 뒤 ioctl(I2C_SLAVE) 로 주소를 정하면 이후 read/write 가 그 장치로 갑니다.", "an": "1교시 1-1 표", "a": 1}, {"ty": "mc", "p": "PCF8591 모듈의 Vcc 를 3V3 에 연결해야 하는 이유는 무엇입니까?", "o": ["기판 풀업이 Vcc 로 버스를 당기므로", "칩이 5V 에서는 주소가 0x49 로 바뀌므로", "3V3 에서만 DAC 출력이 제대로 나오므로", "5V 에서는 변환 속도가 너무 빨라지므로"], "w": "풀업 저항이 Vcc 로 당기므로 5V 면 버스 High 가 5V 가 되어 Pi 핀이 상합니다.", "an": "1교시 1-3", "a": 0}, {"ty": "mc", "p": "i2cdetect -y 1 결과가 모두 -- 입니다. 가장 먼저 의심할 것은 무엇입니까?", "o": ["PCF8591 의 DAC 출력이 꺼져 있음", "가변저항이 0 쪽 끝에 놓여 있음", "SPI 가 켜져 있어 I2C 와 충돌함", "Scl · Sda 가 바뀌었거나 전원이 빠짐"], "w": "ACK 를 보내는 장치가 없다는 뜻입니다. 배선과 전원부터 확인합니다.", "an": "1교시 1-4 표", "a": 3}, {"ty": "mc", "p": "아래 명령을 두 번 실행했습니다. 첫 번째 결과가 가변저항 위치와 다른 이유는 무엇입니까?", "o": ["i2cget 은 항상 0x40 을 돌려주므로", "DAC 출력이 입력에 섞이므로", "I2C 클럭이 너무 느려서", "첫 바이트는 지난번 변환 값이라서"], "w": "PCF8591 은 읽기 요청 때 다음 변환을 시작하므로 처음 받는 바이트는 이전 결과입니다.", "an": "D4-1 · 1바이트만", "c": "i2cget -y 1 0x48 0x40\ni2cget -y 1 0x48 0x40", "a": 3}, {"ty": "mc", "p": "I2C 에서 마스터가 마지막 바이트를 받은 뒤 보내는 신호는 무엇입니까?", "o": ["ACK", "START", "NACK", "다시 시작"], "w": "마지막 바이트에는 NACK 로 \"그만\" 을 알리고 STOP 을 보냅니다.", "an": "D4-1 · 2바이트 읽기", "a": 2}, {"ty": "ox", "p": "I2C 의 SDA · SCL 은 평소 High 이고, 장치는 Low 로 끌어내리기만 한다.", "a": true, "w": "풀업 + open-drain 구조입니다 (Day 2 drive).", "an": "1교시 1-2 표"}, {"ty": "ox", "p": "PCF8591 의 7비트 주소 0x48 에 쓰기 비트를 붙이면 바이트는 0x48 이다.", "a": false, "w": "주소를 한 칸 올리고 R/W 비트를 붙여 0x90(쓰기) · 0x91(읽기) 이 됩니다.", "an": "D4-1 · 파형"}, {"ty": "match", "p": "MCU 코드와 같은 일을 하는 Linux 호출을 이으세요.", "left": ["Wire.begin()", "Wire.beginTransmission(0x48)", "Wire.write + endTransmission", "Wire.requestFrom + read"], "right": ["ioctl(fd, I2C_SLAVE, 0x48)", "read(fd, buf, n)", "open(\"/dev/i2c-1\")", "write(fd, &ctrl, 1)"], "a": [2, 0, 3, 1], "w": "1-1 대응표입니다.", "an": "1교시 1-1 표"}, {"ty": "order", "p": "01_pcf_read 가 값을 하나 읽는 순서대로 놓으세요.", "steps": ["read(fd, buf, 2)", "buf[1] 을 쓴다", "ioctl(I2C_SLAVE, 0x48)", "open(\"/dev/i2c-1\")", "write(fd, 0x40 | ch)"], "a": [3, 2, 4, 0, 1], "w": "열기 → 주소 → 제어 바이트 쓰기 → 2바이트 읽기 → 두 번째 바이트 사용입니다.", "an": "1교시 1-5"}, {"ty": "multi", "p": "i2cdetect · i2cget 에서 생길 수 있는 오류와 원인이 맞게 짝지어진 것을 모두 고르세요.", "o": ["Could not open file → I2C 꺼짐", "Permission denied → i2c 그룹 아님", "전부 -- → 배선 · 전원 문제", "값이 한 박자 늦음 → 칩 고장"], "a": [0, 1, 2], "w": "한 박자 늦은 값은 정상 동작입니다.", "an": "1교시 1-4 표"}]}, {"t": "2교시 · DAC 와 다채널 읽기", "anim": "D4-2 제어 바이트와 자동 증가", "qs": [{"ty": "mc", "p": "AIN2 를 읽고 DAC 를 켜는 제어 바이트는 무엇입니까?", "o": ["0x42", "0x24", "0x02", "0x46"], "w": "DAC 켜기 0x40 | 채널 2 = 0x42 입니다.", "an": "2교시 2-1 표", "a": 0}, {"ty": "mc", "p": "제어 바이트 0x44 가 뜻하는 것은 무엇입니까?", "o": ["DAC 끄기 + 차동 입력 + 채널 4", "DAC 켜기 + 채널 4 하나만", "DAC 켜기 + 자동 증가 + 채널 0", "자동 증가 끄기 + 채널 0 하나"], "w": "bit6(0x40) DAC, bit2(0x04) 자동 증가, 채널 00 입니다.", "an": "2교시 2-1 표", "a": 2}, {"ty": "mc", "p": "DAC 에 128 을 쓰면 AOUT 은 약 몇 V 입니까? (기준 3.3 V)", "o": ["약 1.66 V", "약 3.3 V", "약 0.5 V", "약 2.5 V"], "w": "128 / 255 × 3.3 ≈ 1.66 V 입니다.", "an": "2교시 2-2", "a": 0}, {"ty": "mc", "p": "자동 증가로 네 채널을 읽을 때 몇 바이트를 읽어야 합니까?", "o": ["4바이트", "8바이트", "2바이트", "5바이트"], "w": "첫 바이트는 이전 값이므로 4 + 1 = 5바이트를 읽고 첫 바이트를 버립니다.", "an": "2교시 2-3", "a": 3}, {"ty": "mc", "p": "아래처럼 I2C_RDWR 로 묶어 보내는 장점은 무엇입니까?", "o": ["DAC 와 ADC 를 동시에 바꿀 수 있다", "I2C 속도가 두 배로 빨라진다", "주소를 지정하지 않아도 된다", "중간에 STOP 없이 한 덩어리로 전송된다"], "w": "두 메시지를 repeated START 로 이어 다른 프로세스가 끼어들 틈이 없습니다.", "an": "2교시 2-3", "c": "struct i2c_msg msgs[2] = { {0x48, 0, 1, &ctrl}, {0x48, I2C_M_RD, 5, buf} };\nioctl(fd, I2C_RDWR, &data);", "a": 3}, {"ty": "ox", "p": "DAC 출력은 PWM 처럼 빠르게 켜고 끄는 것이 아니라 실제로 중간 전압을 낸다.", "a": true, "w": "DAC 는 진짜 아날로그 전압을 냅니다.", "an": "2교시 2-2"}, {"ty": "ox", "p": "조이스틱 모듈에 +5V 라고 인쇄되어 있으면 5V 에 연결해야 한다.", "a": false, "w": "출력이 3.3V 를 넘지 않도록 3V3 에 연결합니다.", "an": "2교시 2-4"}, {"ty": "match", "p": "제어 바이트 비트와 뜻을 이으세요.", "left": ["bit6", "bit5 · 4", "bit2", "bit1 · 0"], "right": ["자동 증가", "채널 번호", "DAC 출력 켜기", "입력 방식"], "a": [2, 3, 0, 1], "w": "2-1 제어 바이트 표입니다.", "an": "2교시 2-1 표"}, {"ty": "order", "p": "03_joy_servo 의 한 바퀴 순서대로 놓으세요.", "steps": ["pwm_set_duty 로 서보 각도 반영", "pcf_read_all 로 네 채널 읽기", "X 와 가운데 값 차이 계산", "40 ms 쉬기", "데드존 밖이면 각도 바꾸기"], "a": [1, 2, 4, 0, 3], "w": "읽기 → 차이 → 각도 → 서보 → 대기입니다.", "an": "2교시 2-5"}, {"ty": "multi", "p": "03_joy_servo 에서 쓰는 것을 모두 고르세요.", "o": ["I2C_RDWR 묶음 트랜잭션", "Day 3 의 pwm_sysfs.h", "조이스틱 SW 용 GPIO6 입력", "UART termios 설정"], "a": [0, 1, 2], "w": "UART 는 7교시 내용입니다.", "an": "2교시 2-5"}]}, {"t": "3교시 · 아날로그 센서 확장", "anim": "D4-3 분압과 물리량 변환", "qs": [{"ty": "mc", "p": "PCF8591 8비트, 기준 3.3 V 에서 한 칸은 약 몇 mV 입니까?", "o": ["약 0.8 mV", "약 12.9 mV", "약 3.3 mV", "약 25.5 mV"], "w": "3300 / 255 ≈ 12.9 mV 입니다.", "an": "3교시 3-3 표", "a": 1}, {"ty": "mc", "p": "LM35 출력이 297 mV 일 때 온도는 약 몇 °C 입니까?", "o": ["약 2.97 °C", "약 297 °C", "약 29.7 °C", "약 12.9 °C"], "w": "LM35 는 10 mV = 1 °C 입니다.", "an": "3교시 3-3 표", "a": 2}, {"ty": "mc", "p": "LM35 의 +Vs 를 5V 에 연결해도 PCF8591 입력이 안전한 이유는 무엇입니까?", "o": ["LM35 안에 분압 저항이 들어 있어서", "PCF8591 입력은 5V 까지 견디므로", "출력이 10 mV/°C 라 1.5 V 이하라서", "5V 를 주면 출력이 반으로 줄어서"], "w": "150 °C 에서도 1.5 V 라 3.3 V 한계 안입니다.", "an": "3교시 3-1 표", "a": 2}, {"ty": "mc", "p": "오늘 MQ-2 가스 센서를 쓰지 않는 이유는 무엇입니까?", "o": ["AO 가 5V 까지 올라가 한계를 넘어서", "I2C 주소가 PCF8591 과 겹치므로", "디지털 출력 핀만 있는 모듈이라서", "히터가 3V3 에서만 동작하기 때문에"], "w": "5V 히터 센서라 출력이 3.3V 를 넘을 수 있습니다.", "an": "3교시 3-1 표", "a": 0}, {"ty": "mc", "p": "수위 센서의 + 를 GPIO25 에 연결해 잴 때만 켜는 이유는 무엇입니까?", "o": ["센서 값이 두 배로 커지므로", "전극의 전기 분해 부식을 줄이려고", "I2C 충돌을 피하려고", "GPIO25 가 PWM 핀이라서"], "w": "전류가 계속 흐르면 전극이 부식합니다 (MCU Day 2 와 같음).", "an": "3교시 3-4 표", "a": 1}, {"ty": "ox", "p": "LM35 의 분해능은 PCF8591 에서 약 1.3 °C 이다.", "a": true, "w": "한 칸 12.9 mV ÷ 10 mV/°C ≈ 1.3 °C 입니다.", "an": "3교시 3-3"}, {"ty": "ox", "p": "불꽃 센서(2핀)는 키트 설명서대로 짧은 다리를 5V 에 연결한다.", "a": false, "w": "입력이 3.3 V 를 넘지 않도록 3V3 에 연결합니다.", "an": "3교시 3-1 표"}, {"ty": "match", "p": "센서와 입력 채널을 이으세요.", "left": ["포토레지스터", "LM35", "불꽃 센서", "수위 센서"], "right": ["IN2", "IN0", "IN3", "IN1"], "a": [1, 3, 0, 2], "w": "04_sensors 의 배치입니다.", "an": "3교시 3-2"}, {"ty": "order", "p": "raw 값을 온도로 바꾸는 순서대로 놓으세요.", "steps": ["°C = mV / 10", "이동 평균에 넣기", "pcf_read_all 로 raw 읽기", "mV = raw × 3300 / 255", "화면 출력"], "a": [2, 1, 3, 0, 4], "w": "읽기 → 평균 → mV → °C → 출력입니다.", "an": "3교시 3-4"}, {"ty": "multi", "p": "04_sensors 에서 값을 안정시키는 장치를 모두 고르세요.", "o": ["이동 평균 8개", "불꽃 경보 히스테리시스 120 / 90", "수위 센서 전원 10 ms 대기", "SCHED_FIFO 쓰레드"], "a": [0, 1, 2], "w": "04_sensors 는 실시간 우선순위를 쓰지 않습니다.", "an": "3교시 3-4 표"}]}, {"t": "4교시 · SPI 와 74HC595", "anim": "D4-4 SPI 시프트 · 래치", "qs": [{"ty": "mc", "p": "74HC595 의 ST_CP(래치) 에 Pi 의 CE0 를 연결하는 이유는 무엇입니까?", "o": ["CE0 가 클럭보다 빠르게 토글되기 때문에", "CE0 가 데이터 비트를 내보내는 선이므로", "전송 끝에 CE0 가 올라가 래치가 되므로", "CE0 를 쓰면 자동으로 MSB 먼저가 되므로"], "w": "CE0 는 전송 중 Low, 끝나면 High — 그 상승 에지가 래치입니다.", "an": "4교시 4-2", "a": 2}, {"ty": "mc", "p": "MSB 먼저 8비트를 보낸 뒤 처음 보낸 bit7 은 어디에 있습니까?", "o": ["Q0", "Q4", "Q7", "DS 핀"], "w": "처음 들어간 비트가 가장 멀리 밀려 Q7 에 남습니다.", "an": "4교시 4-2", "a": 2}, {"ty": "mc", "p": "74HC595 의 OE 와 MR 의 연결로 알맞은 것은 무엇입니까?", "o": ["OE → 3V3, MR → GND", "둘 다 GND", "OE → GND, MR → 3V3", "둘 다 연결하지 않음"], "w": "OE Low = 출력 켜기, MR High = 지우지 않음입니다.", "an": "4교시 4-2 표", "a": 2}, {"ty": "mc", "p": "아래 코드에서 SPI_IOC_MESSAGE(1) 의 1 이 뜻하는 것은 무엇입니까?", "o": ["보낼 바이트 수", "전송 구조체 개수", "SPI 모드 번호", "칩 선택 번호"], "w": "spi_ioc_transfer 배열의 개수입니다. 바이트 수는 len 입니다.", "an": "4교시 빈칸 4-1", "c": "ioctl(fd, SPI_IOC_MESSAGE(1), &tr);", "a": 1}, {"ty": "mc", "p": "숫자 \"0\" 의 세그먼트 패턴은 무엇입니까? (a = bit0)", "o": ["0x3F", "0x7F", "0x06", "0xC0"], "w": "a~f 켜짐 = 0011 1111 = 0x3F 입니다.", "an": "4교시 4-3", "a": 0}, {"ty": "ox", "p": "SPI 에는 I2C 의 ACK 같은 응답 비트가 없다.", "a": true, "w": "SPI 는 칩 선택 선으로 상대를 고르고 확인 응답이 없습니다.", "an": "4교시 4-1"}, {"ty": "ox", "p": "595 의 VCC 는 7-Segment 를 밝게 하려고 5V 에 연결한다.", "a": false, "w": "Pi 와 같은 3.3V 논리로 맞춥니다.", "an": "4교시 4-2 표"}, {"ty": "match", "p": "Pi SPI 신호와 595 핀을 이으세요.", "left": ["MOSI", "SCLK", "CE0", "MISO"], "right": ["연결 안 함", "ST_CP (12)", "DS (14)", "SH_CP (11)"], "a": [2, 3, 1, 0], "w": "4-2 배선 표입니다.", "an": "4교시 4-2 표"}, {"ty": "order", "p": "SPI 1바이트가 7-Segment 에 나타나기까지 순서대로 놓으세요.", "steps": ["CE0 가 Low 로", "CE0 가 High 로 → 래치", "SCLK 상승마다 한 칸 밀기", "Q0~Q7 이 동시에 바뀜", "MOSI 에 bit7 부터 올림"], "a": [0, 4, 2, 1, 3], "w": "선택 → 데이터 → 클럭 밀기 → 래치 → 출력입니다.", "an": "D4-4"}, {"ty": "multi", "p": "7-Segment 가 이상하게 보일 때 원인과 증상이 맞는 것을 모두 고르세요.", "o": ["OE 가 떠 있음 → 안 켜짐", "MR 이 떠 있음 → 가끔 전부 꺼짐", "공통 양극 부품 → 반대로 켜짐", "SPI 속도 1 MHz → 숫자가 거꾸로"], "a": [0, 1, 2], "w": "1 MHz 는 595 에 충분히 느린 속도입니다.", "an": "4교시 4-5 표"}]}, {"t": "5교시 · 4자리 7-Segment 멀티플렉싱", "anim": "D4-5 멀티플렉싱과 잔상", "qs": [{"ty": "mc", "p": "세그먼트 저항을 220Ω 에서 1kΩ 으로 바꾼 이유는 무엇입니까?", "o": ["595 의 클럭 속도를 더 높이려고", "자리 핀으로 모이는 전류를 줄이려고", "고스팅을 완전히 없애기 위해서", "공통 양극 부품에 맞추기 위해서"], "w": "\"8.\" 이면 8개 세그먼트 전류가 자리 핀 하나로 모입니다.", "an": "5교시 5-2 표", "a": 1}, {"ty": "mc", "p": "자리당 2 ms 로 4자리를 돌리면 화면 갱신은 약 몇 Hz 입니까?", "o": ["약 500 Hz", "약 50 Hz", "약 250 Hz", "약 125 Hz"], "w": "한 바퀴 8 ms → 1 / 0.008 = 125 Hz 입니다.", "an": "5교시 5-4", "a": 3}, {"ty": "mc", "p": "옆 자리에 숫자가 희미하게 겹쳐 보입니다. 원인은 무엇입니까?", "o": ["자리당 시간이 너무 짧다", "이전 자리를 끄기 전에 모양을 바꿨다", "세그먼트 저항이 너무 크다", "SPI 모드를 3 으로 설정했다"], "w": "끄기 → 모양 → 켜기 순서여야 고스팅이 없습니다.", "an": "D4-5 · 순서", "a": 1}, {"ty": "mc", "p": "자리 선택 라인을 active-low 로 요청한 이유는 무엇입니까?", "o": ["GPIO 핀 전류를 절반으로 줄이려고", "SPI 신호와의 충돌을 피하려고", "부하 중 깜빡임을 없애기 위해서", "코드의 1 이 자리 켜짐이 되도록"], "w": "공통 음극은 Low 일 때 켜지므로 논리를 뒤집어 읽기 쉽게 합니다.", "an": "5교시 5-4", "a": 3}, {"ty": "mc", "p": "부하 중 한 자리만 번쩍이는 깜빡임을 줄이는 방법은 무엇입니까?", "o": ["세그먼트 저항을 220Ω 으로 바꾼다", "표시 쓰레드를 SCHED_FIFO 로 올린다", "자리당 시간을 20 ms 로 늘린다", "SPI 속도를 100 kHz 로 낮춘다"], "w": "Day 3 소프트웨어 PWM 과 같은 해결입니다 (setcap 필요).", "an": "5교시 5-5", "a": 1}, {"ty": "ox", "p": "멀티플렉싱에서는 한 순간에 한 자리만 켜져 있다.", "a": true, "w": "잔상 때문에 동시에 켜진 것처럼 보입니다.", "an": "5교시 5-1"}, {"ty": "ox", "p": "4자리 모듈은 자리마다 a~dp 세그먼트 선이 따로 있다.", "a": false, "w": "세그먼트 8선은 네 자리가 공유하고 자리마다 공통 단자만 따로입니다.", "an": "5교시 5-1"}, {"ty": "match", "p": "4자리 자리 선택과 GPIO 를 이으세요.", "left": ["D1", "D2", "D3", "D4"], "right": ["GPIO22", "GPIO5", "GPIO17", "GPIO27"], "a": [2, 3, 0, 1], "w": "seg4.h 의 SEG4_DIG 입니다.", "an": "5교시 5-3"}, {"ty": "order", "p": "seg4 표시 쓰레드의 한 자리 처리 순서대로 놓으세요.", "steps": ["다음 자리로", "spi_send 로 모양 바꾸기", "모든 자리 끄기", "2 ms 절대 시각으로 잠듦", "이 자리만 켜기"], "a": [2, 1, 4, 3, 0], "w": "끄기 → 모양 → 켜기 → 대기 → 다음입니다.", "an": "5교시 5-4"}, {"ty": "multi", "p": "seg4.h 가 하는 일을 모두 고르세요.", "o": ["화면 버퍼를 mutex 로 보호", "\"23.4\" 를 오른쪽 정렬로 변환", "권한이 없으면 일반 쓰레드로 계속", "PCF8591 에서 조도 읽기"], "a": [0, 1, 2], "w": "조도 읽기는 06_seg4 의 -l 옵션이 합니다.", "an": "5교시 5-4"}]}, {"t": "6교시 · 8×8 도트 매트릭스", "anim": "D4-6 매트릭스 편집기와 이중 버퍼", "qs": [{"ty": "mc", "p": "img[r] = 0x80 은 어떤 점을 켭니까? (bit7 = 왼쪽)", "o": ["r 행의 가장 왼쪽 칸", "r 행의 가장 오른쪽 칸", "r 열의 가장 위 칸", "r 열의 가장 아래 칸"], "w": "한 바이트가 한 행이고 bit7 이 왼쪽 열(C1) 입니다.", "an": "6교시 6-3", "a": 0}, {"ty": "mc", "p": "07_matrix 에서 rev8() 로 비트를 뒤집는 이유는 무엇입니까?", "o": ["595 가 LSB 먼저 데이터만 받기 때문에", "행의 극성을 반대로 바꾸기 위해서", "이중 버퍼의 앞 · 뒤를 교체하기 위해서", "bit7 이 Q7 로 가는데 C1 은 Q0 이라서"], "w": "Pi SPI 는 LSB 먼저를 지원하지 않아 소프트웨어로 뒤집습니다.", "an": "6교시 6-3", "a": 3}, {"ty": "mc", "p": "행이 High 일 때 켜지는 제품에서 열 데이터를 ~ 로 뒤집는 이유는 무엇입니까?", "o": ["595 의 출력 전류를 줄이기 위해서", "rev8 과 같은 효과를 내기 위해서", "스크롤 방향을 반대로 바꾸려고", "켜질 칸의 열을 Low 로 만들려고"], "w": "LED 는 행과 열의 극성이 반대일 때 켜집니다.", "an": "6교시 6-2", "a": 3}, {"ty": "mc", "p": "버퍼 1장으로 스크롤할 때 생기는 현상은 무엇입니까?", "o": ["모든 점이 한꺼번에 꺼졌다 켜진다", "그림이 좌우로 뒤집혀 표시된다", "위 몇 행은 옛 그림, 아래는 새 그림", "스크롤 속도가 두 배로 빨라진다"], "w": "스캔 도중에 그림이 바뀌면 찢어진 프레임이 보입니다.", "an": "D4-6 · 버퍼 1장", "a": 2}, {"ty": "mc", "p": "이중 버퍼에서 스캔 쓰레드가 앞 · 뒤 버퍼를 바꾸는 시점은 언제입니까?", "o": ["메인이 그림을 그리는 도중", "각 행을 그린 바로 직후", "1초에 한 번 정해진 시각", "행 0 을 그리기 직전"], "w": "프레임 경계에서만 바꿔 한 프레임의 8행이 같은 그림이 되게 합니다.", "an": "6교시 6-4", "a": 3}, {"ty": "ox", "p": "1088AS 의 핀 1~8 은 행 R1~R8 이다.", "a": false, "w": "핀 번호가 행 · 열 순서가 아니라 표로 확인해야 합니다.", "an": "6교시 6-1 표"}, {"ty": "ox", "p": "행 하나에 8칸이 켜지면 1kΩ 열 저항 기준 그 행 GPIO 로 약 10 mA 가 흐른다.", "a": true, "w": "8 × 1.3 mA ≈ 10 mA 로 5교시와 같은 계산입니다.", "an": "6교시 6-2"}, {"ty": "match", "p": "매트릭스 행과 GPIO 를 이으세요.", "left": ["R1", "R3", "R5", "R8"], "right": ["GPIO16", "GPIO26", "GPIO5", "GPIO12"], "a": [2, 3, 0, 1], "w": "행 R1~R8 = 5 · 6 · 12 · 13 · 16 · 20 · 21 · 26 입니다.", "an": "6교시 6-1 표"}, {"ty": "order", "p": "이중 버퍼로 그림 하나를 보이기까지 순서대로 놓으세요.", "steps": ["스캔 쓰레드가 행 0 에서 앞 · 뒤 교체", "뒤 버퍼 번호 구하기", "g_swap = 1 로 교체 요청", "새 프레임부터 새 그림 표시", "뒤 버퍼에 그림 복사"], "a": [1, 4, 2, 0, 3], "w": "뒤 버퍼 → 그리기 → 요청 → 경계에서 교체 → 표시입니다.", "an": "6교시 빈칸 6-1"}, {"ty": "multi", "p": "매트릭스가 이상하게 보일 때 원인으로 맞는 것을 모두 고르세요.", "o": ["점이 흩어짐 → 핀 표를 잘못 봄", "좌우 뒤집힘 → rev8 빠짐", "그림만 꺼지고 나머지 켜짐 → 극성 반대", "위아래 뒤집힘 → SPI 모드 오류"], "a": [0, 1, 2], "w": "위아래 뒤집힘은 ROWS[] 순서 문제입니다.", "an": "6교시 6-5 표"}]}, {"t": "7교시 · UART 와 termios", "anim": "D4-7 UART 프레임과 VMIN · VTIME", "qs": [{"ty": "mc", "p": "115200 bps 8N1 의 처리량은 초당 약 몇 바이트입니까?", "o": ["약 14 400 바이트", "약 11 520 바이트", "약 115 200 바이트", "약 1 152 바이트"], "w": "글자 하나가 10비트이므로 115200 / 10 입니다.", "an": "7교시 7-1 표", "a": 1}, {"ty": "mc", "p": "Pi 4 에서 dtoverlay=disable-bt 를 쓰는 이유는 무엇입니까?", "o": ["PL011 을 GPIO14 · 15 로 가져오려고", "Bluetooth 로 ESP32 와 통신하려고", "UART 최고 속도를 두 배로 올리려고", "부팅 때 시리얼 콘솔을 켜기 위해서"], "w": "기본은 클럭이 흔들리는 mini UART 가 GPIO 에 연결됩니다.", "an": "7교시 7-2 표", "a": 0}, {"ty": "mc", "p": "termios 에서 cfmakeraw() 가 하는 일은 무엇입니까?", "o": ["에코 · 줄 편집 · 특수 문자 처리를 끈다", "통신 속도를 115200 으로 맞춰 준다", "쌓여 있던 수신 버퍼를 비워 준다", "짝수 패리티 비트를 자동으로 켠다"], "w": "터미널 기본 처리를 끄고 바이트를 그대로 주고받게 합니다.", "an": "7교시 7-3 표", "a": 0}, {"ty": "mc", "p": "VMIN = 0, VTIME = 1 일 때 read() 의 동작은 무엇입니까?", "o": ["10바이트가 모일 때까지 기다림", "오면 바로, 없으면 0.1초 뒤 0", "바이트가 올 때까지 무한정 기다림", "기다리지 않고 언제나 0 을 돌려줌"], "w": "VTIME 단위는 0.1초입니다.", "an": "7교시 7-3 표", "a": 1}, {"ty": "mc", "p": "ESP32 와 UART 로 연결할 때 알맞은 배선은 무엇입니까?", "o": ["Pi TXD → ESP32 RX2, Pi RXD ← ESP32 TX2, GND 공통", "Pi TXD → ESP32 TX2, Pi RXD → ESP32 RX2, 3V3 공통", "Pi TXD → ESP32 RX2 하나만, GND 는 생략", "Pi 5V → ESP32 VIN, TX · RX 는 같은 이름끼리"], "w": "보내는 선과 받는 선을 엇갈리고 GND 를 반드시 잇습니다.", "an": "7교시 7-5 표", "a": 0}, {"ty": "ox", "p": "UART 는 클럭 선이 없어서 양쪽이 같은 속도를 미리 약속해야 한다.", "a": true, "w": "속도가 다르면 다른 위치에서 비트를 읽어 글자가 깨집니다.", "an": "D4-7"}, {"ty": "ox", "p": "read() 한 번은 항상 한 줄 전체를 돌려준다.", "a": false, "w": "쪼개져 올 수 있어 줄 버퍼(lb_feed)에 모아 처리합니다.", "an": "7교시 7-3"}, {"ty": "match", "p": "termios 설정과 뜻을 이으세요.", "left": ["CS8", "CLOCAL | CREAD", "~CRTSCTS", "TCSANOW"], "right": ["흐름 제어 끔", "8비트 데이터", "바로 적용", "모뎀 선 무시 · 수신 켬"], "a": [1, 3, 0, 2], "w": "7-3 표입니다.", "an": "7교시 7-3 표"}, {"ty": "order", "p": "8N1 로 글자 하나가 나가는 순서대로 놓으세요.", "steps": ["정지 비트 1", "시작 비트 0", "b0 (LSB)", "b7 (MSB)", "b1 ~ b6"], "a": [1, 2, 4, 3, 0], "w": "시작 → LSB 부터 데이터 → 정지입니다.", "an": "7교시 7-1"}, {"ty": "multi", "p": "UART 통신에서 글자가 깨지는 원인을 모두 고르세요.", "o": ["양쪽 속도가 다름", "GND 를 잇지 않음", "시리얼 콘솔이 켜져 있음", "VTIME 을 1 로 설정함"], "a": [0, 1, 2], "w": "VTIME 은 read() 가 돌아오는 시점만 정합니다.", "an": "7교시 7-2 · 7-5"}]}, {"t": "8교시 · 미니 프로젝트 — 센서 게이트웨이", "anim": "D4-8 게이트웨이 시뮬레이터", "qs": [{"ty": "mc", "p": "체크섬 \"T=23.0,H=45*2E\" 에서 2E 는 무엇입니까?", "o": ["* 앞 본문의 글자 수", "* 앞 글자들을 XOR 한 값", "온도와 습도 값의 합", "보낸 ESP32 의 장치 주소"], "w": "본문 글자를 모두 XOR 해 16진 두 자리로 붙입니다.", "an": "8교시 8-1", "a": 1}, {"ty": "mc", "p": "\"LED=1\" 의 XOR 체크섬은 무엇입니까?", "o": ["0x40", "0x31", "0x41", "0x4C"], "w": "0x4C ^ 0x45 ^ 0x44 ^ 0x3D ^ 0x31 = 0x41 입니다.", "an": "8교시 8-1", "a": 2}, {"ty": "mc", "p": "체크섬이 맞지 않는 줄을 받았을 때 gateway 의 동작은 무엇입니까?", "o": ["마지막 바이트만 고쳐서 쓴다", "ESP32 를 다시 시작시킨다", "프로그램을 종료한다", "버리고 다음 줄을 기다린다"], "w": "잘못된 값을 표시하지 않도록 버리고 카운터만 올립니다.", "an": "8교시 8-6 표", "a": 3}, {"ty": "mc", "p": "정상 프레임이 3초 동안 없을 때 7-Segment 표시는 무엇입니까?", "o": ["0000", "마지막 온도 그대로", "----", "Err"], "w": "값이 멈춘 채 보이는 것보다 끊긴 것을 정직하게 보여 줍니다.", "an": "8교시 8-5", "a": 2}, {"ty": "mc", "p": "조도가 30% 아래면 LED=1, 40% 위여야 LED=0 인 이유는 무엇입니까?", "o": ["경계 근처에서 명령이 계속 바뀌지 않게", "PCF8591 분해능이 10% 라서", "ESP32 가 10% 단위만 받으므로", "체크섬 계산을 줄이려고"], "w": "히스테리시스로 경계 떨림을 막습니다.", "an": "8교시 8-2 표", "a": 0}, {"ty": "ox", "p": "gateway 는 UART fd 와 timerfd 를 epoll 하나로 기다린다.", "a": true, "w": "Day 2 의 epoll 루프 구조입니다.", "an": "8교시 8-2"}, {"ty": "ox", "p": "-k 옵션은 ESP32 대신 TXD-RXD 루프백 선으로 가짜 프레임을 보낸다.", "a": false, "w": "-k 는 키보드 입력, -s 가 루프백 모의입니다.", "an": "8교시 8-5"}, {"ty": "match", "p": "gateway 의 구성과 버스를 이으세요.", "left": ["PCF8591 조도", "4자리 7-Segment", "ESP32 프레임", "LED 명령"], "right": ["UART 송신 (TXD)", "SPI + GPIO", "UART 수신 (RXD)", "I2C"], "a": [3, 1, 2, 0], "w": "세 버스를 함께 씁니다.", "an": "8교시 8-3"}, {"ty": "order", "p": "ESP32 프레임 한 줄을 처리하는 순서대로 놓으세요.", "steps": ["값 저장 · 출력", "read 로 바이트 받기", "sscanf 로 형식 · 범위 검사", "줄 버퍼에 모아 \\n 에서 한 줄", "체크섬 검사"], "a": [1, 3, 4, 2, 0], "w": "받기 → 줄 → 체크섬 → 형식 → 저장입니다.", "an": "8교시 8-2"}, {"ty": "multi", "p": "도전 과제로 제시된 것을 모두 고르세요.", "o": ["1분마다 CSV 기록", "매트릭스에 온도 막대", "BUZ=1 명령 추가", "DHT11 을 커널 드라이버로"], "a": [0, 1, 2], "w": "DHT11 커널 드라이버는 Day 5 내용입니다.", "an": "8교시 8-7"}]}];
+
+const TYNAME={mc:'객관식',ox:'OX',match:'선잇기',order:'순서 맞추기',multi:'모두 고르기'};
+let tab=0;
+const ans=Q.map(s=>s.qs.map(q=>q.ty==='multi'?[]:(q.ty==='match'?q.left.map(()=>null):(q.ty==='order'?[]:null))));
+const graded=Q.map(()=>false);
+function hash(s){let h=5381;for(const c of s)h=((h<<5)+h+c.charCodeAt(0))>>>0;return h.toString(16).padStart(8,'0').slice(-4);}
+function codeFor(name,t,score){return `${t}${'ABCDEFGHIJK'[10-score]||'K'}-${hash(`${name.trim()}|${t}|${score}|eio-day4`)}`;}
+function strip(h){const d=document.createElement('div');d.innerHTML=h;return d.textContent;}
+const eqArr=(x,y)=>x.length===y.length&&x.every((v,i)=>v===y[i]);
+function answered(q,a){if(q.ty==='mc'||q.ty==='ox')return a!==null;if(q.ty==='multi')return a.length>0;if(q.ty==='match')return a.every(x=>x!==null);return a.length===q.steps.length;}
+function correct(q,a){if(!answered(q,a))return false;if(q.ty==='multi')return eqArr([...a].sort((x,y)=>x-y),q.a);if(q.ty==='match'||q.ty==='order')return eqArr(a,q.a);return a===q.a;}
+function scoreOf(i){return ans[i].filter((a,k)=>correct(Q[i].qs[k],a)).length;}
+function nAns(i){return ans[i].filter((a,k)=>answered(Q[i].qs[k],a)).length;}
+function txt(q,a){ /* 답을 문자열로 (오답 정리 · 해설용) */
+  if(!answered(q,a))return '미응답';
+  if(q.ty==='mc')return '①②③④'[a]+' '+strip(q.o[a]);
+  if(q.ty==='ox')return a?'O':'X';
+  if(q.ty==='multi')return [...a].sort((x,y)=>x-y).map(j=>'ABCDEFGH'[j]).join(', ');
+  if(q.ty==='match')return a.map((r,i)=>(i+1)+'-'+'ABCDEFGH'[r]).join(' · ');
+  return a.map(j=>'ABCDEFGH'[j]).join(' → ');}
+function renderTabs(){$('#tabs').innerHTML=Q.map((s,i)=>`<button class="${i===tab?'active':''} ${graded[i]?'graded':''}" data-i="${i}">${i+1}교시<span class="s">${graded[i]?scoreOf(i)+'/10':nAns(i)+'/10'}</span></button>`).join('');$('#tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{tab=+b.dataset.i;render();window.scrollTo({top:0});});}
+function body(q,k,a,g){
+  if(q.ty==='mc'){return `<div class="opts">${q.o.map((o,j)=>{let c='';if(g){if(j===q.a)c='ok';else if(j===a)c='bad';}else if(j===a)c='sel';return `<button class="opt ${c}" data-k="${k}" data-j="${j}" ${g?'disabled':''}>${'①②③④'[j]} ${o}</button>`;}).join('')}</div>`;}
+  if(q.ty==='ox'){return `<div class="oxrow">${[true,false].map(v=>{let c='';if(g){if(v===q.a)c='ok';else if(v===a)c='bad';}else if(v===a)c='sel';return `<button class="opt ${c}" data-k="${k}" data-v="${v?1:0}" ${g?'disabled':''}>${v?'O':'X'}</button>`;}).join('')}</div>`;}
+  if(q.ty==='multi'){return `<div class="opts multi">${q.o.map((o,j)=>{const on=a.includes(j),ri=q.a.includes(j);let c='';if(g){if(on&&ri)c='ok';else if(on&&!ri)c='bad';else if(!on&&ri)c='miss';}else if(on)c='sel';return `<button class="opt ${c}" data-k="${k}" data-m="${j}" ${g?'disabled':''}>${'ABCDEFGH'[j]}. ${o}</button>`;}).join('')}</div>`;}
+  if(q.ty==='match'){return `<div class="reflist">${q.right.map((r,j)=>`<div><b>${'ABCDEFGH'[j]}</b>${r}</div>`).join('')}</div>`+q.left.map((l,i)=>{let c='';if(g)c=a[i]===q.a[i]?'ok':'bad';return `<div class="mrow"><div class="l"><b>${i+1}.</b>${l}</div><select class="${c}" data-k="${k}" data-i="${i}" ${g?'disabled':''}><option value="">— 고르기 —</option>${q.right.map((r,j)=>`<option value="${j}" ${a[i]===j?'selected':''}>${'ABCDEFGH'[j]}. ${strip(r)}</option>`).join('')}</select></div>`;}).join('');}
+  /* order */
+  return `<div class="steps">${q.steps.map((s,j)=>{const pos=a.indexOf(j);let c=pos>=0?'on':'';if(g){c=(pos>=0&&a[pos]===q.a[pos])?'ok':'bad';}return `<button class="opt step ${c}" data-k="${k}" data-s="${j}" ${g?'disabled':''}><span class="badge">${pos>=0?pos+1:'ABCDEFGH'[j]}</span><span>${'ABCDEFGH'[j]}. ${s}</span></button>`;}).join('')}</div><div class="seqbar">순서: ${a.length?a.map(j=>'ABCDEFGH'[j]).join(' → '):'단계를 일어나는 순서대로 누르세요'}${g?'':` <button data-k="${k}" data-reset="1">다시</button>`}</div>`;
+}
+function render(){renderTabs();const s=Q[tab];const g=graded[tab];
+  $('#sheet').innerHTML=`<div class="head"><span class="t">${s.t}</span><span class="a">🎬 ${s.anim}</span></div>`+s.qs.map((q,k)=>{const a=ans[tab][k];const ok=correct(q,a);
+    return `<div class="q ${g&&!answered(q,a)?'unans':''}"><div class="n">문항 ${k+1}<span class="ty ty-${q.ty}">${TYNAME[q.ty]}</span></div><div class="p">${q.p}</div>${q.c?`<pre class="qc">${q.c}</pre>`:``}${body(q,k,a,g)}${g?`<div class="fb ${ok?'ok':'bad'}">${!answered(q,a)?'미응답. ':(ok?'정답. ':'오답. ')}${q.ty!=='mc'&&!ok?`<b>정답: ${txt(q,q.a)}</b> · `:''}${q.w}<span class="anim">확인: ${q.an}</span></div>`:''}</div>`;}).join('');
+  if(!g){
+    $('#sheet').querySelectorAll('[data-j]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,j=+b.dataset.j;ans[tab][k]=(ans[tab][k]===j?null:j);render();});
+    $('#sheet').querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,v=b.dataset.v==='1';ans[tab][k]=(ans[tab][k]===v?null:v);render();});
+    $('#sheet').querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,j=+b.dataset.m;const a=ans[tab][k];const p=a.indexOf(j);if(p>=0)a.splice(p,1);else a.push(j);render();});
+    $('#sheet').querySelectorAll('select[data-i]').forEach(sl=>sl.onchange=()=>{const k=+sl.dataset.k,i=+sl.dataset.i;ans[tab][k][i]=sl.value===''?null:+sl.value;renderTabs();updHint();});
+    $('#sheet').querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,j=+b.dataset.s;const a=ans[tab][k];const p=a.indexOf(j);if(p>=0)a.splice(p);else a.push(j);render();});
+    $('#sheet').querySelectorAll('[data-reset]').forEach(b=>b.onclick=()=>{ans[tab][+b.dataset.k]=[];render();});
+  }
+  $('#gradeBtn').disabled=g;$('#gradeBtn').textContent=g?'채점 완료':'채점하기';updHint();
+}
+function updHint(){const g=graded[tab];const nm=$('#name').value;
+  if(g){const sc=scoreOf(tab);$('#rscore').textContent=`${sc}/10`;if(nm.trim()){$('#rcode').textContent=codeFor(nm,tab+1,sc);$('#rhint').textContent='결과 코드';}else{$('#rcode').textContent='—';$('#rhint').textContent='이름을 입력하면 결과 코드가 나옵니다.';}}
+  else{$('#rcode').textContent='—';$('#rscore').textContent='';$('#rhint').textContent=`${tab+1}교시: ${nAns(tab)}/10 답했습니다. 채점하기를 누르면 잠깁니다.`;}}
+$('#gradeBtn').onclick=()=>{const n=nAns(tab);if(n<10&&!confirm(`아직 ${10-n}문항을 끝까지 답하지 않았습니다. 그래도 채점할까요? (미응답은 오답 처리)`))return;graded[tab]=true;render();};
+$('#name').addEventListener('input',updHint);
+
+/* ── 제출 대화상자 ── */
+let lastHtml='',lastText='';
+function buildReport(){
+  const nm=$('#name').value.trim()||'(이름 없음)';const ds=new Date().toLocaleString('ko-KR');
+  let h=`<h3>Embedded I/O 제어 Day 4 개념 워크시트 — 오답 정리</h3><div class="meta">${nm} · ${ds}</div>`;
+  let t=`Embedded I/O 제어 Day 4 개념 워크시트 — 오답 정리\n이름: ${nm}\n일시: ${ds}\n\n`;
+  Q.forEach((s,i)=>{if(!graded[i])return;
+    const wrong=s.qs.map((q,k)=>({q,k,a:ans[i][k]})).filter(x=>!correct(x.q,x.a));
+    h+=`<div class="sec">${s.t} — ${scoreOf(i)}/10</div>`;t+=`### ${s.t} — ${scoreOf(i)}/10\n`;
+    if(!wrong.length){h+=`<div class="ok" style="margin:4px 0 8px">오답 없음</div>`;t+=`오답 없음\n\n`;return;}
+    h+=`<table><tr><th>#</th><th>유형</th><th>문항</th><th>내 답</th><th>정답</th></tr>`;t+=`| # | 유형 | 문항 | 내 답 | 정답 |\n|---|---|---|---|---|\n`;
+    wrong.forEach(({q,k,a})=>{const my=txt(q,a),co=txt(q,q.a);const qt=strip(q.p).replace(/\s+/g,' ').slice(0,60);
+      h+=`<tr><td class="r">${k+1}</td><td>${TYNAME[q.ty]}</td><td>${qt}</td><td class="bad">${my}</td><td class="ok">${co}</td></tr>`;
+      t+=`| ${k+1} | ${TYNAME[q.ty]} | ${qt.replace(/\|/g,'/')} | ${my.replace(/\|/g,'/')} | ${co.replace(/\|/g,'/')} |\n`;});
+    h+=`</table>`;t+=`\n`;});
+  const ng=Q.map((s,i)=>graded[i]?null:i+1).filter(x=>x);
+  if(ng.length){h+=`<div class="meta" style="margin-top:10px">미채점: ${ng.join(', ')}교시</div>`;t+=`미채점: ${ng.join(', ')}교시\n`;}
+  lastHtml=h;lastText=t;return h;
+}
+$('#submitBtn').onclick=()=>{if(!graded.some(x=>x)){alert('먼저 한 교시 이상 채점하기를 눌러 주세요.');return;}$('#dgBody').innerHTML=buildReport();$('#toast').textContent='';$('#dlg').showModal();};
+$('#closeBtn').onclick=()=>$('#dlg').close();
+function copyRich(html,text){
+  // 1) copy 이벤트에 두 형식을 직접 실어 보내기 (사용자 클릭 안에서 동기 실행 — file:// 에서도 동작)
+  let done=false;
+  const onCopy=e=>{e.clipboardData.setData('text/html',html);e.clipboardData.setData('text/plain',text);e.preventDefault();done=true;};
+  document.addEventListener('copy',onCopy);
+  try{
+    const body=$('#dgBody');const sel=window.getSelection();const range=document.createRange();range.selectNodeContents(body);sel.removeAllRanges();sel.addRange(range);
+    document.execCommand('copy');
+    sel.removeAllRanges();
+  }catch(e){}
+  document.removeEventListener('copy',onCopy);
+  return done;
+}
+$('#captureBtn').onclick=async()=>{
+  const htmlDoc=`<meta charset="utf-8">`+lastHtml.replace(/ class="[^"]*"/g,'').replace(/<table>/g,'<table border="1" style="border-collapse:collapse">');
+  if(copyRich(htmlDoc,lastText)){$('#toast').textContent='복사됨 — 노션 페이지에서 Ctrl+V 로 붙여 넣으세요.';return;}
+  // 2) 비동기 Clipboard API
+  try{
+    if(navigator.clipboard&&window.ClipboardItem){
+      await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([htmlDoc],{type:'text/html'}),'text/plain':new Blob([lastText],{type:'text/plain'})})]);
+    }else{await navigator.clipboard.writeText(lastText);}
+    $('#toast').textContent='복사됨 — 노션 페이지에서 Ctrl+V 로 붙여 넣으세요.';return;
+  }catch(e){}
+  // 3) 최종: 텍스트 영역 선택 복사
+  try{
+    const ta=document.createElement('textarea');ta.value=lastText;ta.style.position='fixed';ta.style.opacity='0';$('#dlg').appendChild(ta);ta.focus();ta.select();
+    const ok=document.execCommand('copy');ta.remove();
+    $('#toast').textContent=ok?'텍스트(마크다운 표)로 복사됨 — 노션에서 Ctrl+V.':'복사 실패 — 대화상자 내용을 드래그해 Ctrl+C 로 복사하세요.';
+  }catch(e){$('#toast').textContent='복사 실패 — 대화상자 내용을 드래그해 Ctrl+C 로 복사하세요.';}
+};
+render();
+</script>
+</body>
+</html>
