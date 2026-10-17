@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Embedded I/O 제어 Day 5 개념 워크시트 — 커널 드라이버와 종합 프로젝트</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:900px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.primary{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700;padding:9px 18px;font-size:14px}
+  button.submit{background:#3a2e12;border-color:var(--amber);color:var(--amber);font-weight:700;padding:9px 18px;font-size:14px}
+  button:disabled{opacity:.45;cursor:default}
+  button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  input[type=text]{background:#0a0f1c;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:14px}
+  .tabs{display:flex;flex-wrap:wrap;gap:6px}
+  .tabs button .s{font-family:var(--mono);font-size:11px;color:var(--dim);margin-left:6px}
+  .tabs button.graded .s{color:var(--green)}
+  .head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .head .t{color:var(--amber);font-size:17px}
+  .head .a{font-size:13px;color:var(--teal);font-family:var(--mono)}
+  .q{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#0e1628}
+  .q.unans{border-color:#5a3a1a}
+  .q .n{font-family:var(--mono);color:var(--dim);font-size:12px}
+  .q .p{margin:4px 0 10px;font-size:15px}
+  .q .p code,.opt code,.fb code,td code{font-family:var(--mono);color:var(--blue);background:#0a0f1c;padding:1px 5px;border-radius:4px}
+  .q pre.qc{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:6px;padding:10px 12px;margin:4px 0 12px;font-size:13.5px;line-height:1.5;white-space:pre;overflow-x:auto;color:#dbe4f3}
+  .q pre{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin:6px 0 10px;font-size:14px;white-space:pre;overflow-x:auto}
+  .opts{display:grid;gap:6px}
+  .opt{text-align:left;padding:8px 12px;font-size:14px;font-family:inherit}
+  .opt.sel{border-color:var(--amber);background:#1f1a0c}
+  .opt.ok{border-color:var(--green);color:var(--green);background:#0d2216}
+  .opt.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .opt:disabled{cursor:default;opacity:.9}
+  .fb{margin-top:8px;font-size:13px;color:var(--dim);border-left:3px solid var(--line);padding-left:10px}
+  .fb.ok{border-left-color:var(--green)}.fb.bad{border-left-color:var(--red)}
+  .fb .anim{color:var(--teal);font-family:var(--mono);font-size:12px;display:block;margin-top:3px}
+  .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  .code{font-family:var(--mono);font-size:20px;color:var(--amber);letter-spacing:1px}
+  .score{font-family:var(--mono);color:var(--green);font-size:16px}
+  .hint{color:var(--dim);font-size:13px}
+  details{color:var(--dim);font-size:13px}
+  details summary{cursor:pointer;color:var(--dim)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  /* dialog */
+  dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:0;max-width:820px;width:92vw;max-height:88vh}
+  dialog::backdrop{background:#000a}
+  .dg{padding:18px 20px}
+  .dg h3{color:var(--amber);margin:0 0 4px;font-size:20px}
+  .dg .meta{color:var(--dim);font-size:13px;margin-bottom:12px;font-family:var(--mono)}
+  .dg .sec{margin:14px 0 6px;color:var(--teal);font-weight:700;font-size:14px}
+  .dg table{width:100%;border-collapse:collapse;font-size:13px}
+  .dg th{text-align:left;color:var(--dim);font-weight:600;padding:5px 8px;border-bottom:1px solid var(--line);font-size:12px}
+  .dg td{padding:5px 8px;border-bottom:1px solid #16203a;vertical-align:top}
+  .dg td.r{font-family:var(--mono)}
+  .dg .ok{color:var(--green)}.dg .bad{color:var(--red)}.dg .none{color:var(--dim)}
+  .dg .sum{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0;font-family:var(--mono)}
+  .dgbar{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:10px 20px;display:flex;gap:8px;justify-content:flex-end;align-items:center}
+  .toast{color:var(--green);font-size:13px;margin-right:auto}
+  .body{overflow:auto;max-height:calc(88vh - 60px)}
+
+.q .n .ty{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600;font-family:inherit}
+.ty-mc{background:#1b2a4a;color:var(--blue)} .ty-ox{background:#2a2410;color:var(--amber)} .ty-match{background:#13302c;color:var(--teal)}
+.ty-order{background:#2a1a3a;color:var(--purple)} .ty-multi{background:#2a1616;color:#fca5a5}
+.oxrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:360px}
+.oxrow .opt{text-align:center;font-size:22px;font-weight:700;padding:10px}
+.reflist{display:grid;gap:4px;margin:2px 0 10px;padding:8px 12px;border:1px dashed var(--line);border-radius:8px;font-size:14px;color:var(--text)}
+.reflist b{color:var(--teal);font-family:var(--mono);margin-right:6px}
+.mrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
+.mrow:first-of-type{border-top:0}
+.mrow .l{font-size:14px} .mrow .l b{font-family:var(--mono);color:var(--dim);margin-right:6px}
+.mrow select{width:100%;background:#0a0f1c;color:var(--text);border:1px solid #2a3a5c;border-radius:6px;padding:6px 8px;font:inherit;font-size:13.5px}
+.mrow select.ok{border-color:var(--green);color:var(--green)} .mrow select.bad{border-color:var(--red);color:var(--red)}
+.steps{display:grid;gap:6px}
+.step{display:flex;gap:10px;align-items:center;text-align:left;padding:8px 12px;font-size:14px}
+.step .badge{flex:none;width:26px;height:26px;border-radius:50%;border:1px solid #2a3a5c;display:grid;place-items:center;font-family:var(--mono);font-size:13px;color:var(--dim)}
+.step.on{border-color:var(--purple)} .step.on .badge{background:var(--purple);border-color:var(--purple);color:#0b1220;font-weight:700}
+.step.ok{border-color:var(--green)} .step.ok .badge{background:var(--green);color:#0b1220;border-color:var(--green)}
+.step.bad{border-color:var(--red)} .step.bad .badge{background:var(--red);color:#0b1220;border-color:var(--red)}
+.seqbar{display:flex;gap:10px;align-items:center;margin-top:8px;font-family:var(--mono);font-size:13px;color:var(--dim)}
+.seqbar button{padding:4px 10px;font-size:12px}
+.multi .opt::before{content:"☐ ";color:var(--dim)} .multi .opt.sel::before{content:"☑ ";color:var(--amber)}
+.multi .opt.ok::before{content:"☑ ";color:var(--green)} .multi .opt.miss::before{content:"☐ ";color:var(--green)}
+.multi .opt.miss{border-color:var(--green);border-style:dashed}
+.typeinfo{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Embedded I/O 제어 Day 5 개념 워크시트</h1>
+  <p class="sub">커널 드라이버와 종합 프로젝트 — DHT11 · IIO · Device Tree overlay · LED 클래스 · input 이벤트 · HD44780 LCD · 쓰레드 · mutex · 조건 변수 · 장애 대응 · systemd · 8교시 × 10문항 (객관식 5 · OX 2 · 선잇기 1 · 순서 맞추기 1 · 모두 고르기 1). 🎬 표시는 animation.html 의 애니메이션 번호입니다. 선잇기는 드롭다운으로, 순서 맞추기는 단계를 일어나는 순서대로 눌러서, 모두 고르기는 여러 개를 눌러서 답합니다. 답을 고른 뒤 아래 <b style="color:var(--teal)">채점하기</b>를 누르면 정오·해설과 결과 코드가 나타납니다. 채점 전에는 답을 바꿀 수 있고, 채점 후에는 잠깁니다. 모든 교시를 마치면 <b style="color:var(--amber)">제출</b>로 오답 정리를 열고, <b>캡처</b>로 복사해 노션에 붙여 넣으세요.</p>
+
+  <div class="panel">
+    <div class="row"><label style="color:var(--dim);font-size:13px">이름 <input type="text" id="name" placeholder="홍길동"></label><span class="hint">이름은 결과 코드 계산에만 쓰이며 저장되지 않습니다.</span></div>
+  </div>
+  <div class="panel"><h2>교시</h2><div class="tabs" id="tabs"></div></div>
+  <div class="panel" id="sheet"></div>
+  <div class="panel">
+    <div class="actions">
+      <button class="primary" id="gradeBtn">채점하기</button>
+      <span class="code" id="rcode">—</span><span class="score" id="rscore"></span><span class="hint" id="rhint"></span>
+      <button class="submit" id="submitBtn" style="margin-left:auto">제출</button>
+    </div>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <div class="body"><div class="dg" id="dgBody"></div></div>
+  <div class="dgbar"><span class="toast" id="toast"></span><button id="captureBtn" class="primary">📋 캡처 (노션용 복사)</button><button id="closeBtn">닫기</button></div>
+</dialog>
+
+<script>
+const $=s=>document.querySelector(s);
+const Q=[{"t": "1교시 · 커널 드라이버로 DHT11 읽기", "anim": "D5-1 µs 를 다투는 비트", "qs": [{"ty": "mc", "p": "DHT11 에서 비트 0 과 1 을 구분하는 기준은 무엇입니까?", "o": ["Low 폭 — 50 µs 는 0, 80 µs 는 1", "High 폭 — 약 27 µs 는 0, 70 µs 는 1", "전압 — 1.5 V 미만은 0, 이상은 1", "펄스 개수 — 하나는 0, 둘은 1"], "w": "Low 50 µs 뒤 오는 High 의 길이가 비트입니다.", "an": "1교시 1-1 표", "a": 1}, {"ty": "mc", "p": "사용자 공간 폴링으로 DHT11 을 읽을 때 부하를 걸면 실패가 크게 늘어나는 이유는 무엇입니까?", "o": ["DHT11 이 부하를 감지해 응답을 멈춰서", "GPIO4 가 부하 중에는 출력으로 바뀌어서", "CPU 를 못 받는 동안 에지를 놓쳐서", "체크섬 계산 자체가 부하 중에 틀려서"], "w": "스케줄링 지연 동안 비트 여러 개가 통째로 지나갑니다.", "an": "1교시 1-3 표", "a": 2}, {"ty": "mc", "p": "DHT11 커널 드라이버를 켜는 config.txt 줄은 무엇입니까?", "o": ["dtparam=dht11=on", "dtoverlay=iio,dht11,4", "modprobe dht11 gpiopin=4", "dtoverlay=dht11,gpiopin=4"], "w": "overlay 이름과 인자를 쉼표로 이어 씁니다. 줄 끝 주석은 금지입니다.", "an": "1교시 1-4", "a": 3}, {"ty": "mc", "p": "in_humidityrelative_input 값이 41000 일 때 습도는 얼마입니까?", "o": ["41 %", "4.1 %", "410 %", "41000 %"], "w": "IIO 값은 밀리 단위라 1000 으로 나눕니다.", "an": "1교시 1-4", "a": 0}, {"ty": "mc", "p": "아래처럼 IIO 파일을 읽다가 Input/output error 가 났습니다. dht_read() 의 처리로 알맞은 것은 무엇입니까?", "o": ["즉시 프로그램을 끝낸다", "마지막 값을 그대로 성공으로 돌려준다", "0.3초 뒤 다시 읽고, 3번 실패하면 -1", "GPIO4 를 직접 요청해 다시 읽는다"], "w": "커널 드라이버도 가끔 실패하므로 재시도 후 실패를 값으로 알립니다.", "an": "1교시 1-5", "c": "cat /sys/bus/iio/devices/iio:device0/in_temp_input\ncat: …: Input/output error", "a": 2}, {"ty": "ox", "p": "ESP32 에서 DHT11 이 잘 읽힌 것은 라이브러리가 읽는 동안 인터럽트를 끄기 때문이다.", "a": true, "w": "Linux 사용자 프로그램은 인터럽트를 끌 수 없습니다.", "an": "1교시 1-3 표"}, {"ty": "ox", "p": "dht11 overlay 를 켠 뒤에도 01_dht_poll 로 GPIO4 를 요청할 수 있다.", "a": false, "w": "커널 드라이버가 GPIO4 를 소유해 busy 가 납니다.", "an": "1교시 1-4 표"}, {"ty": "match", "p": "DHT11 데이터 5바이트의 순서를 이으세요.", "left": ["b[0]", "b[2]", "b[4]", "b[1] · b[3]"], "right": ["소수 부분", "습도 정수", "체크섬", "온도 정수"], "a": [1, 3, 2, 0], "w": "습도 · 소수 · 온도 · 소수 · 체크섬입니다.", "an": "1교시 1-1 표"}, {"ty": "order", "p": "DHT11 한 번 읽기 순서대로 놓으세요.", "steps": ["비트 40개", "Pi 가 Low 18 ms 이상", "체크섬 확인", "Pi 가 놓음 (풀업 High)", "DHT11 응답 Low · High 80 µs"], "a": [1, 3, 4, 0, 2], "w": "시작 → 놓기 → 응답 → 비트 → 체크섬입니다.", "an": "1교시 1-1"}, {"ty": "multi", "p": "dht11 overlay 적용을 확인하는 명령을 모두 고르세요.", "o": ["dmesg | grep -i dht", "lsmod | grep dht11", "ls /sys/bus/iio/devices/", "i2cdetect -y 1"], "a": [0, 1, 2], "w": "DHT11 은 I2C 장치가 아닙니다.", "an": "1교시 1-4"}]}, {"t": "2교시 · Device Tree overlay 직접 작성", "anim": "D5-2 overlay → 커널 장치", "qs": [{"ty": "mc", "p": "Device Tree 노드에 맞는 드라이버를 고르는 속성은 무엇입니까?", "o": ["label", "gpios", "status-name", "compatible"], "w": "compatible 문자열이 드라이버와 짝이 맞으면 붙습니다.", "an": "2교시 2-1", "a": 3}, {"ty": "mc", "p": "gpios = <&gpio 5 1>; 에서 마지막 1 의 뜻은 무엇입니까?", "o": ["active-low", "GPIO 컨트롤러 1번", "풀업 저항 켜기", "디바운스 1 ms"], "w": "세 번째 칸은 플래그입니다: 0 = active-high, 1 = active-low.", "an": "2교시 2-3 표", "a": 0}, {"ty": "mc", "p": "overlay 를 적용했는데 /sys/class/leds/eio:green 이 생기지 않고 오류도 없습니다. 가장 먼저 의심할 것은 무엇입니까?", "o": ["compatible 철자 (gpio-leds)", "config.txt 의 [all] 줄이 너무 길다", "LED 의 220Ω 저항이 빠졌다", "dtc 에 -@ 를 두 번 붙였다"], "w": "짝이 맞는 드라이버가 없으면 조용히 아무것도 생기지 않습니다.", "an": "D5-2 · 오타", "a": 0}, {"ty": "mc", "p": "LED 를 프로그램 없이 1초 간격으로 깜빡이게 하는 명령은 무엇입니까?", "o": ["echo 1 > …/eio:green/brightness", "echo timer > …/eio:green/trigger", "gpioset -c gpiochip0 17=1", "echo blink > /dev/input/event0"], "w": "LED 클래스의 trigger 를 timer 로 바꾸면 커널이 깜빡입니다.", "an": "2교시 2-4", "a": 1}, {"ty": "mc", "p": "종합 프로젝트 전에 eio overlay 를 내려야 하는 이유는 무엇입니까?", "o": ["overlay 가 켜져 있으면 I2C 가 꺼지므로", "envmon 이 Device Tree 를 새로 쓰기 때문에", "eio 가 DHT11 overlay 를 덮어쓰기 때문에", "GPIO5 · 17 을 커널이 잡고 있어서"], "w": "커널 드라이버가 소유한 핀은 다른 프로그램이 요청할 수 없습니다.", "an": "2교시 2-6", "a": 3}, {"ty": "ox", "p": "config.txt 에 dtoverlay=eio 를 추가하면 재부팅 없이 바로 장치가 생긴다.", "a": false, "w": "config.txt 는 부팅 때 펌웨어가 읽습니다.", "an": "D5-2 · config.txt"}, {"ty": "ox", "p": "gpio-keys 버튼은 /dev/input/event* 로 나오며 키보드와 같은 struct input_event 를 준다.", "a": true, "w": "value 1 누름 · 0 뗌 · 2 반복입니다.", "an": "2교시 2-5"}, {"ty": "match", "p": "dts 속성과 뜻을 이으세요.", "left": ["linux,code = <28>", "linux,default-trigger", "debounce-interval", "brcm,pull = <2>"], "right": ["pull-up 켜기", "KEY_ENTER", "커널 디바운스 (ms)", "부팅 직후 LED 동작"], "a": [1, 3, 2, 0], "w": "2-3 표의 내용입니다.", "an": "2교시 2-3 표"}, {"ty": "order", "p": "overlay 를 적용하는 순서대로 놓으세요.", "steps": ["sudo reboot", "dtc 로 .dtbo 만들기", "config.txt 에 dtoverlay=eio", "/sys/class/leds 확인", "overlays 폴더로 복사"], "a": [1, 4, 2, 0, 3], "w": "컴파일 → 복사 → 등록 → 재부팅 → 확인입니다.", "an": "2교시 2-4"}, {"ty": "multi", "p": "overlay 로 커널 장치가 된 LED · 버튼의 특징을 모두 고르세요.", "o": ["프로그램이 없어도 trigger 로 깜빡인다", "여러 프로그램이 /dev/input 을 같이 읽는다", "디바운스를 DT 에서 정한다", "gpioset 으로 언제든 바꿀 수 있다"], "a": [0, 1, 2], "w": "커널이 소유하므로 gpioset 은 busy 입니다.", "an": "2교시 2-5 표"}]}, {"t": "3교시 · 1602A LCD 4비트 드라이버", "anim": "D5-3 니블 두 번과 E 펄스", "qs": [{"ty": "mc", "p": "LCD 의 RW 핀을 GND 에 고정하는 이유는 무엇입니까?", "o": ["LCD 가 5V 를 내보내지 않게", "LCD 백라이트를 켜 두기 위해서", "4비트 모드로 바꾸어 주기 위해서", "글자 대비를 최대로 맞추기 위해서"], "w": "항상 쓰기 상태라 LCD → Pi 방향으로 5V 가 나오지 않습니다.", "an": "3교시 3-1", "a": 0}, {"ty": "mc", "p": "4비트 모드에서 한 바이트를 보내는 순서로 맞는 것은 무엇입니까?", "o": ["아래 니블 → E 올림 → 위 니블 → E 올림", "위 니블 → E 내림 → 아래 니블 → E 내림", "8비트를 한 번에 → E 내림 두 번", "RS 내림 → 위 니블 → RS 올림"], "w": "LCD 는 E 가 High → Low 로 바뀔 때 읽고, 위 4비트가 먼저입니다.", "an": "3교시 3-2", "a": 1}, {"ty": "mc", "p": "2행 첫 칸으로 커서를 옮기는 명령 바이트는 무엇입니까?", "o": ["0x80", "0x40", "0x02", "0xC0"], "w": "0x80 | 0x40 = 0xC0 입니다. 2행 DDRAM 은 0x40 부터입니다.", "an": "3교시 3-2 표", "a": 3}, {"ty": "mc", "p": "LCD 는 사용자 공간 드라이버로 충분하지만 DHT11 은 아닌 이유는 무엇입니까?", "o": ["LCD 가 DHT11 보다 전압이 높아서", "LCD 는 I2C 버스를 쓰기 때문에", "LCD 는 커널 드라이버가 없어서", "LCD 타이밍은 모두 최소값이라 늦어도 되므로"], "w": "늦어져도 되는 장치는 사용자 공간, 늦으면 안 되는 장치는 커널입니다.", "an": "3교시 3-3 표", "a": 3}, {"ty": "mc", "p": "백라이트는 켜지는데 글자가 전혀 보이지 않습니다. 가장 먼저 할 일은 무엇입니까?", "o": ["lcd.c 의 초기화 순서 다시 쓰기", "가변저항(V0)으로 대비 조정", "RW 를 3V3 으로 옮기기", "D4~D7 을 D0~D3 으로 옮기기"], "w": "\"LCD 가 안 된다\" 의 대부분은 대비 문제입니다.", "an": "3교시 3-5 표", "a": 1}, {"ty": "ox", "p": "lcd_printf 는 남는 칸을 공백으로 채워 이전 글자가 남지 않게 한다.", "a": true, "w": "LCD 는 덮어쓴 칸만 바뀌기 때문입니다.", "an": "3교시 3-5 표"}, {"ty": "ox", "p": "사용자 문자는 0번부터 써야 lcd_printf 문자열에 넣기 쉽다.", "a": false, "w": "문자 0 은 문자열의 끝(\\0)이라 1번부터 씁니다.", "an": "3교시 3-5"}, {"ty": "match", "p": "LCD 명령과 뜻을 이으세요.", "left": ["0x01", "0x28", "0x0C", "0x06"], "right": ["쓰면 커서 오른쪽으로", "화면 켬 · 커서 숨김", "4비트 · 2줄 · 5×8", "지우기"], "a": [3, 2, 1, 0], "w": "3-2 명령 표입니다.", "an": "3교시 3-2 표"}, {"ty": "order", "p": "lcd_open() 의 초기화 순서대로 놓으세요.", "steps": ["니블 0x2 (4비트 모드)", "40 ms 이상 기다림", "명령 0x28 · 0x08 · 0x01 · 0x06 · 0x0C", "니블 0x3 세 번", "6개 라인 출력 요청"], "a": [4, 1, 3, 0, 2], "w": "요청 → 대기 → 0x3 × 3 → 0x2 → 설정 명령입니다.", "an": "3교시 3-2"}, {"ty": "multi", "p": "LCD 가 이상한 글자를 보일 때 원인이 될 수 있는 것을 모두 고르세요.", "o": ["D4~D7 순서가 바뀜", "위 · 아래 니블 순서를 바꿈", "RS 선이 빠짐", "대비가 조금 진함"], "a": [0, 1, 2], "w": "대비는 글자 진하기만 바꿉니다.", "an": "3교시 3-5 표"}]}, {"t": "4교시 · 종합 프로젝트 설계", "anim": "D5-4 쓰레드와 공유 상태", "qs": [{"ty": "mc", "p": "envmon 에서 2초마다 온습도와 조도를 재는 쓰레드는 무엇입니까?", "o": ["proximity", "sensor", "control", "display"], "w": "sensor 가 DHT11(IIO) 과 PCF8591 을 읽습니다.", "an": "4교시 4-1 표", "a": 1}, {"ty": "mc", "p": "display 쓰레드가 공유 상태를 다루는 올바른 방법은 무엇입니까?", "o": ["잠근 채 LCD 를 다 그린 뒤 푼다", "잠그지 않고 바로 읽어 그린다", "잠그고 복사한 뒤 풀고 LCD 를 그린다", "LCD 를 그릴 때마다 상태를 지운다"], "w": "LCD 출력(수 ms) 동안 다른 쓰레드를 막지 않게 합니다.", "an": "4교시 4-2 표", "a": 2}, {"ty": "mc", "p": "버튼으로 화면을 바꿀 때 display 가 바로 다시 그리게 하는 도구는 무엇입니까?", "o": ["pthread_join", "pthread_cond_signal", "pthread_detach", "pthread_mutex_destroy"], "w": "display 는 cond_timedwait 로 0.5초 또는 신호를 기다립니다.", "an": "4교시 4-2 표", "a": 1}, {"ty": "mc", "p": "센서 선이 빠졌을 때 envmon 의 설계 원칙은 무엇입니까?", "o": ["쓰레드를 끝내고 다시 만든다", "프로그램을 종료해 재시작을 기다린다", "마지막 정상 값을 계속 보여 준다", "값을 -1 로 두고 화면에 -- 표시"], "w": "쓰레드는 죽지 않고 실패를 값으로 알립니다.", "an": "4교시 4-2 표", "a": 3}, {"ty": "mc", "p": "envmon 과 함께 config.txt 에 남아 있어야 하는 overlay 는 무엇입니까?", "o": ["dht11", "eio", "hd44780-lcd", "gpio-key"], "w": "eio · hd44780-lcd 는 envmon 이 쓰는 핀을 커널이 잡습니다.", "an": "4교시 4-4", "a": 0}, {"ty": "ox", "p": "lcd.h 에는 struct lcd 의 내용이 없고 typedef 만 있어 쓰는 쪽이 핀 번호를 몰라도 된다.", "a": true, "w": "불투명 포인터 설계입니다.", "an": "3교시 3-4"}, {"ty": "ox", "p": "센서를 읽는 동안에도 공유 상태 mutex 를 쥐고 있어야 안전하다.", "a": false, "w": "읽는 동안 잠그면 control 이 수십 ms 기다립니다.", "an": "D5-4 · 나쁜 습관"}, {"ty": "match", "p": "모듈 헤더와 처음 만든 날을 이으세요.", "left": ["gpio_common.h", "pcf8591.h", "sonar.h", "lcd.h"], "right": ["Day 4", "Day 5", "Day 2", "Day 3 → 모듈로"], "a": [2, 0, 3, 1], "w": "4-3 모듈 표입니다.", "an": "4교시 4-3 표"}, {"ty": "order", "p": "display 쓰레드 한 바퀴의 순서대로 놓으세요.", "steps": ["LCD 두 줄 그리기", "mutex 잠그고 S.d 복사", "cond_timedwait 로 0.5초 또는 신호 기다림", "mutex 풀기", "1분이 지났으면 CSV 한 줄"], "a": [1, 3, 0, 4, 2], "w": "잠금 · 복사 → 풀기 → 그리기 → CSV → 기다림입니다.", "an": "4교시 빈칸 4-1"}, {"ty": "multi", "p": "envmon 에서 핀이 겹치지 않도록 확인할 것을 모두 고르세요.", "o": ["eio overlay 가 주석 처리됐는가", "gpioinfo 에 다른 consumer 가 없는가", "LCD 와 HC-SR04 핀이 다른가", "I2C 를 꺼 두었는가"], "a": [0, 1, 2], "w": "PCF8591 을 쓰므로 I2C 는 켜 둡니다.", "an": "4교시 4-4"}]}, {"t": "5교시 · 종합 프로젝트 구현 (1)", "anim": "D5-5 센서가 빠지면", "qs": [{"ty": "mc", "p": "envmon 을 만들기 전에 센서를 하나씩 따로 확인하는 이유는 무엇입니까?", "o": ["안 될 때 원인을 한 군데로 좁히려고", "envmon 이 처음 실행에서만 센서를 찾아서", "센서를 하나씩 켜야 전원이 충분해서", "make 가 한 번에 하나만 빌드하므로"], "w": "통합부터 하면 원인 후보가 다섯 군데가 됩니다.", "an": "5교시 5-1", "a": 0}, {"ty": "mc", "p": "아래 Makefile 규칙에서 lcd.c 만 고친 뒤 make envmon 하면 다시 컴파일되는 것은 무엇입니까?", "o": ["모든 .o 파일을 다시 컴파일", "envmon.o 하나만 다시 컴파일", "lcd.o 와 envmon 링크", "아무것도 다시 하지 않음"], "w": "make 는 바뀐 파일과 그에 기대는 대상만 다시 만듭니다.", "an": "5교시 5-4", "c": "envmon: envmon.o lcd.o dht.o sonar.o\n\t$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)", "a": 2}, {"ty": "mc", "p": "sensor 쓰레드가 2초를 sleep_ms(100) × 20 으로 나눠 자는 이유는 무엇입니까?", "o": ["DHT11 이 0.1초마다 값을 바꾸므로", "sleep_ms 는 100 ms 까지만 잘 수 있어서", "Ctrl+C · SIGTERM 에 0.1초 안에 반응하려고", "CPU 사용률을 높이려고"], "w": "g_stop 을 자주 확인해 빨리 끝냅니다.", "an": "5교시 빈칸 5-1", "a": 2}, {"ty": "mc", "p": "DHT11 선을 뽑았을 때 로그가 2초마다 쌓이지 않고 한 줄만 남는 이유는 무엇입니까?", "o": ["상태가 바뀔 때만 로그를 쓰므로", "journal 이 같은 줄을 지워서", "DHT11 오류는 한 번만 일어나므로", "printf 가 버퍼에 막혀서"], "w": "was_dht 와 비교해 바뀔 때만 log_msg 를 부릅니다.", "an": "D5-5", "a": 0}, {"ty": "mc", "p": "조도를 읽지 못하면 화면 1번에는 무엇이 보입니까?", "o": ["Light   0 %", "Light 255 %", "화면이 꺼진다", "Light  --"], "w": "S.d.light = -1 이면 -- 로 표시합니다.", "an": "5교시 빈칸 5-1", "a": 3}, {"ty": "ox", "p": "sonar.c 는 Day 3 의 전역 변수를 struct sonar 안으로 옮겨 모듈로 만들었다.", "a": true, "w": "여러 개를 만들 수 있고 쓰는 쪽이 내부를 몰라도 됩니다.", "an": "5교시 5-2"}, {"ty": "ox", "p": "envmon 은 HC-SR04 요청에 실패하면 바로 종료한다.", "a": false, "w": "거리 없이 계속 동작하고 화면에 --- 를 표시합니다.", "an": "5교시 envmon.c"}, {"ty": "match", "p": "센서와 실패 표시를 이으세요.", "left": ["DHT11", "PCF8591", "HC-SR04", "버튼 · LCD · 출력"], "right": ["Light --", "시작 실패 → 재시작", "T --.-", "Dist ---.-"], "a": [2, 0, 3, 1], "w": "꼭 필요한 것만 실패 시 종료합니다.", "an": "D5-5"}, {"ty": "order", "p": "make envmon 이 하는 일의 순서대로 놓으세요.", "steps": ["envmon 실행 파일", "envmon.c → envmon.o", "dht.c → dht.o", "lcd.c → lcd.o", "sonar.c → sonar.o 후 링크"], "a": [1, 3, 2, 4, 0], "w": "각 .c 를 -c 로 컴파일한 뒤 한 번에 링크합니다.", "an": "5교시 5-4"}, {"ty": "multi", "p": "5교시 단위 시험에서 확인할 것을 모두 고르세요.", "o": ["LCD 첫 화면에 온습도", "손을 20 cm 앞에 두면 접근 경고", "버튼으로 화면 전환", "reboot 후 자동 시작"], "a": [0, 1, 2], "w": "자동 시작은 7교시 서비스 등록 뒤입니다.", "an": "5교시 5-5"}]}, {"t": "6교시 · 종합 프로젝트 구현 (2)", "anim": "D5-6 버튼 · 판단 · 화면", "qs": [{"ty": "mc", "p": "버튼을 1.2초 누르고 뗐을 때 envmon 의 동작은 무엇입니까?", "o": ["화면을 하나 넘긴다", "음소거를 바꾼다", "envmon 을 다시 시작한다", "릴레이를 끈다"], "w": "1초 이상은 길게 — 음소거 전환입니다.", "an": "6교시 6-1", "a": 1}, {"ty": "mc", "p": "온도가 27.5 °C 이고 팬이 켜져 있습니다. 히스테리시스 28 / 27 에서 팬은 어떻게 됩니까?", "o": ["계속 켜져 있다", "바로 꺼진다", "0.5초마다 켜졌다 꺼진다", "부저가 울린다"], "w": "27 °C 이하가 되어야 끕니다.", "an": "6교시 6-2 표", "a": 0}, {"ty": "mc", "p": "거리 20 cm, 음소거 켜짐일 때 출력으로 맞는 것은 무엇입니까?", "o": ["경보 LED 꺼짐, 부저 울림", "경보 LED 켜짐, 부저 조용", "둘 다 꺼짐", "둘 다 켜짐"], "w": "음소거는 부저만 끕니다.", "an": "6교시 6-2 표", "a": 1}, {"ty": "mc", "p": "출력 네 개를 한 요청으로 묶어 set_values 한 번에 바꾸는 이유는 무엇입니까?", "o": ["라인마다 다른 consumer 를 쓰려고", "출력 전류를 줄이려고", "버튼 이벤트를 받으려고", "시스템 콜 한 번에 동시에 바꾸려고"], "w": "Day 2 2교시와 같은 이유입니다.", "an": "6교시 6-2", "a": 3}, {"ty": "mc", "p": "CSV 를 매번 fopen(\"a\") → 쓰기 → fclose 하는 이유는 무엇입니까?", "o": ["파일을 여는 속도가 더 빨라서", "전원이 꺼져도 앞 줄이 남도록", "다른 사람이 못 읽게 하려고", "CSV 형식이 그것을 요구해서"], "w": "닫으면 내용이 파일로 내려갑니다.", "an": "6교시 6-4", "a": 1}, {"ty": "ox", "p": "접근 경고 중에는 버튼으로 화면을 넘겨도 경고 화면이 우선한다.", "a": true, "w": "near 이면 경고를 먼저 그립니다.", "an": "6교시 6-3 표"}, {"ty": "ox", "p": "기준 하나(28 °C)로 판단해도 잡음이 있으면 릴레이가 떨지 않는다.", "a": false, "w": "경계 근처에서 계속 딸깍거립니다.", "an": "D5-6 · 기준 하나"}, {"ty": "match", "p": "출력과 GPIO 를 이으세요.", "left": ["상태 LED", "경보 LED", "릴레이", "부저"], "right": ["GPIO25", "GPIO13", "GPIO17", "GPIO27"], "a": [2, 3, 0, 1], "w": "envmon.c 의 OUTS 배열입니다.", "an": "6교시 6-2 표"}, {"ty": "order", "p": "버튼 짧게 누름이 화면에 나타나기까지 순서대로 놓으세요.", "steps": ["display 가 깨어나 새 화면 그림", "falling 타임스탬프 기억", "rising 에서 누른 시간 계산", "screen++ 후 cond_signal", "커널이 엣지 이벤트 기록"], "a": [4, 1, 2, 3, 0], "w": "이벤트 → 누름 → 뗌 → 신호 → 그리기입니다.", "an": "6교시 6-1"}, {"ty": "multi", "p": "LCD 화면에 대해 맞는 것을 모두 고르세요.", "o": ["한글을 쓸 수 없어 영어 약어를 쓴다", "° 는 사용자 문자 1번이다", "막대는 0xFF 칸으로 그린다", "화면마다 lcd_clear 를 부른다"], "a": [0, 1, 2], "w": "lcd_clear 는 느리고 깜빡여 lcd_printf 덮어쓰기를 씁니다.", "an": "6교시 6-3"}]}, {"t": "7교시 · 서비스화와 장애 대응", "anim": "D5-7 systemd 생명 주기", "qs": [{"ty": "mc", "p": "unit 파일을 /etc/systemd/system 에 복사한 뒤 가장 먼저 할 명령은 무엇입니까?", "o": ["sudo systemctl daemon-reload", "sudo systemctl reboot", "sudo journalctl --vacuum", "sudo systemctl mask envmon"], "w": "systemd 가 새 unit 파일을 읽게 합니다.", "an": "7교시 7-1", "a": 0}, {"ty": "mc", "p": "systemctl stop envmon 을 하면 envmon 에 일어나는 일은 무엇입니까?", "o": ["SIGKILL 로 즉시 끝나 출력이 남는다", "재부팅 때까지 일시 정지된다", "3초 뒤 자동으로 다시 시작된다", "SIGTERM 을 받아 출력 끄고 반납 후 종료"], "w": "KillSignal=SIGTERM, 핸들러가 정리합니다. 정상 종료라 재시작하지 않습니다.", "an": "7교시 7-1 표", "a": 3}, {"ty": "mc", "p": "kill -9 로 envmon 을 끝냈을 때 맞는 설명은 무엇입니까?", "o": ["정리 없이 죽고 3초 뒤 재시작된다", "핸들러가 릴레이를 끄고 끝난다", "서비스가 disabled 로 바뀐다", "다음 재부팅까지 다시 시작되지 않는다"], "w": "SIGKILL 은 받을 수 없습니다. Restart=on-failure 가 다시 시작합니다.", "an": "D5-7 · kill -9", "a": 0}, {"ty": "mc", "p": "systemd 아래에서 printf 로그가 늦게 보이는 이유는 무엇입니까?", "o": ["journal 이 1분마다만 읽어서", "User=pi 는 로그 권한이 없어서", "printf 는 터미널에서만 동작해서", "stdout 이 파이프라 버퍼에 쌓여서"], "w": "setvbuf(stdout, NULL, _IOLBF, 0) 로 줄마다 내보냅니다.", "an": "7교시 7-1", "a": 3}, {"ty": "mc", "p": "04_lcd_demo 가 실행 중일 때 envmon 서비스를 시작하면 어떻게 됩니까?", "o": ["LCD 를 빼앗아 와서 정상 동작한다", "LCD 요청 실패 → 재시작 반복", "04_lcd_demo 가 자동으로 끝난다", "두 프로그램이 LCD 를 번갈아 쓴다"], "w": "먼저 요청한 프로세스가 소유합니다 (busy).", "an": "7교시 7-2 표", "a": 1}, {"ty": "ox", "p": "systemctl enable 은 부팅 때 시작하도록 등록하지만 지금 시작하지는 않는다.", "a": true, "w": "--now 를 붙이면 지금도 시작합니다.", "an": "D5-7 · enable"}, {"ty": "ox", "p": "실행 파일을 다시 빌드하면 서비스가 자동으로 새 파일로 다시 시작된다.", "a": false, "w": "systemctl restart envmon 을 해야 합니다.", "an": "7교시 7-2"}, {"ty": "match", "p": "unit 설정과 뜻을 이으세요.", "left": ["User=pi", "Restart=on-failure", "WorkingDirectory=", "WantedBy=multi-user.target"], "right": ["CSV 가 생기는 곳", "enable 하면 부팅 순서에 들어감", "root 가 아닌 계정으로 실행", "비정상 종료일 때만 재시작"], "a": [2, 3, 0, 1], "w": "7-1 표입니다.", "an": "7교시 7-1 표"}, {"ty": "order", "p": "서비스를 처음 등록하는 순서대로 놓으세요.", "steps": ["journalctl -u envmon -f", "service 파일의 사용자 · 경로 수정", "sudo systemctl enable --now envmon", "sudo systemctl daemon-reload", "sudo cp envmon.service /etc/systemd/system/"], "a": [1, 4, 3, 2, 0], "w": "수정 → 복사 → 다시 읽기 → 등록 · 시작 → 로그입니다.", "an": "7교시 7-1"}, {"ty": "multi", "p": "장애 시험에서 기대하는 결과로 맞는 것을 모두 고르세요.", "o": ["DHT11 선 뽑기 → T --.- 와 로그 한 줄", "systemctl stop → 릴레이 꺼짐", "kill -9 → 3초 뒤 재시작", "PCF8591 선 뽑기 → envmon 종료"], "a": [0, 1, 2], "w": "PCF8591 이 빠져도 envmon 은 계속 동작합니다.", "an": "7교시 7-2 표"}]}, {"t": "8교시 · 시연 · 평가 · 과정 정리", "anim": "D5-8 5일 지도", "qs": [{"ty": "mc", "p": "하드웨어 PWM 으로 서보를 움직일 때 파형을 만드는 곳은 어디입니까?", "o": ["내 C 프로그램의 쓰레드", "libgpiod 라이브러리", "PWM 하드웨어 블록", "systemd"], "w": "/sys/class/pwm 에 값만 쓰면 블록이 파형을 유지합니다.", "an": "D5-8 · HW PWM", "a": 2}, {"ty": "mc", "p": "Day 2 의 /dev/gpiomem mmap 방식이 일반 코드에 쓰이지 않는 이유는 무엇입니까?", "o": ["속도가 libgpiod 보다 훨씬 느려서", "root 만 쓸 수 있는 명령이라서", "커널을 건너뛰어 소유 · 이식성이 없어서", "I2C 버스와 같은 핀을 함께 써서"], "w": "빠르지만 소유권 · 이식성 · 정리 책임 문제가 있습니다.", "an": "D5-8 · mmap", "a": 2}, {"ty": "mc", "p": "지금 각 GPIO 를 누가 잡고 있는지 보는 명령은 무엇입니까?", "o": ["gpioget", "gpiodetect -v", "gpioinfo", "lsgpio --owner"], "w": "consumer 칸에 소유자가 보입니다.", "an": "8교시 괄호 8-1", "a": 2}, {"ty": "mc", "p": "µs 단위로 타이밍이 엄격한 장치에 대한 5일 과정의 결론은 무엇입니까?", "o": ["사용자 공간 폴링 간격을 줄인다", "SCHED_FIFO 만 켜면 해결된다", "하드웨어 블록이나 커널 드라이버에 맡긴다", "sleep 대신 busy loop 를 쓴다"], "w": "ms 이상은 사용자 공간(+SCHED_FIFO), µs 는 하드웨어 · 커널입니다.", "an": "8교시 8-3 표", "a": 2}, {"ty": "mc", "p": "과정이 끝난 뒤 다음 과목을 위해 할 일은 무엇입니까?", "o": ["sudo rm -rf /boot/firmware/overlays", "config.txt 를 모두 지운다", "sudo systemctl disable --now envmon", "Pi OS 를 다시 설치한다"], "w": "서비스를 끄고 같은 Pi 를 다음 과목에 씁니다.", "an": "8교시 과정 마무리", "a": 2}, {"ty": "ox", "p": "프로세스가 죽으면 커널이 GPIO 라인을 반납하지만 출력 상태는 프로그램이 책임진다.", "a": true, "w": "그래서 정리 코드와 재시작이 필요합니다.", "an": "8교시 8-3 표"}, {"ty": "ox", "p": "같은 LED 는 5일 동안 한 가지 방법으로만 다뤘다.", "a": false, "w": "명령 → libgpiod → mmap → LED 클래스까지 여러 경로로 다뤘습니다.", "an": "D5-8"}, {"ty": "match", "p": "Day 와 핵심 인터페이스를 이으세요.", "left": ["Day 2", "Day 3", "Day 4", "Day 5"], "right": ["/dev/i2c-1 · spidev · serial0", "IIO · overlay · systemd", "/dev/gpiochip0 · 엣지 이벤트", "/sys/class/pwm · SCHED_FIFO"], "a": [2, 3, 0, 1], "w": "8-3 표입니다.", "an": "8교시 8-3 표"}, {"ty": "order", "p": "5일 동안 GPIO 를 다룬 경로를 처음부터 순서대로 놓으세요.", "steps": ["커널 드라이버 · overlay · 서비스", "gpioset 명령", "버스 드라이버 (I2C · SPI · UART)", "libgpiod C 프로그램", "하드웨어 PWM · 실시간 우선순위"], "a": [1, 3, 4, 2, 0], "w": "Day 1 → 5 의 흐름입니다.", "an": "8교시 8-3"}, {"ty": "multi", "p": "코드 리뷰 체크리스트에 있는 질문을 모두 고르세요.", "o": ["공유 변수를 mutex 안에서 쓰는가", "stop 뒤 릴레이 · 부저가 꺼지는가", "µs 가 필요한 일을 커널에 두었는가", "LCD 백라이트 색이 예쁜가"], "a": [0, 1, 2], "w": "쓰레드 · 자원 해제 · 타이밍이 리뷰 항목입니다.", "an": "8교시 8-2 표"}]}];
+
+const TYNAME={mc:'객관식',ox:'OX',match:'선잇기',order:'순서 맞추기',multi:'모두 고르기'};
+let tab=0;
+const ans=Q.map(s=>s.qs.map(q=>q.ty==='multi'?[]:(q.ty==='match'?q.left.map(()=>null):(q.ty==='order'?[]:null))));
+const graded=Q.map(()=>false);
+function hash(s){let h=5381;for(const c of s)h=((h<<5)+h+c.charCodeAt(0))>>>0;return h.toString(16).padStart(8,'0').slice(-4);}
+function codeFor(name,t,score){return `${t}${'ABCDEFGHIJK'[10-score]||'K'}-${hash(`${name.trim()}|${t}|${score}|eio-day5`)}`;}
+function strip(h){const d=document.createElement('div');d.innerHTML=h;return d.textContent;}
+const eqArr=(x,y)=>x.length===y.length&&x.every((v,i)=>v===y[i]);
+function answered(q,a){if(q.ty==='mc'||q.ty==='ox')return a!==null;if(q.ty==='multi')return a.length>0;if(q.ty==='match')return a.every(x=>x!==null);return a.length===q.steps.length;}
+function correct(q,a){if(!answered(q,a))return false;if(q.ty==='multi')return eqArr([...a].sort((x,y)=>x-y),q.a);if(q.ty==='match'||q.ty==='order')return eqArr(a,q.a);return a===q.a;}
+function scoreOf(i){return ans[i].filter((a,k)=>correct(Q[i].qs[k],a)).length;}
+function nAns(i){return ans[i].filter((a,k)=>answered(Q[i].qs[k],a)).length;}
+function txt(q,a){ /* 답을 문자열로 (오답 정리 · 해설용) */
+  if(!answered(q,a))return '미응답';
+  if(q.ty==='mc')return '①②③④'[a]+' '+strip(q.o[a]);
+  if(q.ty==='ox')return a?'O':'X';
+  if(q.ty==='multi')return [...a].sort((x,y)=>x-y).map(j=>'ABCDEFGH'[j]).join(', ');
+  if(q.ty==='match')return a.map((r,i)=>(i+1)+'-'+'ABCDEFGH'[r]).join(' · ');
+  return a.map(j=>'ABCDEFGH'[j]).join(' → ');}
+function renderTabs(){$('#tabs').innerHTML=Q.map((s,i)=>`<button class="${i===tab?'active':''} ${graded[i]?'graded':''}" data-i="${i}">${i+1}교시<span class="s">${graded[i]?scoreOf(i)+'/10':nAns(i)+'/10'}</span></button>`).join('');$('#tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{tab=+b.dataset.i;render();window.scrollTo({top:0});});}
+function body(q,k,a,g){
+  if(q.ty==='mc'){return `<div class="opts">${q.o.map((o,j)=>{let c='';if(g){if(j===q.a)c='ok';else if(j===a)c='bad';}else if(j===a)c='sel';return `<button class="opt ${c}" data-k="${k}" data-j="${j}" ${g?'disabled':''}>${'①②③④'[j]} ${o}</button>`;}).join('')}</div>`;}
+  if(q.ty==='ox'){return `<div class="oxrow">${[true,false].map(v=>{let c='';if(g){if(v===q.a)c='ok';else if(v===a)c='bad';}else if(v===a)c='sel';return `<button class="opt ${c}" data-k="${k}" data-v="${v?1:0}" ${g?'disabled':''}>${v?'O':'X'}</button>`;}).join('')}</div>`;}
+  if(q.ty==='multi'){return `<div class="opts multi">${q.o.map((o,j)=>{const on=a.includes(j),ri=q.a.includes(j);let c='';if(g){if(on&&ri)c='ok';else if(on&&!ri)c='bad';else if(!on&&ri)c='miss';}else if(on)c='sel';return `<button class="opt ${c}" data-k="${k}" data-m="${j}" ${g?'disabled':''}>${'ABCDEFGH'[j]}. ${o}</button>`;}).join('')}</div>`;}
+  if(q.ty==='match'){return `<div class="reflist">${q.right.map((r,j)=>`<div><b>${'ABCDEFGH'[j]}</b>${r}</div>`).join('')}</div>`+q.left.map((l,i)=>{let c='';if(g)c=a[i]===q.a[i]?'ok':'bad';return `<div class="mrow"><div class="l"><b>${i+1}.</b>${l}</div><select class="${c}" data-k="${k}" data-i="${i}" ${g?'disabled':''}><option value="">— 고르기 —</option>${q.right.map((r,j)=>`<option value="${j}" ${a[i]===j?'selected':''}>${'ABCDEFGH'[j]}. ${strip(r)}</option>`).join('')}</select></div>`;}).join('');}
+  /* order */
+  return `<div class="steps">${q.steps.map((s,j)=>{const pos=a.indexOf(j);let c=pos>=0?'on':'';if(g){c=(pos>=0&&a[pos]===q.a[pos])?'ok':'bad';}return `<button class="opt step ${c}" data-k="${k}" data-s="${j}" ${g?'disabled':''}><span class="badge">${pos>=0?pos+1:'ABCDEFGH'[j]}</span><span>${'ABCDEFGH'[j]}. ${s}</span></button>`;}).join('')}</div><div class="seqbar">순서: ${a.length?a.map(j=>'ABCDEFGH'[j]).join(' → '):'단계를 일어나는 순서대로 누르세요'}${g?'':` <button data-k="${k}" data-reset="1">다시</button>`}</div>`;
+}
+function render(){renderTabs();const s=Q[tab];const g=graded[tab];
+  $('#sheet').innerHTML=`<div class="head"><span class="t">${s.t}</span><span class="a">🎬 ${s.anim}</span></div>`+s.qs.map((q,k)=>{const a=ans[tab][k];const ok=correct(q,a);
+    return `<div class="q ${g&&!answered(q,a)?'unans':''}"><div class="n">문항 ${k+1}<span class="ty ty-${q.ty}">${TYNAME[q.ty]}</span></div><div class="p">${q.p}</div>${q.c?`<pre class="qc">${q.c}</pre>`:``}${body(q,k,a,g)}${g?`<div class="fb ${ok?'ok':'bad'}">${!answered(q,a)?'미응답. ':(ok?'정답. ':'오답. ')}${q.ty!=='mc'&&!ok?`<b>정답: ${txt(q,q.a)}</b> · `:''}${q.w}<span class="anim">확인: ${q.an}</span></div>`:''}</div>`;}).join('');
+  if(!g){
+    $('#sheet').querySelectorAll('[data-j]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,j=+b.dataset.j;ans[tab][k]=(ans[tab][k]===j?null:j);render();});
+    $('#sheet').querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,v=b.dataset.v==='1';ans[tab][k]=(ans[tab][k]===v?null:v);render();});
+    $('#sheet').querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,j=+b.dataset.m;const a=ans[tab][k];const p=a.indexOf(j);if(p>=0)a.splice(p,1);else a.push(j);render();});
+    $('#sheet').querySelectorAll('select[data-i]').forEach(sl=>sl.onchange=()=>{const k=+sl.dataset.k,i=+sl.dataset.i;ans[tab][k][i]=sl.value===''?null:+sl.value;renderTabs();updHint();});
+    $('#sheet').querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{const k=+b.dataset.k,j=+b.dataset.s;const a=ans[tab][k];const p=a.indexOf(j);if(p>=0)a.splice(p);else a.push(j);render();});
+    $('#sheet').querySelectorAll('[data-reset]').forEach(b=>b.onclick=()=>{ans[tab][+b.dataset.k]=[];render();});
+  }
+  $('#gradeBtn').disabled=g;$('#gradeBtn').textContent=g?'채점 완료':'채점하기';updHint();
+}
+function updHint(){const g=graded[tab];const nm=$('#name').value;
+  if(g){const sc=scoreOf(tab);$('#rscore').textContent=`${sc}/10`;if(nm.trim()){$('#rcode').textContent=codeFor(nm,tab+1,sc);$('#rhint').textContent='결과 코드';}else{$('#rcode').textContent='—';$('#rhint').textContent='이름을 입력하면 결과 코드가 나옵니다.';}}
+  else{$('#rcode').textContent='—';$('#rscore').textContent='';$('#rhint').textContent=`${tab+1}교시: ${nAns(tab)}/10 답했습니다. 채점하기를 누르면 잠깁니다.`;}}
+$('#gradeBtn').onclick=()=>{const n=nAns(tab);if(n<10&&!confirm(`아직 ${10-n}문항을 끝까지 답하지 않았습니다. 그래도 채점할까요? (미응답은 오답 처리)`))return;graded[tab]=true;render();};
+$('#name').addEventListener('input',updHint);
+
+/* ── 제출 대화상자 ── */
+let lastHtml='',lastText='';
+function buildReport(){
+  const nm=$('#name').value.trim()||'(이름 없음)';const ds=new Date().toLocaleString('ko-KR');
+  let h=`<h3>Embedded I/O 제어 Day 5 개념 워크시트 — 오답 정리</h3><div class="meta">${nm} · ${ds}</div>`;
+  let t=`Embedded I/O 제어 Day 5 개념 워크시트 — 오답 정리\n이름: ${nm}\n일시: ${ds}\n\n`;
+  Q.forEach((s,i)=>{if(!graded[i])return;
+    const wrong=s.qs.map((q,k)=>({q,k,a:ans[i][k]})).filter(x=>!correct(x.q,x.a));
+    h+=`<div class="sec">${s.t} — ${scoreOf(i)}/10</div>`;t+=`### ${s.t} — ${scoreOf(i)}/10\n`;
+    if(!wrong.length){h+=`<div class="ok" style="margin:4px 0 8px">오답 없음</div>`;t+=`오답 없음\n\n`;return;}
+    h+=`<table><tr><th>#</th><th>유형</th><th>문항</th><th>내 답</th><th>정답</th></tr>`;t+=`| # | 유형 | 문항 | 내 답 | 정답 |\n|---|---|---|---|---|\n`;
+    wrong.forEach(({q,k,a})=>{const my=txt(q,a),co=txt(q,q.a);const qt=strip(q.p).replace(/\s+/g,' ').slice(0,60);
+      h+=`<tr><td class="r">${k+1}</td><td>${TYNAME[q.ty]}</td><td>${qt}</td><td class="bad">${my}</td><td class="ok">${co}</td></tr>`;
+      t+=`| ${k+1} | ${TYNAME[q.ty]} | ${qt.replace(/\|/g,'/')} | ${my.replace(/\|/g,'/')} | ${co.replace(/\|/g,'/')} |\n`;});
+    h+=`</table>`;t+=`\n`;});
+  const ng=Q.map((s,i)=>graded[i]?null:i+1).filter(x=>x);
+  if(ng.length){h+=`<div class="meta" style="margin-top:10px">미채점: ${ng.join(', ')}교시</div>`;t+=`미채점: ${ng.join(', ')}교시\n`;}
+  lastHtml=h;lastText=t;return h;
+}
+$('#submitBtn').onclick=()=>{if(!graded.some(x=>x)){alert('먼저 한 교시 이상 채점하기를 눌러 주세요.');return;}$('#dgBody').innerHTML=buildReport();$('#toast').textContent='';$('#dlg').showModal();};
+$('#closeBtn').onclick=()=>$('#dlg').close();
+function copyRich(html,text){
+  // 1) copy 이벤트에 두 형식을 직접 실어 보내기 (사용자 클릭 안에서 동기 실행 — file:// 에서도 동작)
+  let done=false;
+  const onCopy=e=>{e.clipboardData.setData('text/html',html);e.clipboardData.setData('text/plain',text);e.preventDefault();done=true;};
+  document.addEventListener('copy',onCopy);
+  try{
+    const body=$('#dgBody');const sel=window.getSelection();const range=document.createRange();range.selectNodeContents(body);sel.removeAllRanges();sel.addRange(range);
+    document.execCommand('copy');
+    sel.removeAllRanges();
+  }catch(e){}
+  document.removeEventListener('copy',onCopy);
+  return done;
+}
+$('#captureBtn').onclick=async()=>{
+  const htmlDoc=`<meta charset="utf-8">`+lastHtml.replace(/ class="[^"]*"/g,'').replace(/<table>/g,'<table border="1" style="border-collapse:collapse">');
+  if(copyRich(htmlDoc,lastText)){$('#toast').textContent='복사됨 — 노션 페이지에서 Ctrl+V 로 붙여 넣으세요.';return;}
+  // 2) 비동기 Clipboard API
+  try{
+    if(navigator.clipboard&&window.ClipboardItem){
+      await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([htmlDoc],{type:'text/html'}),'text/plain':new Blob([lastText],{type:'text/plain'})})]);
+    }else{await navigator.clipboard.writeText(lastText);}
+    $('#toast').textContent='복사됨 — 노션 페이지에서 Ctrl+V 로 붙여 넣으세요.';return;
+  }catch(e){}
+  // 3) 최종: 텍스트 영역 선택 복사
+  try{
+    const ta=document.createElement('textarea');ta.value=lastText;ta.style.position='fixed';ta.style.opacity='0';$('#dlg').appendChild(ta);ta.focus();ta.select();
+    const ok=document.execCommand('copy');ta.remove();
+    $('#toast').textContent=ok?'텍스트(마크다운 표)로 복사됨 — 노션에서 Ctrl+V.':'복사 실패 — 대화상자 내용을 드래그해 Ctrl+C 로 복사하세요.';
+  }catch(e){$('#toast').textContent='복사 실패 — 대화상자 내용을 드래그해 Ctrl+C 로 복사하세요.';}
+};
+render();
+</script>
+</body>
+</html>
