@@ -1,0 +1,52 @@
+/* eio-overlay.dts — GPIO17 LED 와 GPIO5 버튼을 커널 장치로
+ *
+ *   dtc -@ -I dts -O dtb -o eio.dtbo eio-overlay.dts
+ *   sudo cp eio.dtbo /boot/firmware/overlays/
+ *   config.txt [all] 아래:  dtoverlay=eio   → 재부팅
+ *
+ *   결과: /sys/class/leds/eio:green/   (heartbeat 로 깜빡임)
+ *         /dev/input/eventN            (버튼 A = KEY_ENTER)
+ */
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "brcm,bcm2711";
+
+    fragment@0 {
+        target = <&gpio>;
+        __overlay__ {
+            eio_key_pins: eio_key_pins {
+                brcm,pins = <5>;
+                brcm,function = <0>;        /* 0 = 입력 */
+                brcm,pull = <2>;            /* 2 = pull-up */
+            };
+        };
+    };
+
+    fragment@1 {
+        target-path = "/";
+        __overlay__ {
+            eio-leds {
+                compatible = "gpio-leds";
+                eio_led: led-green {
+                    label = "eio:green";
+                    gpios = <&gpio 17 0>;               /* 0 = GPIO_ACTIVE_HIGH */
+                    linux,default-trigger = "heartbeat";
+                };
+            };
+
+            eio-keys {
+                compatible = "gpio-keys";
+                pinctrl-names = "default";
+                pinctrl-0 = <&eio_key_pins>;
+                button-a {
+                    label = "Button A";
+                    gpios = <&gpio 5 1>;                /* 1 = GPIO_ACTIVE_LOW (누르면 0) */
+                    linux,code = <28>;                  /* KEY_ENTER */
+                    debounce-interval = <20>;           /* ms */
+                };
+            };
+        };
+    };
+};

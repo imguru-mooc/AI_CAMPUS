@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Embedded I/O 제어 5일차 — 눈으로 보는 8가지 (커널 드라이버 · 종합 프로젝트)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EEF1F5;
+    --panel:#FFFFFF;
+    --ink:#1B2A41;
+    --ink-soft:#5B6B80;
+    --line:#C9D1DC;
+    --blue:#2457C5;
+    --blue-soft:#DCE6FA;
+    --red:#D6452E;
+    --red-soft:#FBE3DF;
+    --green:#178A67;
+    --green-soft:#DDF2EA;
+    --amber:#C98A12;
+    --amber-soft:#FBF0D3;
+    --mono:'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    --sans:'IBM Plex Sans KR', 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    --t:.35s;
+  }
+  @media (prefers-reduced-motion: reduce){ :root{ --t:0s; } *{ animation:none !important; transition:none !important; } }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; }
+  body{
+    font-family:var(--sans); color:var(--ink); background:var(--paper);
+    background-image:
+      linear-gradient(rgba(27,42,65,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(27,42,65,.045) 1px, transparent 1px);
+    background-size:24px 24px;
+    font-size:16px; line-height:1.55;
+  }
+  code, .mono{ font-family:var(--mono); }
+
+  .app{ display:grid; grid-template-columns:260px 1fr; min-height:100vh; }
+  nav{
+    background:var(--ink); color:#fff; padding:28px 20px;
+    position:sticky; top:0; height:100vh; overflow:auto;
+  }
+  nav h1{ font-size:15px; font-weight:500; margin:0 0 4px; letter-spacing:.01em; color:#AEBBD1; }
+  nav .day{ font-size:26px; font-weight:600; margin:0 0 26px; line-height:1.2; }
+  nav ol{ list-style:none; margin:0; padding:0; counter-reset:lesson; }
+  nav li{ margin:0; }
+  nav button{
+    all:unset; display:grid; grid-template-columns:32px 1fr; gap:10px; align-items:baseline;
+    width:100%; padding:9px 10px; border-radius:6px; cursor:pointer; font-size:14.5px; line-height:1.35;
+    color:#D9E1EC;
+  }
+  nav button::before{ counter-increment:lesson; content:counter(lesson) "교시"; font-family:var(--mono); font-size:11px; color:#8A9BB5; }
+  nav button:hover{ background:rgba(255,255,255,.07); }
+  nav button[aria-current="true"]{ background:var(--blue); color:#fff; }
+  nav button[aria-current="true"]::before{ color:#C9D8F7; }
+  nav button:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
+  nav .hint{ margin-top:28px; font-size:12.5px; color:#8A9BB5; line-height:1.5; }
+  nav .hint kbd{ font-family:var(--mono); background:rgba(255,255,255,.12); padding:1px 5px; border-radius:3px; }
+
+  main{ padding:36px 44px 80px; max-width:1100px; }
+  section.lesson{ display:none; }
+  section.lesson.active{ display:block; }
+  .lesson header{ margin-bottom:22px; }
+  .lesson h2{ font-size:30px; font-weight:600; margin:0 0 6px; line-height:1.25; }
+  .lesson header p{ margin:0; color:var(--ink-soft); font-size:16px; max-width:64ch; }
+
+  .stage{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:26px;
+    box-shadow:0 1px 0 rgba(27,42,65,.06);
+  }
+  .controls{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:20px; }
+  .controls label{ font-size:14px; color:var(--ink-soft); display:flex; align-items:center; gap:6px; }
+  button.btn{
+    font:inherit; font-size:14px; font-weight:500; padding:8px 14px; border-radius:6px; cursor:pointer;
+    border:1px solid var(--ink); background:var(--ink); color:#fff;
+  }
+  button.btn.secondary{ background:#fff; color:var(--ink); border-color:var(--line); }
+  button.btn:disabled{ opacity:.4; cursor:default; }
+  button.btn:focus-visible, select:focus-visible, input:focus-visible{ outline:2px solid var(--blue); outline-offset:2px; }
+  select, input[type=number], input[type=text]{
+    font:inherit; font-size:14px; padding:7px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink);
+  }
+  input[type=number], input[type=text]{ font-family:var(--mono); }
+  .toggle{ display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+  .toggle input{ position:absolute; opacity:0; width:0; height:0; }
+  .toggle .sw{ width:38px; height:22px; border-radius:11px; background:var(--line); position:relative; transition:background var(--t); }
+  .toggle .sw::after{ content:""; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition:transform var(--t); }
+  .toggle input:checked + .sw{ background:var(--blue); }
+  .toggle input:checked + .sw::after{ transform:translateX(16px); }
+  .toggle input:focus-visible + .sw{ outline:2px solid var(--blue); outline-offset:2px; }
+
+  .note{ margin-top:18px; padding:14px 16px; border-left:3px solid var(--blue); background:var(--blue-soft); border-radius:0 6px 6px 0; font-size:14.5px; }
+  .note.warn{ border-color:var(--red); background:var(--red-soft); }
+  .note.ok{ border-color:var(--green); background:var(--green-soft); }
+  .note code{ background:rgba(255,255,255,.7); padding:1px 5px; border-radius:3px; }
+
+  pre.code{
+    font-family:var(--mono); font-size:13.5px; background:#F6F8FB; border:1px solid var(--line); border-radius:6px;
+    padding:14px 16px; margin:0; overflow:auto; line-height:1.55; white-space:pre;
+  }
+  pre.code .dim{ color:#9AA7B8; }
+  pre.code .hi{ background:var(--amber-soft); }
+  pre.code .err{ background:var(--red-soft); color:var(--red); }
+
+    .readout{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-top:16px; }
+  .readout div{ padding:12px 14px; border:1px solid var(--line); border-radius:6px; background:#F6F8FB; }
+  .readout b{ display:block; font-size:12.5px; font-weight:500; color:var(--ink-soft); margin-bottom:2px; }
+  .readout span{ font-family:var(--mono); font-size:17px; font-weight:600; }
+  /* ---------- shared ---------- */
+  .mcell{ display:inline-flex; flex-direction:column; align-items:center; min-width:70px; border:2px solid var(--ink); border-radius:6px; background:#fff; overflow:hidden; transition:all var(--t); }
+  .mcell .a{ font-family:var(--mono); font-size:10px; color:var(--ink-soft); background:#F6F8FB; width:100%; text-align:center; padding:3px 4px; border-bottom:1px solid var(--line); }
+  .mcell .v{ font-family:var(--mono); font-size:20px; font-weight:600; padding:8px 6px; }
+  .mcell .n{ font-family:var(--mono); font-size:11px; color:var(--blue); padding:0 4px 6px; }
+  .mcell.hi{ border-color:var(--blue); background:var(--blue-soft); }
+  .mcell.bad{ border-color:var(--red); background:var(--red-soft); }
+  .mcell.ok{ border-color:var(--green); background:var(--green-soft); }
+  .mcell.dim{ opacity:.35; }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+  .lab{ font-size:12.5px; color:var(--ink-soft); margin:14px 0 6px; }
+  .term{ font-family:var(--mono); font-size:13.5px; background:var(--ink); color:#D9E1EC; padding:12px 16px; border-radius:6px; min-height:60px; white-space:pre-wrap; margin-top:16px; }
+  .term .r{ color:#FF9B8A; } .term .g{ color:#7FE0B8; } .term .y{ color:#FFD27F; } .term .c{ color:#8A9BB5; }
+  svg text{ font-family:var(--mono); }
+  .shake{ animation:shake .4s; } @keyframes shake{ 0%,100%{transform:none} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+  .pop-in{ animation:popin .3s ease-out; } @keyframes popin{ from{ transform:scale(.8); opacity:0; } }
+  .fade-out{ animation:fadeout .4s forwards; } @keyframes fadeout{ to{ opacity:0; transform:translateY(-8px); } }
+  .two{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:24px; }
+  .tabs2{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tabs2 button{ font:inherit; font-size:13px; padding:7px 12px; border-radius:6px; border:1px solid var(--line); background:#fff; cursor:pointer; }
+  .tabs2 button.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .fig svg{ width:100%; height:auto; background:#fff; border:1px solid var(--line); border-radius:6px; display:block; }
+  .fig text{ font-size:11px; fill:var(--ink-soft); }
+  .qslots{ display:flex; gap:6px; margin:10px 0; }
+  .qslots span{ flex:1; height:46px; border:2px solid var(--line); border-radius:6px; display:grid; place-items:center; font-family:var(--mono); font-size:13px; background:#fff; transition:all var(--t); }
+  .qslots span.full{ background:var(--blue-soft); border-color:var(--blue); }
+  .fs{ display:grid; grid-template-columns:repeat(16,1fr); gap:3px; }
+  .fs span{ height:22px; border-radius:3px; background:#EEF1F5; transition:background var(--t); }
+  .fs span.used{ background:#8FB0EA; } .fs span.dirty{ background:var(--amber); } .fs span.hot{ outline:2px solid var(--red); }
+  .crash{ font-family:var(--mono); font-size:12.5px; background:#0E1726; color:#D9E1EC; border-radius:8px; padding:12px 14px; line-height:1.7; }
+  .crash span.ln{ display:block; cursor:pointer; border-radius:3px; padding:0 4px; }
+  .crash span.ln:hover{ background:#22324A; } .crash span.ln.on{ background:#3A2A10; color:#FFD27A; }
+  .flow{ position:relative; }
+  table.rt{ border-collapse:collapse; width:100%; font-family:var(--mono); font-size:12.5px; }
+  table.rt th, table.rt td{ border:1px solid var(--line); padding:6px 8px; text-align:left; }
+  table.rt th{ background:var(--paper); font-family:var(--sans); }
+  table.rt tr.hot td{ background:var(--blue-soft); font-weight:700; }
+  @media (max-width:900px){ .two{ grid-template-columns:1fr; } }
+
+  /* ── Embedded I/O Day 1 추가 스타일 ── */
+  .lanes{ display:grid; grid-template-columns:110px 1fr; gap:10px 14px; align-items:center; }
+  .lanes .ln{ font-size:13px; font-weight:600; color:var(--ink-soft); }
+  .chips{ display:flex; gap:6px; flex-wrap:wrap; }
+  .chip{ font-family:var(--mono); font-size:12px; padding:7px 10px; border-radius:6px; border:2px solid var(--line); background:#fff; color:var(--ink-soft); transition:all var(--t); }
+  .chip.on{ border-color:var(--blue); background:var(--blue-soft); color:var(--ink); }
+  .chip.now{ border-color:var(--amber); background:var(--amber-soft); color:var(--ink); font-weight:600; }
+  .chip.done{ border-color:var(--green); background:var(--green-soft); color:var(--ink); }
+  .chip.bad{ border-color:var(--red); background:var(--red-soft); color:var(--ink); }
+  .hdr{ display:grid; grid-template-columns:repeat(20, 1fr); grid-template-rows:repeat(2, 38px); gap:4px; background:#1B2A41; padding:10px; border-radius:8px; }
+  .pin{ all:unset; cursor:pointer; border-radius:6px; display:grid; place-items:center; font-family:var(--mono); font-size:10.5px; font-weight:600; color:#1B2A41; background:#C9D1DC; position:relative; }
+  .pin:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
+  .pin.p5v{ background:#F28B82; } .pin.p3v{ background:#FFD27F; } .pin.gnd{ background:#5B6B80; color:#fff; }
+  .pin.gpio{ background:#B9CCF2; } .pin.alt{ background:#9FD9C4; } .pin.id{ background:#E3E7ED; color:#8A9BB5; }
+  .pin.sel{ outline:3px solid #fff; transform:scale(1.08); }
+  .pin.hit{ background:var(--green); color:#fff; } .pin.miss{ background:var(--red); color:#fff; }
+  .pinlegend{ display:flex; gap:14px; flex-wrap:wrap; font-size:12.5px; color:var(--ink-soft); margin:10px 0 0; }
+  .pinlegend span::before{ content:""; display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:5px; vertical-align:-2px; background:var(--c); }
+  .pipe{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px; }
+  .stg{ border:2px solid var(--line); border-radius:8px; padding:10px 12px; background:#fff; min-height:74px; transition:all var(--t); }
+  .stg b{ display:block; font-size:13px; margin-bottom:4px; } .stg span{ font-size:12.5px; color:var(--ink-soft); }
+  .stg.ok{ border-color:var(--green); background:var(--green-soft); } .stg.bad{ border-color:var(--red); background:var(--red-soft); } .stg.warn{ border-color:var(--amber); background:var(--amber-soft); } .stg.skip{ opacity:.35; }
+  .cfg{ font-family:var(--mono); font-size:13px; background:#F6F8FB; border:1px solid var(--line); border-radius:6px; padding:12px 14px; white-space:pre; overflow:auto; line-height:1.6; }
+  .cfg .off{ color:#9AA7B8; text-decoration:line-through; } .cfg .add{ background:var(--green-soft); } .cfg .bad{ background:var(--red-soft); }
+  .checks{ display:grid; gap:8px; }
+  .led{ width:54px; height:54px; border-radius:50%; background:#5B2A24; border:3px solid #3A1A16; display:inline-block; transition:all .12s; vertical-align:middle; }
+  .led.on{ background:#FF5A3C; box-shadow:0 0 22px 6px rgba(255,90,60,.55); border-color:#C0392B; }
+  .led.unk{ background:repeating-linear-gradient(45deg,#5B2A24,#5B2A24 6px,#7A3A30 6px,#7A3A30 12px); }
+  .twoterm{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:18px; }
+  .twoterm .term{ min-height:150px; margin-top:8px; }
+  .tbtns{ display:flex; gap:6px; flex-wrap:wrap; }
+  .tbtns button{ font:inherit; font-family:var(--mono); font-size:12px; padding:6px 10px; border-radius:6px; border:1px solid var(--line); background:#fff; cursor:pointer; }
+  .tbtns button:hover{ border-color:var(--ink); }
+  .pressbtn{ font:inherit; font-size:15px; font-weight:600; width:140px; height:64px; border-radius:12px; border:3px solid var(--ink); background:#fff; cursor:pointer; user-select:none; box-shadow:0 4px 0 var(--ink); transition:transform .05s, box-shadow .05s; }
+  .pressbtn.down{ transform:translateY(4px); box-shadow:0 0 0 var(--ink); background:var(--amber-soft); }
+  .wave svg{ width:100%; height:auto; background:#fff; border:1px solid var(--line); border-radius:6px; display:block; }
+  table.rt td.okc{ color:var(--green); font-weight:700; } table.rt td.badc{ color:var(--red); font-weight:700; }
+  @media (max-width:900px){ .pipe{ grid-template-columns:1fr 1fr; } .twoterm{ grid-template-columns:1fr; } }
+  /* ── Day 2 추가 ── */
+  .codepane{ font-family:var(--mono); font-size:12.5px; background:#F6F8FB; border:1px solid var(--line); border-radius:6px; padding:10px 0; overflow:auto; line-height:1.55; }
+  .codepane .cl{ display:block; padding:0 14px; white-space:pre; color:#5B6B80; }
+  .codepane .cl.done{ color:#1B2A41; }
+  .codepane .cl.on{ background:var(--amber-soft); color:#1B2A41; font-weight:600; box-shadow:inset 3px 0 0 var(--amber); }
+  .ledrow{ display:flex; gap:22px; align-items:flex-end; }
+  .ledbox{ text-align:center; font-size:12.5px; color:var(--ink-soft); }
+  .ledbox .led{ width:46px; height:46px; display:block; margin:0 auto 6px; }
+  .led.y{ background:#5A4A1E; border-color:#3B3014; } .led.y.on{ background:#FFC93C; box-shadow:0 0 22px 6px rgba(255,201,60,.55); border-color:#C98A12; }
+  .led.gr{ background:#1F4A33; border-color:#14301F; } .led.gr.on{ background:#3DDC84; box-shadow:0 0 22px 6px rgba(61,220,132,.5); border-color:#178A67; }
+  .bits{ display:grid; grid-template-columns:repeat(32,1fr); gap:2px; font-family:var(--mono); font-size:10px; }
+  .bits div{ border:1px solid var(--line); text-align:center; padding:4px 0; background:#fff; border-radius:3px; }
+  .bits div.n{ border:none; background:none; color:#8A9BB5; font-size:9px; padding:0; }
+  .bits div.hi{ background:var(--amber-soft); border-color:var(--amber); font-weight:700; }
+  .bits div.one{ background:var(--blue-soft); border-color:var(--blue); color:var(--blue); font-weight:700; }
+  .bigbtn{ font:inherit; font-size:15px; font-weight:600; padding:14px 22px; border-radius:12px; border:3px solid var(--ink); background:#fff; cursor:pointer; box-shadow:0 4px 0 var(--ink); }
+  .bigbtn:active{ transform:translateY(4px); box-shadow:0 0 0 var(--ink); }
+  .gamebox{ display:grid; place-items:center; height:200px; border-radius:12px; font-size:30px; font-weight:700; color:#fff; background:#1B2A41; user-select:none; cursor:pointer; transition:background .08s; }
+  .gamebox.ready{ background:#5B6B80; } .gamebox.go{ background:#D6452E; } .gamebox.foul{ background:#C98A12; } .gamebox.res{ background:#178A67; }
+  .gamebox small{ display:block; font-size:14px; font-weight:500; opacity:.85; text-align:center; margin-top:6px; }
+  .cpubar{ height:14px; background:#EEF1F5; border-radius:7px; overflow:hidden; } .cpubar i{ display:block; height:100%; background:var(--red); transition:width .2s; }
+
+  /* ── Day 5 ── */
+  .readout span{ font-size:15px; }
+  .lcdbox{ font-family:var(--mono); background:#9FC24A; color:#1F2E0C; border:8px solid #2B3A12; border-radius:6px; padding:10px 14px; font-size:22px; letter-spacing:3px; white-space:pre; line-height:1.35; display:inline-block; min-width:16ch; }
+  .lcdbox.off{ background:#56682A; color:#56682A; }
+  .codepane .cl{ cursor:default; }
+  .codepane .cl.click{ cursor:pointer; } .codepane .cl.click:hover{ background:#EEF3FC; }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav aria-label="교시 선택">
+    <h1>Embedded I/O 제어 · Raspberry Pi 4</h1>
+    <p class="day">5일차<br>눈으로 보는 8가지</p>
+    <ol id="navlist">
+      <li><button data-go="1" aria-current="true">µs 를 다투는 비트</button></li>
+      <li><button data-go="2">overlay → 커널 장치</button></li>
+      <li><button data-go="3">니블 두 번과 E 펄스</button></li>
+      <li><button data-go="4">쓰레드와 공유 상태</button></li>
+      <li><button data-go="5">센서가 빠지면</button></li>
+      <li><button data-go="6">버튼 · 판단 · 화면</button></li>
+      <li><button data-go="7">systemd 생명 주기</button></li>
+      <li><button data-go="8">5일 지도</button></li>
+    </ol>
+    <p class="hint">키보드 <kbd>←</kbd> <kbd>→</kbd> 로 교시 이동<br><a href="lecture.html" style="color:#AEBBD1">강의 자료</a> · <a href="worksheet.html" style="color:#AEBBD1">워크시트</a></p>
+  </nav>
+  <main>
+
+  <section class="lesson active" id="l1">
+    <header><h2>DHT11 — 26 µs 와 70 µs 를 구분해야 한다</h2><p>위는 DHT11 이 실제로 보내는 40비트, 아래는 프로그램이 잰 High 폭으로 해독한 결과입니다. 읽는 방법 · 폴링 간격 · 부하를 바꾸고 <b>20번 읽기</b>로 성공률을 비교하세요.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>읽는 방법 <select id="d-mode"><option value="poll" selected>사용자 공간 폴링</option><option value="edge">사용자 공간 엣지 타임스탬프</option><option value="kernel">커널 dht11 드라이버</option></select></label>
+        <label>폴링 간격 <select id="d-int"><option value="2">약 2 µs</option><option value="8" selected>약 8 µs</option><option value="30">약 30 µs</option></select></label>
+        <label class="toggle"><input type="checkbox" id="d-load"><span class="sw"></span>부하 yes × 4</label>
+        <button class="btn" id="d-one">한 번 읽기</button>
+        <button class="btn secondary" id="d-20">20번 읽기</button>
+      </div>
+      <div class="fig"><svg viewBox="0 0 900 190" id="d-wave"></svg></div>
+      <div class="lab">해독한 40비트 (초록 = 맞음 · 빨강 = 틀림 · 회색 = 놓침)</div>
+      <div class="row" id="d-bits" style="gap:3px"></div>
+      <div class="readout">
+        <div><b>결과</b><span id="d-res">–</span></div>
+        <div><b>성공률</b><span id="d-rate">–</span></div>
+      </div>
+      <div class="note" id="d-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l2">
+    <header><h2>overlay 한 장이 장치 파일이 되기까지</h2><p>단계를 차례로 눌러 보세요. 일부러 <b>오타</b>를 넣거나 단계를 빼면 어디서 멈추는지 보입니다. 장치가 생기면 아래에서 trigger 를 바꾸고 버튼을 눌러 보세요.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label class="toggle"><input type="checkbox" id="o-typo"><span class="sw"></span>compatible 오타 ("gpio-led")</label>
+        <label class="toggle"><input type="checkbox" id="o-semi"><span class="sw"></span>세미콜론 빠뜨림</label>
+        <button class="btn secondary" id="o-reset">처음부터</button>
+      </div>
+      <div class="tbtns" id="o-steps">
+        <button data-s="0">① make eio.dtbo</button>
+        <button data-s="1">② sudo cp eio.dtbo /boot/firmware/overlays/</button>
+        <button data-s="2">③ config.txt 에 dtoverlay=eio</button>
+        <button data-s="3">④ sudo reboot</button>
+      </div>
+      <div class="pipe" id="o-pipe" style="margin-top:14px"></div>
+      <div class="two" style="margin-top:14px">
+        <div class="term" id="o-term" style="min-height:150px;margin-top:0"></div>
+        <div>
+          <div class="controls" style="margin-bottom:8px"><label>trigger <select id="o-trig"><option>none</option><option>default-on</option><option>timer</option><option selected>heartbeat</option></select></label><button class="pressbtn" id="o-btn" style="width:120px;height:50px">버튼 A</button></div>
+          <div style="display:flex;gap:16px;align-items:center"><span class="led" id="o-led"></span><div><b>/sys/class/leds/eio:green</b><div id="o-ledtxt" style="font-size:13px;color:var(--ink-soft)">장치 없음</div></div></div>
+          <div class="term" id="o-ev" style="min-height:80px"></div>
+        </div>
+      </div>
+      <div class="note" id="o-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l3">
+    <header><h2>HD44780 — 한 글자 = RS + 니블 두 번 + E 두 번</h2><p>글자를 입력하고 <b>한 바이트</b>씩 보내 보세요. 오른쪽 LCD 에 글자가 찍히고, 아래에 그 바이트의 핀 파형이 그려집니다. D4 · D5 를 바꿔 꽂으면?</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>1행 <input type="text" id="h-l1" value="Hello, Pi 4!" maxlength="16" style="width:180px"></label>
+        <label>2행 <input type="text" id="h-l2" value="T 24.0C H 41%" maxlength="16" style="width:180px"></label>
+        <button class="btn" id="h-step">한 바이트</button>
+        <button class="btn secondary" id="h-play">전부 보내기</button>
+        <button class="btn secondary" id="h-reset">초기화부터</button>
+        <label class="toggle"><input type="checkbox" id="h-swap"><span class="sw"></span>D4 · D5 바꿔 꽂음</label>
+      </div>
+      <div class="two">
+        <div>
+          <div class="lcdbox" id="h-lcd"></div>
+          <table class="rt" id="h-tab" style="margin-top:12px"></table>
+        </div>
+        <div class="fig"><svg viewBox="0 0 440 230" id="h-wave"></svg></div>
+      </div>
+      <div class="note" id="h-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l4">
+    <header><h2>네 쓰레드, 하나의 공유 상태</h2><p>3초 동안 각 쓰레드가 무엇을 하는지 시간 막대로 그렸습니다. 주황 = 잠금을 쥔 시간, 빨강 = 잠금을 기다린 시간. 나쁜 습관을 켜거나 조건 변수를 빼고 <b>버튼을 누른 뒤 화면이 바뀌기까지</b>를 비교하세요.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label class="toggle"><input type="checkbox" id="t-bad1"><span class="sw"></span>잠근 채 센서 읽기</label>
+        <label class="toggle"><input type="checkbox" id="t-bad2"><span class="sw"></span>잠근 채 LCD 그리기</label>
+        <label class="toggle"><input type="checkbox" id="t-nocv" ><span class="sw"></span>조건 변수 없이 (0.5초 폴링)</label>
+        <label>버튼 누름 시각 <input type="range" id="t-press" min="200" max="2800" value="1230" style="width:140px"><b id="t-pv">1.23 s</b></label>
+      </div>
+      <div class="fig"><svg viewBox="0 0 900 260" id="t-svg"></svg></div>
+      <div class="readout">
+        <div><b>control 최대 잠금 대기</b><span id="t-wait">–</span></div>
+        <div><b>버튼 → 화면 바뀜</b><span id="t-resp">–</span></div>
+      </div>
+      <div class="note" id="t-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l5">
+    <header><h2>센서 선을 뽑아도 envmon 은 죽지 않는다</h2><p>센서를 뽑았다 꽂아 보세요. 값은 <code>--</code> 로, 상태 LED 는 빠르게, 로그는 바뀔 때 한 줄만 남습니다. 버튼으로 화면을 넘겨 오류 횟수도 확인하세요.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label class="toggle"><input type="checkbox" id="f-dht" checked><span class="sw"></span>DHT11 연결</label>
+        <label class="toggle"><input type="checkbox" id="f-pcf" checked><span class="sw"></span>PCF8591 연결</label>
+        <label class="toggle"><input type="checkbox" id="f-son" checked><span class="sw"></span>HC-SR04 연결</label>
+        <button class="btn secondary" id="f-scr">버튼 A 짧게 (화면 전환)</button>
+      </div>
+      <div class="two">
+        <div>
+          <div class="lcdbox" id="f-lcd"></div>
+          <div class="ledrow" style="margin-top:16px"><div class="ledbox"><span class="led gr" id="f-ok"></span>상태 17</div><div class="ledbox"><span class="led" id="f-al"></span>경보 27</div></div>
+        </div>
+        <div class="term" id="f-term" style="margin-top:0;min-height:200px;max-height:240px;overflow:auto"></div>
+      </div>
+      <table class="rt" id="f-tab" style="margin-top:12px"></table>
+      <div class="note" id="f-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l6">
+    <header><h2>control — 버튼 짧게 · 길게, 히스테리시스, 경보</h2><p>온도와 거리를 움직이고 버튼을 짧게 · 길게(1초 이상) 눌러 보세요. 아래 그래프는 최근 온도와 팬 상태입니다 — 27 ~ 28 °C 사이에서 릴레이가 떨지 않는 것을 확인하세요.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <label>온도 <input type="range" id="c-t" min="240" max="310" value="262" style="width:180px"><b id="c-tv">26.2 °C</b></label>
+        <label class="toggle"><input type="checkbox" id="c-noise" checked><span class="sw"></span>센서 잡음</label>
+        <label>거리 <input type="range" id="c-d" min="5" max="120" value="80" style="width:160px"><b id="c-dv">80 cm</b></label>
+        <label>판단 <select id="c-hyst"><option value="1" selected>히스테리시스 28 / 27</option><option value="0">기준 하나 (28)</option></select></label>
+        <button class="pressbtn" id="c-btn" style="width:120px;height:50px">버튼 A</button>
+      </div>
+      <div class="two">
+        <div>
+          <div class="lcdbox" id="c-lcd"></div>
+          <div class="ledrow" style="margin-top:16px">
+            <div class="ledbox"><span class="led gr" id="c-ok"></span>상태 17</div>
+            <div class="ledbox"><span class="led" id="c-al"></span>경보 27</div>
+            <div class="ledbox"><span class="led y" id="c-rl"></span>릴레이 25</div>
+            <div class="ledbox"><span class="led" id="c-bz" style="background:#333;border-color:#111"></span>부저 13</div>
+          </div>
+        </div>
+        <div class="fig"><svg viewBox="0 0 440 220" id="c-chart"></svg></div>
+      </div>
+      <div class="term" id="c-term" style="min-height:70px"></div>
+      <div class="note" id="c-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l7">
+    <header><h2>systemd — start · stop · kill -9 · reboot</h2><p>명령을 눌러 서비스 상태가 어떻게 바뀌는지, 그때 릴레이(출력)가 어떻게 되는지 보세요. 지금 envmon 은 릴레이를 켜 둔 상태(온도 29 °C)라고 가정합니다.</p></header>
+    <div class="stage">
+      <div class="controls">
+        <div class="tbtns" id="s-cmds">
+          <button data-c="enable">systemctl enable</button>
+          <button data-c="disable">systemctl disable</button>
+          <button data-c="start">systemctl start</button>
+          <button data-c="stop">systemctl stop</button>
+          <button data-c="kill">kill -9</button>
+          <button data-c="reboot">sudo reboot</button>
+        </div>
+        <label class="toggle"><input type="checkbox" id="s-busy"><span class="sw"></span>04_lcd_demo 가 LCD 를 잡고 있음</label>
+      </div>
+      <div class="fig"><svg viewBox="0 0 900 230" id="s-svg"></svg></div>
+      <div class="two" style="margin-top:12px">
+        <div class="term" id="s-status" style="margin-top:0;min-height:120px"></div>
+        <div class="term" id="s-journal" style="margin-top:0;min-height:120px;max-height:180px;overflow:auto"></div>
+      </div>
+      <div class="note" id="s-note"></div>
+    </div>
+  </section>
+
+  <section class="lesson" id="l8">
+    <header><h2>5일 지도 — 같은 GPIO, 다른 길</h2><p>왼쪽에서 장치를 고르면 그 장치를 5일 동안 어떤 층으로 다뤘는지, 왜 그 층인지 표시됩니다. 위에서 Day 를 고르면 그날 쓴 경로가 켜집니다.</p></header>
+    <div class="stage">
+      <div class="controls"><div class="tabs2" id="m-days"><button data-d="1">Day 1</button><button data-d="2">Day 2</button><button data-d="3">Day 3</button><button data-d="4">Day 4</button><button class="on" data-d="5">Day 5</button></div></div>
+      <div class="two">
+        <div class="tbtns" id="m-devs" style="flex-direction:column;align-items:stretch"></div>
+        <div class="fig"><svg viewBox="0 0 440 360" id="m-svg"></svg></div>
+      </div>
+      <div class="note" id="m-note"></div>
+    </div>
+  </section>
+
+  </main>
+</div>
+<script>
+(function(){
+  'use strict';
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+  const NS='http://www.w3.org/2000/svg';
+  const el=(n,a,t)=>{ const e=document.createElementNS(NS,n); for(const k in a) e.setAttribute(k,a[k]); if(t!==undefined) e.textContent=t; return e; };
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  let cur=1;
+  function go(n){ cur=Math.max(1,Math.min(8,n)); $$('.lesson').forEach(s=>s.classList.toggle('active',s.id==='l'+cur)); $$('#navlist button').forEach(b=>b.setAttribute('aria-current',b.dataset.go==cur?'true':'false')); history.replaceState(null,'','#l'+cur); window.scrollTo({top:0}); }
+  $$('#navlist button').forEach(b=>b.addEventListener('click',()=>go(+b.dataset.go)));
+  document.addEventListener('keydown',e=>{ if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName))return; if(e.key==='ArrowRight')go(cur+1); if(e.key==='ArrowLeft')go(cur-1); });
+  if(/^#l[1-8]$/.test(location.hash)) go(+location.hash[2]);
+  function tabs(id,fn){ $$('#'+id+' button').forEach(b=>b.addEventListener('click',()=>{ $$('#'+id+' button').forEach(x=>x.classList.toggle('on',x===b)); fn(b); })); }
+  function box(S,x,y,w,h,title,sub,kind){ const col={n:['#fff','#1B2A41'],b:['#DCE6FA','#2457C5'],g:['#DDF2EA','#178A67'],r:['#FBE3DF','#D6452E'],a:['#FBF0D3','#C98A12'],d:['#F6F8FB','#C9D1DC']}[kind||'n'];
+    S.appendChild(el('rect',{x,y,width:w,height:h,rx:8,fill:col[0],stroke:col[1],'stroke-width':2}));
+    const t=el('text',{x:x+w/2,y:y+(sub?h/2-4:h/2+5),'text-anchor':'middle','font-size':14,'font-weight':600,fill:'#1B2A41'},title); S.appendChild(t);
+    if(sub){ String(sub).split('\n').forEach((ln,i)=>S.appendChild(el('text',{x:x+w/2,y:y+h/2+14+i*14,'text-anchor':'middle','font-size':11.5,fill:col[1]},ln))); } }
+  function arrow(S,x1,y1,x2,y2,color,label){ const id='m'+color.replace('#',''); if(!S.querySelector('#'+id)){ const d=el('defs',{}); const m=el('marker',{id,viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'}); m.appendChild(el('path',{d:'M0,0L10,5L0,10z',fill:color})); d.appendChild(m); S.appendChild(d); }
+    S.appendChild(el('line',{x1,y1,x2,y2,stroke:color,'stroke-width':2.2,'marker-end':`url(#${id})`}));
+    if(label){ const mx=(x1+x2)/2,my=(y1+y2)/2; S.appendChild(el('rect',{x:mx-label.length*3.6-6,y:my-10,width:label.length*7.2+12,height:18,rx:4,fill:'#fff',stroke:color})); S.appendChild(el('text',{x:mx,y:my+3,'text-anchor':'middle','font-size':11,fill:color},label)); } }
+
+    const note=(id,html,kind)=>{ const n=$(id); n.className='note'+(kind?' '+kind:''); n.innerHTML=html; };
+  const ledSet=(id,on,lvl)=>{ const l=$(id); l.classList.toggle('on',!!on); l.style.opacity=on&&lvl!==undefined?(0.35+0.65*lvl):''; };
+  const clr=S=>{ while(S.firstChild) S.removeChild(S.firstChild); };
+  const txt=(S,x,y,s,a)=>S.appendChild(el('text',Object.assign({x,y,'font-size':11,fill:'#5B6B80'},a||{}),s));
+  const line=(S,x1,y1,x2,y2,c,w,d)=>S.appendChild(el('line',{x1,y1,x2,y2,stroke:c||'#1B2A41','stroke-width':w||2,'stroke-dasharray':d||''}));
+  const poly=(S,pts,c,w,d)=>S.appendChild(el('polyline',{points:pts.map(p=>p.join(',')).join(' '),fill:'none',stroke:c||'#2457C5','stroke-width':w||2.2,'stroke-dasharray':d||''}));
+  const fmtus=u=>u>=1000?(u/1000).toFixed(2)+' ms':Math.round(u)+' µs';
+  const rexp=m=>-Math.log(1-Math.random())*m;
+  let AC=null; function beep(hz,ms,vol){ try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); const o=AC.createOscillator(), g=AC.createGain(); o.type='square'; o.frequency.value=hz; g.gain.value=vol||0.04; o.connect(g); g.connect(AC.destination); o.start(); o.stop(AC.currentTime+ms/1000); }catch(e){} }
+  const vis=n=>cur===n;
+
+  /* ───────── 1 소프트웨어 PWM 과 jitter ───────── */
+  const rect=(S,x,y,w,h,f,st,rx)=>S.appendChild(el('rect',{x,y,width:w,height:h,rx:rx||0,fill:f,stroke:st||'none'}));
+  const hex2=v=>'0x'+(v&255).toString(16).toUpperCase().padStart(2,'0');
+  const bin8=v=>(v&255).toString(2).padStart(8,'0');
+  const gauss=()=>{ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
+  /* 7-Segment 하나: bit0=a … bit6=g, bit7=dp */
+  function seg7(S,x,y,s,pat,op,ghost){
+    rect(S,x-6*s,y-6*s,82*s,114*s,'#1B1B1F',null,6*s);
+    const R=[[10,0,40,8],[50,8,8,38],[50,54,8,38],[10,92,40,8],[2,54,8,38],[2,8,8,38],[10,46,40,8]];
+    R.forEach((r,i)=>{ const on=(pat>>i)&1, gh=ghost?((ghost>>i)&1):0;
+      S.appendChild(el('rect',{x:x+r[0]*s,y:y+r[1]*s,width:r[2]*s,height:r[3]*s,rx:3*s,fill:on?'#FF3B2F':(gh?'#7A2A22':'#3A1F1C'),opacity:on?(op===undefined?1:op):1})); });
+    S.appendChild(el('circle',{cx:x+66*s,cy:y+96*s,r:5*s,fill:(pat>>7)&1?'#FF3B2F':'#3A1F1C',opacity:(pat>>7)&1?(op===undefined?1:op):1}));
+  }
+  const SEGF={'0':0x3F,'1':0x06,'2':0x5B,'3':0x4F,'4':0x66,'5':0x6D,'6':0x7D,'7':0x07,'8':0x7F,'9':0x6F,'A':0x77,'B':0x7C,'C':0x39,'D':0x5E,'E':0x79,'F':0x71,'-':0x40,'H':0x76,' ':0,'L':0x38,'P':0x73};
+  const segc=c=>SEGF[String(c).toUpperCase()]||0;
+  function segText(s){ const p=[0,0,0,0]; let k=3; for(let i=s.length-1;i>=0&&k>=0;i--){ if(s[i]==='.'){ if(i>0){ p[k]=segc(s[i-1])|0x80; i--; } else p[k]=0x80; } else p[k]=segc(s[i]); k--; } return p; }
+  const xorcs=s=>{ let x=0; for(const ch of s){ if(ch==='*')break; x^=ch.charCodeAt(0)&255; } return x; };
+
+  const lcdHTML=(r0,r1)=>esc(r0.padEnd(16).slice(0,16))+'\n'+esc(r1.padEnd(16).slice(0,16));
+  const pick=a=>a[Math.floor(Math.random()*a.length)];
+  const nowS=()=>{ const d=new Date(); return d.toTimeString().slice(0,8); };
+
+  /* ───────── 1 DHT11 비트 ───────── */
+  const D={H:41,T:24,runs:[],last:null};
+  function dBits(){ const b=[D.H,0,D.T,0,(D.H+D.T)&255]; const bits=[]; b.forEach(x=>{ for(let i=7;i>=0;i--) bits.push((x>>i)&1); }); return bits; }
+  function dSim(){ const mode=$('#d-mode').value, I=+$('#d-int').value, load=$('#d-load').checked; const bits=dBits();
+    /* 실제 타이밍 (µs): 응답 160 뒤 비트마다 Low 50 + High 27/70 */
+    let t=160; const seg=bits.map(b=>{ const lo=t, hi=t+50, end=hi+(b?70:27); t=end; return {lo,hi,end,b}; });
+    let stall=null; const res={bits:[],status:'ok',msg:''};
+    if(mode==='kernel'){ if(Math.random()<0.03){ res.status='fail'; res.msg='드라이버 읽기 실패 (ETIMEDOUT) → dht_read 가 0.3초 뒤 재시도'; res.bits=bits.map(()=>-1); return {seg,res,stall}; }
+      res.bits=bits.map(b=>({v:b,ok:1})); return {seg,res,stall}; }
+    if(mode==='poll'){ const p=load?0.75:(I>=30?0.25:0.12); if(Math.random()<p){ const len=load?300+Math.random()*2500:60+Math.random()*120; const st=200+Math.random()*3400; stall=[st,st+len]; } }
+    if(mode==='edge'&&Math.random()<(load?0.35:0.05)){ const miss=8+Math.floor(Math.random()*24); stall=[0,seg[miss].lo]; }
+    const out=[]; seg.forEach((s,i)=>{ if(stall&&s.end>stall[0]&&s.hi<stall[1]){ out.push({v:null,ok:0,lost:1}); return; }
+      let w=s.end-s.hi; if(mode==='poll') w+= (Math.random()*I)-(Math.random()*I)+gauss()*1.5;
+      const v=w>50?1:0; out.push({v,ok:v===s.b,w}); });
+    const got=out.filter(o=>!o.lost).length; res.bits=out;
+    if(got<40&&mode==='poll'&&stall){ res.status='short'; res.msg=`비트 부족 (${got} / 40) — 프로그램이 ${Math.round(stall[1]-stall[0])} µs 동안 CPU 를 못 받아 그 사이 에지를 놓침`; }
+    else if(got<40){ res.status='short'; res.msg=`비트 부족 (${got} / 40) — 출력 → 입력 전환이 늦어 앞쪽 비트가 지나감`; }
+    else if(out.some(o=>!o.ok)){ res.status='cs'; res.msg='체크섬 오류 — 폴링 간격만큼 High 폭이 길거나 짧게 재져 0 과 1 이 바뀜'; }
+    return {seg,res,stall}; }
+  function dDraw(r){ const W=$('#d-wave'); clr(W); const X0=40, sx=840/4300; txt(W,4,30,'선',{'font-size':11,'font-weight':700});
+    const pts=[[X0-30,22],[X0,22],[X0,62],[X0+30*sx,62],[X0+30*sx,22]]; let lastx=X0+30*sx;
+    pts.push([X0+80*sx,22],[X0+80*sx,62],[X0+160*sx,62]); r.seg.forEach(s=>{ pts.push([X0+s.lo*sx,62],[X0+s.hi*sx,62],[X0+s.hi*sx,22],[X0+s.end*sx,22],[X0+s.end*sx,62]); }); pts.push([880,62],[880,22]);
+    poly(W,pts,'#2457C5',1.6); txt(W,X0,80,'응답',{'font-size':9}); txt(W,X0+200*sx,14,'비트 40개 — 짧은 High = 0, 긴 High = 1',{'font-size':10,fill:'#1B2A41'});
+    r.seg.forEach((s,i)=>{ const o=r.res.bits[i]; const c=o===-1||o.lost?'#C9D1DC':(o.ok?'#178A67':'#D6452E'); rect(W,X0+s.hi*sx,92,Math.max(2,(s.end-s.hi)*sx),12,c);
+      if(i%8===0) txt(W,X0+s.lo*sx,124,['습도','습도.','온도','온도.','체크섬'][i/8],{'font-size':9}); });
+    txt(W,4,102,'잰 High',{'font-size':9});
+    if(r.stall){ rect(W,X0+r.stall[0]*sx,10,Math.max(3,(Math.min(r.stall[1],4300)-r.stall[0])*sx),120,'rgba(214,69,46,.12)','#D6452E'); txt(W,X0+r.stall[0]*sx+4,146,$('#d-mode').value==='edge'?'입력 전환 전 — 못 본 구간':'CPU 를 못 받은 구간',{'font-size':10,fill:'#D6452E'}); }
+    for(let t=0;t<=4000;t+=1000){ line(W,X0+t*sx,150,X0+t*sx,156,'#9AA7B8',1); txt(W,X0+t*sx-10,170,t/1000+' ms',{'font-size':9}); }
+    $('#d-bits').innerHTML=r.res.bits.map(o=>`<span style="display:inline-block;width:16px;text-align:center;font:600 11px var(--mono);border-radius:3px;padding:2px 0;background:${o===-1||o.lost?'#E3E7ED':(o.ok?'#DDF2EA':'#FBE3DF')};color:${o===-1||o.lost?'#9AA7B8':(o.ok?'#178A67':'#D6452E')}">${o===-1||o.lost?'·':o.v}</span>`).join('');
+    $('#d-res').innerHTML=r.res.status==='ok'?`<span style="color:var(--green)">OK ${D.T} °C · ${D.H} %</span>`:`<span style="color:var(--red)">${r.res.status==='cs'?'체크섬 오류':r.res.status==='short'?'비트 부족':'실패'}</span>`; }
+  function dRun(n){ let last; for(let i=0;i<n;i++){ last=dSim(); D.runs.push(last.res.status==='ok'); } if(D.runs.length>40) D.runs=D.runs.slice(-40); dDraw(last);
+    const ok=D.runs.filter(x=>x).length; $('#d-rate').textContent=`${ok} / ${D.runs.length}`;
+    const mode=$('#d-mode').value;
+    if(mode==='kernel') note('#d-note','커널 드라이버는 GPIO 인터럽트 안에서 에지 시각을 찍고 해독합니다 — 사용자 프로세스의 스케줄링과 상관없습니다. 그래도 가끔 실패(ETIMEDOUT)하므로 읽는 쪽은 <b>재시도</b>합니다. (수치는 수업용 모의값)','ok');
+    else if(last.res.status!=='ok') note('#d-note',last.res.msg+'. ESP32 라이브러리는 읽는 4 ms 동안 인터럽트를 꺼서 이런 일이 없지만, Linux 사용자 프로그램은 그럴 수 없습니다.','warn');
+    else note('#d-note','이번에는 성공했습니다. <b>20번 읽기</b>로 성공률을 보고, 부하를 켜거나 폴링 간격을 늘려 보세요. 가끔이라도 실패하면 제품에는 쓸 수 없습니다.'); }
+  $('#d-one').onclick=()=>dRun(1); $('#d-20').onclick=()=>{ D.runs=[]; dRun(20); };
+  ['#d-mode','#d-int','#d-load'].forEach(i=>$(i).addEventListener('change',()=>{ D.runs=[]; $('#d-rate').textContent='–'; dRun(1); }));
+  dRun(1);
+
+  /* ───────── 2 overlay ───────── */
+  const O={made:false,copied:false,conf:false,booted:false,leds:false,keys:false,phase:0,down:false};
+  const STG=[['dtc 컴파일','.dts → .dtbo'],['overlays 에 복사','/boot/firmware/overlays/'],['config.txt','dtoverlay=eio'],['재부팅 · 병합','펌웨어가 기본 dtb + eio.dtbo'],['드라이버 연결','compatible ↔ gpio-leds · gpio-keys'],['장치 파일','/sys/class/leds · /dev/input']];
+  function oPipe(st){ $('#o-pipe').innerHTML=STG.map(([h,b],i)=>`<div class="stg ${st[i]||''}"><b>${h}</b><span>${b}</span></div>`).join(''); }
+  function oLog(s,c){ const T=$('#o-term'); T.innerHTML+=c?`<span class="${c}">${s}</span>\n`:s+'\n'; T.scrollTop=1e6; }
+  function oStep(s){ const typo=$('#o-typo').checked, semi=$('#o-semi').checked; const st=[];
+    if(s===0){ oLog('<span class="c">$</span> make eio.dtbo'); if(semi){ oLog('Error: eio-overlay.dts:34.17-18 syntax error\nFATAL ERROR: Unable to parse input tree','r'); O.made=false; note('#o-note','dtc 가 문법 오류를 줄 · 칸 번호와 함께 알려 줍니다. 세미콜론 · 중괄호 짝을 확인하세요.','warn'); }
+      else { oLog('dtc -@ -I dts -O dtb -o eio.dtbo eio-overlay.dts'); O.made=true; note('#o-note','<code>-@</code> 은 <code>&amp;gpio</code> 같은 바깥 참조를 표시해 두라는 옵션입니다. 부팅 때 펌웨어가 기본 트리의 gpio 노드와 연결합니다.'); } }
+    if(s===1){ oLog('<span class="c">$</span> sudo cp eio.dtbo /boot/firmware/overlays/'); if(!O.made){ oLog("cp: cannot stat 'eio.dtbo': No such file or directory",'r'); note('#o-note','아직 컴파일하지 않았습니다.','warn'); } else { O.copied=true; note('#o-note','펌웨어는 부팅 때 이 폴더에서 이름으로 .dtbo 를 찾습니다 (eio → eio.dtbo).'); } }
+    if(s===2){ oLog('<span class="c">$</span> sudo nano /boot/firmware/config.txt   # [all] 아래 dtoverlay=eio'); O.conf=true; note('#o-note','설정만 바뀌었습니다. config.txt 는 부팅 때만 읽힙니다 (Day 1).'); }
+    if(s===3){ oLog('<span class="c">$</span> sudo reboot\n… 다시 접속 …'); O.booted=true; O.leds=false; O.keys=false;
+      if(!O.conf){ oLog('<span class="c">$</span> ls /sys/class/leds\nACT  PWR'); note('#o-note','config.txt 에 줄이 없어서 펌웨어가 overlay 를 붙이지 않았습니다.','warn'); }
+      else if(!O.copied){ oLog('<span class="c">$</span> dmesg | grep -i overlay'); oLog("Failed to load overlay 'eio'",'r'); note('#o-note','config.txt 에는 있지만 overlays 폴더에 파일이 없습니다.','warn'); }
+      else { O.keys=true; O.leds=!typo; oLog('<span class="c">$</span> ls /sys/class/leds\nACT  PWR'+(O.leds?'  <span class="g">eio:green</span>':''));
+        oLog('<span class="c">$</span> grep -A1 eio-keys /proc/bus/input/devices\nN: Name="eio-keys"\n<span class="g">H: Handlers=kbd event0</span>');
+        if(typo) note('#o-note','overlay 는 붙었지만 <code>compatible = "gpio-led"</code> 와 짝이 맞는 드라이버가 없어 <b>LED 장치가 생기지 않았습니다</b>. 오류도 나지 않아 찾기 어렵습니다 — 철자를 확인하세요. 버튼(gpio-keys)은 생겼습니다.','warn');
+        else note('#o-note','LED 는 부팅하자마자 heartbeat 로 깜빡이고, 버튼은 키보드처럼 /dev/input/event0 이 되었습니다. 프로그램을 하나도 실행하지 않았습니다 — 이제 이 핀들은 <b>커널의 것</b>입니다.','ok'); } }
+    oRender(); }
+  function oRender(){ const typo=$('#o-typo').checked; const st=[O.made?'ok':'',O.copied?'ok':'',O.conf?'ok':'',O.booted?(O.conf&&O.copied?'ok':'bad'):'',O.booted&&O.conf&&O.copied?(typo?'warn':'ok'):'',O.keys?(O.leds?'ok':'warn'):'']; oPipe(st);
+    $('#o-ledtxt').textContent=O.leds?'trigger = '+$('#o-trig').value:'장치 없음'; }
+  $$('#o-steps button').forEach(b=>b.onclick=()=>oStep(+b.dataset.s));
+  $('#o-reset').onclick=()=>{ Object.assign(O,{made:false,copied:false,conf:false,booted:false,leds:false,keys:false}); $('#o-term').innerHTML=''; $('#o-ev').innerHTML=''; oRender(); note('#o-note','① → ④ 순서대로 눌러 보세요. 순서를 바꾸거나 오타를 켜고 다시 해 보세요.'); };
+  ['#o-typo','#o-semi'].forEach(i=>$(i).addEventListener('change',()=>{ O.made=false; O.booted=false; O.leds=false; O.keys=false; oRender(); }));
+  $('#o-trig').addEventListener('change',()=>{ if(O.leds) $('#o-ev').innerHTML+=`<span class="c">$</span> echo ${$('#o-trig').value} | sudo tee /sys/class/leds/eio:green/trigger\n`; oRender(); });
+  const ob=$('#o-btn'); let obAt=0;
+  const oPress=(v)=>{ ob.classList.toggle('down',v===1); const E=$('#o-ev'); if(!O.keys){ if(v===1) E.innerHTML+='(커널 장치 없음 — 아무도 이 핀을 보지 않음)\n'; return; }
+    const t=(performance.now()/1000+1760583000).toFixed(6); E.innerHTML+=`${t}  type EV_KEY  code 28 (KEY_ENTER)  value ${v} ${v?'누름':'뗌'}\n`; E.scrollTop=1e6;
+    if(v===1&&O.leds){ const s=$('#o-trig'); s.selectedIndex=(s.selectedIndex+1)%4; E.innerHTML+=`  → 03_led_key: trigger = ${s.value}\n`; oRender(); } };
+  ob.addEventListener('pointerdown',()=>oPress(1)); ob.addEventListener('pointerup',()=>oPress(0)); ob.addEventListener('pointerleave',()=>{ if(ob.classList.contains('down')) oPress(0); });
+  setInterval(()=>{ if(!vis(2)) return; const tr=$('#o-trig').value, t=performance.now(); let on=false;
+    if(O.leds){ if(tr==='default-on') on=true; else if(tr==='timer') on=(t%1000)<500; else if(tr==='heartbeat'){ const p=t%1200; on=p<70||(p>220&&p<290); } }
+    ledSet('#o-led',on); },30);
+  $('#o-reset').onclick();
+
+  /* ───────── 3 LCD ───────── */
+  const L={ops:[],k:0,dd:new Array(128).fill(32),addr:0,inited:false,run:null};
+  function lBuild(fromInit){ const ops=[]; if(fromInit){ [3,3,3,2].forEach((n,i)=>ops.push({nib:n,rs:0,lab:['8비트라고 1','8비트라고 2','8비트라고 3','4비트 모드로'][i]}));
+      [[0x28,'기능: 4비트 · 2줄'],[0x08,'화면 끔'],[0x01,'지우기 (2 ms)'],[0x06,'입력: 오른쪽으로'],[0x0C,'화면 켬']].forEach(([b,l])=>ops.push({b,rs:0,lab:l})); }
+    ops.push({b:0x80,rs:0,lab:'위치: 1행 0칸 (0x80|0x00)'}); [...$('#h-l1').value].forEach(c=>ops.push({b:c.charCodeAt(0)&255,rs:1,lab:`'${c}'`}));
+    ops.push({b:0xC0,rs:0,lab:'위치: 2행 0칸 (0x80|0x40)'}); [...$('#h-l2').value].forEach(c=>ops.push({b:c.charCodeAt(0)&255,rs:1,lab:`'${c}'`})); return ops; }
+  const sw45=b=>(b&0xCC)|((b&0x11)<<1)|((b&0x22)>>1);   /* 니블마다 bit0 ↔ bit1 */
+  function lExec(op){ let b=op.b; if(op.nib!==undefined){ L.lastNib=op.nib; return; } if($('#h-swap').checked&&L.inited) b=sw45(b); op.sent=b;
+    if(op.rs){ L.dd[L.addr&0x7F]=b; L.addr=(L.addr+1)&0x7F; }
+    else if(b===0x01){ L.dd.fill(32); L.addr=0; } else if(b&0x80){ L.addr=b&0x7F; } else if(b===0x0C) L.on=true; else if(b===0x08) L.on=false; if(b===0x0C) L.inited=true; }
+  function lShow(){ const ch=c=>c>=32&&c<127?String.fromCharCode(c):'▒'; const r0=Array.from({length:16},(_,i)=>ch(L.dd[i])).join(''), r1=Array.from({length:16},(_,i)=>ch(L.dd[0x40+i])).join('');
+    const box=$('#h-lcd'); box.classList.toggle('off',!L.on); box.textContent=r0+'\n'+r1;
+    const op=L.ops[L.k-1]; const W=$('#h-wave'); clr(W);
+    if(!op){ $('#h-tab').innerHTML=''; return; }
+    const nibs=op.nib!==undefined?[op.nib]:[(op.sent??op.b)>>4,(op.sent??op.b)&15]; const X0=60, step=170;
+    const rows=[['RS',()=>op.rs],['E',null],['D7',(n)=>(n>>3)&1],['D6',(n)=>(n>>2)&1],['D5',(n)=>(n>>1)&1],['D4',(n)=>n&1]];
+    rows.forEach(([nm,f],ri)=>{ const y=24+ri*32; txt(W,8,y+4,nm,{'font-size':11,'font-weight':700,fill:'#1B2A41'}); const hi=y-10, lo=y+8; let pts=[[X0,lo]];
+      nibs.forEach((n,k)=>{ const x=X0+k*step; if(nm==='E'){ pts.push([x+60,lo],[x+60,hi],[x+110,hi],[x+110,lo],[x+step,lo]); } else { const v=nm==='RS'?op.rs:f(n); pts.push([x,v?hi:lo],[x+step,v?hi:lo]); if(nm!=='RS') txt(W,x+80,y+4,v,{'font-size':10,fill:'#2457C5'}); } });
+      poly(W,pts,nm==='E'?'#E07B1A':'#2457C5',1.8); });
+    nibs.forEach((n,k)=>{ txt(W,X0+k*step+50,222,k===0&&nibs.length>1?'위 니블':nibs.length>1?'아래 니블':'니블',{'font-size':10}); line(W,X0+k*step+110,8,X0+k*step+110,210,'#E07B1A',1,'3 3'); });
+    txt(W,X0+110,8+0,'↓ 여기서 읽음',{'font-size':9,fill:'#E07B1A'});
+    const b=op.sent??op.b; $('#h-tab').innerHTML=`<tr><th>#</th><th>RS</th><th>바이트</th><th>뜻</th></tr><tr class="hot"><td>${L.k}/${L.ops.length}</td><td>${op.rs}</td><td>${op.nib!==undefined?'니블 '+op.nib:hex2(b)+' '+bin8(b)}</td><td>${op.lab}${op.sent!==undefined&&op.sent!==op.b?` → 실제 ${hex2(op.sent)}`:''}</td></tr><tr><td>커서</td><td colspan="3">DDRAM 0x${L.addr.toString(16).toUpperCase().padStart(2,'0')} (${L.addr>=0x40?'2행 ':'1행 '}${L.addr&0x3F}칸)</td></tr>`; }
+  function lStep(){ if(L.k>=L.ops.length) return false; lExec(L.ops[L.k]); L.k++; lShow(); const op=L.ops[L.k-1];
+    if($('#h-swap').checked&&L.inited&&op.rs) note('#h-note','D4 · D5 를 바꿔 꽂으면 니블마다 bit0 · bit1 이 바뀌어 <b>다른 글자 코드</b>가 들어갑니다. 명령 바이트도 똑같이 바뀌어 위치 · 화면 설정까지 엉망이 됩니다 — "이상한 글자" 증상.','warn');
+    else if(op.nib!==undefined) note('#h-note','초기화: 처음 니블 <b>0x3 세 번</b>은 LCD 가 8비트 · 4비트 어느 상태든 같은 상태로 맞추는 약속, 마지막 <b>0x2</b> 로 4비트 모드에 들어갑니다. 각 니블 뒤에 4.5 ms · 150 µs 이상 기다립니다.');
+    else if(!op.rs) note('#h-note',`명령 (RS = 0): ${op.lab}. 2행은 DDRAM 0x40 부터라 위치 명령이 0xC0 입니다.`);
+    else note('#h-note','글자 (RS = 1): 위 니블 → E 내림 → 아래 니블 → E 내림 → 50 µs. 쓰면 커서가 저절로 오른쪽으로 갑니다 (입력 방식 0x06). 모든 시간이 <b>최소값</b>이라 늦어져도 괜찮습니다.','ok'); return true; }
+  function lReset(init){ if(L.run){ clearInterval(L.run); L.run=null; } L.ops=lBuild(init); L.k=0; if(init){ L.dd.fill(32); L.addr=0; L.on=false; L.inited=false; } lShow(); note('#h-note',init?'전원을 넣은 직후입니다. <b>한 바이트</b>를 눌러 초기화 순서부터 따라가 보세요.':'글자를 바꿨습니다 — 위치 명령부터 다시 보냅니다.'); }
+  $('#h-step').onclick=lStep; $('#h-play').onclick=()=>{ if(L.run) return; L.run=setInterval(()=>{ if(!lStep()){ clearInterval(L.run); L.run=null; } },90); };
+  $('#h-reset').onclick=()=>lReset(true); ['#h-l1','#h-l2'].forEach(i=>$(i).addEventListener('change',()=>lReset(!L.inited))); $('#h-swap').addEventListener('change',()=>lReset(false));
+  lReset(true);
+
+  /* ───────── 4 쓰레드 Gantt ───────── */
+  function tSim(){ const bad1=$('#t-bad1').checked, bad2=$('#t-bad2').checked, nocv=$('#t-nocv').checked, P=+$('#t-press').value; $('#t-pv').textContent=(P/1000).toFixed(2)+' s';
+    const req=[]; /* {th, t, hold, work(before), lab} */
+    for(let t=100;t<3000;t+=2000){ req.push({th:0,t:bad1?t:t+27,hold:bad1?27.05:0.05,work:bad1?0:27,w0:t}); }
+    for(let t=40;t<3000;t+=290){ req.push({th:1,t:t+185,hold:0.05,work:185,w0:t}); }
+    for(let t=0;t<3000;t+=50) req.push({th:2,t,hold:0.02,work:0,w0:t});
+    req.push({th:2,t:P+0.3,hold:0.02,work:0,w0:P,btn:1});
+    const dTicks=[]; for(let t=10;t<3000;t+=500) dTicks.push(t);
+    req.sort((a,b)=>a.t-b.t); let busy=0; const holds=[], waits=[]; let maxWait=0, sig=null;
+    const doReq=r=>{ const st=Math.max(r.t,busy); if(st>r.t+0.01) waits.push([r.th,r.t,st]); if(r.th===2) maxWait=Math.max(maxWait,st-r.t); busy=st+r.hold; holds.push([r.th,st,busy]); return busy; };
+    const disp=[]; /* display: copy + draw */
+    let events=req.slice(); dTicks.forEach(t=>events.push({th:3,t,hold:bad2?9.02:0.02,draw:9})); events.sort((a,b)=>a.t-b.t);
+    let respEnd=null;
+    events.forEach(r=>{ const end=doReq(r); if(r.btn&&!nocv){ const e2=doReq({th:3,t:end,hold:bad2?9.02:0.02}); respEnd=bad2?e2:e2+9; disp.push([end,respEnd]); } if(r.th===3) disp.push([end-(bad2?9:0),end+(bad2?0:9)]); });
+    if(nocv){ const nt=dTicks.find(t=>t>P)||3000; respEnd=nt+9.02; }
+    const S=$('#t-svg'); clr(S); const X0=110, sx=770/3000; const NM=['sensor','proximity','control','display'];
+    NM.forEach((n,i)=>{ const y=30+i*50; txt(S,8,y+18,n,{'font-size':12,'font-weight':700,fill:'#1B2A41'}); rect(S,X0,y,770,30,'#F6F8FB'); });
+    req.forEach(r=>{ if(r.work>0&&r.th<2){ const y=30+r.th*50; rect(S,X0+r.w0*sx,y+8,Math.max(2,r.work*sx),14,r.th===0?'#B9CCF2':'#9FD9C4'); } });
+    disp.forEach(([a,b])=>rect(S,X0+a*sx,30+3*50+8,Math.max(2,(b-a)*sx),14,'#B9CCF2'));
+    holds.forEach(([th,a,b])=>rect(S,X0+a*sx,30+th*50+4,Math.max(2,(b-a)*sx),22,'#E07B1A'));
+    waits.forEach(([th,a,b])=>rect(S,X0+a*sx,30+th*50+2,Math.max(2,(b-a)*sx),26,'rgba(214,69,46,.55)'));
+    line(S,X0+P*sx,20,X0+P*sx,232,'#7B4FC9',2); txt(S,X0+P*sx+4,18,'버튼',{'font-size':10,fill:'#7B4FC9'});
+    if(respEnd){ line(S,X0+respEnd*sx,20,X0+respEnd*sx,232,'#178A67',2,'4 3'); txt(S,X0+respEnd*sx+4,244,'화면 바뀜',{'font-size':10,fill:'#178A67'}); }
+    for(let t=0;t<=3000;t+=500){ txt(S,X0+t*sx-8,256,(t/1000)+'s',{'font-size':9}); }
+    txt(S,X0+430,12,'주황 = 잠금 · 빨강 = 대기 · 파랑/초록 = 일',{'font-size':9});
+    $('#t-wait').textContent=maxWait<0.05?'≈ 0 ms':maxWait.toFixed(1)+' ms'; const resp=respEnd-P; $('#t-resp').textContent=resp.toFixed(0)+' ms';
+    if(bad1||bad2) note('#t-note',`${bad1?'센서를 읽는 27 ms 동안':''}${bad1&&bad2?', ':''}${bad2?'LCD 를 그리는 9 ms 동안':''} 잠금을 쥐고 있어 control 이 최대 <b>${maxWait.toFixed(1)} ms</b> 기다립니다 (빨강). 50 ms 마다 돌아야 할 부저 · 버튼 처리가 밀립니다. 잠근 채 <b>복사만</b> 하고, 느린 일은 풀고 하세요.`,'warn');
+    else if(nocv) note('#t-note',`조건 변수가 없으면 display 는 0.5초 주기만 기다립니다 — 버튼을 누르고 화면이 바뀌기까지 <b>${resp.toFixed(0)} ms</b>. 사람은 0.1초 넘는 지연을 느낍니다.`,'warn');
+    else note('#t-note',`잠금은 0.05 ms 안팎으로 짧게만 쥐어서 대기가 거의 없습니다. 버튼 → control 이 <code>pthread_cond_signal</code> → display 가 바로 깨어나 <b>${resp.toFixed(0)} ms</b> 만에 화면이 바뀝니다.`,'ok'); }
+  ['#t-bad1','#t-bad2','#t-nocv'].forEach(i=>$(i).addEventListener('change',tSim)); $('#t-press').addEventListener('input',tSim); tSim();
+
+  /* ───────── 5 센서 고장 ───────── */
+  const F={t:24.0,h:41,light:64,cm:72,th_ok:1,lok:1,cok:1,scr:0,err:[0,0,0],last:[1,1,1],tS:0,tP:0,tD:0,log:[]};
+  function fLog(s,c){ F.log.push(`[${nowS()}] `+(c?`<span class="${c}">${esc(s)}</span>`:esc(s))); if(F.log.length>40) F.log.shift(); const T=$('#f-term'); T.innerHTML=F.log.join('\n'); T.scrollTop=1e6; }
+  function fLcd(a,b){ $('#f-lcd').textContent=(a.padEnd(16).slice(0,16))+'\n'+(b.padEnd(16).slice(0,16)); }
+  function fScreen(){ const c=F; let a,b;
+    if(c.scr===0){ a=c.th_ok?`T ${c.t.toFixed(1)}°C H ${c.h}%`:'T --.-  H --'; b='Fan OFF Mute N'; }
+    else if(c.scr===1){ a=c.lok?`Light ${String(c.light).padStart(3)} %`:'Light  --'; const n=c.lok?Math.round(c.light*16/100):0; b='█'.repeat(n); }
+    else if(c.scr===2){ a=c.cok?`Dist ${c.cm.toFixed(1).padStart(6)} cm`:'Dist  ---.- cm'; b='near < 30 cm'; }
+    else { a=`up ${Math.round(performance.now()/1000)} s`; b=`E D${c.err[0]%100} P${c.err[1]%100} S${c.err[2]%100}`; }
+    fLcd(a,b); }
+  function fTick(){ if(!vis(5)) return; const now=performance.now();
+    if(now-F.tS>2000){ F.tS=now; const dh=$('#f-dht').checked, pc=$('#f-pcf').checked; F.th_ok=dh?1:0; if(dh){ F.t=24+Math.random()*0.4; F.h=41; } else F.err[0]++;
+      F.lok=pc?1:0; if(pc) F.light=62+Math.round(Math.random()*4); else F.err[1]++;
+      if(F.th_ok!==F.last[0]) fLog(F.th_ok?'DHT11 복구':'DHT11 읽기 실패 — 선 확인',F.th_ok?'g':'r');
+      if(F.lok!==F.last[1]) fLog(F.lok?'PCF8591 복구':'PCF8591 응답 없음 — I2C 선 확인',F.lok?'g':'r'); F.last[0]=F.th_ok; F.last[1]=F.lok; }
+    if(now-F.tP>300){ F.tP=now; const so=$('#f-son').checked; F.cok=so?1:0; if(so) F.cm=70+Math.random()*4; else F.err[2]++; F.last[2]=F.cok; }
+    if(now-F.tD>500){ F.tD=now; fScreen(); }
+    const err=!F.th_ok||!F.lok||!F.cok; const ms=now%(err?250:1000); ledSet('#f-ok',ms<(err?125:100)); ledSet('#f-al',false);
+    $('#f-tab').innerHTML=`<tr><th>센서</th><th>값</th><th>오류 횟수</th><th>화면</th></tr><tr class="${F.th_ok?'':'hot'}"><td>DHT11 (IIO)</td><td>${F.th_ok?F.t.toFixed(1)+' °C · '+F.h+' %':'-1 (th_ok = 0)'}</td><td>${F.err[0]}</td><td>${F.th_ok?'값':'--'}</td></tr><tr class="${F.lok?'':'hot'}"><td>PCF8591 IN0</td><td>${F.lok?F.light+' %':'-1'}</td><td>${F.err[1]}</td><td>${F.lok?'값':'--'}</td></tr><tr class="${F.cok?'':'hot'}"><td>HC-SR04</td><td>${F.cok?F.cm.toFixed(1)+' cm':'-1'}</td><td>${F.err[2]}</td><td>${F.cok?'값':'--'}</td></tr>`; }
+  function fNote(){ const off=['#f-dht','#f-pcf','#f-son'].filter(i=>!$(i).checked).length;
+    if(!off) note('#f-note','모두 연결 — 상태 LED 가 1초에 한 번 짧게 깜빡입니다. 센서 하나를 뽑아 보세요.','ok');
+    else note('#f-note','센서가 빠져도 쓰레드는 계속 돕니다. 값은 <b>-1 / th_ok = 0</b> 으로 표시되고, 화면은 <code>--</code>, 상태 LED 는 빠르게, 로그는 <b>상태가 바뀔 때 한 줄만</b> 남깁니다 (2초마다 같은 줄이 쌓이지 않게). 다시 꽂으면 저절로 "복구" 됩니다.','warn'); }
+  ['#f-dht','#f-pcf','#f-son'].forEach(i=>$(i).addEventListener('change',fNote)); $('#f-scr').onclick=()=>{ F.scr=(F.scr+1)%4; fScreen(); fLog('버튼 — 화면 전환'); };
+  fLog('envmon 시작 · CSV envmon.csv'); fNote(); fScreen(); setInterval(fTick,50);
+
+  /* ───────── 6 control ───────── */
+  const K={fan:0,scr:0,mute:0,hist:[],tog:0,last:0,down:0,lastFan:0};
+  function kTick(){ if(!vis(6)) return; const now=performance.now(); const hy=$('#c-hyst').value==='1', d=+$('#c-d').value, near=d<30;
+    if(now-K.last>=500){ K.last=now; const t=+$('#c-t').value/10+($('#c-noise').checked?gauss()*0.25:0); K.t=t;
+      if(hy){ if(t>=28) K.fan=1; if(t<=27) K.fan=0; } else K.fan=t>=28?1:0;
+      if(K.fan!==K.lastFan){ K.tog++; $('#c-term').innerHTML=`<span class="${K.fan?'y':'c'}">${nowS()} 릴레이 ${K.fan?'ON  딸깍':'OFF 딸깍'}  (t = ${t.toFixed(2)} °C)</span>\n`+$('#c-term').innerHTML.split('\n').slice(0,3).join('\n'); }
+      K.lastFan=K.fan; K.hist.push([t,K.fan]); if(K.hist.length>80) K.hist.shift(); kChart(); kLcd(near,d); }
+    const ms=now%500; ledSet('#c-al',near); ledSet('#c-rl',K.fan); ledSet('#c-ok',(now%1000)<100);
+    const bz=near&&!K.mute&&ms<100; $('#c-bz').style.background=bz?'#FF5A3C':'#333'; $('#c-bz').style.boxShadow=bz?'0 0 18px 4px rgba(255,90,60,.5)':'none';
+    if(K.down){ const held=now-K.down; $('#c-btn').textContent=held>=1000?'1초 넘음!':`${(held/1000).toFixed(1)} s`; } }
+  function kLcd(near,d){ let a,b; if(near){ a='!! APPROACH !!'; b=`dist ${d.toFixed(1).padStart(5)} cm`; }
+    else if(K.scr===0){ a=`T ${K.t.toFixed(1)}°C H 41%`; b=`Fan ${K.fan?'ON ':'OFF'} Mute ${K.mute?'Y':'N'}`; }
+    else if(K.scr===1){ a='Light  64 %'; b='██████████'; } else if(K.scr===2){ a=`Dist ${d.toFixed(1).padStart(6)} cm`; b='near < 30 cm'; } else { a=`up ${Math.round(performance.now()/1000)} s`; b='E D0 P0 S0'; }
+    $('#c-lcd').textContent=a.padEnd(16).slice(0,16)+'\n'+b.padEnd(16).slice(0,16); }
+  function kChart(){ const S=$('#c-chart'); clr(S); const X0=40, sx=380/80, y=t=>200-(t-24)/7*180; rect(S,X0,10,380,190,'#fff','#E3E7ED');
+    [25,26,27,28,29,30].forEach(t=>{ line(S,X0,y(t),X0+380,y(t),'#F0F2F5',1); txt(S,6,y(t)+4,t+'°',{'font-size':9}); });
+    const hy=$('#c-hyst').value==='1'; line(S,X0,y(28),X0+380,y(28),'#D6452E',1,'5 3'); txt(S,X0+384-60,y(28)-3,'ON 28',{'font-size':9,fill:'#D6452E'});
+    if(hy){ line(S,X0,y(27),X0+380,y(27),'#178A67',1,'5 3'); txt(S,X0+384-60,y(27)+11,'OFF 27',{'font-size':9,fill:'#178A67'}); }
+    K.hist.forEach((h,i)=>{ if(h[1]) rect(S,X0+i*sx,10,sx+0.5,190,'rgba(224,162,26,.15)'); });
+    poly(S,K.hist.map((h,i)=>[X0+i*sx,y(h[0])]),'#2457C5',1.8); txt(S,X0+4,22,`노랑 = 팬 ON · 딸깍 ${K.tog}번`,{'font-size':10,fill:'#1B2A41'});
+    if(!hy&&K.tog>4) note('#c-note',`기준이 하나뿐이면 28 °C 근처에서 잡음 때문에 릴레이가 <b>${K.tog}번</b> 딸깍거립니다 — 릴레이 접점과 팬이 상합니다. 히스테리시스로 바꿔 보세요.`,'warn'); }
+  const kb=$('#c-btn');
+  kb.addEventListener('pointerdown',()=>{ K.down=performance.now(); kb.classList.add('down'); });
+  const kup=()=>{ if(!K.down) return; const held=performance.now()-K.down; K.down=0; kb.classList.remove('down'); kb.textContent='버튼 A';
+    if(held>=1000){ K.mute=!K.mute; note('#c-note',`길게(${(held/1000).toFixed(1)} s) — 음소거 ${K.mute?'켬: 접근해도 부저는 조용, 경보 LED 는 켜짐':'끔'}. 누른 시간 = rising 타임스탬프 − falling 타임스탬프.`,'ok'); }
+    else { K.scr=(K.scr+1)%4; note('#c-note',`짧게(${Math.round(held)} ms) — 화면 ${K.scr} 으로. control 이 pthread_cond_signal 을 보내 display 가 0.5초를 기다리지 않고 바로 그립니다.`); }
+    kLcd(+$('#c-d').value<30,+$('#c-d').value); };
+  kb.addEventListener('pointerup',kup); kb.addEventListener('pointerleave',kup);
+  $('#c-t').addEventListener('input',()=>$('#c-tv').textContent=(+$('#c-t').value/10).toFixed(1)+' °C');
+  $('#c-d').addEventListener('input',()=>{ const d=+$('#c-d').value; $('#c-dv').textContent=d+' cm'; kLcd(d<30,d); if(d<30) note('#c-note','30 cm 안 — LCD 경고 화면이 다른 화면보다 우선하고, 경보 LED · 부저(0.5초마다 0.1초)가 켜집니다. 버튼을 길게 눌러 음소거해 보세요.','warn'); });
+  $('#c-hyst').addEventListener('change',()=>{ K.tog=0; K.hist=[]; note('#c-note',$('#c-hyst').value==='1'?'히스테리시스: 28 °C 이상에서 켜고, 27 °C 이하가 되어야 끕니다. 온도를 27.5 근처에 두어도 릴레이가 떨지 않습니다.':'기준 하나: 온도를 28.0 근처에 두고 잡음을 켜 보세요.'); });
+  K.t=26.2; kLcd(false,80); note('#c-note','온도 슬라이더를 28 °C 넘게 올렸다가 27.5 °C 로 내려 보세요. 팬은 27 °C 이하가 될 때까지 켜져 있습니다.'); setInterval(kTick,30);
+
+  /* ───────── 7 systemd ───────── */
+  const Y={enabled:false,state:'inactive',pid:0,relay:'off',lcd:'',restarts:0,timer:null,since:''};
+  function yJ(s,c){ const J=$('#s-journal'); J.innerHTML+=c?`<span class="${c}">${esc(s)}</span>\n`:esc(s)+'\n'; J.scrollTop=1e6; }
+  function yDraw(){ const S=$('#s-svg'); clr(S); const N={inactive:[130,'inactive (dead)'],active:[450,'active (running)'],restart:[770,'activating (auto-restart)']};
+    Object.entries(N).forEach(([k,[x,l]])=>{ const on=Y.state===k; rect(S,x-100,40,200,56,on?(k==='active'?'#DDF2EA':k==='inactive'?'#EEF1F5':'#FBE3DF'):'#fff',on?'#1B2A41':'#C9D1DC',10); txt(S,x-90,72,l,{'font-size':12,'font-weight':on?700:400,fill:'#1B2A41'}); });
+    arrow(S,232,56,348,56,'#178A67','start'); arrow(S,348,84,232,84,'#5B6B80','stop · SIGTERM'); arrow(S,552,56,668,56,'#D6452E','kill -9'); arrow(S,668,84,552,84,'#178A67','3초 뒤 재시작');
+    txt(S,20,130,`enable: ${Y.enabled?'예 — 부팅 때 시작':'아니오'}   ·   재시작 횟수 ${Y.restarts}`,{'font-size':12,fill:'#1B2A41'});
+    rect(S,20,150,260,60,'#9FC24A','#2B3A12',4); txt(S,30,174,(Y.lcd||'').split('\n')[0]||'',{'font-size':14,fill:'#1F2E0C'}); txt(S,30,198,(Y.lcd||'').split('\n')[1]||'',{'font-size':14,fill:'#1F2E0C'});
+    S.appendChild(el('circle',{cx:340,cy:180,r:18,fill:Y.relay==='on'?'#FFC93C':Y.relay==='unk'?'#C98A12':'#5A4A1E',stroke:'#3B3014','stroke-width':3})); txt(S,366,176,'릴레이 (팬)',{'font-size':12,fill:'#1B2A41'}); txt(S,366,194,Y.relay==='on'?'ON':Y.relay==='unk'?'켜진 채 — 아무도 소유 안 함':'OFF',{'font-size':11,fill:Y.relay==='unk'?'#D6452E':'#5B6B80'});
+    const st={inactive:'inactive (dead)',active:'active (running)',restart:'activating (auto-restart)',failed:'failed'}[Y.state];
+    $('#s-status').innerHTML=`<span class="c">$</span> systemctl status envmon\n● envmon.service - EIO smart environment monitor (Day 5)\n     Loaded: loaded (/etc/systemd/system/envmon.service; <span class="${Y.enabled?'g':'y'}">${Y.enabled?'enabled':'disabled'}</span>)\n     Active: <span class="${Y.state==='active'?'g':Y.state==='inactive'?'c':'r'}">${st}</span>${Y.since?' since '+Y.since:''}\n${Y.state==='active'?`   Main PID: ${Y.pid} (envmon)`:''}`; }
+  function yStart(viaRestart){ if($('#s-busy').checked){ yJ('LCD · 출력 · 버튼 요청 실패 — overlay(eio) 를 내렸는지, 다른 프로그램이 쓰는지 확인','r'); yJ('envmon.service: Main process exited, code=exited, status=1/FAILURE'); yToRestart(); return; }
+    Y.state='active'; Y.pid=1000+Math.floor(Math.random()*9000); Y.since=nowS(); Y.relay='off'; Y.lcd='envmon start\n'; yJ(`Started envmon.service - EIO smart environment monitor (Day 5).`); yJ(`[${nowS()}] envmon 시작 · CSV envmon.csv`); yDraw();
+    setTimeout(()=>{ if(Y.state==='active'){ Y.relay='on'; Y.lcd='T 29.0°C H 41%\nFan ON  Mute N'; yDraw(); } },700); }
+  function yToRestart(){ Y.state='restart'; Y.restarts++; yDraw(); clearTimeout(Y.timer); Y.timer=setTimeout(()=>{ if(Y.state==='restart'){ yJ(`envmon.service: Scheduled restart job, restart counter is at ${Y.restarts}.`); yStart(true); } },3000); }
+  function yCmd(c){ const busy=$('#s-busy').checked;
+    if(c==='enable'){ Y.enabled=true; yJ('Created symlink /etc/systemd/system/multi-user.target.wants/envmon.service → /etc/systemd/system/envmon.service.'); note('#s-note','enable 은 "부팅 때 시작" 표시만 합니다 — 지금 시작하지는 않습니다 (<code>--now</code> 를 붙이면 둘 다).'); }
+    if(c==='disable'){ Y.enabled=false; yJ('Removed "/etc/systemd/system/multi-user.target.wants/envmon.service".'); note('#s-note','과정이 끝나면 disable — 다음 과목에서 같은 핀을 쓸 수 있게.'); }
+    if(c==='start'){ if(Y.state==='active'){ note('#s-note','이미 실행 중입니다.'); } else { clearTimeout(Y.timer); yStart(false); note('#s-note',busy?'LCD 를 다른 프로그램이 잡고 있어 envmon 이 <b>exit 1</b> 로 끝납니다 → on-failure 이므로 3초마다 다시 시도합니다. 04_lcd_demo 를 끄면(토글 해제) 다음 재시작에서 살아납니다.':'시작 → 0.7초 뒤 control 쓰레드가 29 °C 를 보고 릴레이를 켭니다.',busy?'warn':'ok'); } }
+    if(c==='stop'){ clearTimeout(Y.timer); if(Y.state==='active'){ yJ('Stopping envmon.service …'); yJ(`[${nowS()}] envmon 종료`); Y.relay='off'; Y.lcd='envmon stopped\n'; } Y.state='inactive'; Y.since=''; yJ('envmon.service: Deactivated successfully.'); note('#s-note','stop 은 <b>SIGTERM</b> → envmon 의 핸들러가 g_stop = 1 → 쓰레드 정리 → <b>릴레이 · 부저 끄기</b> → 반납 → exit 0. 정상 종료라 Restart=on-failure 는 다시 시작하지 않습니다.','ok'); }
+    if(c==='kill'){ if(Y.state!=='active'){ note('#s-note','실행 중일 때 눌러 보세요.'); } else { yJ(`envmon.service: Main process exited, code=killed, status=9/KILL`,'r'); yJ('envmon.service: Failed with result \'signal\'.'); Y.relay='unk'; yToRestart(); note('#s-note','SIGKILL 은 핸들러가 받지 못해 <b>정리 없이</b> 죽습니다. 커널이 라인을 반납하지만 릴레이는 켜진 채 남을 수 있습니다(보장 없음). 3초 뒤 재시작된 envmon 이 출력을 0 으로 요청해 다시 정리합니다 — Restart=on-failure 의 역할.','warn'); } }
+    if(c==='reboot'){ clearTimeout(Y.timer); yJ('-- Boot --','c'); Y.state='inactive'; Y.relay='off'; Y.lcd=''; Y.since=''; yDraw();
+      if(Y.enabled) setTimeout(()=>{ yStart(false); note('#s-note','enable 해 두었으므로 아무도 로그인하지 않았는데 부팅하자마자 envmon 이 시작됐습니다.','ok'); },1500);
+      else note('#s-note','enable 하지 않았으므로 부팅 뒤에도 꺼져 있습니다.','warn'); }
+    yDraw(); }
+  $$('#s-cmds button').forEach(b=>b.onclick=()=>yCmd(b.dataset.c)); $('#s-busy').addEventListener('change',yDraw);
+  yDraw(); note('#s-note','enable → start 순서로 눌러 보세요. 그다음 kill -9 과 stop 을 비교합니다.');
+
+  /* ───────── 8 5일 지도 ───────── */
+  const LAY=['내 프로그램','명령 · 라이브러리','장치 파일 · sysfs','커널 드라이버','하드웨어 블록','핀'];
+  const DEV=[
+    ['LED 켜기 (명령)',1,[1,2,3,5],'gpioset → /dev/gpiochip0 → gpio 드라이버 → 핀. 프로그램 없이 셸에서.'],
+    ['LED 깜빡이기 (libgpiod)',2,[0,1,2,3,5],'내 C 프로그램이 libgpiod 로 요청 · 반납. 소유가 분명하고 Ctrl+C 로 정리.'],
+    ['레지스터 mmap',2,[0,2,5],'/dev/gpiomem 으로 레지스터 직접 — 빠르지만 커널 드라이버를 건너뛰어 소유 · 이식성 없음.'],
+    ['버튼 엣지 이벤트',2,[0,1,2,3,5],'커널이 인터럽트 순간 타임스탬프 → poll/epoll 로 받음.'],
+    ['소프트웨어 PWM',3,[0,1,2,3,5],'내 쓰레드가 매 주기 켜고 끔 — 부하에 흔들림 (SCHED_FIFO 로 완화).'],
+    ['서보 · 부저 (HW PWM)',3,[0,2,3,4,5],'/sys/class/pwm 에 값만 쓰면 PWM 하드웨어 블록이 파형을 유지.'],
+    ['PCF8591 (I2C)',4,[0,2,3,4,5],'/dev/i2c-1 에 바이트만 — I2C 컨트롤러와 드라이버가 SDA · SCL 타이밍.'],
+    ['74HC595 (SPI)',4,[0,2,3,4,5],'/dev/spidev0.0 — SPI 블록이 클럭 · CE0(래치)을 만든다.'],
+    ['ESP32 (UART)',4,[0,2,3,4,5],'/dev/serial0 + termios — PL011 이 비트 타이밍.'],
+    ['DHT11',5,[0,2,3,5],'µs 비트 → 사용자 공간으로는 실패 → dht11 커널 드라이버 + IIO 파일.'],
+    ['LED · 버튼 (overlay)',5,[2,3,5],'Device Tree overlay 로 커널 장치 — 프로그램 없이도 동작 (/sys/class/leds · /dev/input).'],
+    ['1602A LCD',5,[0,1,2,3,5],'타이밍이 최소값뿐 → libgpiod 사용자 공간 드라이버(lcd.c)로 충분.'],
+    ['envmon (systemd)',5,[0,1,2,3,4,5],'모든 모듈을 쓰레드로 묶어 부팅 때 자동 실행 · 실패하면 재시작.'],
+  ];
+  const MP={day:5,dev:12};
+  function mDraw(){ $('#m-devs').innerHTML=DEV.map((d,i)=>`<button data-i="${i}" style="text-align:left;${d[1]===MP.day?'border-color:var(--blue);':'opacity:.55;'}${i===MP.dev?'background:var(--blue-soft);font-weight:700;':''}">Day ${d[1]} · ${d[0]}</button>`).join('');
+    $$('#m-devs button').forEach(b=>b.onclick=()=>{ MP.dev=+b.dataset.i; mDraw(); });
+    const d=DEV[MP.dev]; const S=$('#m-svg'); clr(S);
+    LAY.forEach((l,i)=>{ const y=10+i*56, on=d[2].includes(i); rect(S,60,y,320,44,on?'#DCE6FA':'#F6F8FB',on?'#2457C5':'#E3E7ED',8); txt(S,76,y+27,l,{'font-size':13,'font-weight':on?700:400,fill:on?'#1B2A41':'#9AA7B8'}); });
+    const ys=d[2].map(i=>10+i*56+22); for(let k=0;k<ys.length-1;k++) arrow(S,40,ys[k]+8,40,ys[k+1]-8,'#2457C5');
+    note('#m-note',`<b>${d[0]}</b> — ${d[3]}`,'ok'); }
+  tabs('m-days',b=>{ MP.day=+b.dataset.d; MP.dev=DEV.findIndex(x=>x[1]===MP.day); mDraw(); });
+  mDraw();
+})();
+</script>
+</body>
+</html>
