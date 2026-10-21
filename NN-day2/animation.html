@@ -51,15 +51,15 @@
   <p class="sub">HYUNDAI AI Insight Campus 온디바이스 AI · 뉴런 · 순전파 · 손실 · 10/21(수)</p>
   <h2>1~8교시 시뮬레이션</h2>
   <div class="list">
-<button data-id="d2-1" aria-current="false"><span class="p">1교시</span><span class="no">D2-1</span><span class="tt">퍼셉트론 뉴런</span><span class="d">가중합 · 편향 · 계단 함수 · AND · OR · NAND · XOR 은 직선 하나로 불가</span></button>
-<button data-id="d2-2" aria-current="false"><span class="p">2교시</span><span class="no">D2-2</span><span class="tt">퍼셉트론 학습</span><span class="d">w ← w + η(t − y)x · 결정 경계 이동 · AND epoch 5 수렴 · XOR 0.5</span></button>
+<button data-id="d2-1" aria-current="false"><span class="p">1교시</span><span class="no">D2-1</span><span class="tt">퍼셉트론 뉴런</span><span class="d">step(xW + b) · 가중합 · 편향 · 계단 함수 · AND · OR · NAND · XOR 은 직선 하나로 불가</span></button>
+<button data-id="d2-2" aria-current="false"><span class="p">2교시</span><span class="no">D2-2</span><span class="tt">퍼셉트론 학습</span><span class="d">W ← W − η(y − t)x · 결정 경계 이동 · AND epoch 5 수렴 · XOR 0.5</span></button>
 <button data-id="d2-3" aria-current="false"><span class="p">3교시</span><span class="no">D2-3</span><span class="tt">XOR 다층 퍼셉트론</span><span class="d">AND(NAND, OR) · 은닉층 공간 변환 · X @ W1 + b1 행렬 형태</span></button>
-<button data-id="d2-4" aria-current="false"><span class="p">4교시</span><span class="no">D2-4</span><span class="tt">활성화 함수</span><span class="d">step · sigmoid · tanh · ReLU · Leaky ReLU · 도함수 · W2(W1x) = (W2W1)x · 0.25ⁿ</span></button>
+<button data-id="d2-4" aria-current="false"><span class="p">4교시</span><span class="no">D2-4</span><span class="tt">활성화 함수</span><span class="d">step · sigmoid · tanh · ReLU · Leaky ReLU · 도함수 · (xW1)W2 = x(W1W2) · 0.25ⁿ</span></button>
 <button data-id="d2-5" aria-current="false"><span class="p">5교시</span><span class="no">D2-5</span><span class="tt">순전파 흐름</span><span class="d">2→3→2→2 · forward(network, X) · 배치 shape · 파라미터 23 · MNIST 79,510</span></button>
 <button data-id="d2-6" aria-current="false"><span class="p">6교시</span><span class="no">D2-6</span><span class="tt">Softmax · 수치 안정화</span><span class="d">exp → 합 → 확률 · [1010, 1000, 990] overflow · max 빼기 · argmax 불변</span></button>
 <button data-id="d2-7" aria-current="false"><span class="p">6교시</span><span class="no">D2-7</span><span class="tt">손실 함수 MSE vs CE</span><span class="d">one-hot np.eye(10)[t] · CE 0.5108 · p=0.1 → 2.3026 · 확신하며 틀림</span></button>
-<button data-id="d2-8" aria-current="false"><span class="p">7교시</span><span class="no">D2-8</span><span class="tt">선형 회귀 경사하강</span><span class="d">데이터 50개 · dL/dw, dL/db · lr 0.1/0.5/0.7/1.0 · w≈2.05, b≈0.98</span></button>
-<button data-id="d2-9" aria-current="false"><span class="p">8교시</span><span class="no">D2-9</span><span class="tt">로지스틱 회귀 결정 경계</span><span class="d">sigmoid 확률 지도 · BCE · θ≈[3.30, 3.41, 0.31] · 정확도 0.995</span></button>
+<button data-id="d2-8" aria-current="false"><span class="p">7교시</span><span class="no">D2-8</span><span class="tt">선형 회귀 경사하강</span><span class="d">Y = XW + b · dW = Xᵀ(Y − T)/N · lr 0.2/1.0/1.4/2.0 · W≈2.05, b≈0.98</span></button>
+<button data-id="d2-9" aria-current="false"><span class="p">8교시</span><span class="no">D2-9</span><span class="tt">로지스틱 회귀 결정 경계</span><span class="d">sigmoid(XW + b) 확률 지도 · BCE · dW = Xᵀ(P − T)/N · W≈[3.30, 3.41], b≈0.31 · 정확도 0.995</span></button>
   </div>
   <p class="hint"><kbd>←</kbd> <kbd>→</kbd> 키로 이전 · 다음 애니메이션</p>
 </nav>
@@ -134,9 +134,9 @@
 &lt;/head&gt;
 &lt;body&gt;
 &lt;div class=&quot;app&quot;&gt;
-  &lt;h1&gt;퍼셉트론 — 뉴런 하나 y = step(w·x + b)&lt;/h1&gt;
-  &lt;p class=&quot;sub&quot;&gt;입력 x1, x2 에 &lt;b style=&quot;color:var(--amber)&quot;&gt;가중치&lt;/b&gt; w1, w2 를 곱해 더하고 &lt;b style=&quot;color:var(--purple)&quot;&gt;편향&lt;/b&gt; b 를 더한 가중합 s 가 0 보다 크면 1, 아니면 0 을 냅니다. 슬라이더로 w, b 를 바꾸면 오른쪽 평면의 &lt;b style=&quot;color:var(--teal)&quot;&gt;결정 경계 직선&lt;/b&gt; w1·x1 + w2·x2 + b = 0 이 움직입니다.&lt;/p&gt;
-  &lt;div class=&quot;pills&quot;&gt;&lt;span class=&quot;pill amber&quot;&gt;s = w1·x1 + w2·x2 + b&lt;/span&gt;&lt;span class=&quot;pill teal&quot;&gt;y = 1 if s &amp;gt; 0 else 0&lt;/span&gt;&lt;span class=&quot;pill blue&quot;&gt;AND (0.5, 0.5, −0.7)&lt;/span&gt;&lt;span class=&quot;pill green&quot;&gt;OR (0.5, 0.5, −0.2)&lt;/span&gt;&lt;span class=&quot;pill purple&quot;&gt;NAND (−0.5, −0.5, 0.7)&lt;/span&gt;&lt;/div&gt;
+  &lt;h1&gt;퍼셉트론 — 뉴런 하나 y = step(xW + b)&lt;/h1&gt;
+  &lt;p class=&quot;sub&quot;&gt;입력 x1, x2 에 &lt;b style=&quot;color:var(--amber)&quot;&gt;가중치&lt;/b&gt; W1, W2 를 곱해 더하고 &lt;b style=&quot;color:var(--purple)&quot;&gt;편향&lt;/b&gt; b 를 더한 가중합 s 가 0 보다 크면 1, 아니면 0 을 냅니다. 행렬로 쓰면 &lt;code&gt;s = x @ W + b&lt;/code&gt; (x shape (2,), W shape (2,)). 슬라이더로 W, b 를 바꾸면 오른쪽 평면의 &lt;b style=&quot;color:var(--teal)&quot;&gt;결정 경계 직선&lt;/b&gt; x1·W1 + x2·W2 + b = 0 이 움직입니다.&lt;/p&gt;
+  &lt;div class=&quot;pills&quot;&gt;&lt;span class=&quot;pill amber&quot;&gt;s = x1·W1 + x2·W2 + b&lt;/span&gt;&lt;span class=&quot;pill amber&quot;&gt;s = x @ W + b&lt;/span&gt;&lt;span class=&quot;pill teal&quot;&gt;y = 1 if s &amp;gt; 0 else 0&lt;/span&gt;&lt;span class=&quot;pill blue&quot;&gt;AND (0.5, 0.5, −0.7)&lt;/span&gt;&lt;span class=&quot;pill green&quot;&gt;OR (0.5, 0.5, −0.2)&lt;/span&gt;&lt;span class=&quot;pill purple&quot;&gt;NAND (−0.5, −0.5, 0.7)&lt;/span&gt;&lt;/div&gt;
 
   &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;프리셋 (누르면 재생)&lt;/h2&gt;&lt;div class=&quot;presets&quot; id=&quot;presets&quot;&gt;&lt;/div&gt;&lt;/div&gt;
 
@@ -144,8 +144,8 @@
     &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;뉴런 · 입력 평면&lt;/h2&gt;
       &lt;svg id=&quot;neuron&quot; viewBox=&quot;0 0 440 210&quot; role=&quot;img&quot; aria-label=&quot;퍼셉트론 뉴런 그림&quot;&gt;&lt;/svg&gt;
       &lt;div class=&quot;row&quot;&gt;&lt;span class=&quot;lab&quot;&gt;입력:&lt;/span&gt;&lt;button type=&quot;button&quot; class=&quot;xbtn&quot; id=&quot;bx1&quot;&gt;x1 = 0&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;xbtn&quot; id=&quot;bx2&quot;&gt;x2 = 0&lt;/button&gt;&lt;/div&gt;
-      &lt;div class=&quot;sl&quot;&gt;&lt;label for=&quot;w1&quot;&gt;w1&lt;/label&gt;&lt;input type=&quot;range&quot; id=&quot;w1&quot; min=&quot;-1&quot; max=&quot;1&quot; step=&quot;0.1&quot;&gt;&lt;output id=&quot;ow1&quot;&gt;&lt;/output&gt;&lt;/div&gt;
-      &lt;div class=&quot;sl&quot;&gt;&lt;label for=&quot;w2&quot;&gt;w2&lt;/label&gt;&lt;input type=&quot;range&quot; id=&quot;w2&quot; min=&quot;-1&quot; max=&quot;1&quot; step=&quot;0.1&quot;&gt;&lt;output id=&quot;ow2&quot;&gt;&lt;/output&gt;&lt;/div&gt;
+      &lt;div class=&quot;sl&quot;&gt;&lt;label for=&quot;w1&quot;&gt;W1&lt;/label&gt;&lt;input type=&quot;range&quot; id=&quot;w1&quot; min=&quot;-1&quot; max=&quot;1&quot; step=&quot;0.1&quot;&gt;&lt;output id=&quot;ow1&quot;&gt;&lt;/output&gt;&lt;/div&gt;
+      &lt;div class=&quot;sl&quot;&gt;&lt;label for=&quot;w2&quot;&gt;W2&lt;/label&gt;&lt;input type=&quot;range&quot; id=&quot;w2&quot; min=&quot;-1&quot; max=&quot;1&quot; step=&quot;0.1&quot;&gt;&lt;output id=&quot;ow2&quot;&gt;&lt;/output&gt;&lt;/div&gt;
       &lt;div class=&quot;sl&quot;&gt;&lt;label for=&quot;bb&quot;&gt;b&lt;/label&gt;&lt;input type=&quot;range&quot; id=&quot;bb&quot; min=&quot;-1&quot; max=&quot;1&quot; step=&quot;0.1&quot;&gt;&lt;output id=&quot;obb&quot;&gt;&lt;/output&gt;&lt;/div&gt;
       &lt;div class=&quot;two&quot; style=&quot;margin-top:8px&quot;&gt;
         &lt;div&gt;&lt;canvas id=&quot;plane&quot;&gt;&lt;/canvas&gt;
@@ -192,8 +192,8 @@ function neuron(){
   &lt;text x=&quot;232&quot; y=&quot;20&quot; fill=&quot;#c084fc&quot; font-size=&quot;13&quot;&gt;b = ${f1(b)}&lt;/text&gt;
   &lt;circle cx=&quot;40&quot; cy=&quot;50&quot; r=&quot;22&quot; fill=&quot;#0e1628&quot; stroke=&quot;${on(x1)}&quot; stroke-width=&quot;2&quot;/&gt;&lt;text x=&quot;40&quot; y=&quot;47&quot; fill=&quot;#dbe4f0&quot; font-size=&quot;12&quot; text-anchor=&quot;middle&quot;&gt;x1&lt;/text&gt;&lt;text x=&quot;40&quot; y=&quot;62&quot; fill=&quot;${on(x1)}&quot; font-size=&quot;14&quot; text-anchor=&quot;middle&quot; font-weight=&quot;700&quot;&gt;${x1}&lt;/text&gt;
   &lt;circle cx=&quot;40&quot; cy=&quot;160&quot; r=&quot;22&quot; fill=&quot;#0e1628&quot; stroke=&quot;${on(x2)}&quot; stroke-width=&quot;2&quot;/&gt;&lt;text x=&quot;40&quot; y=&quot;157&quot; fill=&quot;#dbe4f0&quot; font-size=&quot;12&quot; text-anchor=&quot;middle&quot;&gt;x2&lt;/text&gt;&lt;text x=&quot;40&quot; y=&quot;172&quot; fill=&quot;${on(x2)}&quot; font-size=&quot;14&quot; text-anchor=&quot;middle&quot; font-weight=&quot;700&quot;&gt;${x2}&lt;/text&gt;
-  &lt;text x=&quot;110&quot; y=&quot;62&quot; fill=&quot;#f5b942&quot; font-size=&quot;13&quot;&gt;×w1 = ${f1(w1)}&lt;/text&gt;
-  &lt;text x=&quot;110&quot; y=&quot;160&quot; fill=&quot;#f5b942&quot; font-size=&quot;13&quot;&gt;×w2 = ${f1(w2)}&lt;/text&gt;
+  &lt;text x=&quot;110&quot; y=&quot;62&quot; fill=&quot;#f5b942&quot; font-size=&quot;13&quot;&gt;×W1 = ${f1(w1)}&lt;/text&gt;
+  &lt;text x=&quot;110&quot; y=&quot;160&quot; fill=&quot;#f5b942&quot; font-size=&quot;13&quot;&gt;×W2 = ${f1(w2)}&lt;/text&gt;
   &lt;circle cx=&quot;225&quot; cy=&quot;110&quot; r=&quot;26&quot; fill=&quot;#0e1628&quot; stroke=&quot;#2dd4bf&quot; stroke-width=&quot;2&quot;/&gt;&lt;text x=&quot;225&quot; y=&quot;117&quot; fill=&quot;#2dd4bf&quot; font-size=&quot;20&quot; text-anchor=&quot;middle&quot;&gt;Σ&lt;/text&gt;
   &lt;text x=&quot;225&quot; y=&quot;155&quot; fill=&quot;#dbe4f0&quot; font-size=&quot;12&quot; text-anchor=&quot;middle&quot;&gt;s = ${f2(s)}&lt;/text&gt;
   &lt;line x1=&quot;252&quot; y1=&quot;110&quot; x2=&quot;296&quot; y2=&quot;110&quot; stroke=&quot;#8a9bb8&quot; stroke-width=&quot;2&quot; marker-end=&quot;url(#ar)&quot;/&gt;
@@ -203,7 +203,7 @@ function neuron(){
   &lt;line x1=&quot;360&quot; y1=&quot;110&quot; x2=&quot;392&quot; y2=&quot;110&quot; stroke=&quot;#8a9bb8&quot; stroke-width=&quot;2&quot; marker-end=&quot;url(#ar)&quot;/&gt;
   &lt;circle cx=&quot;414&quot; cy=&quot;110&quot; r=&quot;20&quot; fill=&quot;${y?&#x27;#123d22&#x27;:&#x27;#2a1212&#x27;}&quot; stroke=&quot;${y?&#x27;#4ade80&#x27;:&#x27;#f87171&#x27;}&quot; stroke-width=&quot;2&quot;/&gt;&lt;text x=&quot;414&quot; y=&quot;116&quot; fill=&quot;${y?&#x27;#4ade80&#x27;:&#x27;#f87171&#x27;}&quot; font-size=&quot;16&quot; text-anchor=&quot;middle&quot; font-weight=&quot;700&quot;&gt;${y}&lt;/text&gt;
   &lt;text x=&quot;414&quot; y=&quot;148&quot; fill=&quot;#8a9bb8&quot; font-size=&quot;12&quot; text-anchor=&quot;middle&quot;&gt;y&lt;/text&gt;
-  &lt;text x=&quot;10&quot; y=&quot;204&quot; fill=&quot;#8a9bb8&quot; font-size=&quot;12&quot;&gt;s = ${f1(w1)}·${x1} + ${f1(w2)}·${x2} + (${f1(b)}) = ${f2(s)} → ${s&gt;1e-9?&#x27;s &amp;gt; 0 → y = 1&#x27;:&#x27;s ≤ 0 → y = 0&#x27;}&lt;/text&gt;`;
+  &lt;text x=&quot;10&quot; y=&quot;204&quot; fill=&quot;#8a9bb8&quot; font-size=&quot;12&quot;&gt;s = ${x1}·${f1(w1)} + ${x2}·${f1(w2)} + (${f1(b)}) = ${f2(s)} → ${s&gt;1e-9?&#x27;s &amp;gt; 0 → y = 1&#x27;:&#x27;s ≤ 0 → y = 0&#x27;}&lt;/text&gt;`;
 }
 function plane(){
   const [g,W,H]=fitCanvas($(&#x27;#plane&#x27;));const R=[-0.5,1.5];
@@ -240,9 +240,9 @@ function render(){
   $(&#x27;#bx1&#x27;).setAttribute(&#x27;aria-pressed&#x27;,!!x1);$(&#x27;#bx2&#x27;).setAttribute(&#x27;aria-pressed&#x27;,!!x2);
   neuron();plane();const ok=table();
   const s=S(x1,x2);
-  $(&#x27;#kv&#x27;).innerHTML=`&lt;span&gt;x&lt;/span&gt;&lt;b&gt;[${x1}, ${x2}]&lt;/b&gt;&lt;span&gt;w&lt;/span&gt;&lt;b style=&quot;color:var(--amber)&quot;&gt;[${f1(w1)}, ${f1(w2)}]&lt;/b&gt;&lt;span&gt;b&lt;/span&gt;&lt;b style=&quot;color:var(--purple)&quot;&gt;${f1(b)}&lt;/b&gt;&lt;span&gt;s = w·x + b&lt;/span&gt;&lt;b&gt;${f2(s)}&lt;/b&gt;&lt;span&gt;y = step(s)&lt;/span&gt;&lt;b style=&quot;color:${step(s)?&#x27;var(--green)&#x27;:&#x27;var(--red)&#x27;}&quot;&gt;${step(s)}&lt;/b&gt;&lt;span&gt;결정 경계&lt;/span&gt;&lt;b style=&quot;color:var(--teal)&quot;&gt;${f1(w1)}·x1 + ${f1(w2)}·x2 + (${f1(b)}) = 0&lt;/b&gt;`;
+  $(&#x27;#kv&#x27;).innerHTML=`&lt;span&gt;x&lt;/span&gt;&lt;b&gt;[${x1}, ${x2}]&lt;/b&gt;&lt;span&gt;W&lt;/span&gt;&lt;b style=&quot;color:var(--amber)&quot;&gt;[${f1(w1)}, ${f1(w2)}]&lt;/b&gt;&lt;span&gt;b&lt;/span&gt;&lt;b style=&quot;color:var(--purple)&quot;&gt;${f1(b)}&lt;/b&gt;&lt;span&gt;s = x @ W + b&lt;/span&gt;&lt;b&gt;${f2(s)}&lt;/b&gt;&lt;span&gt;y = step(s)&lt;/span&gt;&lt;b style=&quot;color:${step(s)?&#x27;var(--green)&#x27;:&#x27;var(--red)&#x27;}&quot;&gt;${step(s)}&lt;/b&gt;&lt;span&gt;결정 경계&lt;/span&gt;&lt;b style=&quot;color:var(--teal)&quot;&gt;x1·${f1(w1)} + x2·${f1(w2)} + (${f1(b)}) = 0&lt;/b&gt;`;
   const outs=IN.map(([a,c])=&gt;step(S(a,c)));
-  setCode(`def perceptron(x, w, b):\n    s = np.sum(x * w) + b      &lt;span class=&quot;c&quot;&gt;# 가중합 + 편향&lt;/span&gt;\n    return 1 if s &gt; 0 else 0   &lt;span class=&quot;c&quot;&gt;# 계단 함수&lt;/span&gt;\n\nw = np.array([${f1(w1)}, ${f1(w2)}])\nb = ${f1(b)}\nfor x in [(0, 0), (0, 1), (1, 0), (1, 1)]:\n    print(x, perceptron(np.array(x), w, b))\n&lt;span class=&quot;g&quot;&gt;${IN.map(([a,c],i)=&gt;`# (${a}, ${c}) ${outs[i]}`).join(&#x27;\n&#x27;)}&lt;/span&gt;`);
+  setCode(`def perceptron(x, W, b):\n    s = x @ W + b              &lt;span class=&quot;c&quot;&gt;# 가중합 + 편향 (x1·W1 + x2·W2 + b)&lt;/span&gt;\n    return 1 if s &gt; 0 else 0   &lt;span class=&quot;c&quot;&gt;# 계단 함수&lt;/span&gt;\n\nW = np.array([${f1(w1)}, ${f1(w2)}])\nb = ${f1(b)}\nfor x in [(0, 0), (0, 1), (1, 0), (1, 1)]:\n    print(x, perceptron(np.array(x), W, b))\n&lt;span class=&quot;g&quot;&gt;${IN.map(([a,c],i)=&gt;`# (${a}, ${c}) ${outs[i]}`).join(&#x27;\n&#x27;)}&lt;/span&gt;`);
   return ok;
 }
 function setW(a,c,d){w1=r1(a);w2=r1(c);b=r1(d);}
@@ -255,28 +255,28 @@ window.addEventListener(&#x27;resize&#x27;,plane);
 async function truth(g){
   target=GT[g];gate=g;filled=0;render();await sleep(500);
   for(let i=0;i&lt;4;i++){[x1,x2]=IN[i];hl=i;filled=i+1;render();const s=S(x1,x2);
-    setStatus(&#x27;info&#x27;,`(${x1}, ${x2}): s = ${f1(w1)}·${x1} + ${f1(w2)}·${x2} + (${f1(b)}) = ${f2(s)} → y = ${step(s)}`);await sleep(850);}
+    setStatus(&#x27;info&#x27;,`(${x1}, ${x2}): s = ${x1}·${f1(w1)} + ${x2}·${f1(w2)} + (${f1(b)}) = ${f2(s)} → y = ${step(s)}`);await sleep(850);}
   hl=-1;const ok=render();return ok;
 }
 async function gatePreset(g,a,c,d){
   setW(a,c,d);const ok=await truth(g);
-  setStatus(ok===4?&#x27;ok&#x27;:&#x27;warn&#x27;,`${g}: w = (${f1(w1)}, ${f1(w2)}), b = ${f1(b)} → 진리표 ${ok}/4 일치. 청록 직선 위쪽(s &amp;gt; 0)만 1 입니다.`);
+  setStatus(ok===4?&#x27;ok&#x27;:&#x27;warn&#x27;,`${g}: W = (${f1(w1)}, ${f1(w2)}), b = ${f1(b)} → 진리표 ${ok}/4 일치. 청록 직선 위쪽(s &amp;gt; 0)만 1 입니다.`);
 }
 const P=[
- {n:&#x27;① AND (0.5, 0.5, −0.7)&#x27;,ex:&#x27;&lt;p&gt;두 입력이 모두 1 일 때만 s = 0.5 + 0.5 − 0.7 = &lt;b class=&quot;green&quot;&gt;0.3 &amp;gt; 0&lt;/b&gt;. 하나만 1 이면 s = −0.2 라 0 입니다. 편향 b 는 &lt;b class=&quot;purple&quot;&gt;문턱값의 반대 부호&lt;/b&gt;(−θ) — 얼마나 쉽게 1 이 되는지를 정합니다.&lt;/p&gt;&lt;p&gt;노트북 &lt;code&gt;1-1 perceptron(x, w, b)&lt;/code&gt; 를 구현하면 이 진리표가 그대로 출력됩니다.&lt;/p&gt;&#x27;,
+ {n:&#x27;① AND (0.5, 0.5, −0.7)&#x27;,ex:&#x27;&lt;p&gt;두 입력이 모두 1 일 때만 s = 0.5 + 0.5 − 0.7 = &lt;b class=&quot;green&quot;&gt;0.3 &amp;gt; 0&lt;/b&gt;. 하나만 1 이면 s = −0.2 라 0 입니다. 편향 b 는 &lt;b class=&quot;purple&quot;&gt;문턱값의 반대 부호&lt;/b&gt;(문턱값 = −b) — 얼마나 쉽게 1 이 되는지를 정합니다.&lt;/p&gt;&lt;p&gt;노트북 &lt;code&gt;1-1 perceptron(x, W, b)&lt;/code&gt; 를 구현하면 이 진리표가 그대로 출력됩니다.&lt;/p&gt;&#x27;,
   run:async()=&gt;{await gatePreset(&#x27;AND&#x27;,0.5,0.5,-0.7);}},
- {n:&#x27;② OR (0.5, 0.5, −0.2)&#x27;,ex:&#x27;&lt;p&gt;w 는 AND 와 같고 &lt;b class=&quot;purple&quot;&gt;b 만 −0.7 → −0.2&lt;/b&gt; 로 올렸습니다. 이제 입력 하나만 1 이어도 s = 0.3 &amp;gt; 0. 결정 경계 직선이 원점 쪽으로 평행 이동한 것을 확인하세요.&lt;/p&gt;&lt;p&gt;노트북 &lt;code&gt;1-2&lt;/code&gt; 에서 OR 가중치를 채울 때 이 값을 씁니다 — 다른 값도 정답이 될 수 있습니다(슬라이더로 찾아보기).&lt;/p&gt;&#x27;,
+ {n:&#x27;② OR (0.5, 0.5, −0.2)&#x27;,ex:&#x27;&lt;p&gt;W 는 AND 와 같고 &lt;b class=&quot;purple&quot;&gt;b 만 −0.7 → −0.2&lt;/b&gt; 로 올렸습니다. 이제 입력 하나만 1 이어도 s = 0.3 &amp;gt; 0. 결정 경계 직선이 원점 쪽으로 평행 이동한 것을 확인하세요.&lt;/p&gt;&lt;p&gt;노트북 &lt;code&gt;1-2&lt;/code&gt; 에서 OR 가중치를 채울 때 이 값을 씁니다 — 다른 값도 정답이 될 수 있습니다(슬라이더로 찾아보기).&lt;/p&gt;&#x27;,
   run:async()=&gt;{await gatePreset(&#x27;OR&#x27;,0.5,0.5,-0.2);}},
- {n:&#x27;③ NAND (−0.5, −0.5, 0.7)&#x27;,ex:&#x27;&lt;p&gt;AND 의 w, b 부호를 모두 뒤집으면 출력이 반대인 &lt;b class=&quot;amber&quot;&gt;NAND&lt;/b&gt;. 직선은 그대로, &lt;b class=&quot;teal&quot;&gt;양(+)의 쪽이 반대편&lt;/b&gt;으로 바뀝니다.&lt;/p&gt;&lt;p&gt;NAND 하나만 있으면 모든 논리 회로를 만들 수 있습니다 — 3교시에 NAND · OR · AND 를 쌓아 XOR 을 만듭니다(노트북 1-2, 3-1).&lt;/p&gt;&#x27;,
+ {n:&#x27;③ NAND (−0.5, −0.5, 0.7)&#x27;,ex:&#x27;&lt;p&gt;AND 의 W, b 부호를 모두 뒤집으면 출력이 반대인 &lt;b class=&quot;amber&quot;&gt;NAND&lt;/b&gt;. 직선은 그대로, &lt;b class=&quot;teal&quot;&gt;양(+)의 쪽이 반대편&lt;/b&gt;으로 바뀝니다.&lt;/p&gt;&lt;p&gt;NAND 하나만 있으면 모든 논리 회로를 만들 수 있습니다 — 3교시에 NAND · OR · AND 를 쌓아 XOR 을 만듭니다(노트북 1-2, 3-1).&lt;/p&gt;&#x27;,
   run:async()=&gt;{await gatePreset(&#x27;NAND&#x27;,-0.5,-0.5,0.7);}},
  {n:&#x27;④ XOR 은?&#x27;,ex:&#x27;&lt;p&gt;XOR 은 (0,1), (1,0) 만 1 — 두 초록 점이 대각선에 있어 &lt;b class=&quot;red&quot;&gt;직선 하나로 0 과 1 을 나눌 수 없습니다&lt;/b&gt;(선형 분리 불가). 슬라이더의 9,261 가지 조합을 모두 시도해도 최대 3/4.&lt;/p&gt;&lt;p&gt;해결은 층을 쌓는 것: 2교시 학습 규칙도 XOR 에서는 수렴하지 못하고(D2-2), 3교시 &lt;b class=&quot;teal&quot;&gt;다층 퍼셉트론&lt;/b&gt;이 은닉층으로 공간을 바꿔 풉니다(D2-3).&lt;/p&gt;&#x27;,
   run:async()=&gt;{target=GT.XOR;gate=&#x27;XOR&#x27;;
    const tries=[[0.5,0.5,-0.7],[0.5,0.5,-0.2],[-0.5,-0.5,0.7],[1,-1,0],[0.5,0.5,-0.5],[-1,1,-0.2]];
-   for(const t of tries){setW(...t);filled=4;hl=-1;const ok=render();setStatus(&#x27;warn&#x27;,`w = (${f1(w1)}, ${f1(w2)}), b = ${f1(b)} → XOR 진리표 ${ok}/4`);await sleep(900);}
+   for(const t of tries){setW(...t);filled=4;hl=-1;const ok=render();setStatus(&#x27;warn&#x27;,`W = (${f1(w1)}, ${f1(w2)}), b = ${f1(b)} → XOR 진리표 ${ok}/4`);await sleep(900);}
    let best=0,cnt=0;
    for(let i=-10;i&lt;=10;i++)for(let j=-10;j&lt;=10;j++)for(let k=-10;k&lt;=10;k++){cnt++;const ww=[i/10,j/10,k/10];let ok=0;IN.forEach(([a,c],n)=&gt;{if((ww[0]*a+ww[1]*c+ww[2]&gt;1e-9?1:0)===GT.XOR[n])ok++;});if(ok&gt;best)best=ok;}
    window.__xorBest=best;
-   setStatus(&#x27;warn&#x27;,`슬라이더 전체 ${cnt.toLocaleString()} 조합(w1, w2, b ∈ −1..1, 0.1 간격)을 모두 시도 → 최대 &lt;b&gt;${best}/4&lt;/b&gt;. 직선 하나로는 XOR 을 만들 수 없습니다.`);}},
+   setStatus(&#x27;warn&#x27;,`슬라이더 전체 ${cnt.toLocaleString()} 조합(W1, W2, b ∈ −1..1, 0.1 간격)을 모두 시도 → 최대 &lt;b&gt;${best}/4&lt;/b&gt;. 직선 하나로는 XOR 을 만들 수 없습니다.`);}},
 ];
 initPresets(P);
 render();
@@ -354,8 +354,8 @@ $(&#x27;#presets button&#x27;).click();
 &lt;body&gt;
 &lt;div class=&quot;app&quot;&gt;
   &lt;h1&gt;퍼셉트론 학습 규칙 — 틀린 만큼 고친다&lt;/h1&gt;
-  &lt;p class=&quot;sub&quot;&gt;샘플을 하나씩 넣어 출력 y 와 정답 t 를 비교하고, 틀렸을 때만 &lt;code&gt;w ← w + η(t − y)x&lt;/code&gt;, &lt;code&gt;b ← b + η(t − y)&lt;/code&gt; 로 고칩니다. 시작 w = (0, 0), b = 0, η = 0.1, 입력 순서 (0,0) → (0,1) → (1,0) → (1,1).&lt;/p&gt;
-  &lt;div class=&quot;pills&quot;&gt;&lt;span class=&quot;pill amber&quot;&gt;w ← w + η(t − y)x&lt;/span&gt;&lt;span class=&quot;pill purple&quot;&gt;b ← b + η(t − y)&lt;/span&gt;&lt;span class=&quot;pill teal&quot;&gt;x2 = −(w1·x1 + b) / w2&lt;/span&gt;&lt;span class=&quot;pill green&quot;&gt;AND: epoch 5 → w=(0.2, 0.1), b=−0.2&lt;/span&gt;&lt;span class=&quot;pill red&quot;&gt;XOR: 정확도 0.5 에서 맴돎&lt;/span&gt;&lt;/div&gt;
+  &lt;p class=&quot;sub&quot;&gt;샘플을 하나씩 넣어 출력 y = step(xW + b) 와 정답 t 를 비교하고, 틀렸을 때만 &lt;code&gt;W ← W − η(y − t)x&lt;/code&gt;, &lt;code&gt;b ← b − η(y − t)&lt;/code&gt; 로 고칩니다 — 7 · 8교시 경사하강과 같은 (y − t)x 모양. 시작 W = (0, 0), b = 0, η = 0.1, 입력 순서 (0,0) → (0,1) → (1,0) → (1,1).&lt;/p&gt;
+  &lt;div class=&quot;pills&quot;&gt;&lt;span class=&quot;pill amber&quot;&gt;W ← W − η(y − t)x&lt;/span&gt;&lt;span class=&quot;pill purple&quot;&gt;b ← b − η(y − t)&lt;/span&gt;&lt;span class=&quot;pill teal&quot;&gt;x2 = −(W1·x1 + b) / W2&lt;/span&gt;&lt;span class=&quot;pill green&quot;&gt;AND: epoch 5 → W=(0.2, 0.1), b=−0.2&lt;/span&gt;&lt;span class=&quot;pill red&quot;&gt;XOR: 정확도 0.5 에서 맴돎&lt;/span&gt;&lt;/div&gt;
 
   &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;프리셋 (누르면 재생)&lt;/h2&gt;&lt;div class=&quot;presets&quot; id=&quot;presets&quot;&gt;&lt;/div&gt;&lt;/div&gt;
 
@@ -407,8 +407,8 @@ function one(){
   if(k%4===0){epoch++;ep=acc();accH.push(ep);}
   log.push({ep:Math.floor((k-1)/4)+1,x,t,y,e,w:w.slice(),b});if(log.length&gt;8)log.shift();
   render();
-  const msg=e===0?`epoch ${Math.floor((k-1)/4)+1} 샘플 (${x}) : y = ${y}, t = ${t} → t − y = 0, 갱신 없음`:
-    `epoch ${Math.floor((k-1)/4)+1} 샘플 (${x}) : y = ${y}, t = ${t} → t − y = ${e} → w ← (${f1(prev[0])}, ${f1(prev[1])}) + 0.1·(${e})·(${x}) = (${f1(w[0])}, ${f1(w[1])}), b ← ${f1(prev[2])} + 0.1·(${e}) = ${f1(b)}`;
+  const msg=e===0?`epoch ${Math.floor((k-1)/4)+1} 샘플 (${x}) : y = ${y}, t = ${t} → y − t = 0, 갱신 없음`:
+    `epoch ${Math.floor((k-1)/4)+1} 샘플 (${x}) : y = ${y}, t = ${t} → y − t = ${-e} → W ← (${f1(prev[0])}, ${f1(prev[1])}) − 0.1·(${-e})·(${x}) = (${f1(w[0])}, ${f1(w[1])}), b ← ${f1(prev[2])} − 0.1·(${-e}) = ${f1(b)}`;
   if(ep!==null)setStatus(ep===1?&#x27;ok&#x27;:&#x27;info&#x27;,msg+`&lt;br&gt;&lt;b&gt;epoch ${epoch} 끝 정확도 = ${ep.toFixed(2)}&lt;/b&gt;`);
   else setStatus(&#x27;info&#x27;,msg);
   return ep;
@@ -433,7 +433,7 @@ function draw(){
     if(y!==t){g.strokeStyle=&#x27;#dbe4f0&#x27;;g.lineWidth=1.5;g.beginPath();g.moveTo(X(x[0])-5,Y(x[1])-5);g.lineTo(X(x[0])+5,Y(x[1])+5);g.moveTo(X(x[0])+5,Y(x[1])-5);g.lineTo(X(x[0])-5,Y(x[1])+5);g.stroke();}
     if(i===cur){g.strokeStyle=&#x27;#f5b942&#x27;;g.lineWidth=3;g.beginPath();g.arc(X(x[0]),Y(x[1]),15,0,7);g.stroke();}
     g.fillStyle=&#x27;#dbe4f0&#x27;;g.fillText(`(${x})`,X(x[0])+12,Y(x[1])-12);});
-  if(Math.abs(w[0])&lt;1e-9&amp;&amp;Math.abs(w[1])&lt;1e-9){g.fillStyle=&#x27;#8a9bb8&#x27;;g.fillText(`w = (0, 0): 경계 없음 — 모든 점 y = ${b&gt;1e-9?1:0}`,8,16);}
+  if(Math.abs(w[0])&lt;1e-9&amp;&amp;Math.abs(w[1])&lt;1e-9){g.fillStyle=&#x27;#8a9bb8&#x27;;g.fillText(`W = (0, 0): 경계 없음 — 모든 점 y = ${b&gt;1e-9?1:0}`,8,16);}
   drawAcc();
 }
 function drawAcc(){
@@ -449,40 +449,40 @@ function render(){
   draw();
   $$(&#x27;#gbtn button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;sel&#x27;,x.dataset.g===gate));
   const a=acc();
-  $(&#x27;#kv&#x27;).innerHTML=`&lt;span&gt;게이트&lt;/span&gt;&lt;b&gt;${gate}  t = [${GT[gate]}]&lt;/b&gt;&lt;span&gt;epoch (완료)&lt;/span&gt;&lt;b&gt;${epoch}&lt;/b&gt;&lt;span&gt;다음 샘플&lt;/span&gt;&lt;b&gt;(${IN[k%4]})&lt;/b&gt;&lt;span&gt;w&lt;/span&gt;&lt;b style=&quot;color:var(--amber)&quot;&gt;(${f1(w[0])}, ${f1(w[1])})&lt;/b&gt;&lt;span&gt;b&lt;/span&gt;&lt;b style=&quot;color:var(--purple)&quot;&gt;${f1(b)}&lt;/b&gt;&lt;span&gt;현재 정확도&lt;/span&gt;&lt;b style=&quot;color:${a===1?&#x27;var(--green)&#x27;:&#x27;var(--amber)&#x27;}&quot;&gt;${a.toFixed(2)}&lt;/b&gt;&lt;span&gt;경계&lt;/span&gt;&lt;b style=&quot;color:var(--teal)&quot;&gt;${Math.abs(w[1])&gt;1e-9?`x2 = −(${f1(w[0])}·x1 + (${f1(b)})) / ${f1(w[1])}`:&#x27;(w2 = 0)&#x27;}&lt;/b&gt;`;
-  $(&#x27;#log&#x27;).innerHTML=&#x27;&lt;tr&gt;&lt;th&gt;ep&lt;/th&gt;&lt;th&gt;x&lt;/th&gt;&lt;th&gt;t&lt;/th&gt;&lt;th&gt;y&lt;/th&gt;&lt;th&gt;t−y&lt;/th&gt;&lt;th&gt;w&lt;/th&gt;&lt;th&gt;b&lt;/th&gt;&lt;/tr&gt;&#x27;+log.map(r=&gt;`&lt;tr&gt;&lt;td&gt;${r.ep}&lt;/td&gt;&lt;td&gt;(${r.x})&lt;/td&gt;&lt;td&gt;${r.t}&lt;/td&gt;&lt;td&gt;${r.y}&lt;/td&gt;&lt;td class=&quot;${r.e?&#x27;bad1&#x27;:&#x27;dim&#x27;}&quot;&gt;${r.e}&lt;/td&gt;&lt;td&gt;(${f1(r.w[0])}, ${f1(r.w[1])})&lt;/td&gt;&lt;td&gt;${f1(r.b)}&lt;/td&gt;&lt;/tr&gt;`).join(&#x27;&#x27;);
-  setCode(`X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])\nT = np.array([${GT[gate]}])        &lt;span class=&quot;c&quot;&gt;# ${gate}&lt;/span&gt;\nw, b, eta = np.zeros(2), 0.0, 0.1\nfor epoch in range(epochs):\n    for x, t in zip(X, T):\n        y = perceptron(x, w, b)\n&lt;span class=&quot;a&quot;&gt;        w = w + eta * (t - y) * x     # 2-1&lt;/span&gt;\n&lt;span class=&quot;a&quot;&gt;        b = b + eta * (t - y)&lt;/span&gt;\n&lt;span class=&quot;c&quot;&gt;# 2-2 결정 경계: x2 = -(w[0]*x1 + b) / w[1]&lt;/span&gt;\n&lt;span class=&quot;g&quot;&gt;# epoch ${epoch}: w = [${f1(w[0])}, ${f1(w[1])}], b = ${f1(b)}, acc = ${a.toFixed(2)}&lt;/span&gt;`);
+  $(&#x27;#kv&#x27;).innerHTML=`&lt;span&gt;게이트&lt;/span&gt;&lt;b&gt;${gate}  t = [${GT[gate]}]&lt;/b&gt;&lt;span&gt;epoch (완료)&lt;/span&gt;&lt;b&gt;${epoch}&lt;/b&gt;&lt;span&gt;다음 샘플&lt;/span&gt;&lt;b&gt;(${IN[k%4]})&lt;/b&gt;&lt;span&gt;W&lt;/span&gt;&lt;b style=&quot;color:var(--amber)&quot;&gt;(${f1(w[0])}, ${f1(w[1])})&lt;/b&gt;&lt;span&gt;b&lt;/span&gt;&lt;b style=&quot;color:var(--purple)&quot;&gt;${f1(b)}&lt;/b&gt;&lt;span&gt;현재 정확도&lt;/span&gt;&lt;b style=&quot;color:${a===1?&#x27;var(--green)&#x27;:&#x27;var(--amber)&#x27;}&quot;&gt;${a.toFixed(2)}&lt;/b&gt;&lt;span&gt;경계&lt;/span&gt;&lt;b style=&quot;color:var(--teal)&quot;&gt;${Math.abs(w[1])&gt;1e-9?`x2 = −(${f1(w[0])}·x1 + (${f1(b)})) / ${f1(w[1])}`:&#x27;(W2 = 0)&#x27;}&lt;/b&gt;`;
+  $(&#x27;#log&#x27;).innerHTML=&#x27;&lt;tr&gt;&lt;th&gt;ep&lt;/th&gt;&lt;th&gt;x&lt;/th&gt;&lt;th&gt;t&lt;/th&gt;&lt;th&gt;y&lt;/th&gt;&lt;th&gt;y−t&lt;/th&gt;&lt;th&gt;W&lt;/th&gt;&lt;th&gt;b&lt;/th&gt;&lt;/tr&gt;&#x27;+log.map(r=&gt;`&lt;tr&gt;&lt;td&gt;${r.ep}&lt;/td&gt;&lt;td&gt;(${r.x})&lt;/td&gt;&lt;td&gt;${r.t}&lt;/td&gt;&lt;td&gt;${r.y}&lt;/td&gt;&lt;td class=&quot;${r.e?&#x27;bad1&#x27;:&#x27;dim&#x27;}&quot;&gt;${-r.e||0}&lt;/td&gt;&lt;td&gt;(${f1(r.w[0])}, ${f1(r.w[1])})&lt;/td&gt;&lt;td&gt;${f1(r.b)}&lt;/td&gt;&lt;/tr&gt;`).join(&#x27;&#x27;);
+  setCode(`X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])\nT = np.array([${GT[gate]}])        &lt;span class=&quot;c&quot;&gt;# ${gate}&lt;/span&gt;\nW, b, eta = np.zeros(2), 0.0, 0.1\nfor epoch in range(epochs):\n    for x, t in zip(X, T):\n        y = perceptron(x, W, b)       &lt;span class=&quot;c&quot;&gt;# step(x @ W + b)&lt;/span&gt;\n&lt;span class=&quot;a&quot;&gt;        W = W - eta * (y - t) * x     # 2-1&lt;/span&gt;\n&lt;span class=&quot;a&quot;&gt;        b = b - eta * (y - t)&lt;/span&gt;\n&lt;span class=&quot;c&quot;&gt;# 2-2 결정 경계: x2 = -(W[0]*x1 + b) / W[1]&lt;/span&gt;\n&lt;span class=&quot;g&quot;&gt;# epoch ${epoch}: W = [${f1(w[0])}, ${f1(w[1])}], b = ${f1(b)}, acc = ${a.toFixed(2)}&lt;/span&gt;`);
 }
 function stopAuto(){clearInterval(timer);timer=null;$(&#x27;#bA&#x27;).textContent=&#x27;자동&#x27;;}
 function auto(){if(timer){stopAuto();return;}$(&#x27;#bA&#x27;).textContent=&#x27;정지&#x27;;
-  timer=setInterval(()=&gt;{one();const done=(k%4===0)&amp;&amp;(accH[accH.length-1]===1&amp;&amp;gate!==&#x27;XOR&#x27;);if(done||epoch&gt;=50){stopAuto();if(done)setStatus(&#x27;ok&#x27;,`epoch ${epoch} 에서 정확도 1.0 — w = (${f1(w[0])}, ${f1(w[1])}), b = ${f1(b)} 로 수렴.`);}},220);}
+  timer=setInterval(()=&gt;{one();const done=(k%4===0)&amp;&amp;(accH[accH.length-1]===1&amp;&amp;gate!==&#x27;XOR&#x27;);if(done||epoch&gt;=50){stopAuto();if(done)setStatus(&#x27;ok&#x27;,`epoch ${epoch} 에서 정확도 1.0 — W = (${f1(w[0])}, ${f1(w[1])}), b = ${f1(b)} 로 수렴.`);}},220);}
 $(&#x27;#gbtn&#x27;).innerHTML=Object.keys(GT).map(g=&gt;`&lt;button type=&quot;button&quot; data-g=&quot;${g}&quot;&gt;${g}&lt;/button&gt;`).join(&#x27; &#x27;);
-$$(&#x27;#gbtn button&#x27;).forEach(x=&gt;x.onclick=()=&gt;{if(busy)return;gate=x.dataset.g;reset();setStatus(&#x27;info&#x27;,`${gate} 처음부터: w = (0, 0), b = 0`);});
+$$(&#x27;#gbtn button&#x27;).forEach(x=&gt;x.onclick=()=&gt;{if(busy)return;gate=x.dataset.g;reset();setStatus(&#x27;info&#x27;,`${gate} 처음부터: W = (0, 0), b = 0`);});
 $(&#x27;#b1&#x27;).onclick=()=&gt;{if(busy)return;stopAuto();one();};
 $(&#x27;#bE&#x27;).onclick=()=&gt;{if(busy)return;stopAuto();if(k%4)while(k%4)one();else oneEpoch();};
 $(&#x27;#bA&#x27;).onclick=()=&gt;{if(busy)return;auto();};
-$(&#x27;#bR&#x27;).onclick=()=&gt;{if(busy)return;reset();setStatus(&#x27;info&#x27;,`${gate} 처음부터: w = (0, 0), b = 0`);};
+$(&#x27;#bR&#x27;).onclick=()=&gt;{if(busy)return;reset();setStatus(&#x27;info&#x27;,`${gate} 처음부터: W = (0, 0), b = 0`);};
 window.addEventListener(&#x27;resize&#x27;,draw);
 
 const P=[
- {n:&#x27;① AND — 한 샘플씩&#x27;,ex:&#x27;&lt;p&gt;w = (0, 0), b = 0 에서는 s = 0 이라 모든 출력이 0. 첫 샘플 (0,0) 은 t = 0 이라 맞음 → 갱신 없음. &lt;b class=&quot;amber&quot;&gt;틀린 샘플에서만&lt;/b&gt; (t − y)·x 만큼 w 가 움직입니다 — 입력이 0 인 성분은 바뀌지 않습니다.&lt;/p&gt;&lt;p&gt;노트북 &lt;code&gt;2-1&lt;/code&gt; 은 이 두 줄 갱신식을 채우는 문제입니다. 점선 = 갱신 전 경계, 청록 = 갱신 후.&lt;/p&gt;&#x27;,
-  run:async()=&gt;{gate=&#x27;AND&#x27;;reset();setStatus(&#x27;info&#x27;,&#x27;AND, w = (0, 0), b = 0, η = 0.1 에서 시작&#x27;);await sleep(800);
+ {n:&#x27;① AND — 한 샘플씩&#x27;,ex:&#x27;&lt;p&gt;W = (0, 0), b = 0 에서는 s = 0 이라 모든 출력이 0. 첫 샘플 (0,0) 은 t = 0 이라 맞음 → 갱신 없음. &lt;b class=&quot;amber&quot;&gt;틀린 샘플에서만&lt;/b&gt; −η(y − t)·x 만큼 W 가 움직입니다 — 입력이 0 인 성분은 바뀌지 않습니다. y − t 는 7교시 선형 회귀의 기울기 (y − t)x 와 같은 &amp;lsquo;오차&amp;rsquo;입니다.&lt;/p&gt;&lt;p&gt;노트북 &lt;code&gt;2-1&lt;/code&gt; 은 이 두 줄 갱신식을 채우는 문제입니다. 점선 = 갱신 전 경계, 청록 = 갱신 후.&lt;/p&gt;&#x27;,
+  run:async()=&gt;{gate=&#x27;AND&#x27;;reset();setStatus(&#x27;info&#x27;,&#x27;AND, W = (0, 0), b = 0, η = 0.1 에서 시작&#x27;);await sleep(800);
    for(let i=0;i&lt;8;i++){one();await sleep(1100);}
-   setStatus(&#x27;info&#x27;,`2 epoch(샘플 8개) 끝: w = (${f1(w[0])}, ${f1(w[1])}), b = ${f1(b)}, 정확도 ${acc().toFixed(2)}. ② 에서 수렴까지.`);}},
- {n:&#x27;② AND — 수렴까지 (epoch 5)&#x27;,ex:&#x27;&lt;p&gt;epoch 별 정확도 0.25 → 0.5 → 0.75 → 0.5 → &lt;b class=&quot;green&quot;&gt;1.0&lt;/b&gt;. 5 epoch 째 &lt;b class=&quot;green&quot;&gt;w = (0.2, 0.1), b = −0.2&lt;/b&gt; 에서 더 이상 틀리는 샘플이 없어 멈춥니다(수렴).&lt;/p&gt;&lt;p&gt;찾은 값은 1교시의 (0.5, 0.5, −0.7) 과 다르지만 &lt;b class=&quot;teal&quot;&gt;같은 진리표&lt;/b&gt;를 만드는 또 다른 직선입니다. 경계 x2 = −(0.2·x1 − 0.2)/0.1 = 2 − 2·x1 (노트북 2-2).&lt;/p&gt;&#x27;,
+   setStatus(&#x27;info&#x27;,`2 epoch(샘플 8개) 끝: W = (${f1(w[0])}, ${f1(w[1])}), b = ${f1(b)}, 정확도 ${acc().toFixed(2)}. ② 에서 수렴까지.`);}},
+ {n:&#x27;② AND — 수렴까지 (epoch 5)&#x27;,ex:&#x27;&lt;p&gt;epoch 별 정확도 0.25 → 0.5 → 0.75 → 0.5 → &lt;b class=&quot;green&quot;&gt;1.0&lt;/b&gt;. 5 epoch 째 &lt;b class=&quot;green&quot;&gt;W = (0.2, 0.1), b = −0.2&lt;/b&gt; 에서 더 이상 틀리는 샘플이 없어 멈춥니다(수렴).&lt;/p&gt;&lt;p&gt;찾은 값은 1교시의 (0.5, 0.5, −0.7) 과 다르지만 &lt;b class=&quot;teal&quot;&gt;같은 진리표&lt;/b&gt;를 만드는 또 다른 직선입니다. 경계 x2 = −(0.2·x1 − 0.2)/0.1 = 2 − 2·x1 (노트북 2-2).&lt;/p&gt;&#x27;,
   run:async()=&gt;{gate=&#x27;AND&#x27;;reset();await sleep(500);
    for(let e=0;e&lt;5;e++){for(let i=0;i&lt;4;i++){one();await sleep(380);}await sleep(500);}
    window.__and=[w[0],w[1],b,epoch,acc(),accH.slice()];
-   setStatus(&#x27;ok&#x27;,`epoch ${epoch}: 정확도 ${accH[accH.length-1].toFixed(2)} → w = (${f1(w[0])}, ${f1(w[1])}), b = ${f1(b)} 로 수렴. 정확도 기록 [${accH.map(v=&gt;v.toFixed(2)).join(&#x27;, &#x27;)}]`);}},
- {n:&#x27;③ OR 학습&#x27;,ex:&#x27;&lt;p&gt;OR 은 더 쉬워 &lt;b class=&quot;green&quot;&gt;epoch 3&lt;/b&gt; 에 정확도 1.0 (w = (0.1, 0.1), b = 0.0). s = 0 인 (0,0) 은 계단 함수 &lt;code&gt;s &amp;gt; 0&lt;/code&gt; 규칙에 따라 0 — 경계선 위의 점은 0 쪽입니다.&lt;/p&gt;&lt;p&gt;학습 규칙은 &lt;b class=&quot;teal&quot;&gt;선형 분리 가능&lt;/b&gt;하기만 하면 언젠가 반드시 수렴합니다(퍼셉트론 수렴 정리).&lt;/p&gt;&#x27;,
+   setStatus(&#x27;ok&#x27;,`epoch ${epoch}: 정확도 ${accH[accH.length-1].toFixed(2)} → W = (${f1(w[0])}, ${f1(w[1])}), b = ${f1(b)} 로 수렴. 정확도 기록 [${accH.map(v=&gt;v.toFixed(2)).join(&#x27;, &#x27;)}]`);}},
+ {n:&#x27;③ OR 학습&#x27;,ex:&#x27;&lt;p&gt;OR 은 더 쉬워 &lt;b class=&quot;green&quot;&gt;epoch 3&lt;/b&gt; 에 정확도 1.0 (W = (0.1, 0.1), b = 0.0). s = 0 인 (0,0) 은 계단 함수 &lt;code&gt;s &amp;gt; 0&lt;/code&gt; 규칙에 따라 0 — 경계선 위의 점은 0 쪽입니다.&lt;/p&gt;&lt;p&gt;학습 규칙은 &lt;b class=&quot;teal&quot;&gt;선형 분리 가능&lt;/b&gt;하기만 하면 언젠가 반드시 수렴합니다(퍼셉트론 수렴 정리).&lt;/p&gt;&#x27;,
   run:async()=&gt;{gate=&#x27;OR&#x27;;reset();await sleep(500);
    for(let e=0;e&lt;4;e++){for(let i=0;i&lt;4;i++){one();await sleep(380);}await sleep(400);}
-   setStatus(&#x27;ok&#x27;,`OR: 정확도 기록 [${accH.map(v=&gt;v.toFixed(2)).join(&#x27;, &#x27;)}] → w = (${f1(w[0])}, ${f1(w[1])}), b = ${f1(b)}`);}},
- {n:&#x27;④ XOR — 50 epoch&#x27;,ex:&#x27;&lt;p&gt;XOR 은 50 epoch 을 돌려도 정확도가 &lt;b class=&quot;red&quot;&gt;0.5 에서 맴돌고 1.0 에 도달하지 못합니다&lt;/b&gt;. 한 샘플을 맞추려 직선을 옮기면 다른 샘플이 틀려 w, b 가 같은 값들을 순환합니다.&lt;/p&gt;&lt;p&gt;직선 하나(뉴런 하나)의 한계 — 1969년 Minsky · Papert 가 지적한 문제입니다. 3교시 &lt;b class=&quot;teal&quot;&gt;은닉층&lt;/b&gt;을 넣으면 해결됩니다(D2-3).&lt;/p&gt;&#x27;,
+   setStatus(&#x27;ok&#x27;,`OR: 정확도 기록 [${accH.map(v=&gt;v.toFixed(2)).join(&#x27;, &#x27;)}] → W = (${f1(w[0])}, ${f1(w[1])}), b = ${f1(b)}`);}},
+ {n:&#x27;④ XOR — 50 epoch&#x27;,ex:&#x27;&lt;p&gt;XOR 은 50 epoch 을 돌려도 정확도가 &lt;b class=&quot;red&quot;&gt;0.5 에서 맴돌고 1.0 에 도달하지 못합니다&lt;/b&gt;. 한 샘플을 맞추려 직선을 옮기면 다른 샘플이 틀려 W, b 가 같은 값들을 순환합니다.&lt;/p&gt;&lt;p&gt;직선 하나(뉴런 하나)의 한계 — 1969년 Minsky · Papert 가 지적한 문제입니다. 3교시 &lt;b class=&quot;teal&quot;&gt;은닉층&lt;/b&gt;을 넣으면 해결됩니다(D2-3).&lt;/p&gt;&#x27;,
   run:async()=&gt;{gate=&#x27;XOR&#x27;;reset();await sleep(400);
    for(let e=0;e&lt;50;e++){oneEpoch();await sleep(e&lt;6?500:70);}
    window.__xor=accH.slice();
-   setStatus(&#x27;warn&#x27;,`XOR 50 epoch: 정확도 최댓값 ${Math.max(...accH).toFixed(2)}, 최솟값 ${Math.min(...accH).toFixed(2)} — 1.0 에 한 번도 도달하지 못함. 마지막 w = (${f1(w[0])}, ${f1(w[1])}), b = ${f1(b)}`);}},
+   setStatus(&#x27;warn&#x27;,`XOR 50 epoch: 정확도 최댓값 ${Math.max(...accH).toFixed(2)}, 최솟값 ${Math.min(...accH).toFixed(2)} — 1.0 에 한 번도 도달하지 못함. 마지막 W = (${f1(w[0])}, ${f1(w[1])}), b = ${f1(b)}`);}},
 ];
 initPresets(P,stopAuto);
 reset();
@@ -779,7 +779,7 @@ $(&#x27;#presets button&#x27;).click();
 &lt;div class=&quot;app&quot;&gt;
   &lt;h1&gt;활성화 함수 — 비선형이 층을 의미 있게 만든다&lt;/h1&gt;
   &lt;p class=&quot;sub&quot;&gt;가중합 a = x·W + b 뒤에 붙는 함수 h(a). 실선 = 함수, &lt;b style=&quot;color:var(--red)&quot;&gt;점선 = 도함수&lt;/b&gt;. 도함수 크기가 Day 3 역전파에서 기울기가 얼마나 잘 전달되는지를 정합니다.&lt;/p&gt;
-  &lt;div class=&quot;pills&quot;&gt;&lt;span class=&quot;pill blue&quot;&gt;sigmoid = 1/(1+e^(−x))&lt;/span&gt;&lt;span class=&quot;pill red&quot;&gt;sigmoid&#x27; = s(1−s) ≤ 0.25&lt;/span&gt;&lt;span class=&quot;pill purple&quot;&gt;tanh&#x27; = 1 − t²&lt;/span&gt;&lt;span class=&quot;pill green&quot;&gt;ReLU&#x27; = (x &amp;gt; 0)&lt;/span&gt;&lt;span class=&quot;pill amber&quot;&gt;W2(W1x) = (W2W1)x&lt;/span&gt;&lt;/div&gt;
+  &lt;div class=&quot;pills&quot;&gt;&lt;span class=&quot;pill blue&quot;&gt;sigmoid = 1/(1+e^(−x))&lt;/span&gt;&lt;span class=&quot;pill red&quot;&gt;sigmoid&#x27; = s(1−s) ≤ 0.25&lt;/span&gt;&lt;span class=&quot;pill purple&quot;&gt;tanh&#x27; = 1 − t²&lt;/span&gt;&lt;span class=&quot;pill green&quot;&gt;ReLU&#x27; = (x &amp;gt; 0)&lt;/span&gt;&lt;span class=&quot;pill amber&quot;&gt;(xW1)W2 = x(W1W2)&lt;/span&gt;&lt;/div&gt;
 
   &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;프리셋 (누르면 재생)&lt;/h2&gt;&lt;div class=&quot;presets&quot; id=&quot;presets&quot;&gt;&lt;/div&gt;&lt;/div&gt;
 
@@ -887,15 +887,16 @@ function drawLin(){
 const M=(A,B)=&gt;A.map(r=&gt;B[0].map((_,j)=&gt;r.reduce((s,v,k)=&gt;s+v*B[k][j],0)));
 async function linPreset(){
   show(&#x27;vLin&#x27;,&#x27;선형 층 두 개 = 선형 층 한 개&#x27;);linStage=0;
-  const W1=[[1,2],[0,1]],W2=[[2,0],[1,1]],x=[[1],[1]];
-  const a=M(W1,x),y1=M(W2,a),W21=M(W2,W1),y2=M(W21,x);
-  $(&#x27;#mm&#x27;).innerHTML=`&lt;div data-k=&quot;1&quot;&gt;&lt;b&gt;W1&lt;/b&gt; = [[1, 2],\n      [0, 1]]\n&lt;b&gt;W2&lt;/b&gt; = [[2, 0],\n      [1, 1]]\n&lt;b&gt;x&lt;/b&gt;  = [1, 1]&lt;/div&gt;&lt;div data-k=&quot;2&quot;&gt;&lt;b&gt;W1x&lt;/b&gt; = [${a.flat()}]\n&lt;b&gt;W2(W1x)&lt;/b&gt; = [${y1.flat()}]&lt;/div&gt;&lt;div data-k=&quot;3&quot;&gt;&lt;b&gt;W2W1&lt;/b&gt; = [[${W21[0]}],\n        [${W21[1]}]]\n&lt;b&gt;(W2W1)x&lt;/b&gt; = [${y2.flat()}]&lt;/div&gt;`;
+  const W1=[[1,2],[0,1]],W2=[[2,0],[1,1]],x=[[1,1]];   // 행 벡터 x (1, 2) — Y = XW + b 와 같은 순서
+  const a=M(x,W1),y1=M(a,W2),W12=M(W1,W2),y2=M(x,W12);
+  $(&#x27;#mm&#x27;).innerHTML=`&lt;div data-k=&quot;1&quot;&gt;&lt;b&gt;W1&lt;/b&gt; = [[1, 2],\n      [0, 1]]\n&lt;b&gt;W2&lt;/b&gt; = [[2, 0],\n      [1, 1]]\n&lt;b&gt;x&lt;/b&gt;  = [1, 1]   (행 벡터)&lt;/div&gt;&lt;div data-k=&quot;2&quot;&gt;&lt;b&gt;xW1&lt;/b&gt; = [${a.flat()}]\n&lt;b&gt;(xW1)W2&lt;/b&gt; = [${y1.flat()}]&lt;/div&gt;&lt;div data-k=&quot;3&quot;&gt;&lt;b&gt;W1W2&lt;/b&gt; = [[${W12[0]}],\n        [${W12[1]}]]\n&lt;b&gt;x(W1W2)&lt;/b&gt; = [${y2.flat()}]&lt;/div&gt;`;
   const on=k=&gt;$$(&#x27;#mm div&#x27;).forEach(d=&gt;d.classList.toggle(&#x27;on&#x27;,+d.dataset.k&lt;=k));
-  setCode(`W1 = np.array([[1, 2], [0, 1]])\nW2 = np.array([[2, 0], [1, 1]])\nx = np.array([1, 1])\n\nW2 @ (W1 @ x)      &lt;span class=&quot;g&quot;&gt;# [${y1.flat()}]&lt;/span&gt;\n(W2 @ W1) @ x      &lt;span class=&quot;g&quot;&gt;# [${y2.flat()}]  같다!&lt;/span&gt;\nnp.allclose(W2 @ (W1 @ x), (W2 @ W1) @ x)  &lt;span class=&quot;g&quot;&gt;# True (4-4)&lt;/span&gt;`);
-  $(&#x27;#kv&#x27;).innerHTML=`&lt;span&gt;W2(W1x)&lt;/span&gt;&lt;b&gt;[${y1.flat()}]&lt;/b&gt;&lt;span&gt;(W2W1)x&lt;/span&gt;&lt;b&gt;[${y2.flat()}]&lt;/b&gt;&lt;span&gt;합친 행렬&lt;/span&gt;&lt;b&gt;W2W1 = [[${W21[0]}], [${W21[1]}]]&lt;/b&gt;`;
-  on(1);drawLin();setStatus(&#x27;info&#x27;,&#x27;2×2 행렬 W1, W2 와 입력 x = [1, 1]&#x27;);await sleep(1000);
-  on(2);setStatus(&#x27;info&#x27;,`층을 차례로: W1x = [${a.flat()}], W2(W1x) = [${y1.flat()}]`);await sleep(1200);
-  on(3);setStatus(&#x27;info&#x27;,`먼저 합치면: W2W1 = [[${W21[0]}], [${W21[1]}]] → (W2W1)x = [${y2.flat()}] — 같은 결과`);await sleep(1200);
+  setCode(`W1 = np.array([[1, 2], [0, 1]])\nW2 = np.array([[2, 0], [1, 1]])\nx = np.array([1, 1])          &lt;span class=&quot;c&quot;&gt;# 행 벡터 (샘플 하나)&lt;/span&gt;\n\n(x @ W1) @ W2      &lt;span class=&quot;g&quot;&gt;# [${y1.flat()}]&lt;/span&gt;\nx @ (W1 @ W2)      &lt;span class=&quot;g&quot;&gt;# [${y2.flat()}]  같다!&lt;/span&gt;\nW1 @ W2            &lt;span class=&quot;g&quot;&gt;# [[${W12[0]}], [${W12[1]}]]&lt;/span&gt;\nnp.allclose((x @ W1) @ W2, x @ (W1 @ W2))  &lt;span class=&quot;g&quot;&gt;# True (4-4)&lt;/span&gt;`);
+  $(&#x27;#kv&#x27;).innerHTML=`&lt;span&gt;(xW1)W2&lt;/span&gt;&lt;b&gt;[${y1.flat()}]&lt;/b&gt;&lt;span&gt;x(W1W2)&lt;/span&gt;&lt;b&gt;[${y2.flat()}]&lt;/b&gt;&lt;span&gt;합친 행렬&lt;/span&gt;&lt;b&gt;W1W2 = [[${W12[0]}], [${W12[1]}]]&lt;/b&gt;`;
+  window.__lin4={a:a.flat(),y1:y1.flat(),W12,y2:y2.flat()};
+  on(1);drawLin();setStatus(&#x27;info&#x27;,&#x27;2×2 행렬 W1, W2 와 입력 행 벡터 x = [1, 1]&#x27;);await sleep(1000);
+  on(2);setStatus(&#x27;info&#x27;,`층을 차례로: xW1 = [${a.flat()}], (xW1)W2 = [${y1.flat()}]`);await sleep(1200);
+  on(3);setStatus(&#x27;info&#x27;,`먼저 합치면: W1W2 = W1 @ W2 = [[${W12[0]}], [${W12[1]}]] → x(W1W2) = [${y2.flat()}] — 같은 결과`);await sleep(1200);
   setStatus(&#x27;info&#x27;,&#x27;은닉 3개짜리 2층 망(같은 가중치)에서 활성화 없이 출력 부호를 칠하면…&#x27;);await sleep(900);
   linStage=1;drawLin();await sleep(1300);
   linStage=2;drawLin();
@@ -932,9 +933,9 @@ const P=[
   run:async()=&gt;{show(&#x27;vFn&#x27;,&#x27;함수와 도함수&#x27;);big=false;$(&#x27;#big&#x27;).checked=false;setFn(&#x27;ReLU&#x27;);for(let v=-3;v&lt;=3.001;v+=0.25){xv=v;drawFn();infoFn();fnStatus();await sleep(60);}
    await sleep(400);setFn(&#x27;Leaky ReLU&#x27;);xv=-2;drawFn();infoFn();setStatus(&#x27;info&#x27;,&#x27;Leaky ReLU, α = 0.01: f(−2) = −0.02 — 그림에서는 거의 0 처럼 보입니다.&#x27;);await sleep(1500);
    big=true;$(&#x27;#big&#x27;).checked=true;drawFn();infoFn();setStatus(&#x27;ok&#x27;,&#x27;α = 0.1 로 크게 보기: f(−2) = −0.2, f\&#x27;(−2) = 0.1 — 음수에서도 기울기가 0 이 아닙니다.&#x27;);}},
- {n:&#x27;④ step — 왜 안 쓰나&#x27;,ex:&#x27;&lt;p&gt;퍼셉트론의 step 은 x ≠ 0 에서 &lt;b class=&quot;red&quot;&gt;도함수가 항상 0&lt;/b&gt;. 경사하강은 기울기로 움직이므로 w 를 조금 바꿔도 손실 변화를 알 수 없습니다.&lt;/p&gt;&lt;p&gt;그래서 신경망은 step 을 &lt;b class=&quot;teal&quot;&gt;매끄러운 sigmoid&lt;/b&gt; 로 바꾸며 시작했습니다 — 1 · 2교시 퍼셉트론과 5교시 신경망의 차이입니다.&lt;/p&gt;&#x27;,
+ {n:&#x27;④ step — 왜 안 쓰나&#x27;,ex:&#x27;&lt;p&gt;퍼셉트론의 step 은 x ≠ 0 에서 &lt;b class=&quot;red&quot;&gt;도함수가 항상 0&lt;/b&gt;. 경사하강은 기울기로 움직이므로 W 를 조금 바꿔도 손실 변화를 알 수 없습니다.&lt;/p&gt;&lt;p&gt;그래서 신경망은 step 을 &lt;b class=&quot;teal&quot;&gt;매끄러운 sigmoid&lt;/b&gt; 로 바꾸며 시작했습니다 — 1 · 2교시 퍼셉트론과 5교시 신경망의 차이입니다.&lt;/p&gt;&#x27;,
   run:async()=&gt;{show(&#x27;vFn&#x27;,&#x27;함수와 도함수&#x27;);setFn(&#x27;step&#x27;);for(let v=-2;v&lt;=2.001;v+=0.2){xv=v;drawFn();infoFn();fnStatus();await sleep(80);}}},
- {n:&#x27;⑤ 선형만 쌓으면&#x27;,ex:&#x27;&lt;p&gt;W2(W1x) = (W2W1)x — 선형 층 두 개는 &lt;b class=&quot;amber&quot;&gt;행렬 W2W1 하나&lt;/b&gt;와 같습니다. 100층을 쌓아도 활성화가 없으면 1층짜리 모델이고 결정 경계는 직선입니다.&lt;/p&gt;&lt;p&gt;노트북 &lt;code&gt;4-4&lt;/code&gt; 에서 &lt;code&gt;np.allclose&lt;/code&gt; 로 확인합니다. 활성화 함수(비선형)가 있어야 3교시 XOR 처럼 공간을 휘어 문제를 풀 수 있습니다.&lt;/p&gt;&#x27;,
+ {n:&#x27;⑤ 선형만 쌓으면&#x27;,ex:&#x27;&lt;p&gt;(xW1)W2 = x(W1W2) — 선형 층 두 개는 &lt;b class=&quot;amber&quot;&gt;행렬 W1W2 = W1 @ W2 하나&lt;/b&gt;와 같습니다. 행 벡터 x 에 왼쪽부터 곱하므로 Y = XW + b 와 같은 순서(x @ W1 @ W2)입니다. 100층을 쌓아도 활성화가 없으면 1층짜리 모델이고 결정 경계는 직선입니다.&lt;/p&gt;&lt;p&gt;노트북 &lt;code&gt;4-4&lt;/code&gt; 에서 &lt;code&gt;np.allclose&lt;/code&gt; 로 확인합니다. 활성화 함수(비선형)가 있어야 3교시 XOR 처럼 공간을 휘어 문제를 풀 수 있습니다.&lt;/p&gt;&#x27;,
   run:linPreset},
  {n:&#x27;⑥ 기울기 소실 0.25ⁿ&#x27;,ex:&#x27;&lt;p&gt;역전파(Day 3)는 층마다 활성화 도함수를 곱합니다. sigmoid 는 최대 0.25 라 10층이면 &lt;b class=&quot;red&quot;&gt;0.25¹⁰ ≈ 9.5e-7&lt;/b&gt; — 입력 쪽 가중치가 거의 학습되지 않습니다(기울기 소실).&lt;/p&gt;&lt;p&gt;ReLU 는 x &amp;gt; 0 에서 도함수 1 → &lt;b class=&quot;green&quot;&gt;곱해도 1&lt;/b&gt;. 은닉층에 ReLU 를 쓰는 이유이며, Day 4 에서 He 초기화와 함께 다시 다룹니다.&lt;/p&gt;&#x27;,
   run:vanPreset},
@@ -1594,20 +1595,20 @@ $(&#x27;#presets button&#x27;).click();
 &lt;/head&gt;
 &lt;body&gt;
 &lt;div class=&quot;app&quot;&gt;
-  &lt;h1&gt;선형 회귀를 경사하강으로 — y = w·x + b&lt;/h1&gt;
-  &lt;p class=&quot;sub&quot;&gt;데이터 50개 (&lt;code&gt;rng = np.random.default_rng(0)&lt;/code&gt;, t = 2x + 1 + 잡음). w = b = 0 에서 출발해 MSE 의 기울기 반대 방향으로 내려갑니다. 왼쪽은 데이터와 직선, 오른쪽은 (w, b) 평면 위의 &lt;b style=&quot;color:var(--teal)&quot;&gt;MSE 등고선&lt;/b&gt;과 경로입니다.&lt;/p&gt;
-  &lt;div class=&quot;pills&quot;&gt;&lt;span class=&quot;pill blue&quot;&gt;L = mean((y − t)²)&lt;/span&gt;&lt;span class=&quot;pill amber&quot;&gt;dL/dw = 2·mean((y − t)·x)&lt;/span&gt;&lt;span class=&quot;pill amber&quot;&gt;dL/db = 2·mean(y − t)&lt;/span&gt;&lt;span class=&quot;pill green&quot;&gt;lr 0.5, 200 epoch → w≈2.05, b≈0.98&lt;/span&gt;&lt;span class=&quot;pill red&quot;&gt;lr ≥ 1.0 발산 (한계 ≈ 0.77)&lt;/span&gt;&lt;/div&gt;
+  &lt;h1&gt;선형 회귀를 경사하강으로 — Y = XW + b&lt;/h1&gt;
+  &lt;p class=&quot;sub&quot;&gt;데이터 50개 (&lt;code&gt;rng = np.random.default_rng(0)&lt;/code&gt;, T = 2X + 1 + 잡음, X shape (50, 1)). W = b = 0 에서 출발해 손실 &lt;code&gt;L = ½·mean((Y − T)²)&lt;/code&gt; 의 기울기 반대 방향으로 내려갑니다. ½ 을 붙이면 미분할 때 2 가 상쇄되어 기울기가 &lt;code&gt;(y − t)x&lt;/code&gt; 모양이 됩니다. 왼쪽은 데이터와 직선, 오른쪽은 (W, b) 평면 위의 &lt;b style=&quot;color:var(--teal)&quot;&gt;손실 등고선&lt;/b&gt;과 경로입니다.&lt;/p&gt;
+  &lt;div class=&quot;pills&quot;&gt;&lt;span class=&quot;pill teal&quot;&gt;Y = XW + b&lt;/span&gt;&lt;span class=&quot;pill blue&quot;&gt;L = ½·mean((Y − T)²)&lt;/span&gt;&lt;span class=&quot;pill amber&quot;&gt;dL/dW = mean((y − t)·x) = Xᵀ(Y − T)/N&lt;/span&gt;&lt;span class=&quot;pill amber&quot;&gt;dL/db = mean(y − t)&lt;/span&gt;&lt;span class=&quot;pill green&quot;&gt;lr 1.0, 200 epoch → W≈2.05, b≈0.98&lt;/span&gt;&lt;span class=&quot;pill red&quot;&gt;lr ≥ 2.0 발산 (한계 ≈ 1.54)&lt;/span&gt;&lt;/div&gt;
 
   &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;프리셋 (누르면 재생)&lt;/h2&gt;&lt;div class=&quot;presets&quot; id=&quot;presets&quot;&gt;&lt;/div&gt;&lt;/div&gt;
 
   &lt;div class=&quot;grid&quot;&gt;
     &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;데이터 · 손실 지형&lt;/h2&gt;
       &lt;div class=&quot;two&quot;&gt;
-        &lt;div&gt;&lt;canvas id=&quot;sc&quot;&gt;&lt;/canvas&gt;&lt;div class=&quot;legend&quot;&gt;&lt;span&gt;&lt;i style=&quot;background:#60a5fa&quot;&gt;&lt;/i&gt;(x, t)&lt;/span&gt;&lt;span&gt;&lt;i style=&quot;background:#f5b942&quot;&gt;&lt;/i&gt;y = w·x + b&lt;/span&gt;&lt;span&gt;&lt;i style=&quot;background:#f87171&quot;&gt;&lt;/i&gt;잔차&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
-        &lt;div&gt;&lt;canvas id=&quot;ct&quot;&gt;&lt;/canvas&gt;&lt;div class=&quot;legend&quot;&gt;&lt;span&gt;&lt;i style=&quot;background:#2dd4bf&quot;&gt;&lt;/i&gt;MSE 등고선&lt;/span&gt;&lt;span&gt;&lt;i style=&quot;background:#f5b942&quot;&gt;&lt;/i&gt;GD 경로&lt;/span&gt;&lt;span&gt;&lt;i style=&quot;background:#4ade80&quot;&gt;&lt;/i&gt;최소제곱 해&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;div&gt;&lt;canvas id=&quot;sc&quot;&gt;&lt;/canvas&gt;&lt;div class=&quot;legend&quot;&gt;&lt;span&gt;&lt;i style=&quot;background:#60a5fa&quot;&gt;&lt;/i&gt;(x, t)&lt;/span&gt;&lt;span&gt;&lt;i style=&quot;background:#f5b942&quot;&gt;&lt;/i&gt;Y = XW + b&lt;/span&gt;&lt;span&gt;&lt;i style=&quot;background:#f87171&quot;&gt;&lt;/i&gt;잔차&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;div&gt;&lt;canvas id=&quot;ct&quot;&gt;&lt;/canvas&gt;&lt;div class=&quot;legend&quot;&gt;&lt;span&gt;&lt;i style=&quot;background:#2dd4bf&quot;&gt;&lt;/i&gt;손실 등고선&lt;/span&gt;&lt;span&gt;&lt;i style=&quot;background:#f5b942&quot;&gt;&lt;/i&gt;GD 경로&lt;/span&gt;&lt;span&gt;&lt;i style=&quot;background:#4ade80&quot;&gt;&lt;/i&gt;최소제곱 해&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
       &lt;/div&gt;
       &lt;canvas id=&quot;lc&quot;&gt;&lt;/canvas&gt;
-      &lt;div class=&quot;legend&quot;&gt;&lt;span&gt;&lt;i style=&quot;background:#4ade80&quot;&gt;&lt;/i&gt;MSE 기록 (log 눈금)&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;legend&quot;&gt;&lt;span&gt;&lt;i style=&quot;background:#4ade80&quot;&gt;&lt;/i&gt;손실 L 기록 (log 눈금)&lt;/span&gt;&lt;/div&gt;
       &lt;div class=&quot;row lrb&quot; id=&quot;lrb&quot; style=&quot;margin-top:10px&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;row&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;run&quot; id=&quot;b1&quot;&gt;한 스텝&lt;/button&gt;&lt;button type=&quot;button&quot; id=&quot;bA&quot;&gt;자동 (200 epoch)&lt;/button&gt;&lt;button type=&quot;button&quot; id=&quot;bR&quot;&gt;처음부터&lt;/button&gt;&lt;/div&gt;
     &lt;/div&gt;
@@ -1638,16 +1639,18 @@ const DT=[2.3097,1.4187,1.0815,1.0987,2.4977,2.865,2.2563,2.5286,1.9688,2.804,2.
 const N=DX.length;
 const mean=a=&gt;a.reduce((s,v)=&gt;s+v,0)/a.length;
 const Sx=mean(DX),St=mean(DT),Sxx=mean(DX.map(v=&gt;v*v)),Sxt=mean(DX.map((v,i)=&gt;v*DT[i])),Stt=mean(DT.map(v=&gt;v*v));
-const loss=(w,b)=&gt;w*w*Sxx+2*w*b*Sx+b*b-2*w*Sxt-2*b*St+Stt;
-const lossD=(w,b)=&gt;mean(DX.map((x,i)=&gt;(w*x+b-DT[i])**2));
-function grad(w,b){let gw=0,gb=0;for(let i=0;i&lt;N;i++){const e=w*DX[i]+b-DT[i];gw+=e*DX[i];gb+=e;}return [2*gw/N,2*gb/N];}
+const mse=(w,b)=&gt;w*w*Sxx+2*w*b*Sx+b*b-2*w*Sxt-2*b*St+Stt;   // mean((Y − T)²)
+const loss=(w,b)=&gt;0.5*mse(w,b);                              // L = ½·mean((Y − T)²)
+const lossD=(w,b)=&gt;0.5*mean(DX.map((x,i)=&gt;(w*x+b-DT[i])**2));
+// dL/dW = mean((y − t)·x) = X.T @ (Y − T) / N,  dL/db = mean(y − t)  (½ 이 2 를 상쇄)
+function grad(w,b){let gw=0,gb=0;for(let i=0;i&lt;N;i++){const e=w*DX[i]+b-DT[i];gw+=e*DX[i];gb+=e;}return [gw/N,gb/N];}
 function numGrad(w,b,h=1e-4){return [(lossD(w+h,b)-lossD(w-h,b))/(2*h),(lossD(w,b+h)-lossD(w,b-h))/(2*h)];}
 const Wls=(Sxt-Sx*St)/(Sxx-Sx*Sx), Bls=St-Wls*Sx;
-// Hessian 2*[[Sxx,Sx],[Sx,1]] 최대 고윳값 → 안정 한계 2/λmax
-const tr=2*(Sxx+1),det=4*(Sxx-Sx*Sx),lmax=tr/2+Math.sqrt(tr*tr/4-det),LRMAX=2/lmax;
-window.__lin={Wls,Bls,LRMAX};
-let lr=0.5,w=0,b=0,ep=0,path=[[0,0]],hist=[loss(0,0)],timer=null,g0=[NaN,NaN];
-const LRS=[0.1,0.5,0.7,1.0];
+// L 의 Hessian [[Sxx,Sx],[Sx,1]] 최대 고윳값 λmax ≈ 1.297 → 안정 한계 2/λmax ≈ 1.54
+const tr=Sxx+1,det=Sxx-Sx*Sx,lmax=tr/2+Math.sqrt(tr*tr/4-det),LRMAX=2/lmax;
+window.__lin={Wls,Bls,LRMAX,lmax};
+let lr=1.0,w=0,b=0,ep=0,path=[[0,0]],hist=[loss(0,0)],timer=null,g0=[NaN,NaN];
+const LRS=[0.2,1.0,1.4,2.0];
 const fx=v=&gt;fe(v,4);
 const diverged=()=&gt;!isFinite(w)||Math.abs(w)&gt;1e4;
 function drawSc(){
@@ -1672,11 +1675,11 @@ function drawCt(){
   const key=W+&#x27;x&#x27;+H;
   if(ctKey!==key){const off=document.createElement(&#x27;canvas&#x27;);off.width=Math.ceil(W);off.height=Math.ceil(H);const og=off.getContext(&#x27;2d&#x27;);const st=3;
     for(let px=0;px&lt;W;px+=st)for(let py=0;py&lt;H;py+=st){const ww=WR[0]+(px+st/2)/W*(WR[1]-WR[0]),bb=BR[1]-(py+st/2)/H*(BR[1]-BR[0]);
-      const lv=Math.log2(loss(ww,bb)/0.0099)*1.3;const band=Math.floor(lv);const t=Math.max(0,Math.min(1,lv/14));
+      const lv=Math.log2(loss(ww,bb)/0.00495)*1.3;const band=Math.floor(lv);const t=Math.max(0,Math.min(1,lv/14));
       og.fillStyle=`rgba(${Math.round(20+30*t)},${Math.round(60+60*(1-t))},${Math.round(90+40*(1-t))},${band%2?0.55:0.35})`;og.fillRect(px,py,st,st);}
     ctImg=off;ctKey=key;}
   g.clearRect(0,0,W,H);g.drawImage(ctImg,0,0,W,H);
-  g.font=&#x27;11px Consolas,monospace&#x27;;g.fillStyle=&#x27;#8a9bb8&#x27;;g.fillText(&#x27;w →&#x27;,W-30,H-6);g.fillText(&#x27;b ↑&#x27;,4,12);
+  g.font=&#x27;11px Consolas,monospace&#x27;;g.fillStyle=&#x27;#8a9bb8&#x27;;g.fillText(&#x27;W →&#x27;,W-30,H-6);g.fillText(&#x27;b ↑&#x27;,4,12);
   g.strokeStyle=&#x27;#3f5070&#x27;;g.beginPath();g.moveTo(X(0),0);g.lineTo(X(0),H);g.moveTo(0,Y(0));g.lineTo(W,Y(0));g.stroke();
   [1,2,3].forEach(v=&gt;g.fillText(v,X(v)-3,Y(0)+12));[1,2].forEach(v=&gt;g.fillText(v,X(0)+4,Y(v)+4));
   g.fillStyle=&#x27;#4ade80&#x27;;g.beginPath();g.arc(X(Wls),Y(Bls),5,0,7);g.fill();
@@ -1688,50 +1691,51 @@ function drawCt(){
 }
 function drawL(){
   const [g,W,H]=fitCanvas($(&#x27;#lc&#x27;));g.clearRect(0,0,W,H);g.font=&#x27;11px Consolas,monospace&#x27;;
-  const lg=hist.map(v=&gt;Math.log10(Math.min(Math.max(v,1e-4),1e12)));const lo=Math.min(...lg,-2.2),hi=Math.max(...lg,0.7);
+  const lg=hist.map(v=&gt;Math.log10(Math.min(Math.max(v,1e-4),1e12)));const lo=Math.min(...lg,-2.5),hi=Math.max(...lg,0.7);
   const n=Math.max(hist.length,40),X=i=&gt;40+i/(n-1)*(W-46),Y=v=&gt;6+(1-(v-lo)/(hi-lo))*(H-18);
   g.fillStyle=&#x27;#5d7292&#x27;;g.fillText(&#x27;1e&#x27;+hi.toFixed(0),2,12);g.fillText(&#x27;1e&#x27;+lo.toFixed(1),2,H-6);g.fillText(&#x27;epoch&#x27;,W-40,H-2);
-  g.strokeStyle=&#x27;#1a2540&#x27;;g.beginPath();g.moveTo(40,Y(Math.log10(0.0099)));g.lineTo(W,Y(Math.log10(0.0099)));g.stroke();
+  g.strokeStyle=&#x27;#1a2540&#x27;;g.beginPath();g.moveTo(40,Y(Math.log10(0.00495)));g.lineTo(W,Y(Math.log10(0.00495)));g.stroke();
   g.strokeStyle=diverged()||(hist.length&gt;1&amp;&amp;hist[hist.length-1]&gt;hist[0])?&#x27;#f87171&#x27;:&#x27;#4ade80&#x27;;g.lineWidth=2;g.beginPath();lg.forEach((v,i)=&gt;i?g.lineTo(X(i),Y(v)):g.moveTo(X(i),Y(v)));g.stroke();
 }
 function info(){
   const L=loss(w,b);const [gw,gb]=isFinite(w)?grad(w,b):[NaN,NaN];
-  $(&#x27;#kv&#x27;).innerHTML=`&lt;span&gt;epoch&lt;/span&gt;&lt;b&gt;${ep}&lt;/b&gt;&lt;span&gt;lr&lt;/span&gt;&lt;b style=&quot;color:${lr&gt;LRMAX?&#x27;var(--red)&#x27;:&#x27;var(--teal)&#x27;}&quot;&gt;${lr.toFixed(1)}${lr&gt;LRMAX?&#x27; (발산)&#x27;:&#x27;&#x27;}&lt;/b&gt;&lt;span&gt;w&lt;/span&gt;&lt;b style=&quot;color:var(--amber)&quot;&gt;${fx(w)}&lt;/b&gt;&lt;span&gt;b&lt;/span&gt;&lt;b style=&quot;color:var(--amber)&quot;&gt;${fx(b)}&lt;/b&gt;&lt;span&gt;MSE&lt;/span&gt;&lt;b style=&quot;color:${diverged()||lr&gt;LRMAX?&#x27;var(--red)&#x27;:&#x27;var(--green)&#x27;}&quot;&gt;${fx(L)}&lt;/b&gt;&lt;span&gt;dL/dw&lt;/span&gt;&lt;b&gt;${fx(gw)}&lt;/b&gt;&lt;span&gt;dL/db&lt;/span&gt;&lt;b&gt;${fx(gb)}&lt;/b&gt;&lt;span&gt;최소제곱 해&lt;/span&gt;&lt;b&gt;w = ${Wls.toFixed(4)}, b = ${Bls.toFixed(4)}&lt;/b&gt;&lt;span&gt;안정 한계&lt;/span&gt;&lt;b&gt;lr &amp;lt; 2/λmax ≈ ${LRMAX.toFixed(3)}&lt;/b&gt;`;
-  setCode(`rng = np.random.default_rng(0)\nx = rng.uniform(0, 1, 50)\nt = 2.0 * x + 1.0 + rng.normal(0, 0.1, 50)\n\nw, b, lr = 0.0, 0.0, ${lr.toFixed(1)}\nfor epoch in range(200):                 &lt;span class=&quot;c&quot;&gt;# 7-2&lt;/span&gt;\n    y = w * x + b\n&lt;span class=&quot;a&quot;&gt;    dw = 2 * np.mean((y - t) * x)          # 7-1&lt;/span&gt;\n&lt;span class=&quot;a&quot;&gt;    db = 2 * np.mean(y - t)&lt;/span&gt;\n    w -= lr * dw\n    b -= lr * db\n&lt;span class=&quot;g&quot;&gt;# epoch ${ep}: w = ${fx(w)}, b = ${fx(b)}\n# MSE = ${fx(L)}  dw = ${fx(gw)}  db = ${fx(gb)}&lt;/span&gt;`);
+  $(&#x27;#kv&#x27;).innerHTML=`&lt;span&gt;epoch&lt;/span&gt;&lt;b&gt;${ep}&lt;/b&gt;&lt;span&gt;lr&lt;/span&gt;&lt;b style=&quot;color:${lr&gt;LRMAX?&#x27;var(--red)&#x27;:&#x27;var(--teal)&#x27;}&quot;&gt;${lr.toFixed(1)}${lr&gt;LRMAX?&#x27; (발산)&#x27;:&#x27;&#x27;}&lt;/b&gt;&lt;span&gt;W&lt;/span&gt;&lt;b style=&quot;color:var(--amber)&quot;&gt;${fx(w)}&lt;/b&gt;&lt;span&gt;b&lt;/span&gt;&lt;b style=&quot;color:var(--amber)&quot;&gt;${fx(b)}&lt;/b&gt;&lt;span&gt;L = ½·MSE&lt;/span&gt;&lt;b style=&quot;color:${diverged()||lr&gt;LRMAX?&#x27;var(--red)&#x27;:&#x27;var(--green)&#x27;}&quot;&gt;${fx(L)}&lt;/b&gt;&lt;span&gt;MSE&lt;/span&gt;&lt;b&gt;${fx(mse(w,b))}&lt;/b&gt;&lt;span&gt;dL/dW&lt;/span&gt;&lt;b&gt;${fx(gw)}&lt;/b&gt;&lt;span&gt;dL/db&lt;/span&gt;&lt;b&gt;${fx(gb)}&lt;/b&gt;&lt;span&gt;최소제곱 해&lt;/span&gt;&lt;b&gt;W = ${Wls.toFixed(4)}, b = ${Bls.toFixed(4)}&lt;/b&gt;&lt;span&gt;안정 한계&lt;/span&gt;&lt;b&gt;lr &amp;lt; 2/λmax ≈ ${LRMAX.toFixed(3)}&lt;/b&gt;`;
+  setCode(`rng = np.random.default_rng(0)\nX = rng.uniform(0, 1, (50, 1))\nT = 2.0 * X + 1.0 + rng.normal(0, 0.1, (50, 1))\n\nW = np.zeros((1, 1))\nb = np.zeros(1)\nlr = ${lr.toFixed(1)}\nfor epoch in range(200):                 &lt;span class=&quot;c&quot;&gt;# 7-2&lt;/span&gt;\n    Y = X @ W + b                        &lt;span class=&quot;c&quot;&gt;# (50, 1)&lt;/span&gt;\n&lt;span class=&quot;a&quot;&gt;    dW = X.T @ (Y - T) / len(X)          # 7-1  (1, 1)&lt;/span&gt;\n&lt;span class=&quot;a&quot;&gt;    db = np.mean(Y - T, axis=0)          #      (1,)&lt;/span&gt;\n    W -= lr * dW\n    b -= lr * db\n&lt;span class=&quot;g&quot;&gt;# epoch ${ep}: W = [[${fx(w)}]], b = [${fx(b)}]\n# L = ${fx(L)} (MSE = ${fx(mse(w,b))})  dW = ${fx(gw)}  db = ${fx(gb)}&lt;/span&gt;`);
   $$(&#x27;#lrb button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;sel&#x27;,+x.dataset.v===lr));
 }
 function draw(){drawSc();drawCt();drawL();}
 function reset(){stopAuto();w=0;b=0;ep=0;path=[[0,0]];hist=[loss(0,0)];draw();info();}
 function step(){if(diverged())return false;const [gw,gb]=grad(w,b);g0=[gw,gb];w-=lr*gw;b-=lr*gb;ep++;path.push([w,b]);hist.push(loss(w,b));draw();info();
-  if(diverged())setStatus(&#x27;warn&#x27;,`⚠ epoch ${ep}: |w| 가 ${fe(Math.abs(w),2)} — 발산했습니다. lr = ${lr.toFixed(1)} &amp;gt; 안정 한계 ${LRMAX.toFixed(3)}`);
-  else setStatus(lr&gt;LRMAX?&#x27;warn&#x27;:&#x27;info&#x27;,`epoch ${ep}: dw = ${fx(gw)}, db = ${fx(gb)} → w = ${fx(w)}, b = ${fx(b)}, MSE = ${fx(loss(w,b))}`);
+  if(diverged())setStatus(&#x27;warn&#x27;,`⚠ epoch ${ep}: |W| 가 ${fe(Math.abs(w),2)} — 발산했습니다. lr = ${lr.toFixed(1)} &amp;gt; 안정 한계 ${LRMAX.toFixed(3)}`);
+  else setStatus(lr&gt;LRMAX?&#x27;warn&#x27;:&#x27;info&#x27;,`epoch ${ep}: dW = ${fx(gw)}, db = ${fx(gb)} → W = ${fx(w)}, b = ${fx(b)}, L = ${fx(loss(w,b))}`);
   return !diverged();}
 function stopAuto(){clearInterval(timer);timer=null;$(&#x27;#bA&#x27;).textContent=&#x27;자동 (200 epoch)&#x27;;}
 function auto(){if(timer){stopAuto();return;}if(ep&gt;=200||diverged())reset();$(&#x27;#bA&#x27;).textContent=&#x27;정지&#x27;;
   timer=setInterval(()=&gt;{if(!step()||ep&gt;=200){stopAuto();doneStatus();}},25);}
-function doneStatus(){if(diverged()||lr&gt;LRMAX){setStatus(&#x27;warn&#x27;,`lr = ${lr.toFixed(1)}: epoch ${ep} 에서 MSE = ${fx(loss(w,b))} — 발산. 안정 한계 ≈ ${LRMAX.toFixed(3)}`);return;}
-  setStatus(&#x27;ok&#x27;,`lr = ${lr.toFixed(1)}, ${ep} epoch: w = ${w.toFixed(4)}, b = ${b.toFixed(4)}, MSE = ${loss(w,b).toFixed(4)}${Math.abs(w-Wls)&lt;1e-3?&#x27; — 최소제곱 해와 같습니다&#x27;:&#x27; — 아직 수렴 중&#x27;}`);}
+function doneStatus(){if(diverged()||lr&gt;LRMAX){setStatus(&#x27;warn&#x27;,`lr = ${lr.toFixed(1)}: epoch ${ep} 에서 L = ${fx(loss(w,b))} — 발산. 안정 한계 ≈ ${LRMAX.toFixed(3)}`);return;}
+  setStatus(&#x27;ok&#x27;,`lr = ${lr.toFixed(1)}, ${ep} epoch: W = ${w.toFixed(4)}, b = ${b.toFixed(4)}, L = ${loss(w,b).toFixed(4)} (MSE = ${mse(w,b).toFixed(4)})${Math.abs(w-Wls)&lt;1e-3?&#x27; — 최소제곱 해와 같습니다&#x27;:&#x27; — 아직 수렴 중&#x27;}`);}
 $(&#x27;#lrb&#x27;).innerHTML=&#x27;&lt;span class=&quot;lab&quot;&gt;lr:&lt;/span&gt;&#x27;+LRS.map(v=&gt;`&lt;button type=&quot;button&quot; data-v=&quot;${v}&quot; class=&quot;${v&gt;LRMAX?&#x27;bad&#x27;:&#x27;&#x27;}&quot;&gt;${v.toFixed(1)}${v&gt;LRMAX?&#x27; 발산&#x27;:&#x27;&#x27;}&lt;/button&gt;`).join(&#x27;&#x27;);
-$$(&#x27;#lrb button&#x27;).forEach(x=&gt;x.onclick=()=&gt;{if(busy)return;lr=+x.dataset.v;reset();setStatus(lr&gt;LRMAX?&#x27;warn&#x27;:&#x27;info&#x27;,`lr = ${lr.toFixed(1)}${lr&gt;LRMAX?` — 안정 한계 ${LRMAX.toFixed(3)} 보다 큼 (발산 예상)`:&#x27;&#x27;}. w = b = 0 에서 시작.`);});
+$$(&#x27;#lrb button&#x27;).forEach(x=&gt;x.onclick=()=&gt;{if(busy)return;lr=+x.dataset.v;reset();setStatus(lr&gt;LRMAX?&#x27;warn&#x27;:&#x27;info&#x27;,`lr = ${lr.toFixed(1)}${lr&gt;LRMAX?` — 안정 한계 ${LRMAX.toFixed(3)} 보다 큼 (발산 예상)`:&#x27;&#x27;}. W = b = 0 에서 시작.`);});
 $(&#x27;#b1&#x27;).onclick=()=&gt;{if(busy)return;stopAuto();step();};
 $(&#x27;#bA&#x27;).onclick=()=&gt;{if(busy)return;auto();};
-$(&#x27;#bR&#x27;).onclick=()=&gt;{if(busy)return;reset();setStatus(&#x27;info&#x27;,&#x27;w = b = 0 에서 다시 시작&#x27;);};
+$(&#x27;#bR&#x27;).onclick=()=&gt;{if(busy)return;reset();setStatus(&#x27;info&#x27;,&#x27;W = b = 0 에서 다시 시작&#x27;);};
 window.addEventListener(&#x27;resize&#x27;,draw);
 async function runN(n,ms){for(let i=0;i&lt;n;i++){if(!step())break;await sleep(i&lt;10?ms*4:ms);}}
 const P=[
- {n:&#x27;① lr 0.5 — 200 epoch&#x27;,ex:&#x27;&lt;p&gt;200 epoch 후 &lt;b class=&quot;green&quot;&gt;w ≈ 2.05, b ≈ 0.98, MSE ≈ 0.0099&lt;/b&gt;. 정답 규칙은 2x + 1 이지만 잡음 50개로 구한 &lt;b class=&quot;teal&quot;&gt;최소제곱 해&lt;/b&gt;(초록 점)가 바로 이 값입니다 — 경사하강이 해석해와 같은 곳에 도착합니다.&lt;/p&gt;&lt;p&gt;MSE 가 0 이 아닌 0.0099 에서 멈추는 건 잡음(σ = 0.1 → σ² = 0.01) 때문. 노트북 &lt;code&gt;7-1&lt;/code&gt; 기울기 공식, &lt;code&gt;7-2&lt;/code&gt; 학습 루프.&lt;/p&gt;&#x27;,
-  run:async()=&gt;{lr=0.5;reset();setStatus(&#x27;info&#x27;,&#x27;lr = 0.5, w = b = 0 에서 시작&#x27;);await sleep(600);await runN(200,22);doneStatus();window.__lr05=[w,b,loss(w,b),ep];}},
- {n:&#x27;② lr 0.1 — 느림&#x27;,ex:&#x27;&lt;p&gt;200 epoch 후 &lt;b class=&quot;amber&quot;&gt;w ≈ 1.97, b ≈ 1.02&lt;/b&gt; — 아직 최소점에 덜 왔습니다. 등고선이 길쭉한 타원이라 완만한 방향(긴 축)으로는 작은 lr 로 천천히 움직입니다.&lt;/p&gt;&lt;p&gt;더 돌리면 결국 같은 해에 도착합니다. 학습률이 작으면 안전하지만 느립니다 — Day 1 등고선과 같은 이야기.&lt;/p&gt;&#x27;,
-  run:async()=&gt;{lr=0.1;reset();await sleep(400);await runN(200,18);doneStatus();window.__lr01=[w,b];}},
- {n:&#x27;③ lr 0.7 — 한계 근처&#x27;,ex:&#x27;&lt;p&gt;안정 한계 ≈ 0.77 바로 아래. 가파른 방향으로는 매번 &lt;b class=&quot;amber&quot;&gt;반대편으로 넘어가며&lt;/b&gt;(지그재그) 진동하지만 진폭이 줄어 결국 수렴합니다.&lt;/p&gt;&lt;p&gt;한계 2/λmax 의 λmax 는 MSE 의 2차 미분 행렬(Hessian) 2·[[mean(x²), mean(x)], [mean(x), 1]] 의 가장 큰 고윳값 ≈ 2.59 입니다.&lt;/p&gt;&#x27;,
-  run:async()=&gt;{lr=0.7;reset();await sleep(400);await runN(200,18);doneStatus();window.__lr07=[w,b];}},
- {n:&#x27;④ ⚠ lr 1.0 — 발산&#x27;,ex:&#x27;&lt;p&gt;lr = 1.0 &amp;gt; 0.77: 가파른 방향의 오차가 매 스텝 |1 − 1.0·2.59| ≈ &lt;b class=&quot;red&quot;&gt;1.59배&lt;/b&gt;로 커지며 부호가 뒤집힙니다. 경로가 등고선 밖으로 튀어나가고 MSE 가 폭발합니다.&lt;/p&gt;&lt;p&gt;학습 중 loss 가 nan · inf 가 되면 가장 먼저 &lt;b class=&quot;amber&quot;&gt;학습률을 줄여 보세요&lt;/b&gt;. 입력을 표준화하면(Day 1) 한계가 넓어집니다 — Day 4 학습 기법.&lt;/p&gt;&#x27;,
-  run:async()=&gt;{lr=1.0;reset();await sleep(400);await runN(40,60);doneStatus();window.__lr10=[w,b,loss(w,b)];}},
- {n:&#x27;⑤ 수치 미분과 비교 (7-3)&#x27;,ex:&#x27;&lt;p&gt;Day 1 의 &lt;code&gt;numerical_gradient&lt;/code&gt; (중앙 차분, h = 1e-4) 로 구한 기울기와 해석 공식이 소수점 아래 여러 자리까지 일치합니다. 공식이 맞는지 확인하는 방법 — &lt;b class=&quot;teal&quot;&gt;gradient check&lt;/b&gt;.&lt;/p&gt;&lt;p&gt;해석 공식이 훨씬 빠르므로 실제 학습에는 공식을 쓰고, 수치 미분은 검산용. Day 3 역전파 구현도 이 방법으로 검증합니다.&lt;/p&gt;&#x27;,
-  run:async()=&gt;{lr=0.5;reset();
+ {n:&#x27;① lr 1.0 — 200 epoch&#x27;,ex:&#x27;&lt;p&gt;200 epoch 후 &lt;b class=&quot;green&quot;&gt;W ≈ 2.05, b ≈ 0.98, L ≈ 0.0050 (MSE ≈ 0.0099)&lt;/b&gt;. 정답 규칙은 2x + 1 이지만 잡음 50개로 구한 &lt;b class=&quot;teal&quot;&gt;최소제곱 해&lt;/b&gt;(초록 점)가 바로 이 값입니다 — 경사하강이 해석해와 같은 곳에 도착합니다.&lt;/p&gt;&lt;p&gt;첫 스텝(W = b = 0): db = mean(Y − T) = −mean(T) ≈ −2.057 → b ≈ 2.06. L 이 0 이 아닌 0.0050 에서 멈추는 건 잡음(σ = 0.1 → σ² = 0.01, ½·σ² ≈ 0.005) 때문. 노트북 &lt;code&gt;7-1&lt;/code&gt; 기울기 &lt;code&gt;dW = X.T @ (Y − T) / N&lt;/code&gt;, &lt;code&gt;7-2&lt;/code&gt; 학습 루프.&lt;/p&gt;&#x27;,
+  run:async()=&gt;{lr=1.0;reset();setStatus(&#x27;info&#x27;,&#x27;lr = 1.0, W = b = 0 에서 시작&#x27;);await sleep(600);await runN(200,22);doneStatus();window.__lr10=[w,b,loss(w,b),mse(w,b),ep];}},
+ {n:&#x27;② lr 0.2 — 느림&#x27;,ex:&#x27;&lt;p&gt;200 epoch 후 &lt;b class=&quot;amber&quot;&gt;W ≈ 1.97, b ≈ 1.02&lt;/b&gt; — 아직 최소점에 덜 왔습니다. 등고선이 길쭉한 타원이라 완만한 방향(긴 축)으로는 작은 lr 로 천천히 움직입니다.&lt;/p&gt;&lt;p&gt;더 돌리면 결국 같은 해에 도착합니다. 학습률이 작으면 안전하지만 느립니다 — Day 1 등고선과 같은 이야기.&lt;/p&gt;&#x27;,
+  run:async()=&gt;{lr=0.2;reset();await sleep(400);await runN(200,18);doneStatus();window.__lr02=[w,b];}},
+ {n:&#x27;③ lr 1.4 — 한계 근처&#x27;,ex:&#x27;&lt;p&gt;안정 한계 ≈ 1.54 바로 아래. 가파른 방향으로는 매번 &lt;b class=&quot;amber&quot;&gt;반대편으로 넘어가며&lt;/b&gt;(지그재그) 진동하지만 진폭이 |1 − 1.4·1.297| ≈ 0.82 배씩 줄어 결국 수렴합니다.&lt;/p&gt;&lt;p&gt;한계 2/λmax 의 λmax 는 L = ½·mean((Y − T)²) 의 2차 미분 행렬(Hessian) [[mean(x²), mean(x)], [mean(x), 1]] 의 가장 큰 고윳값 ≈ 1.297 입니다 (½ 덕분에 앞의 2 가 사라짐).&lt;/p&gt;&#x27;,
+  run:async()=&gt;{lr=1.4;reset();await sleep(400);await runN(200,18);doneStatus();window.__lr14=[w,b];}},
+ {n:&#x27;④ ⚠ lr 2.0 — 발산&#x27;,ex:&#x27;&lt;p&gt;lr = 2.0 &amp;gt; 1.54: 가파른 방향의 오차가 매 스텝 |1 − 2.0·1.297| ≈ &lt;b class=&quot;red&quot;&gt;1.59배&lt;/b&gt;로 커지며 부호가 뒤집힙니다. 경로가 등고선 밖으로 튀어나가고 손실이 폭발합니다.&lt;/p&gt;&lt;p&gt;학습 중 loss 가 nan · inf 가 되면 가장 먼저 &lt;b class=&quot;amber&quot;&gt;학습률을 줄여 보세요&lt;/b&gt;. 입력을 표준화하면(Day 1) 한계가 넓어집니다 — Day 4 학습 기법.&lt;/p&gt;&#x27;,
+  run:async()=&gt;{lr=2.0;reset();await sleep(400);await runN(40,60);doneStatus();window.__lr20=[w,b,loss(w,b)];}},
+ {n:&#x27;⑤ 수치 미분과 비교 (7-3)&#x27;,ex:&#x27;&lt;p&gt;Day 1 의 &lt;code&gt;numerical_gradient&lt;/code&gt; (중앙 차분, h = 1e-4) 로 구한 기울기와 해석 공식 &lt;code&gt;[mean((Y − T)·X), mean(Y − T)]&lt;/code&gt; 가 소수점 아래 여러 자리까지 일치합니다. 공식이 맞는지 확인하는 방법 — &lt;b class=&quot;teal&quot;&gt;gradient check&lt;/b&gt;.&lt;/p&gt;&lt;p&gt;손실에 ½ 을 붙였으므로 해석 공식에는 2 가 없습니다. 해석 공식이 훨씬 빠르므로 실제 학습에는 공식을 쓰고, 수치 미분은 검산용. Day 3 역전파 구현도 이 방법으로 검증합니다.&lt;/p&gt;&#x27;,
+  run:async()=&gt;{lr=1.0;reset();
    for(const [pw,pb] of [[0,0],[1,0.5],[2.05,0.98]]){w=pw;b=pb;path=[[0,0],[pw,pb]];draw();info();const a=grad(w,b),n=numGrad(w,b);
-     setCode(`def loss(p):\n    return np.mean((p[0] * x + p[1] - t) ** 2)\n\np = np.array([${pw}, ${pb}])\nanalytic = [2*np.mean((p[0]*x+p[1]-t)*x), 2*np.mean(p[0]*x+p[1]-t)]\nnumerical_gradient(loss, p)       &lt;span class=&quot;c&quot;&gt;# Day 1, h = 1e-4&lt;/span&gt;\n&lt;span class=&quot;g&quot;&gt;# 해석: [${a.map(v=&gt;v.toFixed(8)).join(&#x27;, &#x27;)}]\n# 수치: [${n.map(v=&gt;v.toFixed(8)).join(&#x27;, &#x27;)}]\n# 차이: ${Math.max(Math.abs(a[0]-n[0]),Math.abs(a[1]-n[1])).toExponential(1)}&lt;/span&gt;`);
-     setStatus(&#x27;info&#x27;,`(w, b) = (${pw}, ${pb}): 해석 [${a.map(v=&gt;v.toFixed(6)).join(&#x27;, &#x27;)}] vs 수치 [${n.map(v=&gt;v.toFixed(6)).join(&#x27;, &#x27;)}]`);await sleep(1800);}
+     setCode(`def loss(p):                      &lt;span class=&quot;c&quot;&gt;# p = [W, b]&lt;/span&gt;\n    Y = p[0] * X + p[1]\n    return 0.5 * np.mean((Y - T) ** 2)\n\np = np.array([${pw}, ${pb}])\nY = p[0] * X + p[1]\nanalytic = [np.mean((Y - T) * X), np.mean(Y - T)]\nnumerical_gradient(loss, p)       &lt;span class=&quot;c&quot;&gt;# Day 1, h = 1e-4&lt;/span&gt;\n&lt;span class=&quot;g&quot;&gt;# 해석: [${a.map(v=&gt;v.toFixed(8)).join(&#x27;, &#x27;)}]\n# 수치: [${n.map(v=&gt;v.toFixed(8)).join(&#x27;, &#x27;)}]\n# 차이: ${Math.max(Math.abs(a[0]-n[0]),Math.abs(a[1]-n[1])).toExponential(1)}&lt;/span&gt;`);
+     setStatus(&#x27;info&#x27;,`(W, b) = (${pw}, ${pb}): 해석 [${a.map(v=&gt;v.toFixed(6)).join(&#x27;, &#x27;)}] vs 수치 [${n.map(v=&gt;v.toFixed(6)).join(&#x27;, &#x27;)}]`);await sleep(1800);}
+   window.__gc=[grad(0,0),numGrad(0,0)];
    setStatus(&#x27;ok&#x27;,&#x27;세 지점 모두 해석 기울기 = 수치 기울기 (차이 ~1e-10 이하). 공식이 맞습니다.&#x27;);}},
 ];
 initPresets(P,stopAuto);
@@ -1811,8 +1815,8 @@ $(&#x27;#presets button&#x27;).click();
 &lt;body&gt;
 &lt;div class=&quot;app&quot;&gt;
   &lt;h1&gt;미니 프로젝트 — 로지스틱 회귀와 결정 경계&lt;/h1&gt;
-  &lt;p class=&quot;sub&quot;&gt;두 무리(클래스 0: 중심 (−1, −1), 클래스 1: 중심 (1, 1), 각 100개)를 나누는 직선을 학습합니다. 배경색 = 모델이 낸 &lt;b style=&quot;color:var(--blue)&quot;&gt;확률 p = sigmoid(θ1·x1 + θ2·x2 + θ3)&lt;/b&gt;, 노란 선 = &lt;b style=&quot;color:var(--amber)&quot;&gt;p = 0.5 결정 경계&lt;/b&gt;.&lt;/p&gt;
-  &lt;div class=&quot;pills&quot;&gt;&lt;span class=&quot;pill blue&quot;&gt;p = sigmoid(X @ θ[:2] + θ[2])&lt;/span&gt;&lt;span class=&quot;pill red&quot;&gt;BCE = −mean(t·log p + (1−t)·log(1−p))&lt;/span&gt;&lt;span class=&quot;pill amber&quot;&gt;θ1·x1 + θ2·x2 + θ3 = 0&lt;/span&gt;&lt;span class=&quot;pill green&quot;&gt;lr 0.5, 300 step → θ≈[3.30, 3.41, 0.31]&lt;/span&gt;&lt;span class=&quot;pill teal&quot;&gt;정확도 0.995&lt;/span&gt;&lt;/div&gt;
+  &lt;p class=&quot;sub&quot;&gt;두 무리(클래스 0: 중심 (−1, −1), 클래스 1: 중심 (1, 1), 각 100개)를 나누는 직선을 학습합니다. 배경색 = 모델이 낸 &lt;b style=&quot;color:var(--blue)&quot;&gt;확률 p = sigmoid(x1·W1 + x2·W2 + b)&lt;/b&gt; — 행렬로 쓰면 &lt;code&gt;P = sigmoid(X @ W + b)&lt;/code&gt;, W shape (2, 1), b shape (1,), 노란 선 = &lt;b style=&quot;color:var(--amber)&quot;&gt;p = 0.5 결정 경계&lt;/b&gt;.&lt;/p&gt;
+  &lt;div class=&quot;pills&quot;&gt;&lt;span class=&quot;pill blue&quot;&gt;P = sigmoid(X @ W + b)&lt;/span&gt;&lt;span class=&quot;pill red&quot;&gt;BCE = −mean(T·log P + (1−T)·log(1−P))&lt;/span&gt;&lt;span class=&quot;pill purple&quot;&gt;dW = Xᵀ(P − T)/N&lt;/span&gt;&lt;span class=&quot;pill purple&quot;&gt;db = mean(P − T)&lt;/span&gt;&lt;span class=&quot;pill amber&quot;&gt;x1·W1 + x2·W2 + b = 0&lt;/span&gt;&lt;span class=&quot;pill green&quot;&gt;lr 0.5, 300 step → W≈[3.30, 3.41], b≈0.31&lt;/span&gt;&lt;span class=&quot;pill teal&quot;&gt;정확도 0.995&lt;/span&gt;&lt;/div&gt;
 
   &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;프리셋 (누르면 재생)&lt;/h2&gt;&lt;div class=&quot;presets&quot; id=&quot;presets&quot;&gt;&lt;/div&gt;&lt;/div&gt;
 
@@ -1826,7 +1830,7 @@ $(&#x27;#presets button&#x27;).click();
     &lt;div&gt;
       &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;z → p (sigmoid) · 손실 기록&lt;/h2&gt;
         &lt;canvas id=&quot;sg&quot;&gt;&lt;/canvas&gt;
-        &lt;div class=&quot;legend&quot;&gt;&lt;span&gt;점 = 200개 샘플의 z = θ1x1 + θ2x2 + θ3&lt;/span&gt;&lt;span&gt;&lt;i style=&quot;background:#f5b942&quot;&gt;&lt;/i&gt;0.5 문턱&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;legend&quot;&gt;&lt;span&gt;점 = 200개 샘플의 z = x1·W1 + x2·W2 + b&lt;/span&gt;&lt;span&gt;&lt;i style=&quot;background:#f5b942&quot;&gt;&lt;/i&gt;0.5 문턱&lt;/span&gt;&lt;/div&gt;
         &lt;canvas id=&quot;lc&quot; style=&quot;margin-top:8px&quot;&gt;&lt;/canvas&gt;
         &lt;div class=&quot;legend&quot;&gt;&lt;span&gt;&lt;i style=&quot;background:#4ade80&quot;&gt;&lt;/i&gt;BCE (step 별)&lt;/span&gt;&lt;/div&gt;
       &lt;/div&gt;
@@ -1859,10 +1863,12 @@ const LRS=[0.01,0.5,20];
 function proba(t=th){const p=new Array(M);for(let i=0;i&lt;M;i++)p[i]=sigm(t[0]*x1(i)+t[1]*x2(i)+t[2]);return p;}
 function bce(t=th){const p=proba(t);let s=0;for(let i=0;i&lt;M;i++)s+=TT[i]*Math.log(p[i]+1e-7)+(1-TT[i])*Math.log(1-p[i]+1e-7);return -s/M;}
 function acc(t=th){const p=proba(t);let c=0;for(let i=0;i&lt;M;i++)if((p[i]&gt;0.5?1:0)===TT[i])c++;return c/M;}
+// dW = X.T @ (P − T) / N, db = mean(P − T)  — 선형 회귀와 같은 (y − t)x 모양
 function grad(){const p=proba();let g=[0,0,0];for(let i=0;i&lt;M;i++){const e=p[i]-TT[i];g[0]+=e*x1(i);g[1]+=e*x2(i);g[2]+=e;}return g.map(v=&gt;v/M);}
 function train(n,l){let t=[0,0,0];const sv=th;for(let k=0;k&lt;n;k++){th=t;const g=grad();t=t.map((v,j)=&gt;v-l*g[j]);}th=sv;return t;}
 window.__train=(n,l)=&gt;{const t=train(n,l);return [t,bce(t),acc(t)];};
 const R=[-4,4];
+const fW=(t,d)=&gt;`[${t[0].toFixed(d)}, ${t[1].toFixed(d)}]`, fB=(t,d)=&gt;t[2].toFixed(d);   // 내부 배열 th = [W1, W2, b]
 function drawHM(){
   const [g,W,H]=fitCanvas($(&#x27;#hm&#x27;));g.clearRect(0,0,W,H);
   const X=v=&gt;(v-R[0])/(R[1]-R[0])*W, Y=v=&gt;H-(v-R[0])/(R[1]-R[0])*H;const st=5;
@@ -1878,7 +1884,7 @@ function drawHM(){
   const z9=Math.log(9);lineZ(-z9,&#x27;rgba(245,185,66,.45)&#x27;,1.2,[4,4]);lineZ(z9,&#x27;rgba(245,185,66,.45)&#x27;,1.2,[4,4]);lineZ(0,&#x27;#f5b942&#x27;,2.8,[]);
   const p=proba();
   for(let i=0;i&lt;M;i++){const wrong=(p[i]&gt;0.5?1:0)!==TT[i];g.beginPath();g.arc(X(x1(i)),Y(x2(i)),wrong?4.5:3.2,0,7);g.fillStyle=TT[i]?&#x27;#60a5fa&#x27;:&#x27;#f87171&#x27;;g.fill();g.strokeStyle=wrong?&#x27;#ffffff&#x27;:&#x27;#0b1220&#x27;;g.lineWidth=wrong?2:1;g.stroke();}
-  if(th.every(v=&gt;v===0)){g.fillStyle=&#x27;#dbe4f0&#x27;;g.fillText(&#x27;θ = 0: 모든 점 p = 0.5 — 경계 없음&#x27;,8,H-10);}
+  if(th.every(v=&gt;v===0)){g.fillStyle=&#x27;#dbe4f0&#x27;;g.fillText(&#x27;W = 0, b = 0: 모든 점 p = 0.5 — 경계 없음&#x27;,8,H-10);}
 }
 function drawSG(){
   const [g,W,H]=fitCanvas($(&#x27;#sg&#x27;));g.clearRect(0,0,W,H);
@@ -1900,35 +1906,36 @@ function drawL(){
 }
 function info(){
   const L=bce(),A=acc();const bd=Math.abs(th[1])&gt;1e-9?`x2 = −(${th[0].toFixed(2)}·x1 + ${th[2].toFixed(2)}) / ${th[1].toFixed(2)}`:&#x27;—&#x27;;
-  $(&#x27;#kv&#x27;).innerHTML=`&lt;span&gt;step&lt;/span&gt;&lt;b&gt;${stepN}&lt;/b&gt;&lt;span&gt;lr&lt;/span&gt;&lt;b&gt;${lr}&lt;/b&gt;&lt;span&gt;θ&lt;/span&gt;&lt;b style=&quot;color:var(--amber)&quot;&gt;[${th.map(v=&gt;v.toFixed(4)).join(&#x27;, &#x27;)}]&lt;/b&gt;&lt;span&gt;BCE&lt;/span&gt;&lt;b style=&quot;color:var(--green)&quot;&gt;${L.toFixed(4)}&lt;/b&gt;&lt;span&gt;정확도&lt;/span&gt;&lt;b style=&quot;color:${A&gt;=0.9?&#x27;var(--green)&#x27;:&#x27;var(--amber)&#x27;}&quot;&gt;${A.toFixed(3)}&lt;/b&gt;&lt;span&gt;경계&lt;/span&gt;&lt;b style=&quot;color:var(--amber)&quot;&gt;${bd}&lt;/b&gt;`;
-  setCode(`def predict_proba(theta, X):            &lt;span class=&quot;c&quot;&gt;# 과제 1&lt;/span&gt;\n    return sigmoid(X @ theta[:2] + theta[2])\n\ndef bce_loss(theta):                    &lt;span class=&quot;c&quot;&gt;# 과제 2&lt;/span&gt;\n    p = predict_proba(theta, X)\n    return -np.mean(t * np.log(p + 1e-7) + (1 - t) * np.log(1 - p + 1e-7))\n\ntheta = np.zeros(3)                     &lt;span class=&quot;c&quot;&gt;# 과제 3&lt;/span&gt;\nfor step in range(300):\n&lt;span class=&quot;a&quot;&gt;    grad = numerical_gradient(bce_loss, theta)   # Day 1&lt;/span&gt;\n    theta -= ${lr} * grad\n&lt;span class=&quot;c&quot;&gt;# 이 애니메이션은 같은 값을 주는 해석 기울기\n# [X.T @ (p - t), sum(p - t)] / N 로 빠르게 계산&lt;/span&gt;\n&lt;span class=&quot;g&quot;&gt;# step ${stepN}: theta = [${th.map(v=&gt;v.toFixed(2)).join(&#x27;, &#x27;)}]\n# BCE = ${L.toFixed(4)}, acc = ${A.toFixed(3)}&lt;/span&gt;`);
+  const g=grad();
+  $(&#x27;#kv&#x27;).innerHTML=`&lt;span&gt;step&lt;/span&gt;&lt;b&gt;${stepN}&lt;/b&gt;&lt;span&gt;lr&lt;/span&gt;&lt;b&gt;${lr}&lt;/b&gt;&lt;span&gt;W (2, 1)&lt;/span&gt;&lt;b style=&quot;color:var(--amber)&quot;&gt;${fW(th,4)}ᵀ&lt;/b&gt;&lt;span&gt;b (1,)&lt;/span&gt;&lt;b style=&quot;color:var(--amber)&quot;&gt;[${fB(th,4)}]&lt;/b&gt;&lt;span&gt;BCE&lt;/span&gt;&lt;b style=&quot;color:var(--green)&quot;&gt;${L.toFixed(4)}&lt;/b&gt;&lt;span&gt;정확도&lt;/span&gt;&lt;b style=&quot;color:${A&gt;=0.9?&#x27;var(--green)&#x27;:&#x27;var(--amber)&#x27;}&quot;&gt;${A.toFixed(3)}&lt;/b&gt;&lt;span&gt;dW, db&lt;/span&gt;&lt;b&gt;[${g[0].toFixed(4)}, ${g[1].toFixed(4)}]ᵀ, ${g[2].toFixed(4)}&lt;/b&gt;&lt;span&gt;경계&lt;/span&gt;&lt;b style=&quot;color:var(--amber)&quot;&gt;${bd}&lt;/b&gt;`;
+  setCode(`def predict_proba(X, W, b):              &lt;span class=&quot;c&quot;&gt;# 과제 1&lt;/span&gt;\n    return sigmoid(X @ W + b)           &lt;span class=&quot;c&quot;&gt;# (200, 1)&lt;/span&gt;\n\ndef bce_loss(P, T):                      &lt;span class=&quot;c&quot;&gt;# 과제 2&lt;/span&gt;\n    return -np.mean(T * np.log(P + 1e-7) + (1 - T) * np.log(1 - P + 1e-7))\n\ndef gradients(X, T, W, b):               &lt;span class=&quot;c&quot;&gt;# 과제 3&lt;/span&gt;\n    P = predict_proba(X, W, b)\n&lt;span class=&quot;a&quot;&gt;    dW = X.T @ (P - T) / len(X)          # (2, 1)  선형 회귀와 같은 (y − t)x\n    db = np.mean(P - T, axis=0)          # (1,)&lt;/span&gt;\n    return dW, db\n\nW, b = np.zeros((2, 1)), np.zeros(1)\nfor step in range(300):\n    dW, db = gradients(X, T, W, b)\n    W -= ${lr} * dW\n    b -= ${lr} * db\n&lt;span class=&quot;g&quot;&gt;# step ${stepN}: W = ${fW(th,2)}ᵀ, b = [${fB(th,2)}]\n# BCE = ${L.toFixed(4)}, acc = ${A.toFixed(3)}&lt;/span&gt;`);
   $$(&#x27;#lrb button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;sel&#x27;,+x.dataset.v===lr));
 }
 function draw(){drawHM();drawSG();drawL();}
 function reset(){stopAuto();th=[0,0,0];stepN=0;hist=[bce()];draw();info();}
 function step(){const g=grad();th=th.map((v,j)=&gt;v-lr*g[j]);stepN++;hist.push(bce());draw();info();
-  setStatus(&#x27;info&#x27;,`step ${stepN}: ∇ = [${g.map(v=&gt;v.toFixed(4)).join(&#x27;, &#x27;)}] → θ = [${th.map(v=&gt;v.toFixed(3)).join(&#x27;, &#x27;)}], BCE = ${hist[hist.length-1].toFixed(4)}, 정확도 ${acc().toFixed(3)}`);}
+  setStatus(&#x27;info&#x27;,`step ${stepN}: dW = [${g[0].toFixed(4)}, ${g[1].toFixed(4)}], db = ${g[2].toFixed(4)} → W = ${fW(th,3)}, b = ${fB(th,3)}, BCE = ${hist[hist.length-1].toFixed(4)}, 정확도 ${acc().toFixed(3)}`);}
 function stopAuto(){clearInterval(timer);timer=null;$(&#x27;#bA&#x27;).textContent=&#x27;자동 (300 step)&#x27;;}
-function doneStatus(){const A=acc();setStatus(A&gt;=0.9?&#x27;ok&#x27;:&#x27;info&#x27;,`lr = ${lr}, ${stepN} step: θ = [${th.map(v=&gt;v.toFixed(2)).join(&#x27;, &#x27;)}], BCE = ${bce().toFixed(4)}, 정확도 ${A.toFixed(3)}${A&gt;=0.9?&#x27; (채점 기준 ≥ 0.9 통과)&#x27;:&#x27;&#x27;}`);}
+function doneStatus(){const A=acc();setStatus(A&gt;=0.9?&#x27;ok&#x27;:&#x27;info&#x27;,`lr = ${lr}, ${stepN} step: W = ${fW(th,2)}, b = ${fB(th,2)}, BCE = ${bce().toFixed(4)}, 정확도 ${A.toFixed(3)}${A&gt;=0.9?&#x27; (채점 기준 ≥ 0.9 통과)&#x27;:&#x27;&#x27;}`);}
 function auto(){if(timer){stopAuto();return;}if(stepN&gt;=300)reset();$(&#x27;#bA&#x27;).textContent=&#x27;정지&#x27;;timer=setInterval(()=&gt;{step();if(stepN&gt;=300){stopAuto();doneStatus();}},20);}
 $(&#x27;#lrb&#x27;).innerHTML=&#x27;&lt;span class=&quot;lab&quot;&gt;lr:&lt;/span&gt;&#x27;+LRS.map(v=&gt;`&lt;button type=&quot;button&quot; data-v=&quot;${v}&quot;&gt;${v}&lt;/button&gt;`).join(&#x27;&#x27;);
-$$(&#x27;#lrb button&#x27;).forEach(x=&gt;x.onclick=()=&gt;{if(busy)return;lr=+x.dataset.v;reset();setStatus(&#x27;info&#x27;,`lr = ${lr}, θ = 0 에서 시작`);});
+$$(&#x27;#lrb button&#x27;).forEach(x=&gt;x.onclick=()=&gt;{if(busy)return;lr=+x.dataset.v;reset();setStatus(&#x27;info&#x27;,`lr = ${lr}, W = 0, b = 0 에서 시작`);});
 $(&#x27;#b1&#x27;).onclick=()=&gt;{if(busy)return;stopAuto();step();};
 $(&#x27;#bA&#x27;).onclick=()=&gt;{if(busy)return;auto();};
-$(&#x27;#bR&#x27;).onclick=()=&gt;{if(busy)return;reset();setStatus(&#x27;info&#x27;,&#x27;θ = [0, 0, 0] 에서 다시 시작 — 모든 p = 0.5, BCE = log 2 ≈ 0.6931&#x27;);};
+$(&#x27;#bR&#x27;).onclick=()=&gt;{if(busy)return;reset();setStatus(&#x27;info&#x27;,&#x27;W = [0, 0], b = 0 에서 다시 시작 — 모든 p = 0.5, BCE = log 2 ≈ 0.6931&#x27;);};
 window.addEventListener(&#x27;resize&#x27;,draw);
 async function runN(n,fast){for(let i=0;i&lt;n;i++){step();if(i&lt;8)await sleep(fast?120:350);else if(i%3===0)await sleep(16);}draw();info();}
 const P=[
- {n:&#x27;① lr 0.5 — 300 step&#x27;,ex:&#x27;&lt;p&gt;θ = 0 에서는 모든 점 p = 0.5, BCE = log 2 ≈ 0.693. 300 step 후 &lt;b class=&quot;green&quot;&gt;θ ≈ [3.30, 3.41, 0.31], BCE ≈ 0.031, 정확도 0.995&lt;/b&gt; (200개 중 1개만 틀림 — 흰 테두리 점).&lt;/p&gt;&lt;p&gt;노트북은 Day 1 &lt;code&gt;numerical_gradient(bce_loss, theta)&lt;/code&gt; 로 학습합니다. 이 애니메이션은 같은 값을 주는 해석 기울기를 써서 빠르게 돌렸습니다(과제 3).&lt;/p&gt;&#x27;,
-  run:async()=&gt;{lr=0.5;reset();setStatus(&#x27;info&#x27;,&#x27;θ = [0, 0, 0]: 모든 점 p = 0.5, BCE = 0.6931&#x27;);await sleep(800);await runN(300);doneStatus();window.__lg=[th.slice(),bce(),acc()];}},
- {n:&#x27;② 결정 경계 읽기&#x27;,ex:&#x27;&lt;p&gt;p = 0.5 ⇔ z = 0 ⇔ &lt;b class=&quot;amber&quot;&gt;θ1·x1 + θ2·x2 + θ3 = 0&lt;/b&gt; ⇔ x2 = −(θ1·x1 + θ3)/θ2 — 과제 4 에서 그릴 직선입니다. 점선은 p = 0.1, 0.9 인 곳(z = ±log 9).&lt;/p&gt;&lt;p&gt;오른쪽 위 그림: 각 점의 z 를 sigmoid 에 넣으면 p. 파란 점(t=1)은 대부분 z &amp;gt; 0 쪽, 빨간 점은 z &amp;lt; 0 쪽에 있습니다(과제 5 해석).&lt;/p&gt;&#x27;,
+ {n:&#x27;① lr 0.5 — 300 step&#x27;,ex:&#x27;&lt;p&gt;W = 0, b = 0 에서는 모든 점 p = 0.5, BCE = log 2 ≈ 0.693. 300 step 후 &lt;b class=&quot;green&quot;&gt;W ≈ [3.30, 3.41], b ≈ 0.31, BCE ≈ 0.031, 정확도 0.995&lt;/b&gt; (200개 중 1개만 틀림 — 흰 테두리 점).&lt;/p&gt;&lt;p&gt;기울기는 &lt;code&gt;dW = X.T @ (P − T) / N&lt;/code&gt;, &lt;code&gt;db = mean(P − T)&lt;/code&gt; — 선형 회귀(D2-8)와 &lt;b class=&quot;purple&quot;&gt;똑같은 (y − t)x 모양&lt;/b&gt;입니다. sigmoid 의 미분 p(1 − p) 가 BCE 의 미분과 상쇄되기 때문. Day 1 &lt;code&gt;numerical_gradient&lt;/code&gt; 는 이 공식을 검증할 때만 씁니다(과제 3).&lt;/p&gt;&#x27;,
+  run:async()=&gt;{lr=0.5;reset();setStatus(&#x27;info&#x27;,&#x27;W = [0, 0], b = 0: 모든 점 p = 0.5, BCE = 0.6931&#x27;);await sleep(800);await runN(300);doneStatus();window.__lg=[th.slice(),bce(),acc()];}},
+ {n:&#x27;② 결정 경계 읽기&#x27;,ex:&#x27;&lt;p&gt;p = 0.5 ⇔ z = 0 ⇔ &lt;b class=&quot;amber&quot;&gt;x1·W1 + x2·W2 + b = 0&lt;/b&gt; ⇔ x2 = −(W1·x1 + b)/W2 (코드 &lt;code&gt;-(W[0,0]*x1 + b[0]) / W[1,0]&lt;/code&gt;) — 과제 4 에서 그릴 직선입니다. 점선은 p = 0.1, 0.9 인 곳(z = ±log 9).&lt;/p&gt;&lt;p&gt;오른쪽 위 그림: 각 점의 z 를 sigmoid 에 넣으면 p. 파란 점(t=1)은 대부분 z &amp;gt; 0 쪽, 빨간 점은 z &amp;lt; 0 쪽에 있습니다(과제 5 해석).&lt;/p&gt;&#x27;,
   run:async()=&gt;{lr=0.5;reset();const t=train(300,0.5);th=t;stepN=300;hist=[];draw();info();
-   setStatus(&#x27;info&#x27;,`θ = [${t.map(v=&gt;v.toFixed(2)).join(&#x27;, &#x27;)}]`);await sleep(1200);
+   setStatus(&#x27;info&#x27;,`W = ${fW(t,2)}, b = ${fB(t,2)}`);await sleep(1200);
    setStatus(&#x27;ok&#x27;,`경계: ${t[0].toFixed(2)}·x1 + ${t[1].toFixed(2)}·x2 + ${t[2].toFixed(2)} = 0 → x2 = −(${t[0].toFixed(2)}·x1 + ${t[2].toFixed(2)}) / ${t[1].toFixed(2)}. 기울기 ≈ ${(-t[0]/t[1]).toFixed(2)}, 절편 ≈ ${(-t[2]/t[1]).toFixed(2)}`);}},
- {n:&#x27;③ lr 0.01 — 너무 작음&#x27;,ex:&#x27;&lt;p&gt;300 step 후에도 θ ≈ [0.75, 0.82, 0.02], BCE ≈ 0.23. 경계 방향은 이미 맞아 정확도는 0.99 이지만 &lt;b class=&quot;amber&quot;&gt;확률이 0.5 근처로 흐릿&lt;/b&gt;합니다(배경색이 옅음) — 아직 덜 학습됨.&lt;/p&gt;&lt;p&gt;손실이 천천히만 줄면 학습률을 의심하세요. 정확도만 보면 놓치는 차이를 BCE 가 보여 줍니다.&lt;/p&gt;&#x27;,
-  run:async()=&gt;{lr=0.01;reset();await sleep(400);await runN(300,true);doneStatus();}},
- {n:&#x27;④ lr 20 — 아주 큼&#x27;,ex:&#x27;&lt;p&gt;선형 회귀(D2-8)와 달리 이 데이터의 BCE 는 lr = 20 에서도 &lt;b class=&quot;teal&quot;&gt;발산하지 않습니다&lt;/b&gt; — sigmoid 가 기울기 크기를 제한하기 때문. 대신 θ ≈ [10.9, 11.9, 1.9] 로 커져 경계 근처까지 &lt;b class=&quot;red&quot;&gt;p 가 0 · 1 로 극단적&lt;/b&gt;(과신)이 됩니다.&lt;/p&gt;&lt;p&gt;데이터가 거의 분리 가능하면 θ 는 계속 커지려 합니다 → 과적합 위험. Day 4 의 가중치 감소(weight decay)가 이를 막습니다.&lt;/p&gt;&#x27;,
-  run:async()=&gt;{lr=20;reset();await sleep(400);await runN(300,true);doneStatus();}},
+ {n:&#x27;③ lr 0.01 — 너무 작음&#x27;,ex:&#x27;&lt;p&gt;300 step 후에도 W ≈ [0.75, 0.82], b ≈ 0.02, BCE ≈ 0.23. 경계 방향은 이미 맞아 정확도는 0.99 이지만 &lt;b class=&quot;amber&quot;&gt;확률이 0.5 근처로 흐릿&lt;/b&gt;합니다(배경색이 옅음) — 아직 덜 학습됨.&lt;/p&gt;&lt;p&gt;손실이 천천히만 줄면 학습률을 의심하세요. 정확도만 보면 놓치는 차이를 BCE 가 보여 줍니다.&lt;/p&gt;&#x27;,
+  run:async()=&gt;{lr=0.01;reset();await sleep(400);await runN(300,true);doneStatus();window.__lg001=[th.slice(),bce(),acc()];}},
+ {n:&#x27;④ lr 20 — 아주 큼&#x27;,ex:&#x27;&lt;p&gt;선형 회귀(D2-8)와 달리 이 데이터의 BCE 는 lr = 20 에서도 &lt;b class=&quot;teal&quot;&gt;발산하지 않습니다&lt;/b&gt; — sigmoid 가 기울기 크기를 제한하기 때문. 대신 W ≈ [10.9, 11.9], b ≈ 1.9 로 커져 경계 근처까지 &lt;b class=&quot;red&quot;&gt;p 가 0 · 1 로 극단적&lt;/b&gt;(과신)이 됩니다.&lt;/p&gt;&lt;p&gt;데이터가 거의 분리 가능하면 W 는 계속 커지려 합니다 → 과적합 위험. Day 4 의 가중치 감소(weight decay)가 이를 막습니다.&lt;/p&gt;&#x27;,
+  run:async()=&gt;{lr=20;reset();await sleep(400);await runN(300,true);doneStatus();window.__lg20=[th.slice(),bce(),acc()];}},
 ];
 initPresets(P,stopAuto);
 reset();
