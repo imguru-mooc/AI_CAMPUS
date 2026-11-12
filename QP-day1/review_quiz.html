@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quantization·Pruning Day 1 복습 퀴즈</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:920px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.primary{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700;padding:9px 18px;font-size:14px}
+  button.submit{background:#3a2e12;border-color:var(--amber);color:var(--amber);font-weight:700;padding:9px 18px;font-size:14px}
+  button:disabled{opacity:.5;cursor:default}
+  button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  input[type=text]{background:#0a0f1c;color:var(--text);border:1px solid #2a3a5c;border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:14px}
+  select{background:#0a0f1c;color:var(--text);border:1px solid #2a3a5c;border-radius:6px;padding:4px 8px;font-family:inherit;font-size:14px}
+  .tabs{display:flex;flex-wrap:wrap;gap:6px}
+  .tabs button .s{font-family:var(--mono);font-size:11px;color:var(--dim);margin-left:6px}
+  .tabs button.graded .s{color:var(--green)}
+  .legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .tag{font-size:11.5px;border:1px solid var(--line);border-radius:999px;padding:2px 9px;color:var(--dim);font-family:var(--mono)}
+  .head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .head .t{color:var(--amber);font-size:17px}
+  .head .a{font-size:13px;color:var(--teal);font-family:var(--mono)}
+  .q{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px;background:#0e1628}
+  .q.unans{border-color:#5a3a1a}
+  .q.ok{border-color:#1f6b45}.q.bad{border-color:#7a2e2e}
+  .qh{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .q .n{font-family:var(--mono);color:var(--dim);font-size:12px}
+  .ty{font-size:11.5px;border-radius:999px;padding:1px 9px;border:1px solid}
+  .q .p{margin:6px 0 10px;font-size:15px}
+  .q code,.fb code,.dg code{font-family:var(--mono);color:var(--blue);background:#0a0f1c;padding:1px 5px;border-radius:4px}
+  .q pre{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin:6px 0 4px;font-size:14px;white-space:pre;overflow-x:auto;line-height:1.9}
+  .q pre input{font-size:13px;padding:2px 6px;width:auto;min-width:5ch}
+  .opts{display:grid;gap:6px}
+  .opt{text-align:left;padding:8px 12px;font-size:14px}
+  .opt .box{display:inline-block;width:18px;font-family:var(--mono);color:var(--dim)}
+  .opt.sel{border-color:var(--amber);background:#1f1a0c}
+  .opt.ok{border-color:var(--green);color:var(--green);background:#0d2216}
+  .opt.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .opt.miss{border-color:var(--green);border-style:dashed}
+  .ox{display:flex;gap:10px}
+  .ox button{font-size:22px;width:78px;height:54px;font-weight:700}
+  .fill{line-height:2.3}
+  .mrow{display:grid;grid-template-columns:1fr 24px minmax(160px,1.2fr);gap:8px;align-items:center;margin-bottom:6px}
+  .mrow .l{background:#0a0f1c;border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-size:14px}
+  .mrow select{width:100%}
+  .mrow .arr{color:var(--dim);text-align:center}
+  .mrow.ok select{border-color:var(--green)}.mrow.bad select{border-color:var(--red)}
+  .ord{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+  .ord li{display:grid;grid-template-columns:28px 1fr auto;gap:8px;align-items:center;background:#0a0f1c;border:1px solid #2a3a5c;border-radius:8px;padding:7px 10px;cursor:grab;font-size:14px}
+  .ord li.drag{opacity:.4}.ord li.over{border-color:var(--amber)}
+  .ord li .k{font-family:var(--mono);color:var(--dim)}
+  .ord li .mv button{padding:2px 8px;margin-left:4px}
+  .ord li.ok{border-color:var(--green)}.ord li.bad{border-color:var(--red)}
+  .hot{background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:6px;overflow-x:auto}
+  .hot svg{display:block;max-width:100%;height:auto;margin:0 auto}
+  .hot .rg{cursor:pointer;fill:transparent;stroke:transparent;stroke-width:2.5}
+  .hot .rg:hover{stroke:#f5b94288}
+  .hot .rg.sel{stroke:var(--amber);fill:#f5b94222}
+  .hot .rg.ok{stroke:var(--green);fill:#4ade8026}
+  .hot .rg.bad{stroke:var(--red);fill:#f8717126}
+  .card{perspective:900px;max-width:560px}
+  .card .in{position:relative;min-height:130px;transition:transform .5s;transform-style:preserve-3d}
+  .card.flip .in{transform:rotateY(180deg)}
+  .card .f,.card .b{position:absolute;inset:0;backface-visibility:hidden;border-radius:10px;border:1px solid #2a3a5c;display:flex;align-items:center;justify-content:center;text-align:center;padding:14px 18px;font-size:16px}
+  .card .f{background:#14203a;color:var(--amber)}
+  .card .b{background:#0f2a27;color:var(--teal);transform:rotateY(180deg)}
+  @media (prefers-reduced-motion:reduce){.card .in{transition:none}}
+  .selfrow{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center}
+  .selfrow .hint{margin-left:4px}
+  .fb{margin-top:10px;font-size:13px;color:var(--dim);border-left:3px solid var(--line);padding-left:10px}
+  .fb.ok{border-left-color:var(--green)}.fb.bad{border-left-color:var(--red)}
+  .fb b.v{display:block;margin-bottom:2px}
+  .fb.ok b.v{color:var(--green)}.fb.bad b.v{color:var(--red)}
+  .fb .anim{color:var(--teal);font-family:var(--mono);font-size:12px;display:block;margin-top:3px}
+  .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  .code{font-family:var(--mono);font-size:20px;color:var(--amber);letter-spacing:1px}
+  .score{font-family:var(--mono);color:var(--green);font-size:16px}
+  .hint{color:var(--dim);font-size:13px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:0;max-width:860px;width:92vw;max-height:88vh}
+  dialog::backdrop{background:#000a}
+  .dg{padding:18px 20px}
+  .dg h3{color:var(--amber);margin:0 0 4px;font-size:20px}
+  .dg .meta{color:var(--dim);font-size:13px;margin-bottom:12px;font-family:var(--mono)}
+  .dg .sec{margin:14px 0 6px;color:var(--teal);font-weight:700;font-size:14px}
+  .dg table{width:100%;border-collapse:collapse;font-size:13px}
+  .dg th{text-align:left;color:var(--dim);font-weight:600;padding:5px 8px;border-bottom:1px solid var(--line);font-size:12px}
+  .dg td{padding:5px 8px;border-bottom:1px solid #16203a;vertical-align:top}
+  .dg .ok{color:var(--green)}.dg .bad{color:var(--red)}.dg .none{color:var(--dim)}
+  .dg .sum{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0;font-family:var(--mono)}
+  .dgbar{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:10px 20px;display:flex;gap:8px;justify-content:flex-end;align-items:center}
+  .toast{color:var(--green);font-size:13px;margin-right:auto}
+  .body{overflow:auto;max-height:calc(88vh - 60px)}
+  @media(max-width:600px){.mrow{grid-template-columns:1fr;gap:4px}.mrow .arr{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Quantization·Pruning Day 1 복습 퀴즈</h1>
+  <p class="sub">Day 1 (1~8교시) 내용을 <b>24문항</b>으로 점검합니다 — 단일 · 다중 선택, O/X, 단답형, 선택형 빈칸, 짝 맞추기, 순서 배열, 핫스팟, 코드 완성 9가지 유형. 이름을 입력하고 모두 푼 뒤 <b style="color:var(--teal)">채점하기</b>를 누르면 정오 · 해설과 결과 코드가 나타납니다 (채점 후에는 답이 잠깁니다). 마지막으로 <b style="color:var(--amber)">제출 (오답 정리)</b>을 열어 <b>텍스트 복사</b> 또는 화면 캡처로 강사가 안내한 곳에 제출하세요.</p>
+
+  <div class="panel">
+    <div class="row"><label style="color:var(--dim);font-size:13px">이름 <input type="text" id="name" placeholder="홍길동"></label><span class="hint">이름은 결과 코드 계산에만 쓰이며 저장되지 않습니다.</span></div>
+  </div>
+  <div class="panel"><h2>문항 유형</h2><div class="tabs" id="tabs" style="display:none"></div><div class="legend" id="legend"></div></div>
+  <div class="panel" id="sheet"></div>
+  <div class="panel">
+    <div class="actions">
+      <button class="primary" id="gradeBtn">채점하기</button>
+      <span class="score" id="rscore"></span>
+      <span class="hint" id="rhint"></span>
+      <span class="code" id="rcode">—</span>
+    </div>
+    <div class="actions" style="margin-top:12px">
+      <button class="submit" id="submitBtn">제출 (오답 정리)</button>
+      <button id="resetBtn">다시 풀기</button>
+    </div>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <div class="body"><div class="dg" id="dgBody"></div></div>
+  <div class="dgbar"><span class="toast" id="toast"></span><button id="captureBtn" class="primary">📋 텍스트 복사 (제출용)</button><button id="closeBtn">닫기</button></div>
+</dialog>
+
+<script>
+const Q = [{"t": "Day 1 복습 퀴즈", "anim": "1~8교시 전체 · 24문항", "qs": [{"type": "single", "p": "<span style=\"color:var(--dim)\">[1교시]</span> MobileNetV3-Small (파라미터 2,542,856 개) 를 INT8 로 저장하면 약 몇 MB 인가요?", "o": ["10.17 MB", "5.09 MB", "2.54 MB", "0.64 MB"], "a": 2, "w": "INT8 은 숫자 하나에 1 byte → 2,542,856 B ≈ 2.54 MB. 10.17 은 FP32, 5.09 는 FP16, 0.64 는 INT2 에 해당합니다.", "an": "문제 1-2"}, {"type": "ox", "p": "<span style=\"color:var(--dim)\">[1교시]</span> 모델 크기가 1/4 이 되면 추론 속도는 항상 정확히 4배 빨라진다.", "a": false, "w": "속도는 하드웨어 · 런타임의 INT8 연산 지원, 전처리 · 오버헤드에 달려 있어 크기와 비례하지 않습니다. 그래서 Day 2 · 3 에서 직접 측정합니다.", "an": "1교시 · 자주 하는 오해"}, {"type": "code", "p": "<span style=\"color:var(--dim)\">[1교시]</span> 문제 1-1 · 1-3 — 파라미터 수와 FP32 크기, INT8 압축률을 구하세요.", "code": "n_params = sum(p.{{}}() for p in cnn.parameters())   # 433,890\nfp32_mb = n_params * {{}} / 1e6                     # 1.736\nratio = size_mb[\"SimpleConvNet\"][\"FP32\"] / size_mb[\"SimpleConvNet\"][\"{{}}\"]   # 4.0", "a": [["numel"], ["4"], ["INT8"]], "w": "numel() = 원소 수, FP32 = 4 byte, INT8 대비 4배.", "an": "문제 1-1 · 1-3"}, {"type": "single", "p": "<span style=\"color:var(--dim)\">[2교시]</span> FP16 이 담을 수 있는 가장 큰 유한한 값은?", "o": ["127", "32,767", "65,504", "약 3.4 × 10³⁸"], "a": 2, "w": "FP16 최댓값은 65,504 (np.finfo(np.float16).max). 70000 을 FP16 으로 바꾸면 inf. 3.4e38 은 FP32 의 최댓값입니다.", "an": "문제 2-2"}, {"type": "drop", "p": "<span style=\"color:var(--dim)\">[2교시]</span> 빈칸에 알맞은 것을 고르세요.", "p2": "FP32 는 부호 1 · 지수 {} · 가수 23 비트이고, FP16 은 지수 5 · 가수 {} 비트라 유효숫자가 약 {} 자리다.", "opts": [["5", "8", "10"], ["7", "10", "23"], ["3", "7", "16"]], "a": [1, 1, 0], "w": "FP32: 1 · 8 · 23, FP16: 1 · 5 · 10. 가수 10비트 → 유효숫자 약 3자리라 1000.1 이 1000 이 됩니다.", "an": "2교시 · 비트 구조"}, {"type": "order", "p": "<span style=\"color:var(--dim)\">[2교시]</span> 실수 x 를 INT8 로 안전하게 바꾸는 순서입니다.", "items": ["실수 x 준비", "<code>np.round</code> 로 가장 가까운 정수", "<code>np.clip(..., -128, 127)</code> 로 범위 자르기", "<code>.astype(np.int8)</code> 로 형 변환"], "w": "astype 을 먼저 하면 이미 값이 망가진 뒤라 clip 이 소용없습니다.", "an": "문제 2-3"}, {"type": "multi", "p": "<span style=\"color:var(--dim)\">[3교시]</span> 범위 안 실수 x 를 quantize → dequantize 했을 때 <b>항상 성립</b>하는 것을 모두 고르세요. (0 을 포함한 범위)", "o": ["|오차| ≤ scale / 2", "0.0 은 정확히 0.0 으로 돌아온다", "모든 값의 오차가 정확히 0 이 된다고 보장된다", "q 는 qmin ~ qmax 사이 정수"], "a": [0, 1, 3], "w": "반올림은 많아야 반 칸 틀리므로 오차 ≤ scale/2. 0 은 zp 칸에 정확히 놓입니다. 오차가 항상 0 인 것은 아닙니다.", "an": "문제 3-3"}, {"type": "hot", "p": "<span style=\"color:var(--dim)\">[3교시]</span> [−1, 3] → UINT8 에서 <b>x = 1.234</b> 가 놓이는 정수 칸을 클릭하세요.", "w": "1.234 / 0.015686 = 78.67 → round 79 → 79 + zp 64 = <b>143</b>. 되돌리면 (143 − 64) × scale = 1.2392.", "an": "문제 3-2", "viewBox": "0 0 720 300", "sw": 720, "svg": "<defs><marker id=\"ah\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#8a9bb8\"/></marker></defs><text x=\"20\" y=\"20\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"start\" font-family=\"Noto Sans KR,sans-serif\" font-weight=\"normal\" dominant-baseline=\"middle\">scale = 0.015686, zp = 64 — 1.234 는 몇 번 칸?</text><rect x=\"40\" y=\"90\" width=\"140\" height=\"70\" rx=\"6\" fill=\"#14203a\" stroke=\"#2dd4bf\" stroke-width=\"1\"/><text x=\"110.0\" y=\"125.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">q = 79</text><rect x=\"200\" y=\"90\" width=\"140\" height=\"70\" rx=\"6\" fill=\"#14203a\" stroke=\"#2dd4bf\" stroke-width=\"1\"/><text x=\"270.0\" y=\"125.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">q = 96</text><rect x=\"360\" y=\"90\" width=\"140\" height=\"70\" rx=\"6\" fill=\"#14203a\" stroke=\"#2dd4bf\" stroke-width=\"1\"/><text x=\"430.0\" y=\"125.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">q = 143</text><rect x=\"520\" y=\"90\" width=\"140\" height=\"70\" rx=\"6\" fill=\"#14203a\" stroke=\"#2dd4bf\" stroke-width=\"1\"/><text x=\"590.0\" y=\"125.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">q = 193</text><text x=\"360\" y=\"210\" font-size=\"12\" fill=\"#f5b942\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"normal\" dominant-baseline=\"middle\">q = clip(round(x / scale) + zp, 0, 255)</text>", "regions": [{"id": "q79", "label": "q = 79", "x": 40, "y": 90, "w": 140, "h": 70}, {"id": "q96", "label": "q = 96", "x": 200, "y": 90, "w": 140, "h": 70}, {"id": "q143", "label": "q = 143", "x": 360, "y": 90, "w": 140, "h": 70}, {"id": "q193", "label": "q = 193", "x": 520, "y": 90, "w": 140, "h": 70}], "a": "q143"}, {"type": "code", "p": "<span style=\"color:var(--dim)\">[3교시]</span> 문제 3-1 ~ 3-3 — 세 함수의 빈칸을 채우세요.", "code": "scale = (xmax - xmin) / (qmax - {{}})\nq = np.clip(np.round(np.asarray(x) / scale) + {{}}, qmin, qmax)\nreturn (np.asarray(q, np.float64) - zp) * {{}}", "a": [["qmin"], ["zp"], ["scale"]], "w": "scale = 범위 / (qmax − qmin), quantize 는 + zp, dequantize 는 (q − zp) × scale.", "an": "문제 3-1 ~ 3-3"}, {"type": "single", "p": "<span style=\"color:var(--dim)\">[4교시]</span> ReLU 를 지난 활성값(모두 0 이상)에 대칭 INT8 을 쓰면 생기는 문제는?", "o": ["음수 칸 절반이 비어 간격이 2배", "zero_point 가 음수가 되어 계산이 불가능해진다", "0 을 표현할 수 없게 된다", "값이 모두 127 로 잘린다"], "a": 0, "w": "음수 쪽 127 칸이 비어 같은 범위를 절반의 칸으로 덮습니다 → scale 2배 → MSE 약 4배 (실측 5.1배).", "an": "문제 4-2"}, {"type": "ox", "p": "<span style=\"color:var(--dim)\">[4교시]</span> 대칭 INT8 은 보통 −128 ~ 127 전체를 사용한다.", "a": false, "w": "0 을 중심으로 정확히 대칭이 되도록 −127 ~ 127 만 씁니다. −128 은 짝이 없어 버립니다.", "an": "4교시 · 자주 하는 실수"}, {"type": "match", "p": "<span style=\"color:var(--dim)\">[4교시]</span> 데이터와 알맞은 방식을 짝지으세요.", "left": ["ReLU 출력 (0 이상)", "conv weight (0 중심)", "+0.3 만큼 치우친 weight", "정수 행렬곱을 단순하게"], "right": ["비대칭 — MSE 약 5배 유리", "대칭 — 손해 1.2배뿐", "비대칭 — 대칭은 2.55배 손해", "대칭 — zp = 0"], "a": [0, 1, 2, 3], "w": "데이터가 한쪽으로 치우칠수록 비대칭이 유리하고, 0 중심이면 대칭도 충분합니다.", "an": "D1-4 · 실측 비교"}, {"type": "single", "p": "<span style=\"color:var(--dim)\">[5교시]</span> per-channel scale <code>sc</code> (shape (30,)) 를 W (30, 1, 5, 5) 와 나누려면 sc 를 어떤 모양으로 바꿔야 하나요?", "o": ["(30, 1, 1, 1)", "(1, 1, 5, 5)", "(1, 30, 1, 1)", "(5, 5, 1, 30)"], "a": 0, "w": "채널 축을 맨 앞에 두고 나머지 축을 1 로: sc[:, None, None, None] → (30, 1, 1, 1). 그래야 필터 하나의 25개 값이 같은 scale 로 나뉩니다.", "an": "문제 5-3"}, {"type": "short", "p": "<span style=\"color:var(--dim)\">[5교시]</span> Conv · Linear weight 에서 출력 채널은 몇 번 축인가요? (숫자)", "a": ["0", "0번"], "w": "Conv (out, in, kh, kw), Linear (out, in) 모두 0번 축이 출력 채널입니다. W.shape[0].", "an": "문제 5-4"}, {"type": "hot", "p": "<span style=\"color:var(--dim)\">[5교시]</span> per-tensor 로 양자화할 때 <b>scale 을 결정하는 필터</b>를 클릭하세요.", "w": "per-tensor scale = 텐서 전체의 max|W| / 127. 가장 큰 필터(max|w| 0.48)가 모두의 간격을 정합니다.", "an": "D1-5 · 튀는 필터", "viewBox": "0 0 720 300", "sw": 720, "svg": "<defs><marker id=\"ah\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#8a9bb8\"/></marker></defs><text x=\"20\" y=\"20\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"start\" font-family=\"Noto Sans KR,sans-serif\" font-weight=\"normal\" dominant-baseline=\"middle\">필터 4개 (max|w|) — per-tensor scale 은 누구에게 맞춰질까?</text><rect x=\"40\" y=\"90\" width=\"140\" height=\"80\" rx=\"6\" fill=\"#14203a\" stroke=\"#2dd4bf\" stroke-width=\"1\"/><text x=\"110.0\" y=\"120.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">필터 A</text><text x=\"110.0\" y=\"141.0\" font-size=\"10.5\" fill=\"#8a9bb8\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"normal\" dominant-baseline=\"middle\">max|w| 0.21</text><rect x=\"200\" y=\"90\" width=\"140\" height=\"80\" rx=\"6\" fill=\"#14203a\" stroke=\"#2dd4bf\" stroke-width=\"1\"/><text x=\"270.0\" y=\"120.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">필터 B</text><text x=\"270.0\" y=\"141.0\" font-size=\"10.5\" fill=\"#8a9bb8\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"normal\" dominant-baseline=\"middle\">max|w| 0.48</text><rect x=\"360\" y=\"90\" width=\"140\" height=\"80\" rx=\"6\" fill=\"#14203a\" stroke=\"#2dd4bf\" stroke-width=\"1\"/><text x=\"430.0\" y=\"120.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">필터 C</text><text x=\"430.0\" y=\"141.0\" font-size=\"10.5\" fill=\"#8a9bb8\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"normal\" dominant-baseline=\"middle\">max|w| 0.17</text><rect x=\"520\" y=\"90\" width=\"140\" height=\"80\" rx=\"6\" fill=\"#14203a\" stroke=\"#2dd4bf\" stroke-width=\"1\"/><text x=\"590.0\" y=\"120.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">필터 D</text><text x=\"590.0\" y=\"141.0\" font-size=\"10.5\" fill=\"#8a9bb8\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"normal\" dominant-baseline=\"middle\">max|w| 0.30</text><text x=\"360\" y=\"220\" font-size=\"12\" fill=\"#f87171\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"normal\" dominant-baseline=\"middle\">per-tensor scale = max|W| / 127 (텐서 전체)</text>", "regions": [{"id": "f0", "label": "필터 A — max|w| 0.21", "x": 40, "y": 90, "w": 140, "h": 80}, {"id": "f1", "label": "필터 B — max|w| 0.48", "x": 200, "y": 90, "w": 140, "h": 80}, {"id": "f2", "label": "필터 C — max|w| 0.17", "x": 360, "y": 90, "w": 140, "h": 80}, {"id": "f3", "label": "필터 D — max|w| 0.30", "x": 520, "y": 90, "w": 140, "h": 80}], "a": "f1"}, {"type": "single", "p": "<span style=\"color:var(--dim)\">[6교시]</span> 양자화 범위를 MinMax 보다 좁히면(clip) 어떻게 되나요?", "o": ["반올림 오차 ↑, 잘림 오차 ↓", "반올림 오차 ↓, 잘림 오차 ↑", "두 오차 모두 ↓", "두 오차 모두 변화 없음"], "a": 1, "w": "범위가 좁아지면 scale 이 작아져 범위 안 값은 정확해지고(반올림 ↓), 넘는 값은 잘려 크게 틀립니다(잘림 ↑).", "an": "6교시 · trade-off"}, {"type": "drop", "p": "<span style=\"color:var(--dim)\">[6교시]</span> 빈칸에 알맞은 것을 고르세요.", "p2": "outlier 하나(max × 20)가 섞이면 MinMax 의 scale 이 약 {} 배가 된다. 나머지 431,999 개 값의 MSE 는 {} 이 약 42배 작지만, 전체 MSE 는 {} 이 더 작다.", "opts": [["2", "20", "256"], ["MinMax", "Percentile", "대칭 양자화 (zp=0)"], ["MinMax", "Percentile", "Entropy"]], "a": [1, 1, 0], "w": "범위가 20배 → scale 20배. 나머지 값은 Percentile 이 훨씬 정확하지만 outlier 하나의 잘림 오차가 커서 전체 MSE 는 MinMax 가 낮게 나옵니다 — 지표 선택이 결론을 바꿉니다.", "an": "문제 6-3"}, {"type": "code", "p": "<span style=\"color:var(--dim)\">[6교시]</span> 문제 6-1 · 6-2 — 백분위와 최적 clip 을 구하세요.", "code": "p999 = np.{{}}(A, 99.9)\nfrac_over = (A > p999).{{}}()\nbest[bits] = clips[np.{{}}(curve)]", "a": [["percentile"], ["mean"], ["argmin"]], "w": "np.percentile, 비율은 mean, 가장 작은 위치는 argmin.", "an": "문제 6-1 · 6-2"}, {"type": "multi", "p": "<span style=\"color:var(--dim)\">[7교시]</span> 대칭 INT8 행렬곱 y = s_w s_x (W_q x_q + b_q) 에서 <b>정수로</b> 계산되는 것을 모두 고르세요.", "o": ["W_q · x_q 의 곱", "곱들의 누적 합", "b_q 더하기", "마지막 × s_w s_x"], "a": [0, 1, 2], "w": "괄호 안은 모두 정수입니다. 실수 곱셈은 마지막 scale 한 번뿐(또는 M 으로 requantize).", "an": "7교시 · 식"}, {"type": "order", "p": "<span style=\"color:var(--dim)\">[7교시]</span> 정수 행렬곱 순서입니다.", "items": ["s_x, s_w 구하기 (대칭)", "x_q, W_q 양자화 (INT8)", "INT32 로 넓혀 곱하고 누적", "b_q 더하기", "× s_x · s_w 로 실수 y"], "w": "노트북 7-1 ~ 7-3 의 순서. 결과: fc2 최대 차이 0.10, 예측 일치율 1.00.", "an": "문제 7-1 ~ 7-3"}, {"type": "hot", "p": "<span style=\"color:var(--dim)\">[7교시]</span> INT8 추론 흐름에서 <b>실수(FP32) 곱셈이 일어나는 단계</b>를 클릭하세요.", "w": "실수 곱셈은 마지막 × (s_x · s_w) 한 번뿐입니다. 곱 · 누적 · bias 는 모두 정수 연산이라 INT8 하드웨어가 빠르게 처리합니다.", "an": "D1-7 · 정수 행렬곱", "viewBox": "0 0 720 300", "sw": 720, "svg": "<defs><marker id=\"ah\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#8a9bb8\"/></marker></defs><text x=\"20\" y=\"20\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"start\" font-family=\"Noto Sans KR,sans-serif\" font-weight=\"normal\" dominant-baseline=\"middle\">INT8 행렬곱 — 실수 곱셈은 어디서?</text><rect x=\"30\" y=\"100\" width=\"150\" height=\"80\" rx=\"6\" fill=\"#14203a\" stroke=\"#2dd4bf\" stroke-width=\"1\"/><text x=\"105.0\" y=\"130.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">x_q · W_q</text><text x=\"105.0\" y=\"151.0\" font-size=\"10.5\" fill=\"#8a9bb8\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"normal\" dominant-baseline=\"middle\">INT8 곱</text><rect x=\"205\" y=\"100\" width=\"150\" height=\"80\" rx=\"6\" fill=\"#14203a\" stroke=\"#f5b942\" stroke-width=\"1\"/><text x=\"280.0\" y=\"130.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">Σ 누적</text><text x=\"280.0\" y=\"151.0\" font-size=\"10.5\" fill=\"#8a9bb8\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"normal\" dominant-baseline=\"middle\">INT32</text><rect x=\"380\" y=\"100\" width=\"130\" height=\"80\" rx=\"6\" fill=\"#14203a\" stroke=\"#c084fc\" stroke-width=\"1\"/><text x=\"445.0\" y=\"130.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">+ b_q</text><text x=\"445.0\" y=\"151.0\" font-size=\"10.5\" fill=\"#8a9bb8\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"normal\" dominant-baseline=\"middle\">INT32</text><rect x=\"535\" y=\"100\" width=\"155\" height=\"80\" rx=\"6\" fill=\"#14203a\" stroke=\"#60a5fa\" stroke-width=\"1\"/><text x=\"612.5\" y=\"130.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">× s_x · s_w</text><text x=\"612.5\" y=\"151.0\" font-size=\"10.5\" fill=\"#8a9bb8\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"normal\" dominant-baseline=\"middle\">→ y</text><line x1=\"182\" y1=\"140\" x2=\"203\" y2=\"140\" stroke=\"#8a9bb8\" stroke-width=\"1.6\" marker-end=\"url(#ah)\"/><line x1=\"357\" y1=\"140\" x2=\"378\" y2=\"140\" stroke=\"#8a9bb8\" stroke-width=\"1.6\" marker-end=\"url(#ah)\"/><line x1=\"512\" y1=\"140\" x2=\"533\" y2=\"140\" stroke=\"#8a9bb8\" stroke-width=\"1.6\" marker-end=\"url(#ah)\"/>", "regions": [{"id": "mul", "label": "x_q · W_q — INT8 곱", "x": 30, "y": 100, "w": 150, "h": 80}, {"id": "acc", "label": "Σ 누적 — INT32", "x": 205, "y": 100, "w": 150, "h": 80}, {"id": "bias", "label": "+ b_q — INT32", "x": 380, "y": 100, "w": 130, "h": 80}, {"id": "sc", "label": "× s_x · s_w — → y", "x": 535, "y": 100, "w": 155, "h": 80}], "a": "sc"}, {"type": "single", "p": "<span style=\"color:var(--dim)\">[8교시]</span> 미니 프로젝트에서 2비트 per-tensor 의 정확도가 0.25 로 무너진 주된 이유는?", "o": ["작은 필터 값이 대부분 0", "bias 를 양자화하지 않아서", "FP32 모델이 처음부터 잘못 학습되어서", "MNIST 이미지가 흑백이라서"], "a": 0, "w": "2비트 대칭은 −s, 0, +s 세 값뿐. 큰 필터에 맞춘 s 로는 작은 필터(max 0.205 < s/2 근처)의 값이 거의 모두 0 이 됩니다. per-channel 이면 0.52.", "an": "과제 3 · 과제 6"}, {"type": "ox", "p": "<span style=\"color:var(--dim)\">[8교시]</span> MNIST 100장에서 4비트 정확도가 FP32 와 같으므로, 4비트 배포는 충분히 검증된 것이다.", "a": false, "w": "100장은 1장 = 1%p 이고 쉬운 문제라 둔감합니다. max_diff 가 1 이상이면 경계 사례에서 예측이 바뀔 수 있으니 큰 평가 세트와 민감한 지표로 함께 봐야 합니다.", "an": "과제 6"}, {"type": "match", "p": "<span style=\"color:var(--dim)\">[8교시]</span> 설정과 실측 결과를 짝지으세요.", "left": ["8 bit per-tensor", "4 bit per-tensor", "2 bit per-tensor", "2 bit per-channel"], "right": ["일치율 1.00 · max_diff 0.067", "정확도 1.00 · max_diff 1.59", "정확도 0.25", "정확도 0.52"], "a": [0, 1, 2, 3], "w": "비트를 줄일수록 출력 차이가 커지고, 2비트에서는 per-channel 의 이득이 뚜렷합니다.", "an": "D1-8 · 결과표"}]}];
+const NQ = Q.reduce((t, s) => t + s.qs.length, 0);
+const TYPES = {
+  single:{n:'단일 선택',c:'#60a5fa'}, multi:{n:'다중 선택',c:'#c084fc'}, ox:{n:'O/X',c:'#f5b942'},
+  short:{n:'단답형',c:'#2dd4bf'}, drop:{n:'선택형 빈칸',c:'#93c5fd'}, match:{n:'짝 맞추기',c:'#f472b6'},
+  order:{n:'순서 배열',c:'#fb923c'}, hot:{n:'핫스팟',c:'#4ade80'}, code:{n:'코드 완성',c:'#a3e635'}
+};
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const strip = h => { const d = document.createElement('div'); d.innerHTML = h; return d.textContent; };
+const norm = s => String(s ?? '').toLowerCase().replace(/\s+/g, '').replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+function rng(seed){ let h = 2166136261; for (const c of seed) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return () => { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return ((h >>> 0) % 100000) / 100000; }; }
+function shuffled(arr, seed){ const r = rng(seed), idx = arr.map((_, i) => i); for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; } if (idx.every((v, i) => v === i) && idx.length > 1) idx.push(idx.shift()); return idx; }
+
+// ── 상태 ──
+let tab = 0;
+const graded = Q.map(() => false);
+const ans = Q.map((s, i) => s.qs.map((q, k) => init(q, `${i}-${k}`)));
+function init(q, id){
+  switch (q.type) {
+    case 'single': case 'ox': case 'hot': return null;
+    case 'multi': return [];
+    case 'short': return '';
+    case 'drop': return q.opts.map(() => -1);
+    case 'match': return q.left.map(() => -1);
+    case 'order': return shuffled(q.items, 'o' + id);          // 현재 화면 순서(원래 인덱스)
+    case 'flash': return { flipped:false, self:null };
+    case 'code': return q.a.map(() => '');
+  }
+}
+function answered(q, a){
+  switch (q.type) {
+    case 'single': case 'ox': case 'hot': return a !== null;
+    case 'multi': return a.length > 0;
+    case 'short': return a.trim() !== '';
+    case 'drop': case 'match': return a.every(v => v >= 0);
+    case 'order': return true;
+    case 'flash': return a.self !== null;
+    case 'code': return a.every(v => v.trim() !== '');
+  }
+}
+function correct(q, a){
+  switch (q.type) {
+    case 'single': case 'hot': return a === q.a;
+    case 'ox': return a === q.a;
+    case 'multi': return a.length === q.a.length && q.a.every(x => a.includes(x));
+    case 'short': return q.a.some(x => norm(x) === norm(a));
+    case 'drop': return a.every((v, i) => v === q.a[i]);
+    case 'match': return a.every((v, i) => v === q.a[i]);
+    case 'order': return a.every((v, i) => v === i);
+    case 'flash': return a.self === true;
+    case 'code': return a.every((v, i) => q.a[i].some(x => norm(x) === norm(v)));
+  }
+}
+const scoreOf = i => ans[i].filter((a, k) => correct(Q[i].qs[k], a)).length;
+
+// ── 답 문자열 (오답 정리용) ──
+const L = '①②③④⑤⑥⑦⑧';
+function fmt(q, a, right){
+  switch (q.type) {
+    case 'single': return right ? `${L[q.a]} ${strip(q.o[q.a])}` : (a === null ? '미응답' : `${L[a]} ${strip(q.o[a])}`);
+    case 'multi': { const v = right ? q.a : a; return v.length ? [...v].sort().map(i => L[i]).join(' ') : '미응답'; }
+    case 'ox': { const v = right ? q.a : a; return v === null ? '미응답' : (v ? 'O' : 'X'); }
+    case 'short': return right ? q.a[0] : (a.trim() || '미응답');
+    case 'drop': return (right ? q.a : a).map((v, i) => v < 0 ? '?' : strip(q.opts[i][v])).join(' / ');
+    case 'match': return (right ? q.a : a).map((v, i) => `${strip(q.left[i])}→${v < 0 ? '?' : strip(q.right[v])}`).join(', ');
+    case 'order': return (right ? q.items.map((_, i) => i) : a).map(i => strip(q.items[i])).join(' → ');
+    case 'hot': { const v = right ? q.a : a; return v === null ? '미응답' : (q.regions.find(r => r.id === v) || {}).label; }
+    case 'flash': return right ? strip(q.back) : (a.self === null ? '미응답' : (a.self ? '알았다' : '몰랐다'));
+    case 'code': return (right ? q.a.map(x => x[0]) : a.map(v => v || '?')).join(' / ');
+  }
+}
+
+// ── 렌더 ──
+function renderTabs(){
+  $('#tabs').innerHTML = Q.map((s, i) => {
+    const n = ans[i].filter((a, k) => answered(s.qs[k], a)).length;
+    return `<button class="${i === tab ? 'active' : ''} ${graded[i] ? 'graded' : ''}" data-i="${i}">${s.t}<span class="s">${graded[i] ? scoreOf(i) + '/' + s.qs.length : n + '/' + s.qs.length}</span></button>`;
+  }).join('');
+  $('#tabs').querySelectorAll('button').forEach(b => b.onclick = () => { tab = +b.dataset.i; history.replaceState(null, '', '#t' + (tab + 1)); render(); window.scrollTo({ top: 0 }); });
+}
+function qHTML(q, k){
+  const a = ans[tab][k], g = graded[tab], id = `${tab}-${k}`, dis = g ? 'disabled' : '';
+  const ok = g && correct(q, a);
+  let body = '';
+  switch (q.type) {
+    case 'single':
+    case 'multi': {
+      const isM = q.type === 'multi';
+      body = (isM ? '<div class="hint" style="margin:-4px 0 8px">정답을 <b>모두</b> 고르세요.</div>' : '') + '<div class="opts">' + q.o.map((o, j) => {
+        const sel = isM ? a.includes(j) : a === j, isA = isM ? q.a.includes(j) : q.a === j;
+        let c = sel ? 'sel' : '';
+        if (g) c = isA && sel ? 'ok' : (sel ? 'bad' : (isA ? (isM ? 'miss' : 'ok') : ''));
+        const box = isM ? (sel ? '☑' : '☐') : L[j];
+        return `<button class="opt ${c}" data-k="${k}" data-j="${j}" ${dis}><span class="box">${box}</span> ${o}</button>`;
+      }).join('') + '</div>';
+      break;
+    }
+    case 'ox':
+      body = '<div class="ox">' + [true, false].map(v => {
+        let c = a === v ? 'active' : '';
+        if (g) c = (q.a === v ? 'opt ok' : (a === v ? 'opt bad' : ''));
+        return `<button class="oxb ${c}" data-k="${k}" data-v="${v}" ${dis} aria-label="${v ? '참' : '거짓'}">${v ? 'O' : 'X'}</button>`;
+      }).join('') + '</div>';
+      break;
+    case 'short':
+      body = `<input type="text" class="sa" data-k="${k}" value="${esc(a)}" placeholder="정답 입력" style="width:min(100%,320px)" ${dis}>`;
+      break;
+    case 'drop': {
+      let i = 0;
+      body = '<div class="fill">' + q.p2.replace(/\{\}/g, () => {
+        const n = i++;
+        const opts = q.opts[n].map((o, j) => `<option value="${j}" ${a[n] === j ? 'selected' : ''}>${esc(strip(o))}</option>`).join('');
+        const st = g ? `style="border-color:${a[n] === q.a[n] ? 'var(--green)' : 'var(--red)'}"` : '';
+        return `<select class="dd" data-k="${k}" data-n="${n}" ${dis} ${st}><option value="-1">선택</option>${opts}</select>`;
+      }) + '</div>';
+      break;
+    }
+    case 'match': {
+      const order = shuffled(q.right, 'm' + id);
+      body = q.left.map((l, i) => {
+        const opts = order.map(j => `<option value="${j}" ${a[i] === j ? 'selected' : ''}>${esc(strip(q.right[j]))}</option>`).join('');
+        const c = g ? (a[i] === q.a[i] ? 'ok' : 'bad') : '';
+        return `<div class="mrow ${c}"><span class="l">${l}</span><span class="arr">↔</span><select class="mm" data-k="${k}" data-i="${i}" ${dis}><option value="-1">짝 선택</option>${opts}</select></div>`;
+      }).join('');
+      break;
+    }
+    case 'order':
+      body = '<div class="hint" style="margin:-4px 0 8px">끌어다 놓거나 ▲▼ 버튼으로 순서를 바꾸세요.</div><ol class="ord" data-k="' + k + '">' + a.map((it, pos) => {
+        const c = g ? (it === pos ? 'ok' : 'bad') : '';
+        return `<li class="${c}" draggable="${!g}" data-pos="${pos}"><span class="k">${pos + 1}</span><span>${q.items[it]}</span><span class="mv"><button data-k="${k}" data-pos="${pos}" data-d="-1" ${dis || (pos === 0 ? 'disabled' : '')} aria-label="위로">▲</button><button data-k="${k}" data-pos="${pos}" data-d="1" ${dis || (pos === a.length - 1 ? 'disabled' : '')} aria-label="아래로">▼</button></span></li>`;
+      }).join('') + '</ol>';
+      break;
+    case 'hot': {
+      const regs = q.regions.map(r => {
+        let c = a === r.id ? 'sel' : '';
+        if (g) c = r.id === q.a ? 'ok' : (a === r.id ? 'bad' : '');
+        const shape = r.shape === 'circle' ? `<circle cx="${r.x}" cy="${r.y}" r="${r.r}"` : `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="6"`;
+        return `${shape} class="rg ${c}" data-k="${k}" data-r="${r.id}" tabindex="${g ? -1 : 0}" role="button" aria-label="${esc(r.label)}"><title>${esc(r.label)}</title>${r.shape === 'circle' ? '</circle>' : '</rect>'}`;
+      }).join('');
+      body = `<div class="hot"><svg viewBox="${q.viewBox}" width="${q.sw}" xmlns="http://www.w3.org/2000/svg">${q.svg}${regs}</svg></div>` +
+        `<div class="hint" style="margin-top:6px">선택: <b style="color:var(--amber)">${a === null ? '없음' : esc((q.regions.find(r => r.id === a) || {}).label)}</b></div>`;
+      break;
+    }
+    case 'flash':
+      body = `<div class="card ${a.flipped ? 'flip' : ''}" data-k="${k}"><div class="in"><div class="f">${q.front}</div><div class="b">${q.back}</div></div></div>` +
+        `<div class="selfrow"><button class="flipb" data-k="${k}" ${g ? 'disabled' : ''}>${a.flipped ? '앞면 보기' : '🔄 카드 뒤집기'}</button>` +
+        `<button class="selfb ${a.self === true ? 'active' : ''}" data-k="${k}" data-v="1" ${g || !a.flipped ? 'disabled' : ''}>✅ 알았다</button>` +
+        `<button class="selfb ${a.self === false ? 'active' : ''}" data-k="${k}" data-v="0" ${g || !a.flipped ? 'disabled' : ''}>❌ 몰랐다</button>` +
+        `<span class="hint">${a.flipped ? '정답과 비교해 스스로 채점하세요.' : '먼저 답을 떠올린 뒤 뒤집으세요.'}</span></div>`;
+      break;
+    case 'code': {
+      let i = 0;
+      body = '<pre>' + esc(q.code).replace(/\{\{\}\}/g, () => {
+        const n = i++;
+        const w = Math.max(5, (q.a[n][0] || '').length + 2);
+        const st = g ? `style="border-color:${q.a[n].some(x => norm(x) === norm(a[n])) ? 'var(--green)' : 'var(--red)'};width:${w}ch"` : `style="width:${w}ch"`;
+        return `<input type="text" class="ci" data-k="${k}" data-n="${n}" value="${esc(a[n])}" ${dis} ${st} aria-label="빈칸 ${n + 1}">`;
+      }) + '</pre>';
+      break;
+    }
+  }
+  const t = TYPES[q.type];
+  const prompt = q.type === 'drop' ? (q.p || '') : (q.type === 'flash' ? (q.p || '카드 앞면의 질문에 답을 떠올린 뒤 뒤집어 확인하세요.') : q.p);
+  let fb = '';
+  if (g) {
+    const right = q.type === 'flash' ? '' : `<div>정답: <b>${esc(fmt(q, a, true))}</b></div>`;
+    fb = `<div class="fb ${ok ? 'ok' : 'bad'}"><b class="v">${ok ? '정답' : '오답'}</b>${right}${q.w}<span class="anim">확인: ${q.an}</span></div>`;
+  }
+  const un = !g && !answered(q, a) && attempted[tab] ? 'unans' : '';
+  return `<div class="q ${g ? (ok ? 'ok' : 'bad') : un}"><div class="qh"><span class="n">문항 ${k + 1}</span><span class="ty" style="color:${t.c};border-color:${t.c}">${t.n}</span></div><div class="p">${prompt}</div>${body}${fb}</div>`;
+}
+const attempted = Q.map(() => false);
+function render(){
+  renderTabs();
+  const s = Q[tab];
+  $('#sheet').innerHTML = `<div class="head"><span class="t">${s.t}</span><span class="a">🎬 ${s.anim}</span></div>` + s.qs.map((q, k) => qHTML(q, k)).join('');
+  bind();
+  const nm = $('#name').value, g = graded[tab];
+  if (g) {
+    const sc = scoreOf(tab); $('#rscore').textContent = `${sc}/${s.qs.length}`;
+    if (nm.trim()) { $('#rcode').textContent = codeFor(nm, tab + 1, sc); $('#rhint').textContent = '결과 코드'; }
+    else { $('#rcode').textContent = '—'; $('#rhint').textContent = '이름을 입력하면 결과 코드가 나옵니다.'; }
+  } else {
+    $('#rcode').textContent = '—'; $('#rscore').textContent = '';
+    const n = ans[tab].filter((a, k) => answered(s.qs[k], a)).length;
+    $('#rhint').textContent = `${n}/${s.qs.length} 응답. 채점하기를 누르면 잠깁니다.`;
+  }
+  $('#gradeBtn').disabled = g;
+}
+function bind(){
+  const S = $('#sheet'), A = ans[tab];
+  S.querySelectorAll('.opt[data-j]').forEach(b => b.onclick = () => {
+    const k = +b.dataset.k, j = +b.dataset.j, q = Q[tab].qs[k];
+    if (q.type === 'multi') { const i = A[k].indexOf(j); i < 0 ? A[k].push(j) : A[k].splice(i, 1); }
+    else A[k] = A[k] === j ? null : j;
+    render();
+  });
+  S.querySelectorAll('.oxb').forEach(b => b.onclick = () => { const k = +b.dataset.k, v = b.dataset.v === 'true'; A[k] = A[k] === v ? null : v; render(); });
+  S.querySelectorAll('.sa').forEach(i => i.oninput = () => { A[+i.dataset.k] = i.value; renderTabs(); });
+  S.querySelectorAll('.ci').forEach(i => i.oninput = () => { A[+i.dataset.k][+i.dataset.n] = i.value; renderTabs(); });
+  S.querySelectorAll('.dd').forEach(s => s.onchange = () => { A[+s.dataset.k][+s.dataset.n] = +s.value; renderTabs(); });
+  S.querySelectorAll('.mm').forEach(s => s.onchange = () => { A[+s.dataset.k][+s.dataset.i] = +s.value; renderTabs(); });
+  S.querySelectorAll('.ord .mv button').forEach(b => b.onclick = () => {
+    const k = +b.dataset.k, p = +b.dataset.pos, d = +b.dataset.d, arr = A[k];
+    [arr[p], arr[p + d]] = [arr[p + d], arr[p]]; render();
+  });
+  S.querySelectorAll('.ord').forEach(ol => {
+    const k = +ol.dataset.k; let from = null;
+    ol.querySelectorAll('li').forEach(li => {
+      li.addEventListener('dragstart', e => { from = +li.dataset.pos; li.classList.add('drag'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(from)); });
+      li.addEventListener('dragend', () => li.classList.remove('drag'));
+      li.addEventListener('dragover', e => { if (from !== null) { e.preventDefault(); li.classList.add('over'); } });
+      li.addEventListener('dragleave', () => li.classList.remove('over'));
+      li.addEventListener('drop', e => { e.preventDefault(); const to = +li.dataset.pos; if (from === null || from === to) return; const arr = A[k]; const [x] = arr.splice(from, 1); arr.splice(to, 0, x); from = null; render(); });
+    });
+  });
+  S.querySelectorAll('.rg').forEach(r => {
+    const pick = () => { if (graded[tab]) return; const k = +r.dataset.k; A[k] = A[k] === r.dataset.r ? null : r.dataset.r; render(); };
+    r.addEventListener('click', pick);
+    r.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+  });
+  S.querySelectorAll('.flipb').forEach(b => b.onclick = () => { const k = +b.dataset.k; A[k].flipped = !A[k].flipped; render(); });
+  S.querySelectorAll('.card').forEach(c => c.onclick = () => { if (graded[tab]) return; const k = +c.dataset.k; A[k].flipped = !A[k].flipped; render(); });
+  S.querySelectorAll('.selfb').forEach(b => b.onclick = () => { const k = +b.dataset.k; A[k].self = b.dataset.v === '1'; render(); });
+}
+
+// ── 채점 · 결과 코드 ──
+function hash(s){ let h = 5381; for (const c of s) h = ((h << 5) + h + c.charCodeAt(0)) >>> 0; return h.toString(16).padStart(8, '0').slice(-4); }
+function codeFor(name, t, score){ return `${t}${'ABCDEFGHIJK'[Math.round(10 - score * 10 / Q[t - 1].qs.length)] || 'K'}-${hash(`${name.trim()}|${t}|${score}|qpday1quiz`)}`; }
+$('#gradeBtn').onclick = () => {
+  const s = Q[tab], n = ans[tab].filter((a, k) => answered(s.qs[k], a)).length;
+  attempted[tab] = true;
+  if (n < s.qs.length && !confirm(`아직 ${s.qs.length - n}문항에 답하지 않았습니다. 그래도 채점할까요? (미응답은 오답 처리)`)) { render(); return; }
+  graded[tab] = true; render();
+};
+$('#resetBtn').onclick = () => {
+  if (!confirm(`답을 모두 지우고 다시 풀까요?`)) return;
+  graded[tab] = false; attempted[tab] = false;
+  ans[tab] = Q[tab].qs.map((q, k) => init(q, `${tab}-${k}`)); render();
+};
+$('#name').oninput = render;
+
+// ── 제출 · 오답 정리 ──
+let lastHtml = '', lastText = '';
+function buildReport(){
+  const nm = $('#name').value.trim() || '(이름 없음)', ds = new Date().toLocaleString('ko-KR');
+  let h = `<h3>Quantization·Pruning Day 1 복습 퀴즈 — 오답 정리</h3><div class="meta">${esc(nm)} · ${ds}</div>`;
+  let t = `Quantization·Pruning Day 1 복습 퀴즈 — 오답 정리\n이름: ${nm}\n일시: ${ds}\n\n`;
+  let tot = 0, cnt = 0;
+  const byType = {};
+  Q.forEach((s, i) => {
+    if (!graded[i]) return;
+    const sc = scoreOf(i); tot += sc; cnt++;
+    s.qs.forEach((q, k) => { const b = byType[q.type] ||= [0, 0]; b[1]++; if (correct(q, ans[i][k])) b[0]++; });
+    const code = $('#name').value.trim() ? codeFor($('#name').value, i + 1, sc) : '—';
+    const wrong = s.qs.map((q, k) => ({ q, k, a: ans[i][k] })).filter(x => !correct(x.q, x.a));
+    h += `<div class="sec">${esc(s.t)} — ${sc}/${s.qs.length} · 결과 코드 ${code}</div>`;
+    t += `[${s.t}] ${sc}/${s.qs.length} · 결과 코드 ${code}\n`;
+    if (!wrong.length) { h += `<div class="ok">전부 정답 🎉</div>`; t += '  전부 정답\n\n'; return; }
+    h += '<table><tr><th>#</th><th>유형</th><th>문항</th><th>내 답</th><th>정답</th><th>다시 볼 곳</th></tr>';
+    wrong.forEach(({ q, k, a }) => {
+      const qt = strip(q.type === 'flash' ? q.front : (q.p || q.p2 || '')).replace(/\s+/g, ' ').slice(0, 70);
+      const my = fmt(q, a, false), co = fmt(q, a, true);
+      h += `<tr><td>${k + 1}</td><td>${TYPES[q.type].n}</td><td>${esc(qt)}</td><td class="bad">${esc(my)}</td><td class="ok">${esc(co)}</td><td>${esc(strip(q.an))}</td></tr>`;
+      t += `  ${k + 1}. [${TYPES[q.type].n}] ${qt}\n     내 답: ${my}\n     정답: ${co}\n     다시 볼 곳: ${strip(q.an)}\n`;
+    });
+    h += '</table>'; t += '\n';
+  });
+  const notGraded = Q.map((s, i) => graded[i] ? null : i + 1).filter(x => x);
+  const typeLine = Object.entries(byType).map(([k, [c, n]]) => `${TYPES[k].n} ${c}/${n}`).join(' · ');
+  const sum = `<div class="sum"><span>총점 ${tot}/${NQ} · ${Math.round(tot / NQ * 100)}점</span>${notGraded.length ? `<span class="none">미채점: ${notGraded.join(', ')}</span>` : ''}</div>` + (typeLine ? `<div class="meta">유형별 정답: ${typeLine}</div>` : '');
+  h = h.replace('</div>', '</div>' + sum);
+  t = t.replace('\n\n', `\n총점 ${tot}/${NQ} · ${Math.round(tot / NQ * 100)}점${notGraded.length ? ' · 미채점 ' + notGraded.join(', ') + '교시' : ''}\n유형별 정답: ${typeLine}\n\n`);
+  lastHtml = h; lastText = t;
+  return h;
+}
+$('#submitBtn').onclick = () => {
+  if (!graded.some(x => x)) { alert('먼저 채점하기를 누르세요.'); return; }
+  $('#dgBody').innerHTML = buildReport(); $('#toast').textContent = ''; $('#dlg').showModal();
+};
+$('#closeBtn').onclick = () => $('#dlg').close();
+$('#captureBtn').onclick = async () => {
+  const htmlDoc = `<meta charset="utf-8">` + lastHtml.replace(/ class="[^"]*"/g, '').replace(/<table>/g, '<table border="1" style="border-collapse:collapse">');
+  try {
+    if (navigator.clipboard && window.ClipboardItem) {
+      await navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([htmlDoc], { type: 'text/html' }), 'text/plain': new Blob([lastText], { type: 'text/plain' }) })]);
+      $('#toast').textContent = '복사했습니다 — 안내받은 제출처에 붙여 넣으세요.'; return;
+    }
+  } catch (e) {}
+  const ta = document.createElement('textarea'); ta.value = lastText; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  $('#dlg').appendChild(ta); ta.focus(); ta.select();
+  const ok = document.execCommand('copy'); ta.remove();
+  $('#toast').textContent = ok ? '텍스트로 복사했습니다.' : '복사하지 못했습니다 — 직접 선택해 복사하세요.';
+};
+
+$('#legend').innerHTML = Object.values(TYPES).map(t => `<span class="tag" style="color:${t.c};border-color:${t.c}55">${t.n}</span>`).join('');
+// worksheet.html#t3 → 3교시 탭으로 바로 열기 (노트북 교시별 링크)
+function fromHash(){ const m = location.hash.match(/^#t([1-8])$/); if (m) { tab = +m[1] - 1; } }
+fromHash();
+window.addEventListener('hashchange', () => { fromHash(); render(); window.scrollTo({ top: 0 }); });
+render();
+</script>
+</body>
+</html>
