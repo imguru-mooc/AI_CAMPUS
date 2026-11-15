@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quantization·Pruning Day 2 복습 퀴즈</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:920px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.primary{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700;padding:9px 18px;font-size:14px}
+  button.submit{background:#3a2e12;border-color:var(--amber);color:var(--amber);font-weight:700;padding:9px 18px;font-size:14px}
+  button:disabled{opacity:.5;cursor:default}
+  button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  input[type=text]{background:#0a0f1c;color:var(--text);border:1px solid #2a3a5c;border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:14px}
+  select{background:#0a0f1c;color:var(--text);border:1px solid #2a3a5c;border-radius:6px;padding:4px 8px;font-family:inherit;font-size:14px}
+  .tabs{display:flex;flex-wrap:wrap;gap:6px}
+  .tabs button .s{font-family:var(--mono);font-size:11px;color:var(--dim);margin-left:6px}
+  .tabs button.graded .s{color:var(--green)}
+  .legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .tag{font-size:11.5px;border:1px solid var(--line);border-radius:999px;padding:2px 9px;color:var(--dim);font-family:var(--mono)}
+  .head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .head .t{color:var(--amber);font-size:17px}
+  .head .a{font-size:13px;color:var(--teal);font-family:var(--mono)}
+  .q{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px;background:#0e1628}
+  .q.unans{border-color:#5a3a1a}
+  .q.ok{border-color:#1f6b45}.q.bad{border-color:#7a2e2e}
+  .qh{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .q .n{font-family:var(--mono);color:var(--dim);font-size:12px}
+  .ty{font-size:11.5px;border-radius:999px;padding:1px 9px;border:1px solid}
+  .q .p{margin:6px 0 10px;font-size:15px}
+  .q code,.fb code,.dg code{font-family:var(--mono);color:var(--blue);background:#0a0f1c;padding:1px 5px;border-radius:4px}
+  .q pre{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin:6px 0 4px;font-size:14px;white-space:pre;overflow-x:auto;line-height:1.9}
+  .q pre input{font-size:13px;padding:2px 6px;width:auto;min-width:5ch}
+  .opts{display:grid;gap:6px}
+  .opt{text-align:left;padding:8px 12px;font-size:14px}
+  .opt .box{display:inline-block;width:18px;font-family:var(--mono);color:var(--dim)}
+  .opt.sel{border-color:var(--amber);background:#1f1a0c}
+  .opt.ok{border-color:var(--green);color:var(--green);background:#0d2216}
+  .opt.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .opt.miss{border-color:var(--green);border-style:dashed}
+  .ox{display:flex;gap:10px}
+  .ox button{font-size:22px;width:78px;height:54px;font-weight:700}
+  .fill{line-height:2.3}
+  .mrow{display:grid;grid-template-columns:1fr 24px minmax(160px,1.2fr);gap:8px;align-items:center;margin-bottom:6px}
+  .mrow .l{background:#0a0f1c;border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-size:14px}
+  .mrow select{width:100%}
+  .mrow .arr{color:var(--dim);text-align:center}
+  .mrow.ok select{border-color:var(--green)}.mrow.bad select{border-color:var(--red)}
+  .ord{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+  .ord li{display:grid;grid-template-columns:28px 1fr auto;gap:8px;align-items:center;background:#0a0f1c;border:1px solid #2a3a5c;border-radius:8px;padding:7px 10px;cursor:grab;font-size:14px}
+  .ord li.drag{opacity:.4}.ord li.over{border-color:var(--amber)}
+  .ord li .k{font-family:var(--mono);color:var(--dim)}
+  .ord li .mv button{padding:2px 8px;margin-left:4px}
+  .ord li.ok{border-color:var(--green)}.ord li.bad{border-color:var(--red)}
+  .hot{background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:6px;overflow-x:auto}
+  .hot svg{display:block;max-width:100%;height:auto;margin:0 auto}
+  .hot .rg{cursor:pointer;fill:transparent;stroke:transparent;stroke-width:2.5}
+  .hot .rg:hover{stroke:#f5b94288}
+  .hot .rg.sel{stroke:var(--amber);fill:#f5b94222}
+  .hot .rg.ok{stroke:var(--green);fill:#4ade8026}
+  .hot .rg.bad{stroke:var(--red);fill:#f8717126}
+  .card{perspective:900px;max-width:560px}
+  .card .in{position:relative;min-height:130px;transition:transform .5s;transform-style:preserve-3d}
+  .card.flip .in{transform:rotateY(180deg)}
+  .card .f,.card .b{position:absolute;inset:0;backface-visibility:hidden;border-radius:10px;border:1px solid #2a3a5c;display:flex;align-items:center;justify-content:center;text-align:center;padding:14px 18px;font-size:16px}
+  .card .f{background:#14203a;color:var(--amber)}
+  .card .b{background:#0f2a27;color:var(--teal);transform:rotateY(180deg)}
+  @media (prefers-reduced-motion:reduce){.card .in{transition:none}}
+  .selfrow{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center}
+  .selfrow .hint{margin-left:4px}
+  .fb{margin-top:10px;font-size:13px;color:var(--dim);border-left:3px solid var(--line);padding-left:10px}
+  .fb.ok{border-left-color:var(--green)}.fb.bad{border-left-color:var(--red)}
+  .fb b.v{display:block;margin-bottom:2px}
+  .fb.ok b.v{color:var(--green)}.fb.bad b.v{color:var(--red)}
+  .fb .anim{color:var(--teal);font-family:var(--mono);font-size:12px;display:block;margin-top:3px}
+  .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  .code{font-family:var(--mono);font-size:20px;color:var(--amber);letter-spacing:1px}
+  .score{font-family:var(--mono);color:var(--green);font-size:16px}
+  .hint{color:var(--dim);font-size:13px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:0;max-width:860px;width:92vw;max-height:88vh}
+  dialog::backdrop{background:#000a}
+  .dg{padding:18px 20px}
+  .dg h3{color:var(--amber);margin:0 0 4px;font-size:20px}
+  .dg .meta{color:var(--dim);font-size:13px;margin-bottom:12px;font-family:var(--mono)}
+  .dg .sec{margin:14px 0 6px;color:var(--teal);font-weight:700;font-size:14px}
+  .dg table{width:100%;border-collapse:collapse;font-size:13px}
+  .dg th{text-align:left;color:var(--dim);font-weight:600;padding:5px 8px;border-bottom:1px solid var(--line);font-size:12px}
+  .dg td{padding:5px 8px;border-bottom:1px solid #16203a;vertical-align:top}
+  .dg .ok{color:var(--green)}.dg .bad{color:var(--red)}.dg .none{color:var(--dim)}
+  .dg .sum{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0;font-family:var(--mono)}
+  .dgbar{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:10px 20px;display:flex;gap:8px;justify-content:flex-end;align-items:center}
+  .toast{color:var(--green);font-size:13px;margin-right:auto}
+  .body{overflow:auto;max-height:calc(88vh - 60px)}
+  @media(max-width:600px){.mrow{grid-template-columns:1fr;gap:4px}.mrow .arr{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Quantization·Pruning Day 2 복습 퀴즈</h1>
+  <p class="sub">Day 2 (1~8교시) 내용을 <b>24문항</b>으로 점검합니다 — 단일 · 다중 선택, O/X, 단답형, 선택형 빈칸, 짝 맞추기, 순서 배열, 핫스팟, 코드 완성 9가지 유형. 이름을 입력하고 모두 푼 뒤 <b style="color:var(--teal)">채점하기</b>를 누르면 정오 · 해설과 결과 코드가 나타납니다 (채점 후에는 답이 잠깁니다). 마지막으로 <b style="color:var(--amber)">제출 (오답 정리)</b>을 열어 <b>텍스트 복사</b> 또는 화면 캡처로 강사가 안내한 곳에 제출하세요.</p>
+
+  <div class="panel">
+    <div class="row"><label style="color:var(--dim);font-size:13px">이름 <input type="text" id="name" placeholder="홍길동"></label><span class="hint">이름은 결과 코드 계산에만 쓰이며 저장되지 않습니다.</span></div>
+  </div>
+  <div class="panel"><h2>문항 유형</h2><div class="tabs" id="tabs" style="display:none"></div><div class="legend" id="legend"></div></div>
+  <div class="panel" id="sheet"></div>
+  <div class="panel">
+    <div class="actions">
+      <button class="primary" id="gradeBtn">채점하기</button>
+      <span class="score" id="rscore"></span>
+      <span class="hint" id="rhint"></span>
+      <span class="code" id="rcode">—</span>
+    </div>
+    <div class="actions" style="margin-top:12px">
+      <button class="submit" id="submitBtn">제출 (오답 정리)</button>
+      <button id="resetBtn">다시 풀기</button>
+    </div>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <div class="body"><div class="dg" id="dgBody"></div></div>
+  <div class="dgbar"><span class="toast" id="toast"></span><button id="captureBtn" class="primary">📋 텍스트 복사 (제출용)</button><button id="closeBtn">닫기</button></div>
+</dialog>
+
+<script>
+const Q = [{"t": "Day 2 복습 퀴즈", "anim": "1~8교시 전체 · 24문항", "qs": [{"type": "single", "p": "<span style=\"color:var(--dim)\">[1교시]</span> PTQ(Post-Training Quantization)를 가장 바르게 설명한 것은?", "o": ["양자화 오차를 줄이도록 모델을 처음부터 다시 학습한다", "학습이 끝난 모델을 다시 학습하지 않고 INT8 로 바꾼다", "모델의 덜 중요한 채널 · weight 를 찾아 잘라 낸다", "큰 모델의 출력으로 작은 모델을 학습한다"], "a": 1, "w": "PTQ 는 <b>학습이 끝난 모델</b>의 숫자 그릇만 바꿉니다. 다시 학습하는 것은 QAT (Day 4), 채널 자르기는 Pruning, 큰 모델로 가르치기는 증류입니다.", "an": "D2-1 · ① 개념"}, {"type": "order", "p": "<span style=\"color:var(--dim)\">[1교시]</span> 오늘 static INT8 모델을 만든 순서대로 배열하세요.", "items": ["PyTorch 기준 정확도 확인", "ONNX 로 export · ONNX 정확도 확인", "quant_pre_process", "CalibrationDataReader 로 보정", "quantize_static", "같은 함수로 크기 · 정확도 · 속도 측정"], "w": "기준(0.846) → ONNX(0.846) → 전처리 → 보정 → 양자화 → 측정. 기준을 먼저 잡아야 떨어진 정확도의 원인을 알 수 있습니다.", "an": "D2-1 · ① 개념"}, {"type": "code", "p": "<span style=\"color:var(--dim)\">[1교시]</span> 실습 1-1 — 배치 크기를 바꿀 수 있는 ONNX 로 내보내세요.", "code": "torch.onnx.export(model, torch.zeros(1, 3, 32, 32), \"rn20.onnx\",\n    input_names=[\"{{}}\"], output_names=[\"logits\"],\n    {{}}={\"input\": {0: \"N\"}}, opset_version=17)", "a": [["input"], ["dynamic_axes"]], "w": "입력 이름은 뒤의 <code>sess.run(None, {\"input\": x})</code> 와 같아야 하고, <code>dynamic_axes</code> 로 0번 축(배치)을 가변 'N' 으로 둡니다.", "an": "실습 1-1"}, {"type": "single", "p": "<span style=\"color:var(--dim)\">[2교시]</span> ResNet-20 에 <code>quantize_dynamic</code> 을 적용했더니 FP32 보다 약 9배 느려졌습니다. 가장 큰 이유는?", "o": ["weight 가 INT8 이 되어 파일이 커졌기 때문", "층마다 실행 중에 활성값 scale 을 계산하고 다시 실수로 바꾸기 때문", "정확도가 크게 떨어져 ONNX Runtime 이 같은 입력을 여러 번 다시 실행하기 때문", "ONNX Runtime 이 INT8 을 전혀 지원하지 않기 때문"], "a": 1, "w": "dynamic 은 Conv 마다 DynamicQuantizeLinear (min/max → scale) · ConvInteger · Cast · Mul 이 붙습니다. 노드 52 → 181개. 파일은 오히려 1/3.5 로 작아졌고 정확도도 0.8445 로 거의 같습니다.", "an": "D2-2 · 예제 2-A"}, {"type": "ox", "p": "<span style=\"color:var(--dim)\">[2교시]</span> dynamic 양자화는 보정(calibration) 데이터가 필요 없다.", "a": true, "w": "맞습니다. 활성값 범위를 실행할 때마다 직접 계산하므로 보정 데이터가 없어도 됩니다. 그 대가가 실행 중 계산(느림)입니다.", "an": "2교시"}, {"type": "hot", "p": "<span style=\"color:var(--dim)\">[2교시]</span> dynamic 모델에서 <b>활성값의 min/max 를 실행 중에 찾는 노드</b>를 클릭하세요.", "w": "DynamicQuantizeLinear — 입력 텐서를 훑어 scale · zero_point 를 실행 중에 만듭니다. 이 노드가 Conv 마다 붙어 느려집니다.", "an": "D2-2 · 층 하나 들여다보기", "viewBox": "0 0 720 300", "sw": 720, "svg": "<defs><marker id=\"ah\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#8a9bb8\"/></marker></defs><text x=\"20\" y=\"20\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"start\" font-family=\"Noto Sans KR,sans-serif\" font-weight=\"normal\" dominant-baseline=\"middle\">rn20_dyn.onnx 의 Conv 한 자리 (실행 순서 →)</text><rect x=\"520\" y=\"90\" width=\"150\" height=\"70\" rx=\"6\" fill=\"#14203a\" stroke=\"#f5b942\" stroke-width=\"1\"/><text x=\"595.0\" y=\"115.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">Cast</text><text x=\"595.0\" y=\"136.0\" font-size=\"10.5\" fill=\"#8a9bb8\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"normal\" dominant-baseline=\"middle\">INT32 → FP32</text><rect x=\"40\" y=\"90\" width=\"200\" height=\"70\" rx=\"6\" fill=\"#14203a\" stroke=\"#f87171\" stroke-width=\"1\"/><text x=\"140.0\" y=\"115.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">DynamicQuantizeLinear</text><text x=\"140.0\" y=\"136.0\" font-size=\"10.5\" fill=\"#8a9bb8\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"normal\" dominant-baseline=\"middle\">x → uint8, scale, zp</text><rect x=\"290\" y=\"90\" width=\"180\" height=\"70\" rx=\"6\" fill=\"#14203a\" stroke=\"#2dd4bf\" stroke-width=\"1\"/><text x=\"380.0\" y=\"115.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">ConvInteger</text><text x=\"380.0\" y=\"136.0\" font-size=\"10.5\" fill=\"#8a9bb8\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"normal\" dominant-baseline=\"middle\">uint8 × int8 → int32</text><rect x=\"290\" y=\"200\" width=\"180\" height=\"70\" rx=\"6\" fill=\"#14203a\" stroke=\"#f5b942\" stroke-width=\"1\"/><text x=\"380.0\" y=\"225.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">Mul</text><text x=\"380.0\" y=\"246.0\" font-size=\"10.5\" fill=\"#8a9bb8\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"normal\" dominant-baseline=\"middle\">× (scale_x · scale_w)</text><line x1=\"240\" y1=\"125\" x2=\"288\" y2=\"125\" stroke=\"#8a9bb8\" stroke-width=\"1.6\" marker-end=\"url(#ah)\"/><line x1=\"470\" y1=\"125\" x2=\"518\" y2=\"125\" stroke=\"#8a9bb8\" stroke-width=\"1.6\" marker-end=\"url(#ah)\"/><line x1=\"595\" y1=\"160\" x2=\"472\" y2=\"230\" stroke=\"#8a9bb8\" stroke-width=\"1.6\" marker-end=\"url(#ah)\"/>", "regions": [{"id": "cast", "label": "Cast — INT32 → FP32", "x": 520, "y": 90, "w": 150, "h": 70}, {"id": "dql", "label": "DynamicQuantizeLinear — x → uint8, scale, zp", "x": 40, "y": 90, "w": 200, "h": 70}, {"id": "ci", "label": "ConvInteger — uint8 × int8 → int32", "x": 290, "y": 90, "w": 180, "h": 70}, {"id": "mul", "label": "Mul — × (scale_x · scale_w)", "x": 290, "y": 200, "w": 180, "h": 70}], "a": "dql"}, {"type": "multi", "p": "<span style=\"color:var(--dim)\">[3교시]</span> BatchNorm folding 에 대해 옳은 것을 모두 고르세요.", "o": ["추론 때 BN 의 μ · σ² · γ · β 는 상수라서 앞 Conv 에 합칠 수 있다", "접은 weight 는 W' = W × γ / √(σ² + ε) 이다", "folding 하면 BN 이 하던 정규화 효과가 사라지므로 정확도가 눈에 띄게 떨어진다", "양자화할 weight 는 접은 뒤의 W' 이다"], "a": [0, 1, 3], "w": "folding 은 같은 계산을 한 번의 Conv 로 바꾼 것이라 결과가 같습니다 (실측 최대 차이 9.5e-07). 양자화는 실제로 실행되는 W' 를 대상으로 합니다.", "an": "D2-3 · 실습 3-1"}, {"type": "short", "p": "<span style=\"color:var(--dim)\">[3교시]</span> PyTorch ResNet-20 에는 BN 모듈이 21개 있었습니다. eval 모드로 export 한 <code>rn20.onnx</code> 의 BatchNormalization 노드는 몇 개였나요? (숫자)", "a": ["0", "0개"], "w": "0개 — torch.onnx.export 가 eval 모드에서 BN 을 Conv 에 이미 접어 둡니다. 첫 Conv weight 와 직접 접은 W' 의 차이도 0.0 이었습니다.", "an": "실습 3-1"}, {"type": "drop", "p": "<span style=\"color:var(--dim)\">[3교시]</span> 빈칸에 알맞은 것을 고르세요.", "p2": "quant_pre_process 는 그래프 최적화와 함께 각 텐서의 {} 정보를 채운다. 실습에서 value_info 는 0 → {} 개가 되었고, 정확도는 {}.", "opts": [["모양(shape)", "정답 레이블 목록", "학습률"], ["21", "52", "181"], ["그대로였다", "1%p 올랐다", "크게 떨어졌다"]], "a": [0, 1, 0], "w": "양자화 도구가 텐서의 모양 · 자료형을 알아야 하므로 value_info 를 채웁니다 (0 → 52). 계산은 바뀌지 않아 정확도는 그대로입니다.", "an": "실습 3-2"}, {"type": "code", "p": "<span style=\"color:var(--dim)\">[4교시]</span> 실습 4-1 — 보정 데이터를 50장씩 내보내는 reader 를 완성하세요.", "code": "class CifarReader({{}}):\n    def get_next(self):\n        b = next(self.it, None)\n        return {{}} if b is None else {\"input\": b}", "a": [["CalibrationDataReader"], ["None"]], "w": "ONNX Runtime 의 <code>CalibrationDataReader</code> 를 상속하고, 데이터가 끝나면 <code>None</code> 을 돌려줘 보정을 멈춥니다.", "an": "실습 4-1"}, {"type": "ox", "p": "<span style=\"color:var(--dim)\">[4교시]</span> 보정 이미지를 모두 0.2배로 어둡게 해도, 장수가 500장으로 충분하면 정확도는 거의 그대로다.", "a": false, "w": "틀립니다. 범위가 어두운 쪽으로 좁게 잡혀 실제 입력의 밝은 값이 잘리고 정확도가 0.845 → 0.684 로 떨어졌습니다. 장수보다 <b>분포</b>가 중요합니다 (정상 분포면 10장도 0.8445).", "an": "D2-4 · 예제 4-B"}, {"type": "single", "p": "<span style=\"color:var(--dim)\">[4교시]</span> 보정 데이터로 잡은 입력 텐서 범위가 [−1.9895, 2.1265] 일 때 UINT8 scale 에 가장 가까운 값은?", "o": ["0.00807", "0.032282", "0.016141", "4.1160"], "a": 2, "w": "scale = (2.1265 − (−1.9895)) / 255 = 4.116 / 255 ≈ 0.016141, zp = round(1.9895 / 0.016141) = 123. Day 1 my_quant 와 ONNX Runtime 이 같은 값이었습니다.", "an": "예제 4-A"}, {"type": "hot", "p": "<span style=\"color:var(--dim)\">[5교시]</span> QOperator 형식 모델에서 <b>정수 연산을 직접 하는 Conv 노드</b>를 클릭하세요.", "w": "QLinearConv — uint8 입력 × int8 weight → int32 누적 → requantize 를 한 노드가 합니다. QDQ 형식에서는 원래 Conv 가 그대로 남고 Q · DQ 가 앞뒤에 붙습니다.", "an": "D2-5 · QOperator 모양", "viewBox": "0 0 720 300", "sw": 720, "svg": "<defs><marker id=\"ah\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#8a9bb8\"/></marker></defs><text x=\"20\" y=\"20\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"start\" font-family=\"Noto Sans KR,sans-serif\" font-weight=\"normal\" dominant-baseline=\"middle\">rn20_qop.onnx 의 일부</text><rect x=\"40\" y=\"100\" width=\"160\" height=\"70\" rx=\"6\" fill=\"#14203a\" stroke=\"#c084fc\" stroke-width=\"1\"/><text x=\"120.0\" y=\"125.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">QuantizeLinear</text><text x=\"120.0\" y=\"146.0\" font-size=\"10.5\" fill=\"#8a9bb8\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"normal\" dominant-baseline=\"middle\">float → uint8</text><rect x=\"250\" y=\"100\" width=\"180\" height=\"70\" rx=\"6\" fill=\"#14203a\" stroke=\"#2dd4bf\" stroke-width=\"1\"/><text x=\"340.0\" y=\"125.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">QLinearConv</text><text x=\"340.0\" y=\"146.0\" font-size=\"10.5\" fill=\"#8a9bb8\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"normal\" dominant-baseline=\"middle\">uint8 × int8</text><rect x=\"480\" y=\"100\" width=\"180\" height=\"70\" rx=\"6\" fill=\"#14203a\" stroke=\"#60a5fa\" stroke-width=\"1\"/><text x=\"570.0\" y=\"125.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">QLinearAdd</text><text x=\"570.0\" y=\"146.0\" font-size=\"10.5\" fill=\"#8a9bb8\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"normal\" dominant-baseline=\"middle\">skip 연결</text><rect x=\"455\" y=\"210\" width=\"230\" height=\"60\" rx=\"6\" fill=\"#14203a\" stroke=\"#60a5fa\" stroke-width=\"1\"/><text x=\"570.0\" y=\"240.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">QLinearGlobalAveragePool</text><line x1=\"200\" y1=\"135\" x2=\"248\" y2=\"135\" stroke=\"#8a9bb8\" stroke-width=\"1.6\" marker-end=\"url(#ah)\"/><line x1=\"430\" y1=\"135\" x2=\"478\" y2=\"135\" stroke=\"#8a9bb8\" stroke-width=\"1.6\" marker-end=\"url(#ah)\"/><line x1=\"570\" y1=\"170\" x2=\"570\" y2=\"208\" stroke=\"#8a9bb8\" stroke-width=\"1.6\" marker-end=\"url(#ah)\"/>", "regions": [{"id": "q", "label": "QuantizeLinear — float → uint8", "x": 40, "y": 100, "w": 160, "h": 70}, {"id": "conv", "label": "QLinearConv — uint8 × int8", "x": 250, "y": 100, "w": 180, "h": 70}, {"id": "add", "label": "QLinearAdd — skip 연결", "x": 480, "y": 100, "w": 180, "h": 70}, {"id": "gap", "label": "QLinearGlobalAveragePool", "x": 455, "y": 210, "w": 230, "h": 60}], "a": "conv"}, {"type": "multi", "p": "<span style=\"color:var(--dim)\">[5교시]</span> QDQ 형식과 QOperator 형식에 대해 옳은 것을 모두 고르세요.", "o": ["QDQ 는 원래 Conv 를 두고 앞뒤에 Q · DQ 노드를 붙인다", "같은 scale 을 쓰면 두 형식의 정확도는 거의 같다", "QOperator 는 보정 데이터 없이 만들 수 있는 유일한 형식이다", "실습 모델의 노드 수는 QDQ 가 QOperator 보다 많았다"], "a": [0, 1, 3], "w": "두 형식 모두 static 양자화라 보정 데이터가 필요합니다. 노드 수는 QDQ 145개 vs QOperator 35개, 정확도는 둘 다 0.845.", "an": "실습 5-1"}, {"type": "short", "p": "<span style=\"color:var(--dim)\">[5교시]</span> x86 CPU 에서 빠른 INT8 조합은 활성값을 부호 없는 8비트로 두는 것입니다. 이때 <code>activation_type</code> 에 넣는 QuantType 이름은? (QuantType. 뒤)", "a": ["QUInt8", "quint8", "QuantType.QUInt8"], "w": "QUInt8 (활성값) × QInt8 (weight) 가 x86 의 빠른 길입니다. 활성값도 QInt8 로 하면 QDQ S8/S8 1.10 ms 로 FP32 (0.68 ms) 보다 느렸습니다.", "an": "D2-5 · 실습 5-2"}, {"type": "match", "p": "<span style=\"color:var(--dim)\">[6교시]</span> 보정 방법과 범위를 정하는 방식을 짝지으세요.", "left": ["MinMax", "Percentile", "Entropy"], "right": ["본 값의 최솟값 ~ 최댓값", "상위 극단값 일부를 버린 지점", "원래 분포와의 KL divergence 가 최소인 지점"], "a": [0, 1, 2], "w": "MinMax 는 꼬리 끝까지, Percentile 은 꼬리를 잘라, Entropy 는 분포 차이를 기준으로 범위를 고릅니다.", "an": "D2-6 · 실습 6-1"}, {"type": "drop", "p": "<span style=\"color:var(--dim)\">[6교시]</span> 빈칸에 알맞은 것을 고르세요.", "p2": "Percentile 은 MinMax 보다 범위가 {} 칸 간격(scale)이 {}. 대신 범위 밖 값은 {} 오차가 생긴다.", "opts": [["좁아", "넓어", "같아"], ["촘촘해진다", "넓어진다", "0 이 된다"], ["잘림(clipping)", "반올림 오차만", "오버플로(overflow)"]], "a": [0, 0, 0], "w": "범위를 줄이면 scale 이 작아져 본체 값의 반올림 오차는 줄고, 잘린 꼬리 값에는 clipping 오차가 생깁니다. 실측 활성값 34개의 범위 비율 평균 0.82.", "an": "D2-6 · ① 개념"}, {"type": "ox", "p": "<span style=\"color:var(--dim)\">[6교시]</span> ResNet-20 실측에서 6가지 보정 설정(3가지 방법 × per-channel 여부)의 정확도 차이는 1%p 를 넘었다.", "a": false, "w": "6가지 모두 0.844 ~ 0.8465 — 차이 0.25%p (2,000장 중 5장) 입니다. ResNet-20 은 양자화에 강해 방법 차이가 작습니다. 약한 모델은 Day 3 에서 봅니다.", "an": "실습 6-1"}, {"type": "single", "p": "<span style=\"color:var(--dim)\">[7교시]</span> <code>bench</code> 함수에서 본 측정 전에 warm-up 실행을 몇 번 하는 이유로 가장 알맞은 것은?", "o": ["측정하는 동안 모델 정확도를 조금씩 높이기 위해", "첫 실행의 메모리 할당 · 초기화 시간을 측정에서 빼기 위해", "INT8 모델 파일 크기를 측정 전에 미리 한 번 더 줄여 두기 위해", "보정 데이터를 미리 읽기 위해"], "a": 1, "w": "첫 몇 번은 메모리 할당 · 커널 선택 · 캐시 준비로 느립니다. 이를 빼야 반복 측정이 안정됩니다.", "an": "실습 2-2 · D2-7"}, {"type": "multi", "p": "<span style=\"color:var(--dim)\">[7교시]</span> 실측 qp_baseline.csv 에서 읽을 수 있는 사실을 모두 고르세요.", "o": ["INT8 모델은 모두 약 300 KB 로 FP32 의 약 1/3 이다", "dynamic 모델은 배치 1 지연이 가장 길었다", "QDQ U8/S8 은 배치 32 처리량이 FP32 의 약 2배였다", "INT8 모델의 정확도는 모두 FP32 보다 2%p 이상 낮게 측정되었다"], "a": [0, 1, 2], "w": "크기 297 ~ 322 KB (FP32 1,071 KB), dynamic 6.39 ms, 처리량 1,478 → 3,217 장/초. 정확도는 0.8445 ~ 0.846 으로 거의 같았습니다.", "an": "D2-7 · 실습 7-1"}, {"type": "order", "p": "<span style=\"color:var(--dim)\">[7교시]</span> bench 함수가 하는 일을 순서대로 배열하세요.", "items": ["세션 만들기 (스레드 1)", "warm-up 몇 번 실행", "n 번 실행하며 시간 기록", "평균(mean) · p95 계산"], "w": "make_session → warm-up → 반복 측정 → mean · p95. 스레드 수를 고정해야 컴퓨터마다 비교가 공정합니다.", "an": "실습 2-2"}, {"type": "short", "p": "<span style=\"color:var(--dim)\">[8교시]</span> 미니 프로젝트의 조합 수는? (형식 2 × 활성값 2 × 방법 2 × per-channel 2)", "a": ["16", "16개", "16가지"], "w": "2 × 2 × 2 × 2 = 16. 강사 실측에서 정확도는 모두 0.844 ~ 0.8465 였습니다.", "an": "과제 3"}, {"type": "drop", "p": "<span style=\"color:var(--dim)\">[8교시]</span> 빈칸에 알맞은 것을 고르세요.", "p2": "최적 설정은 먼저 acc ≥ fp32_acc − {} 인 것만 남기고, 그중 {} 가 가장 작은 것을 고른다. 상위 설정끼리 차이가 측정 {} 보다 작으면 다시 재 본다.", "opts": [["0.01", "0.1", "0.05"], ["mean_ms", "size_kb", "acc"], ["잡음", "정확도", "파일"]], "a": [0, 0, 0], "w": "정확도 조건 → 목표 지표 최소. 강사 PC 에서도 두 번 돌리니 1등(QOperator U8 계열)이 바뀌었습니다 — 0.35 ~ 0.40 ms 차이는 측정 잡음 수준입니다.", "an": "D2-8 · 측정 잡음"}, {"type": "match", "p": "<span style=\"color:var(--dim)\">[8교시]</span> 목표 지표를 바꿀 때 1등이 되는 설정을 짝지으세요 (강사 실측 grid).", "left": ["mean_ms 최소", "size_kb 최소", "acc 최대"], "right": ["QOperator U8 계열 (약 0.35 ms)", "QOperator per-tensor (약 293 KB)", "Percentile per-tensor (0.8465)"], "a": [0, 1, 2], "w": "'가장 좋은 설정' 은 무엇을 원하느냐에 달려 있습니다. 0.8465 처럼 FP32 보다 높은 정확도는 2,000장 중 1장 차이 — 평가 잡음입니다.", "an": "D2-8 · 과제 4"}]}];
+const NQ = Q.reduce((t, s) => t + s.qs.length, 0);
+const TYPES = {
+  single:{n:'단일 선택',c:'#60a5fa'}, multi:{n:'다중 선택',c:'#c084fc'}, ox:{n:'O/X',c:'#f5b942'},
+  short:{n:'단답형',c:'#2dd4bf'}, drop:{n:'선택형 빈칸',c:'#93c5fd'}, match:{n:'짝 맞추기',c:'#f472b6'},
+  order:{n:'순서 배열',c:'#fb923c'}, hot:{n:'핫스팟',c:'#4ade80'}, code:{n:'코드 완성',c:'#a3e635'}
+};
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const strip = h => { const d = document.createElement('div'); d.innerHTML = h; return d.textContent; };
+const norm = s => String(s ?? '').toLowerCase().replace(/\s+/g, '').replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+function rng(seed){ let h = 2166136261; for (const c of seed) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return () => { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return ((h >>> 0) % 100000) / 100000; }; }
+function shuffled(arr, seed){ const r = rng(seed), idx = arr.map((_, i) => i); for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; } if (idx.every((v, i) => v === i) && idx.length > 1) idx.push(idx.shift()); return idx; }
+
+// ── 상태 ──
+let tab = 0;
+const graded = Q.map(() => false);
+const ans = Q.map((s, i) => s.qs.map((q, k) => init(q, `${i}-${k}`)));
+function init(q, id){
+  switch (q.type) {
+    case 'single': case 'ox': case 'hot': return null;
+    case 'multi': return [];
+    case 'short': return '';
+    case 'drop': return q.opts.map(() => -1);
+    case 'match': return q.left.map(() => -1);
+    case 'order': return shuffled(q.items, 'o' + id);          // 현재 화면 순서(원래 인덱스)
+    case 'flash': return { flipped:false, self:null };
+    case 'code': return q.a.map(() => '');
+  }
+}
+function answered(q, a){
+  switch (q.type) {
+    case 'single': case 'ox': case 'hot': return a !== null;
+    case 'multi': return a.length > 0;
+    case 'short': return a.trim() !== '';
+    case 'drop': case 'match': return a.every(v => v >= 0);
+    case 'order': return true;
+    case 'flash': return a.self !== null;
+    case 'code': return a.every(v => v.trim() !== '');
+  }
+}
+function correct(q, a){
+  switch (q.type) {
+    case 'single': case 'hot': return a === q.a;
+    case 'ox': return a === q.a;
+    case 'multi': return a.length === q.a.length && q.a.every(x => a.includes(x));
+    case 'short': return q.a.some(x => norm(x) === norm(a));
+    case 'drop': return a.every((v, i) => v === q.a[i]);
+    case 'match': return a.every((v, i) => v === q.a[i]);
+    case 'order': return a.every((v, i) => v === i);
+    case 'flash': return a.self === true;
+    case 'code': return a.every((v, i) => q.a[i].some(x => norm(x) === norm(v)));
+  }
+}
+const scoreOf = i => ans[i].filter((a, k) => correct(Q[i].qs[k], a)).length;
+
+// ── 답 문자열 (오답 정리용) ──
+const L = '①②③④⑤⑥⑦⑧';
+function fmt(q, a, right){
+  switch (q.type) {
+    case 'single': return right ? `${L[q.a]} ${strip(q.o[q.a])}` : (a === null ? '미응답' : `${L[a]} ${strip(q.o[a])}`);
+    case 'multi': { const v = right ? q.a : a; return v.length ? [...v].sort().map(i => L[i]).join(' ') : '미응답'; }
+    case 'ox': { const v = right ? q.a : a; return v === null ? '미응답' : (v ? 'O' : 'X'); }
+    case 'short': return right ? q.a[0] : (a.trim() || '미응답');
+    case 'drop': return (right ? q.a : a).map((v, i) => v < 0 ? '?' : strip(q.opts[i][v])).join(' / ');
+    case 'match': return (right ? q.a : a).map((v, i) => `${strip(q.left[i])}→${v < 0 ? '?' : strip(q.right[v])}`).join(', ');
+    case 'order': return (right ? q.items.map((_, i) => i) : a).map(i => strip(q.items[i])).join(' → ');
+    case 'hot': { const v = right ? q.a : a; return v === null ? '미응답' : (q.regions.find(r => r.id === v) || {}).label; }
+    case 'flash': return right ? strip(q.back) : (a.self === null ? '미응답' : (a.self ? '알았다' : '몰랐다'));
+    case 'code': return (right ? q.a.map(x => x[0]) : a.map(v => v || '?')).join(' / ');
+  }
+}
+
+// ── 렌더 ──
+function renderTabs(){
+  $('#tabs').innerHTML = Q.map((s, i) => {
+    const n = ans[i].filter((a, k) => answered(s.qs[k], a)).length;
+    return `<button class="${i === tab ? 'active' : ''} ${graded[i] ? 'graded' : ''}" data-i="${i}">${s.t}<span class="s">${graded[i] ? scoreOf(i) + '/' + s.qs.length : n + '/' + s.qs.length}</span></button>`;
+  }).join('');
+  $('#tabs').querySelectorAll('button').forEach(b => b.onclick = () => { tab = +b.dataset.i; history.replaceState(null, '', '#t' + (tab + 1)); render(); window.scrollTo({ top: 0 }); });
+}
+function qHTML(q, k){
+  const a = ans[tab][k], g = graded[tab], id = `${tab}-${k}`, dis = g ? 'disabled' : '';
+  const ok = g && correct(q, a);
+  let body = '';
+  switch (q.type) {
+    case 'single':
+    case 'multi': {
+      const isM = q.type === 'multi';
+      body = (isM ? '<div class="hint" style="margin:-4px 0 8px">정답을 <b>모두</b> 고르세요.</div>' : '') + '<div class="opts">' + q.o.map((o, j) => {
+        const sel = isM ? a.includes(j) : a === j, isA = isM ? q.a.includes(j) : q.a === j;
+        let c = sel ? 'sel' : '';
+        if (g) c = isA && sel ? 'ok' : (sel ? 'bad' : (isA ? (isM ? 'miss' : 'ok') : ''));
+        const box = isM ? (sel ? '☑' : '☐') : L[j];
+        return `<button class="opt ${c}" data-k="${k}" data-j="${j}" ${dis}><span class="box">${box}</span> ${o}</button>`;
+      }).join('') + '</div>';
+      break;
+    }
+    case 'ox':
+      body = '<div class="ox">' + [true, false].map(v => {
+        let c = a === v ? 'active' : '';
+        if (g) c = (q.a === v ? 'opt ok' : (a === v ? 'opt bad' : ''));
+        return `<button class="oxb ${c}" data-k="${k}" data-v="${v}" ${dis} aria-label="${v ? '참' : '거짓'}">${v ? 'O' : 'X'}</button>`;
+      }).join('') + '</div>';
+      break;
+    case 'short':
+      body = `<input type="text" class="sa" data-k="${k}" value="${esc(a)}" placeholder="정답 입력" style="width:min(100%,320px)" ${dis}>`;
+      break;
+    case 'drop': {
+      let i = 0;
+      body = '<div class="fill">' + q.p2.replace(/\{\}/g, () => {
+        const n = i++;
+        const opts = q.opts[n].map((o, j) => `<option value="${j}" ${a[n] === j ? 'selected' : ''}>${esc(strip(o))}</option>`).join('');
+        const st = g ? `style="border-color:${a[n] === q.a[n] ? 'var(--green)' : 'var(--red)'}"` : '';
+        return `<select class="dd" data-k="${k}" data-n="${n}" ${dis} ${st}><option value="-1">선택</option>${opts}</select>`;
+      }) + '</div>';
+      break;
+    }
+    case 'match': {
+      const order = shuffled(q.right, 'm' + id);
+      body = q.left.map((l, i) => {
+        const opts = order.map(j => `<option value="${j}" ${a[i] === j ? 'selected' : ''}>${esc(strip(q.right[j]))}</option>`).join('');
+        const c = g ? (a[i] === q.a[i] ? 'ok' : 'bad') : '';
+        return `<div class="mrow ${c}"><span class="l">${l}</span><span class="arr">↔</span><select class="mm" data-k="${k}" data-i="${i}" ${dis}><option value="-1">짝 선택</option>${opts}</select></div>`;
+      }).join('');
+      break;
+    }
+    case 'order':
+      body = '<div class="hint" style="margin:-4px 0 8px">끌어다 놓거나 ▲▼ 버튼으로 순서를 바꾸세요.</div><ol class="ord" data-k="' + k + '">' + a.map((it, pos) => {
+        const c = g ? (it === pos ? 'ok' : 'bad') : '';
+        return `<li class="${c}" draggable="${!g}" data-pos="${pos}"><span class="k">${pos + 1}</span><span>${q.items[it]}</span><span class="mv"><button data-k="${k}" data-pos="${pos}" data-d="-1" ${dis || (pos === 0 ? 'disabled' : '')} aria-label="위로">▲</button><button data-k="${k}" data-pos="${pos}" data-d="1" ${dis || (pos === a.length - 1 ? 'disabled' : '')} aria-label="아래로">▼</button></span></li>`;
+      }).join('') + '</ol>';
+      break;
+    case 'hot': {
+      const regs = q.regions.map(r => {
+        let c = a === r.id ? 'sel' : '';
+        if (g) c = r.id === q.a ? 'ok' : (a === r.id ? 'bad' : '');
+        const shape = r.shape === 'circle' ? `<circle cx="${r.x}" cy="${r.y}" r="${r.r}"` : `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="6"`;
+        return `${shape} class="rg ${c}" data-k="${k}" data-r="${r.id}" tabindex="${g ? -1 : 0}" role="button" aria-label="${esc(r.label)}"><title>${esc(r.label)}</title>${r.shape === 'circle' ? '</circle>' : '</rect>'}`;
+      }).join('');
+      body = `<div class="hot"><svg viewBox="${q.viewBox}" width="${q.sw}" xmlns="http://www.w3.org/2000/svg">${q.svg}${regs}</svg></div>` +
+        `<div class="hint" style="margin-top:6px">선택: <b style="color:var(--amber)">${a === null ? '없음' : esc((q.regions.find(r => r.id === a) || {}).label)}</b></div>`;
+      break;
+    }
+    case 'flash':
+      body = `<div class="card ${a.flipped ? 'flip' : ''}" data-k="${k}"><div class="in"><div class="f">${q.front}</div><div class="b">${q.back}</div></div></div>` +
+        `<div class="selfrow"><button class="flipb" data-k="${k}" ${g ? 'disabled' : ''}>${a.flipped ? '앞면 보기' : '🔄 카드 뒤집기'}</button>` +
+        `<button class="selfb ${a.self === true ? 'active' : ''}" data-k="${k}" data-v="1" ${g || !a.flipped ? 'disabled' : ''}>✅ 알았다</button>` +
+        `<button class="selfb ${a.self === false ? 'active' : ''}" data-k="${k}" data-v="0" ${g || !a.flipped ? 'disabled' : ''}>❌ 몰랐다</button>` +
+        `<span class="hint">${a.flipped ? '정답과 비교해 스스로 채점하세요.' : '먼저 답을 떠올린 뒤 뒤집으세요.'}</span></div>`;
+      break;
+    case 'code': {
+      let i = 0;
+      body = '<pre>' + esc(q.code).replace(/\{\{\}\}/g, () => {
+        const n = i++;
+        const w = Math.max(5, (q.a[n][0] || '').length + 2);
+        const st = g ? `style="border-color:${q.a[n].some(x => norm(x) === norm(a[n])) ? 'var(--green)' : 'var(--red)'};width:${w}ch"` : `style="width:${w}ch"`;
+        return `<input type="text" class="ci" data-k="${k}" data-n="${n}" value="${esc(a[n])}" ${dis} ${st} aria-label="빈칸 ${n + 1}">`;
+      }) + '</pre>';
+      break;
+    }
+  }
+  const t = TYPES[q.type];
+  const prompt = q.type === 'drop' ? (q.p || '') : (q.type === 'flash' ? (q.p || '카드 앞면의 질문에 답을 떠올린 뒤 뒤집어 확인하세요.') : q.p);
+  let fb = '';
+  if (g) {
+    const right = q.type === 'flash' ? '' : `<div>정답: <b>${esc(fmt(q, a, true))}</b></div>`;
+    fb = `<div class="fb ${ok ? 'ok' : 'bad'}"><b class="v">${ok ? '정답' : '오답'}</b>${right}${q.w}<span class="anim">확인: ${q.an}</span></div>`;
+  }
+  const un = !g && !answered(q, a) && attempted[tab] ? 'unans' : '';
+  return `<div class="q ${g ? (ok ? 'ok' : 'bad') : un}"><div class="qh"><span class="n">문항 ${k + 1}</span><span class="ty" style="color:${t.c};border-color:${t.c}">${t.n}</span></div><div class="p">${prompt}</div>${body}${fb}</div>`;
+}
+const attempted = Q.map(() => false);
+function render(){
+  renderTabs();
+  const s = Q[tab];
+  $('#sheet').innerHTML = `<div class="head"><span class="t">${s.t}</span><span class="a">🎬 ${s.anim}</span></div>` + s.qs.map((q, k) => qHTML(q, k)).join('');
+  bind();
+  const nm = $('#name').value, g = graded[tab];
+  if (g) {
+    const sc = scoreOf(tab); $('#rscore').textContent = `${sc}/${s.qs.length}`;
+    if (nm.trim()) { $('#rcode').textContent = codeFor(nm, tab + 1, sc); $('#rhint').textContent = '결과 코드'; }
+    else { $('#rcode').textContent = '—'; $('#rhint').textContent = '이름을 입력하면 결과 코드가 나옵니다.'; }
+  } else {
+    $('#rcode').textContent = '—'; $('#rscore').textContent = '';
+    const n = ans[tab].filter((a, k) => answered(s.qs[k], a)).length;
+    $('#rhint').textContent = `${n}/${s.qs.length} 응답. 채점하기를 누르면 잠깁니다.`;
+  }
+  $('#gradeBtn').disabled = g;
+}
+function bind(){
+  const S = $('#sheet'), A = ans[tab];
+  S.querySelectorAll('.opt[data-j]').forEach(b => b.onclick = () => {
+    const k = +b.dataset.k, j = +b.dataset.j, q = Q[tab].qs[k];
+    if (q.type === 'multi') { const i = A[k].indexOf(j); i < 0 ? A[k].push(j) : A[k].splice(i, 1); }
+    else A[k] = A[k] === j ? null : j;
+    render();
+  });
+  S.querySelectorAll('.oxb').forEach(b => b.onclick = () => { const k = +b.dataset.k, v = b.dataset.v === 'true'; A[k] = A[k] === v ? null : v; render(); });
+  S.querySelectorAll('.sa').forEach(i => i.oninput = () => { A[+i.dataset.k] = i.value; renderTabs(); });
+  S.querySelectorAll('.ci').forEach(i => i.oninput = () => { A[+i.dataset.k][+i.dataset.n] = i.value; renderTabs(); });
+  S.querySelectorAll('.dd').forEach(s => s.onchange = () => { A[+s.dataset.k][+s.dataset.n] = +s.value; renderTabs(); });
+  S.querySelectorAll('.mm').forEach(s => s.onchange = () => { A[+s.dataset.k][+s.dataset.i] = +s.value; renderTabs(); });
+  S.querySelectorAll('.ord .mv button').forEach(b => b.onclick = () => {
+    const k = +b.dataset.k, p = +b.dataset.pos, d = +b.dataset.d, arr = A[k];
+    [arr[p], arr[p + d]] = [arr[p + d], arr[p]]; render();
+  });
+  S.querySelectorAll('.ord').forEach(ol => {
+    const k = +ol.dataset.k; let from = null;
+    ol.querySelectorAll('li').forEach(li => {
+      li.addEventListener('dragstart', e => { from = +li.dataset.pos; li.classList.add('drag'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(from)); });
+      li.addEventListener('dragend', () => li.classList.remove('drag'));
+      li.addEventListener('dragover', e => { if (from !== null) { e.preventDefault(); li.classList.add('over'); } });
+      li.addEventListener('dragleave', () => li.classList.remove('over'));
+      li.addEventListener('drop', e => { e.preventDefault(); const to = +li.dataset.pos; if (from === null || from === to) return; const arr = A[k]; const [x] = arr.splice(from, 1); arr.splice(to, 0, x); from = null; render(); });
+    });
+  });
+  S.querySelectorAll('.rg').forEach(r => {
+    const pick = () => { if (graded[tab]) return; const k = +r.dataset.k; A[k] = A[k] === r.dataset.r ? null : r.dataset.r; render(); };
+    r.addEventListener('click', pick);
+    r.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+  });
+  S.querySelectorAll('.flipb').forEach(b => b.onclick = () => { const k = +b.dataset.k; A[k].flipped = !A[k].flipped; render(); });
+  S.querySelectorAll('.card').forEach(c => c.onclick = () => { if (graded[tab]) return; const k = +c.dataset.k; A[k].flipped = !A[k].flipped; render(); });
+  S.querySelectorAll('.selfb').forEach(b => b.onclick = () => { const k = +b.dataset.k; A[k].self = b.dataset.v === '1'; render(); });
+}
+
+// ── 채점 · 결과 코드 ──
+function hash(s){ let h = 5381; for (const c of s) h = ((h << 5) + h + c.charCodeAt(0)) >>> 0; return h.toString(16).padStart(8, '0').slice(-4); }
+function codeFor(name, t, score){ return `${t}${'ABCDEFGHIJK'[Math.round(10 - score * 10 / Q[t - 1].qs.length)] || 'K'}-${hash(`${name.trim()}|${t}|${score}|qpday2quiz`)}`; }
+$('#gradeBtn').onclick = () => {
+  const s = Q[tab], n = ans[tab].filter((a, k) => answered(s.qs[k], a)).length;
+  attempted[tab] = true;
+  if (n < s.qs.length && !confirm(`아직 ${s.qs.length - n}문항에 답하지 않았습니다. 그래도 채점할까요? (미응답은 오답 처리)`)) { render(); return; }
+  graded[tab] = true; render();
+};
+$('#resetBtn').onclick = () => {
+  if (!confirm(`답을 모두 지우고 다시 풀까요?`)) return;
+  graded[tab] = false; attempted[tab] = false;
+  ans[tab] = Q[tab].qs.map((q, k) => init(q, `${tab}-${k}`)); render();
+};
+$('#name').oninput = render;
+
+// ── 제출 · 오답 정리 ──
+let lastHtml = '', lastText = '';
+function buildReport(){
+  const nm = $('#name').value.trim() || '(이름 없음)', ds = new Date().toLocaleString('ko-KR');
+  let h = `<h3>Quantization·Pruning Day 2 복습 퀴즈 — 오답 정리</h3><div class="meta">${esc(nm)} · ${ds}</div>`;
+  let t = `Quantization·Pruning Day 2 복습 퀴즈 — 오답 정리\n이름: ${nm}\n일시: ${ds}\n\n`;
+  let tot = 0, cnt = 0;
+  const byType = {};
+  Q.forEach((s, i) => {
+    if (!graded[i]) return;
+    const sc = scoreOf(i); tot += sc; cnt++;
+    s.qs.forEach((q, k) => { const b = byType[q.type] ||= [0, 0]; b[1]++; if (correct(q, ans[i][k])) b[0]++; });
+    const code = $('#name').value.trim() ? codeFor($('#name').value, i + 1, sc) : '—';
+    const wrong = s.qs.map((q, k) => ({ q, k, a: ans[i][k] })).filter(x => !correct(x.q, x.a));
+    h += `<div class="sec">${esc(s.t)} — ${sc}/${s.qs.length} · 결과 코드 ${code}</div>`;
+    t += `[${s.t}] ${sc}/${s.qs.length} · 결과 코드 ${code}\n`;
+    if (!wrong.length) { h += `<div class="ok">전부 정답 🎉</div>`; t += '  전부 정답\n\n'; return; }
+    h += '<table><tr><th>#</th><th>유형</th><th>문항</th><th>내 답</th><th>정답</th><th>다시 볼 곳</th></tr>';
+    wrong.forEach(({ q, k, a }) => {
+      const qt = strip(q.type === 'flash' ? q.front : (q.p || q.p2 || '')).replace(/\s+/g, ' ').slice(0, 70);
+      const my = fmt(q, a, false), co = fmt(q, a, true);
+      h += `<tr><td>${k + 1}</td><td>${TYPES[q.type].n}</td><td>${esc(qt)}</td><td class="bad">${esc(my)}</td><td class="ok">${esc(co)}</td><td>${esc(strip(q.an))}</td></tr>`;
+      t += `  ${k + 1}. [${TYPES[q.type].n}] ${qt}\n     내 답: ${my}\n     정답: ${co}\n     다시 볼 곳: ${strip(q.an)}\n`;
+    });
+    h += '</table>'; t += '\n';
+  });
+  const notGraded = Q.map((s, i) => graded[i] ? null : i + 1).filter(x => x);
+  const typeLine = Object.entries(byType).map(([k, [c, n]]) => `${TYPES[k].n} ${c}/${n}`).join(' · ');
+  const sum = `<div class="sum"><span>총점 ${tot}/${NQ} · ${Math.round(tot / NQ * 100)}점</span>${notGraded.length ? `<span class="none">미채점: ${notGraded.join(', ')}</span>` : ''}</div>` + (typeLine ? `<div class="meta">유형별 정답: ${typeLine}</div>` : '');
+  h = h.replace('</div>', '</div>' + sum);
+  t = t.replace('\n\n', `\n총점 ${tot}/${NQ} · ${Math.round(tot / NQ * 100)}점${notGraded.length ? ' · 미채점 ' + notGraded.join(', ') + '교시' : ''}\n유형별 정답: ${typeLine}\n\n`);
+  lastHtml = h; lastText = t;
+  return h;
+}
+$('#submitBtn').onclick = () => {
+  if (!graded.some(x => x)) { alert('먼저 채점하기를 누르세요.'); return; }
+  $('#dgBody').innerHTML = buildReport(); $('#toast').textContent = ''; $('#dlg').showModal();
+};
+$('#closeBtn').onclick = () => $('#dlg').close();
+$('#captureBtn').onclick = async () => {
+  const htmlDoc = `<meta charset="utf-8">` + lastHtml.replace(/ class="[^"]*"/g, '').replace(/<table>/g, '<table border="1" style="border-collapse:collapse">');
+  try {
+    if (navigator.clipboard && window.ClipboardItem) {
+      await navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([htmlDoc], { type: 'text/html' }), 'text/plain': new Blob([lastText], { type: 'text/plain' }) })]);
+      $('#toast').textContent = '복사했습니다 — 안내받은 제출처에 붙여 넣으세요.'; return;
+    }
+  } catch (e) {}
+  const ta = document.createElement('textarea'); ta.value = lastText; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  $('#dlg').appendChild(ta); ta.focus(); ta.select();
+  const ok = document.execCommand('copy'); ta.remove();
+  $('#toast').textContent = ok ? '텍스트로 복사했습니다.' : '복사하지 못했습니다 — 직접 선택해 복사하세요.';
+};
+
+$('#legend').innerHTML = Object.values(TYPES).map(t => `<span class="tag" style="color:${t.c};border-color:${t.c}55">${t.n}</span>`).join('');
+// worksheet.html#t3 → 3교시 탭으로 바로 열기 (노트북 교시별 링크)
+function fromHash(){ const m = location.hash.match(/^#t([1-8])$/); if (m) { tab = +m[1] - 1; } }
+fromHash();
+window.addEventListener('hashchange', () => { fromHash(); render(); window.scrollTo({ top: 0 }); });
+render();
+</script>
+</body>
+</html>
