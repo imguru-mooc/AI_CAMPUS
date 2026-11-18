@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>경보·기록 명세 · 프로젝트 1 산출물</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="crumb"><a href="../index.html">프로젝트 1 산출물</a> / Day 9 · 12.07(월)</div>
+  <header class="top">
+    <h1 class="page">경보·기록 명세</h1>
+    <div class="meta"><span class="pill">Day 9 · 12.07(월)</span><span class="pill">제출: Day 9 8교시</span><span class="pill">파일명: docs/09_alert_logging.md</span></div>
+    <p class="lead">회로 연결, 경보 단계별 출력, 로그 형식을 정리하고 경보 지연을 측정합니다.</p>
+  </header>
+  <div class="bar">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-t" aria-selected="true" aria-controls="pane-t">양식</button>
+      <button role="tab" id="tab-e" aria-selected="false" aria-controls="pane-e">작성 예시</button>
+    </div>
+    <button class="btn primary" id="copy">양식 Markdown 복사</button>
+    <a class="btn" href="../templates/09_alert_logging.md">양식 .md 열기</a>
+    <a class="btn" href="../examples/09_alert_logging.md">예시 .md 열기</a>
+    <span class="toast" id="toast" role="status"></span>
+  </div>
+  <section class="sheet" id="pane-t" role="tabpanel" aria-labelledby="tab-t"><h1>경보·기록 명세 (양식)</h1>
+<blockquote>
+<p>프로젝트 1 · 현장 안전 모니터링 온디바이스 AI<br />
+Day 9 · 12.07(월) · 제출: Day 9 8교시</p>
+</blockquote>
+<p>회로 연결, 경보 단계별 출력, 로그 형식을 정리하고 경보 지연을 측정합니다.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>조</th>
+<th>작성자</th>
+<th>작성일</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h2>핀 연결</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>부품</th>
+<th>BCM 핀</th>
+<th>물리 핀</th>
+<th>동작</th>
+<th>비고</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h2>경보 단계</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>단계</th>
+<th>LED</th>
+<th>부저</th>
+<th>경광등</th>
+<th>LCD 문구</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>정상</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>주의</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>위반</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h2>이벤트 로그 형식 (CSV)</h2>
+<p><em>작성 안내: 열 이름을 정하고 실제 로그 몇 줄을 붙여 넣습니다.</em></p>
+<pre><code class="language-csv">timestamp,event,rule,confidence,snapshot
+
+</code></pre>
+<h2>스냅샷 규칙</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>저장 경로 / 파일명</td>
+<td></td>
+</tr>
+<tr>
+<td>보관 한도</td>
+<td><em>저장 공간이 가득 차지 않게 하는 방법</em></td>
+</tr>
+</tbody>
+</table></div>
+<h2>경보 지연 측정</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>회차</th>
+<th>위반 발생 → 부저(초)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td>2</td>
+<td></td>
+</tr>
+<tr>
+<td>3</td>
+<td></td>
+</tr>
+<tr>
+<td>4</td>
+<td></td>
+</tr>
+<tr>
+<td>5</td>
+<td></td>
+</tr>
+<tr>
+<td>평균</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p><em>측정 방법 예: 휴대폰 슬로모션 영상으로 구역 진입 순간과 부저 시작 순간의 차이를 잽니다.</em></p></section>
+  <section class="sheet" id="pane-e" role="tabpanel" aria-labelledby="tab-e" hidden><h1>경보·기록 명세 (예시)</h1>
+<blockquote>
+<p>프로젝트 1 · 현장 안전 모니터링 온디바이스 AI<br />
+Day 9 · 12.07(월) · 제출: Day 9 8교시</p>
+</blockquote>
+<p><strong>이 문서는 작성 예시입니다. 조 이름, 수치, 파일명은 형식을 보여 주기 위한 가상 값입니다.</strong></p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>조</th>
+<th>작성자</th>
+<th>작성일</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0조 (예시)</td>
+<td>조원 F</td>
+<td>12.07(월)</td>
+</tr>
+</tbody>
+</table></div>
+<h2>핀 연결</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>부품</th>
+<th>BCM 핀</th>
+<th>물리 핀</th>
+<th>동작</th>
+<th>비고</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>녹색 LED</td>
+<td>17</td>
+<td>11</td>
+<td>HIGH에서 켜짐</td>
+<td>330Ω 저항</td>
+</tr>
+<tr>
+<td>황색 LED</td>
+<td>27</td>
+<td>13</td>
+<td>HIGH에서 켜짐</td>
+<td>330Ω 저항</td>
+</tr>
+<tr>
+<td>적색 LED</td>
+<td>22</td>
+<td>15</td>
+<td>HIGH에서 켜짐</td>
+<td>330Ω 저항</td>
+</tr>
+<tr>
+<td>능동 부저</td>
+<td>18</td>
+<td>12</td>
+<td>HIGH에서 울림</td>
+<td></td>
+</tr>
+<tr>
+<td>릴레이 IN</td>
+<td>23</td>
+<td>16</td>
+<td>경광등 전원 개폐</td>
+<td>경광등은 별도 전원</td>
+</tr>
+<tr>
+<td>LCD1602 (I2C)</td>
+<td>2 / 3</td>
+<td>3 / 5</td>
+<td>SDA / SCL</td>
+<td>주소 0x27</td>
+</tr>
+</tbody>
+</table></div>
+<h2>경보 단계</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>단계</th>
+<th>LED</th>
+<th>부저</th>
+<th>경광등</th>
+<th>LCD 문구</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>정상</td>
+<td>녹색</td>
+<td>꺼짐</td>
+<td>꺼짐</td>
+<td>SAFE</td>
+</tr>
+<tr>
+<td>주의</td>
+<td>황색</td>
+<td>0.2초 간격 단속음</td>
+<td>꺼짐</td>
+<td>NO HELMET</td>
+</tr>
+<tr>
+<td>위반</td>
+<td>적색</td>
+<td>연속음</td>
+<td>켜짐</td>
+<td>DANGER ZONE</td>
+</tr>
+</tbody>
+</table></div>
+<h2>이벤트 로그 형식 (CSV)</h2>
+<pre><code class="language-csv">timestamp,event,rule,confidence,snapshot
+2026-12-07T14:03:21,WARN_ON,R1,0.82,snap/20261207_140321_R1.jpg
+2026-12-07T14:03:29,WARN_OFF,R1,,
+2026-12-07T14:05:02,VIOLATION_ON,R2,0.91,snap/20261207_140502_R2.jpg
+</code></pre>
+<h2>스냅샷 규칙</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>저장 경로 / 파일명</td>
+<td><code>snap/YYYYMMDD_HHMMSS_규칙ID.jpg</code></td>
+</tr>
+<tr>
+<td>보관 한도</td>
+<td>최근 500장만 유지, 오래된 파일부터 삭제</td>
+</tr>
+</tbody>
+</table></div>
+<h2>경보 지연 측정</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>회차</th>
+<th>위반 발생 → 부저(초)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>0.9</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1.1</td>
+</tr>
+<tr>
+<td>3</td>
+<td>0.8</td>
+</tr>
+<tr>
+<td>4</td>
+<td>1.0</td>
+</tr>
+<tr>
+<td>5</td>
+<td>1.2</td>
+</tr>
+<tr>
+<td>평균</td>
+<td>1.0</td>
+</tr>
+</tbody>
+</table></div>
+<p><em>측정 방법 예: 휴대폰 슬로모션 영상으로 구역 진입 순간과 부저 시작 순간의 차이를 잽니다.</em></p></section>
+  <textarea id="raw" hidden># 경보·기록 명세 (양식)
+
+&gt; 프로젝트 1 · 현장 안전 모니터링 온디바이스 AI  
+&gt; Day 9 · 12.07(월) · 제출: Day 9 8교시
+
+회로 연결, 경보 단계별 출력, 로그 형식을 정리하고 경보 지연을 측정합니다.
+
+| 조 | 작성자 | 작성일 |
+| --- | --- | --- |
+|   |   |   |
+
+## 핀 연결
+
+| 부품 | BCM 핀 | 물리 핀 | 동작 | 비고 |
+| --- | --- | --- | --- | --- |
+|   |   |   |   |   |
+|   |   |   |   |   |
+|   |   |   |   |   |
+|   |   |   |   |   |
+|   |   |   |   |   |
+|   |   |   |   |   |
+
+## 경보 단계
+
+| 단계 | LED | 부저 | 경광등 | LCD 문구 |
+| --- | --- | --- | --- | --- |
+| 정상 |   |   |   |   |
+| 주의 |   |   |   |   |
+| 위반 |   |   |   |   |
+
+## 이벤트 로그 형식 (CSV)
+
+_작성 안내: 열 이름을 정하고 실제 로그 몇 줄을 붙여 넣습니다._
+
+```csv
+timestamp,event,rule,confidence,snapshot
+
+```
+
+## 스냅샷 규칙
+
+| 항목 | 내용 |
+| --- | --- |
+| 저장 경로 / 파일명 |   |
+| 보관 한도 | _저장 공간이 가득 차지 않게 하는 방법_ |
+
+## 경보 지연 측정
+
+| 회차 | 위반 발생 → 부저(초) |
+| --- | --- |
+| 1 |   |
+| 2 |   |
+| 3 |   |
+| 4 |   |
+| 5 |   |
+| 평균 |   |
+
+_측정 방법 예: 휴대폰 슬로모션 영상으로 구역 진입 순간과 부저 시작 순간의 차이를 잽니다._
+</textarea>
+</div>
+<script>
+const tabs = {t: document.getElementById("tab-t"), e: document.getElementById("tab-e")};
+const panes = {t: document.getElementById("pane-t"), e: document.getElementById("pane-e")};
+function show(k){ for (const x of ["t","e"]) { tabs[x].setAttribute("aria-selected", x===k); panes[x].hidden = x!==k; } drawMermaid(); }
+tabs.t.onclick = () => show("t"); tabs.e.onclick = () => show("e");
+if (location.hash === "#example") show("e");
+document.getElementById("copy").onclick = async () => {
+  const raw = document.getElementById("raw").value, toast = document.getElementById("toast");
+  try { await navigator.clipboard.writeText(raw); toast.textContent = "복사했습니다. 조 저장소의 docs/09_alert_logging.md 또는 Notion에 붙여 넣으세요."; }
+  catch (e) { toast.textContent = "복사하지 못했습니다. '양식 .md 열기'에서 직접 복사하세요."; }
+};
+let mermaidReady = null;
+function drawMermaid(){
+  const blocks = [...document.querySelectorAll("section:not([hidden]) pre > code.language-mermaid")];
+  if (!blocks.length) return;
+  mermaidReady = mermaidReady || new Promise((ok, no) => { const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
+  mermaidReady.then(() => {
+    mermaid.initialize({startOnLoad:false, theme:"neutral"});
+    for (const c of blocks) { const d = document.createElement("div"); d.className = "mermaid"; d.textContent = c.textContent; c.parentElement.replaceWith(d); }
+    mermaid.run({querySelector: "section:not([hidden]) .mermaid:not([data-processed])"});
+  }).catch(() => {});
+}
+drawMermaid();
+</script>
+</body>
+</html>

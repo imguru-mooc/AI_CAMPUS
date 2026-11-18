@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ONNX 변환과 일치 검증 · 프로젝트 1 산출물</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="crumb"><a href="../index.html">프로젝트 1 산출물</a> / Day 6 · 12.02(수)</div>
+  <header class="top">
+    <h1 class="page">ONNX 변환과 일치 검증</h1>
+    <div class="meta"><span class="pill">Day 6 · 12.02(수)</span><span class="pill">제출: Day 6 8교시</span><span class="pill">파일명: docs/06_onnx_verify.md</span></div>
+    <p class="lead">변환한 ONNX 모델이 원래 모델과 같은 결과를 내는지 확인하고, Pi에서의 FP32 속도를 기록합니다.</p>
+  </header>
+  <div class="bar">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-t" aria-selected="true" aria-controls="pane-t">양식</button>
+      <button role="tab" id="tab-e" aria-selected="false" aria-controls="pane-e">작성 예시</button>
+    </div>
+    <button class="btn primary" id="copy">양식 Markdown 복사</button>
+    <a class="btn" href="../templates/06_onnx_verify.md">양식 .md 열기</a>
+    <a class="btn" href="../examples/06_onnx_verify.md">예시 .md 열기</a>
+    <span class="toast" id="toast" role="status"></span>
+  </div>
+  <section class="sheet" id="pane-t" role="tabpanel" aria-labelledby="tab-t"><h1>ONNX 변환과 일치 검증 (양식)</h1>
+<blockquote>
+<p>프로젝트 1 · 현장 안전 모니터링 온디바이스 AI<br />
+Day 6 · 12.02(수) · 제출: Day 6 8교시</p>
+</blockquote>
+<p>변환한 ONNX 모델이 원래 모델과 같은 결과를 내는지 확인하고, Pi에서의 FP32 속도를 기록합니다.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>조</th>
+<th>작성자</th>
+<th>작성일</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h2>변환 정보</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>내보내기 설정</td>
+<td><em>명령 또는 옵션</em></td>
+</tr>
+<tr>
+<td>입력 shape</td>
+<td></td>
+</tr>
+<tr>
+<td>출력 shape</td>
+<td><em>4 + 클래스 수, 후보 수</em></td>
+</tr>
+<tr>
+<td>파일 크기</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h2>추론 코드 점검</h2>
+<ul>
+<li class="task"><span class="box"></span>letterbox로 비율 유지 리사이즈</li>
+<li class="task"><span class="box"></span>BGR → RGB 변환</li>
+<li class="task"><span class="box"></span>0~1 정규화, float32</li>
+<li class="task"><span class="box"></span>HWC → NCHW, 배치 차원 추가</li>
+<li class="task"><span class="box"></span>출력 전치 후 박스·점수 분리</li>
+<li class="task"><span class="box"></span>클래스별 최고 점수로 필터링</li>
+<li class="task"><span class="box"></span>NMS 적용</li>
+<li class="task"><span class="box"></span>letterbox 여백과 비율을 되돌려 원본 좌표로 복원</li>
+</ul>
+<h2>결과 일치 검증</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>이미지</th>
+<th>PyTorch 박스 수</th>
+<th>ONNX 박스 수</th>
+<th>최대 좌표 차(px)</th>
+<th>최대 점수 차</th>
+<th>판정</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p><em>판정 기준 예: 박스 수가 같고 좌표 차 2px 이하, 점수 차 0.01 이하.</em></p>
+<h2>Pi FP32 속도</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>구간</th>
+<th>평균 시간(ms)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>전처리</td>
+<td></td>
+</tr>
+<tr>
+<td>추론</td>
+<td></td>
+</tr>
+<tr>
+<td>후처리</td>
+<td></td>
+</tr>
+<tr>
+<td>전체 FPS</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h2>메모</h2>
+<p><em>작성 안내: 변환이나 구현 중 겪은 문제를 적습니다.</em></p>
+<p>(여기에 작성)</p></section>
+  <section class="sheet" id="pane-e" role="tabpanel" aria-labelledby="tab-e" hidden><h1>ONNX 변환과 일치 검증 (예시)</h1>
+<blockquote>
+<p>프로젝트 1 · 현장 안전 모니터링 온디바이스 AI<br />
+Day 6 · 12.02(수) · 제출: Day 6 8교시</p>
+</blockquote>
+<p><strong>이 문서는 작성 예시입니다. 조 이름, 수치, 파일명은 형식을 보여 주기 위한 가상 값입니다.</strong></p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>조</th>
+<th>작성자</th>
+<th>작성일</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0조 (예시)</td>
+<td>조원 F</td>
+<td>12.02(수)</td>
+</tr>
+</tbody>
+</table></div>
+<h2>변환 정보</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>내보내기 설정</td>
+<td><code>model.export(format='onnx', imgsz=320, opset=12, simplify=True)</code></td>
+</tr>
+<tr>
+<td>입력 shape</td>
+<td>(1, 3, 320, 320) float32</td>
+</tr>
+<tr>
+<td>출력 shape</td>
+<td>(1, 7, 2100)</td>
+</tr>
+<tr>
+<td>파일 크기</td>
+<td>12.1 MB</td>
+</tr>
+</tbody>
+</table></div>
+<h2>추론 코드 점검</h2>
+<ul>
+<li class="task done"><span class="box">✓</span>letterbox로 비율 유지 리사이즈</li>
+<li class="task done"><span class="box">✓</span>BGR → RGB 변환</li>
+<li class="task done"><span class="box">✓</span>0~1 정규화, float32</li>
+<li class="task done"><span class="box">✓</span>HWC → NCHW, 배치 차원 추가</li>
+<li class="task done"><span class="box">✓</span>출력 전치 후 박스·점수 분리</li>
+<li class="task done"><span class="box">✓</span>클래스별 최고 점수로 필터링</li>
+<li class="task done"><span class="box">✓</span>NMS 적용</li>
+<li class="task done"><span class="box">✓</span>letterbox 여백과 비율을 되돌려 원본 좌표로 복원</li>
+</ul>
+<h2>결과 일치 검증</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>이미지</th>
+<th>PyTorch 박스 수</th>
+<th>ONNX 박스 수</th>
+<th>최대 좌표 차(px)</th>
+<th>최대 점수 차</th>
+<th>판정</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>test_001.jpg</td>
+<td>3</td>
+<td>3</td>
+<td>0.8</td>
+<td>0.004</td>
+<td>일치</td>
+</tr>
+<tr>
+<td>test_002.jpg</td>
+<td>5</td>
+<td>5</td>
+<td>1.2</td>
+<td>0.006</td>
+<td>일치</td>
+</tr>
+<tr>
+<td>test_003.jpg</td>
+<td>2</td>
+<td>2</td>
+<td>0.5</td>
+<td>0.002</td>
+<td>일치</td>
+</tr>
+</tbody>
+</table></div>
+<p><em>판정 기준 예: 박스 수가 같고 좌표 차 2px 이하, 점수 차 0.01 이하.</em></p>
+<h2>Pi FP32 속도</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>구간</th>
+<th>평균 시간(ms)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>전처리</td>
+<td>6</td>
+</tr>
+<tr>
+<td>추론</td>
+<td>210</td>
+</tr>
+<tr>
+<td>후처리</td>
+<td>5</td>
+</tr>
+<tr>
+<td>전체 FPS</td>
+<td>약 4.2</td>
+</tr>
+</tbody>
+</table></div>
+<h2>메모</h2>
+<p>처음에는 좌표가 어긋났는데, letterbox 여백을 빼지 않고 비율만 곱한 것이 원인이었습니다.</p></section>
+  <textarea id="raw" hidden># ONNX 변환과 일치 검증 (양식)
+
+&gt; 프로젝트 1 · 현장 안전 모니터링 온디바이스 AI  
+&gt; Day 6 · 12.02(수) · 제출: Day 6 8교시
+
+변환한 ONNX 모델이 원래 모델과 같은 결과를 내는지 확인하고, Pi에서의 FP32 속도를 기록합니다.
+
+| 조 | 작성자 | 작성일 |
+| --- | --- | --- |
+|   |   |   |
+
+## 변환 정보
+
+| 항목 | 내용 |
+| --- | --- |
+| 내보내기 설정 | _명령 또는 옵션_ |
+| 입력 shape |   |
+| 출력 shape | _4 + 클래스 수, 후보 수_ |
+| 파일 크기 |   |
+
+## 추론 코드 점검
+
+- [ ] letterbox로 비율 유지 리사이즈
+- [ ] BGR → RGB 변환
+- [ ] 0~1 정규화, float32
+- [ ] HWC → NCHW, 배치 차원 추가
+- [ ] 출력 전치 후 박스·점수 분리
+- [ ] 클래스별 최고 점수로 필터링
+- [ ] NMS 적용
+- [ ] letterbox 여백과 비율을 되돌려 원본 좌표로 복원
+
+## 결과 일치 검증
+
+| 이미지 | PyTorch 박스 수 | ONNX 박스 수 | 최대 좌표 차(px) | 최대 점수 차 | 판정 |
+| --- | --- | --- | --- | --- | --- |
+|   |   |   |   |   |   |
+|   |   |   |   |   |   |
+|   |   |   |   |   |   |
+|   |   |   |   |   |   |
+|   |   |   |   |   |   |
+
+_판정 기준 예: 박스 수가 같고 좌표 차 2px 이하, 점수 차 0.01 이하._
+
+## Pi FP32 속도
+
+| 구간 | 평균 시간(ms) |
+| --- | --- |
+| 전처리 |   |
+| 추론 |   |
+| 후처리 |   |
+| 전체 FPS |   |
+
+## 메모
+
+_작성 안내: 변환이나 구현 중 겪은 문제를 적습니다._
+
+(여기에 작성)
+</textarea>
+</div>
+<script>
+const tabs = {t: document.getElementById("tab-t"), e: document.getElementById("tab-e")};
+const panes = {t: document.getElementById("pane-t"), e: document.getElementById("pane-e")};
+function show(k){ for (const x of ["t","e"]) { tabs[x].setAttribute("aria-selected", x===k); panes[x].hidden = x!==k; } drawMermaid(); }
+tabs.t.onclick = () => show("t"); tabs.e.onclick = () => show("e");
+if (location.hash === "#example") show("e");
+document.getElementById("copy").onclick = async () => {
+  const raw = document.getElementById("raw").value, toast = document.getElementById("toast");
+  try { await navigator.clipboard.writeText(raw); toast.textContent = "복사했습니다. 조 저장소의 docs/06_onnx_verify.md 또는 Notion에 붙여 넣으세요."; }
+  catch (e) { toast.textContent = "복사하지 못했습니다. '양식 .md 열기'에서 직접 복사하세요."; }
+};
+let mermaidReady = null;
+function drawMermaid(){
+  const blocks = [...document.querySelectorAll("section:not([hidden]) pre > code.language-mermaid")];
+  if (!blocks.length) return;
+  mermaidReady = mermaidReady || new Promise((ok, no) => { const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
+  mermaidReady.then(() => {
+    mermaid.initialize({startOnLoad:false, theme:"neutral"});
+    for (const c of blocks) { const d = document.createElement("div"); d.className = "mermaid"; d.textContent = c.textContent; c.parentElement.replaceWith(d); }
+    mermaid.run({querySelector: "section:not([hidden]) .mermaid:not([data-processed])"});
+  }).catch(() => {});
+}
+drawMermaid();
+</script>
+</body>
+</html>

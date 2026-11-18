@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>프로젝트 1 전체 일정</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* 레이아웃: 주 단위 5열 달력(월~금) + 아래에 하루 흐름·마일스톤. 단계는 색 띠와 글자 라벨로 함께 표시 */
+:root{
+  --bg:#eef0f3; --surface:#ffffff; --ink:#16202e; --muted:#5b6777; --line:#d5dae2;
+  --accent:#f2b705; --accent-ink:#1b1b1b;
+  --p1:#2563c9; --p2:#0b8468; --p3:#b86a00; --p4:#c2362b; --p5:#6d3fc4;
+  --p1-bg:#e6eefb; --p2-bg:#e1f3ee; --p3-bg:#fbefd9; --p4-bg:#fbe6e3; --p5-bg:#eee7fa;
+  --display:"Black Han Sans","Noto Sans KR",sans-serif;
+  --body:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#11151b; --surface:#1b212a; --ink:#eef1f5; --muted:#a3adba; --line:#323b48;
+    --accent:#f6c624; --accent-ink:#1b1b1b;
+    --p1:#7aa7f5; --p2:#4fcba9; --p3:#f0b04a; --p4:#f58a7f; --p5:#b497f2;
+    --p1-bg:#1c2a44; --p2-bg:#15332c; --p3-bg:#3a2c12; --p4-bg:#3d1f1c; --p5-bg:#2a2144;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#11151b; --surface:#1b212a; --ink:#eef1f5; --muted:#a3adba; --line:#323b48;
+  --accent:#f6c624; --accent-ink:#1b1b1b;
+  --p1:#7aa7f5; --p2:#4fcba9; --p3:#f0b04a; --p4:#f58a7f; --p5:#b497f2;
+  --p1-bg:#1c2a44; --p2-bg:#15332c; --p3-bg:#3a2c12; --p4-bg:#3d1f1c; --p5-bg:#2a2144;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.5;-webkit-font-smoothing:antialiased;word-break:keep-all;overflow-wrap:anywhere}
+.wrap{max-width:1320px;margin:0 auto;padding:28px 20px 48px;display:flex;flex-direction:column;gap:22px}
+
+header{display:flex;flex-wrap:wrap;gap:16px 28px;align-items:flex-end;justify-content:space-between;
+  border-bottom:6px solid var(--accent);padding-bottom:16px}
+.eyebrow{font-size:14px;font-weight:700;color:var(--muted);letter-spacing:.02em}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(30px,4.6vw,54px);line-height:1.1;margin:4px 0 0;text-wrap:balance}
+.facts{display:flex;flex-wrap:wrap;gap:8px}
+.fact{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-size:15px;font-weight:700}
+.fact span{display:block;font-size:12px;font-weight:500;color:var(--muted)}
+
+.status{background:var(--ink);color:var(--bg);border-radius:10px;padding:12px 18px;font-size:18px;font-weight:700;
+  display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center}
+.status b{color:var(--accent)}
+
+.legend{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 12px;font-size:13px;font-weight:700}
+.chip i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.ph1{background:var(--p1-bg);color:var(--p1)} .ph1 i{background:var(--p1)}
+.ph2{background:var(--p2-bg);color:var(--p2)} .ph2 i{background:var(--p2)}
+.ph3{background:var(--p3-bg);color:var(--p3)} .ph3 i{background:var(--p3)}
+.ph4{background:var(--p4-bg);color:var(--p4)} .ph4 i{background:var(--p4)}
+.ph5{background:var(--p5-bg);color:var(--p5)} .ph5 i{background:var(--p5)}
+
+.week{display:flex;flex-direction:column;gap:8px}
+.week h2{font-size:15px;font-weight:700;color:var(--muted);margin:0}
+.grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.dow{font-size:13px;font-weight:700;color:var(--muted);text-align:center}
+.day{background:var(--surface);border:1px solid var(--line);border-top:8px solid var(--c);border-radius:10px;
+  padding:14px 14px 16px;display:flex;flex-direction:column;gap:8px;min-height:230px;position:relative}
+.day.d1{--c:var(--p1)} .day.d2{--c:var(--p2)} .day.d3{--c:var(--p3)} .day.d4{--c:var(--p4)} .day.d5{--c:var(--p5)}
+.day .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.day .n{font-family:var(--display);font-size:26px;color:var(--c);line-height:1}
+.day .date{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--muted)}
+.day h3{font-size:19px;font-weight:900;line-height:1.3;margin:0;text-wrap:balance}
+.day ul{margin:0;padding-left:18px;font-size:14.5px;color:var(--ink)}
+.day li{margin:2px 0}
+.day .out{font-size:13.5px;color:var(--muted);margin-top:auto}
+.day .out b{color:var(--ink)}
+.ms{background:var(--accent);color:var(--accent-ink);border-radius:6px;padding:6px 10px;font-size:14px;font-weight:900}
+.ms small{font-weight:700;font-size:13px}
+.empty{border:1px dashed var(--line);border-radius:10px;min-height:230px;display:flex;align-items:center;justify-content:center;
+  text-align:center;color:var(--muted);font-size:14px;padding:12px}
+.day.today{outline:4px solid var(--accent);outline-offset:2px}
+.day.today::after{content:"오늘";position:absolute;top:-20px;right:10px;background:var(--accent);color:var(--accent-ink);
+  font-weight:900;font-size:13px;padding:2px 10px;border-radius:6px}
+.day.past{opacity:.6}
+
+.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 20px}
+.panel h2{font-size:20px;font-weight:900;margin:0 0 12px}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{text-align:left;padding:9px 8px;border-top:1px solid var(--line);vertical-align:top}
+tr:first-child th,tr:first-child td{border-top:0}
+th{white-space:nowrap;font-weight:900;width:1%}
+td .d{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{display:inline-block;background:var(--accent);color:var(--accent-ink);font-weight:900;border-radius:5px;padding:1px 8px}
+.final{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+.final li{border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:15px;font-weight:700}
+.note{font-size:13.5px;color:var(--muted);margin:10px 0 0}
+
+@media (max-width:980px){
+  .grid{grid-template-columns:1fr}
+  .dow,.empty{display:none}
+  .day{min-height:0}
+  .cols{grid-template-columns:1fr}
+}
+@media print{
+  body{background:#fff}
+  .day,.panel{break-inside:avoid}
+  .status{display:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">HYUNDAI AI Insight Campus · 온디바이스 AI · 프로젝트 1</div>
+      <h1>현장 안전 모니터링 온디바이스 AI</h1>
+    </div>
+    <div class="facts">
+      <div class="fact"><span>기간</span>11.25(수) ~ 12.10(목)</div>
+      <div class="fact"><span>시간</span>12일 · 96시간</div>
+      <div class="fact"><span>장비</span>Raspberry Pi 4 + Pi 카메라</div>
+      <div class="fact"><span>최종 발표</span>12.10(목)</div>
+    </div>
+  </header>
+
+  <div class="status" id="status"></div>
+
+  <div class="legend" aria-label="단계 범례">
+    <span class="chip ph1"><i></i>1단계 설계 (Day 1~2)</span>
+    <span class="chip ph2"><i></i>2단계 모델 (Day 3~5)</span>
+    <span class="chip ph3"><i></i>3단계 경량화 (Day 6~7)</span>
+    <span class="chip ph4"><i></i>4단계 시스템 (Day 8~10)</span>
+    <span class="chip ph5"><i></i>5단계 마무리 (Day 11~12)</span>
+  </div>
+
+  <div id="weeks"></div>
+
+  <div class="cols">
+    <section class="panel">
+      <h2>마일스톤 5개</h2>
+      <table>
+        <tr><th><span class="tag">M1</span></th><td>사전학습 모델로 Pi 화면에 탐지 박스 출력<br><span class="d">Day 2 · 11.26(목)</span></td></tr>
+        <tr><th><span class="tag">M2</span></th><td>우리 조 모델 v1 확정, 성능(mAP) 보고<br><span class="d">Day 5 · 12.01(화)</span></td></tr>
+        <tr><th><span class="tag">M3</span></th><td>경량화 비교표 제출 (FP32 / INT8)<br><span class="d">Day 7 · 12.03(목)</span></td></tr>
+        <tr><th><span class="tag">M4</span></th><td>중간 시연: 탐지 + 위반 판정<br><span class="d">Day 8 · 12.04(금)</span></td></tr>
+        <tr><th><span class="tag">M5</span></th><td>전원을 켜면 자동 실행<br><span class="d">Day 10 · 12.08(화)</span></td></tr>
+      </table>
+    </section>
+    <section class="panel">
+      <h2>하루 흐름</h2>
+      <table>
+        <tr><th>1교시</th><td>조별 스탠드업 10분 + 강사 가이드 강의·예제 시연</td></tr>
+        <tr><th>2~4교시</th><td>조별 구현 (강사 순회 코드 리뷰·질의응답)</td></tr>
+        <tr><th>5~7교시</th><td>조별 구현 (조별 개별 멘토링)</td></tr>
+        <tr><th>8교시</th><td>오늘 산출물 시연 2분 → GitHub push → 프로젝트 일지 작성</td></tr>
+      </table>
+      <p class="note">매일 8교시에 push와 일지 작성을 마쳐야 그날 일정이 끝납니다.</p>
+    </section>
+  </div>
+
+  <section class="panel">
+    <h2>최종 제출물 (Day 11 종료 시점)</h2>
+    <ul class="final">
+      <li>GitHub 저장소 (코드 · README · 회로도)</li>
+      <li>모델 파일 (best.pt · FP32 ONNX · INT8 ONNX)</li>
+      <li>결과 보고서</li>
+      <li>발표 자료</li>
+      <li>시연 영상 (백업용)</li>
+      <li>프로젝트 일지 12일치</li>
+    </ul>
+    <p class="note">발표는 조당 발표 10분 + 시연 5분 + 질의 5분입니다.</p>
+  </section>
+</div>
+
+<script>
+const DOW = ["월","화","수","목","금"];
+const DAYS = [
+  {n:1, date:"2026-11-25", p:1, t:"킥오프 · 요구사항 정의 · 환경 구축",
+   todo:["탐지 대상·위반 조건·성공 기준 정하기","시스템 구성도와 일정표 작성","Pi 개발 환경 설치, 카메라 테스트"], out:"설계서, 구성도, 일정표", ms:"설계서 발표"},
+  {n:2, date:"2026-11-26", p:1, t:"카메라 입력 · 베이스라인 추론",
+   todo:["Picamera2로 영상 받기, FPS 측정","이미지 수집 도구 만들기","사전학습 YOLOv8n을 Pi에서 실행"], out:"수집 도구, 베이스라인 성능표", ms:"M1 Pi에서 탐지 화면 출력"},
+  {n:3, date:"2026-11-27", p:2, t:"데이터셋 구축 · 라벨링",
+   todo:["공개 데이터셋 고르고 정리","교육장에서 직접 촬영","라벨링, 학습·검증·테스트 분할"], out:"데이터셋 v1, 라벨링 기준서"},
+  {n:4, date:"2026-11-30", p:2, t:"모델 학습 (1) 전이학습",
+   todo:["Colab/Kaggle에서 YOLOv8n 학습","학습 곡선 확인","입력 크기 320·416·640 비교"], out:"best.pt, 실험 기록표"},
+  {n:5, date:"2026-12-01", p:2, t:"모델 평가 · 오탐 분석 · 재학습",
+   todo:["mAP·정밀도·재현율 평가","오탐·미탐 사례 원인 분류","데이터 보강 후 재학습"], out:"모델 v1, 평가 보고", ms:"M2 모델 v1 확정"},
+  {n:6, date:"2026-12-02", p:3, t:"ONNX 변환 · Pi 추론 코드",
+   todo:["PyTorch → ONNX 내보내기","전처리·NMS 직접 구현","Pi에서 FP32 속도 측정"], out:"model.onnx, Pi 추론 코드"},
+  {n:7, date:"2026-12-03", p:3, t:"INT8 양자화 · 속도 최적화",
+   todo:["캘리브레이션 후 INT8 모델 생성","정확도 하락 확인과 대응","입력 크기·스레드·프레임 건너뛰기 조정"], out:"INT8 모델, 비교표", ms:"M3 경량화 비교표"},
+  {n:8, date:"2026-12-04", p:4, t:"안전 규칙 로직 · 중간 시연",
+   todo:["미착용·위험구역 진입 판정","연속 프레임 조건으로 오경보 줄이기","조별 5분 중간 시연"], out:"규칙 엔진, 수정 일정표", ms:"M4 중간 시연"},
+  {n:9, date:"2026-12-07", p:4, t:"경보 · 기록 · 관리자 화면",
+   todo:["부저·LED·경광등·LCD 경보","CSV 로그와 위반 스냅샷 저장","화면 오버레이, 경보 지연 측정"], out:"경보·기록 기능, 회로도"},
+  {n:10, date:"2026-12-08", p:4, t:"통합 · 자동 실행 · 안정화",
+   todo:["모듈 통합, 설정 파일 분리","systemd로 부팅 시 자동 실행","30분 연속 동작 테스트"], out:"통합 프로그램, 테스트 기록", ms:"M5 전원 켜면 자동 실행"},
+  {n:11, date:"2026-12-09", p:5, t:"시나리오 테스트 · 보고서 · 리허설",
+   todo:["시나리오 10가지 이상 테스트","최종 성능 측정","보고서·발표 자료 작성, 리허설"], out:"보고서, 발표 자료, 시연 영상", ms:"최종 제출물 마감"},
+  {n:12, date:"2026-12-10", p:5, t:"시연 · 발표 · 프로젝트 평가",
+   todo:["조별 발표와 실시간 시연","동료 평가, 자기 평가","회고, 장비 반납"], out:"평가 결과, 회고 기록", ms:"최종 발표 · 평가"}
+];
+const WEEKS = [
+  {label:"1주차 · 11.23 ~ 11.27", start:"2026-11-23"},
+  {label:"2주차 · 11.30 ~ 12.04", start:"2026-11-30"},
+  {label:"3주차 · 12.07 ~ 12.11", start:"2026-12-07"}
+];
+const pad = n => String(n).padStart(2,"0");
+const iso = d => d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const today = iso(new Date());
+const byDate = Object.fromEntries(DAYS.map(d => [d.date, d]));
+const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+
+let html = "";
+for (const w of WEEKS){
+  html += '<section class="week"><h2>'+w.label+'</h2><div class="grid">';
+  for (let i=0;i<5;i++) html += '<div class="dow">'+DOW[i]+'</div>';
+  const [y,m,dd] = w.start.split("-").map(Number);
+  for (let i=0;i<5;i++){
+    const dt = new Date(y, m-1, dd+i), key = iso(dt), d = byDate[key];
+    if (!d){
+      const txt = key < DAYS[0].date ? "Quantization·Pruning<br>(파트 2 평가 11.24)" : "프로젝트 1 종료";
+      html += '<div class="empty">'+txt+'</div>'; continue;
+    }
+    const cls = ["day","d"+d.p]; if (key===today) cls.push("today"); else if (key<today) cls.push("past");
+    html += '<article class="'+cls.join(" ")+'">'
+      + '<div class="top"><span class="n">DAY '+d.n+'</span><span class="date">'+pad(dt.getMonth()+1)+"."+pad(dt.getDate())+" "+DOW[i]+'</span></div>'
+      + '<h3>'+esc(d.t)+'</h3>'
+      + '<ul>'+d.todo.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul>'
+      + '<div class="out"><b>산출물</b> '+esc(d.out)+'</div>'
+      + (d.ms ? '<div class="ms">'+esc(d.ms)+'</div>' : '')
+      + '</article>';
+  }
+  html += '</div></section>';
+}
+const weeks = document.getElementById("weeks");
+weeks.style.display = "flex"; weeks.style.flexDirection = "column"; weeks.style.gap = "22px";
+weeks.innerHTML = html;
+
+const st = document.getElementById("status");
+const first = DAYS[0].date, last = DAYS[DAYS.length-1].date;
+const diff = (a,b) => Math.round((new Date(b+"T00:00:00") - new Date(a+"T00:00:00"))/86400000);
+if (today < first){
+  st.innerHTML = '<span>프로젝트 시작까지 <b>D-'+diff(today, first)+'</b></span><span>11.25(수) Day 1 킥오프</span>';
+} else if (today > last){
+  st.innerHTML = '<span>프로젝트 1이 <b>종료</b>되었습니다.</span>';
+} else if (byDate[today]){
+  const d = byDate[today];
+  const next = DAYS.find(x => x.ms && x.date >= today);
+  st.innerHTML = '<span>오늘은 <b>DAY '+d.n+'</b> · '+esc(d.t)+'</span>'
+    + '<span>최종 발표까지 <b>D-'+diff(today,last)+'</b></span>'
+    + (next ? '<span>다음 점검: '+esc(next.ms)+'</span>' : '');
+} else {
+  const nx = DAYS.find(x => x.date > today);
+  st.innerHTML = '<span>다음 수업은 <b>DAY '+nx.n+'</b> · '+esc(nx.t)+'</span><span>최종 발표까지 <b>D-'+diff(today,last)+'</b></span>';
+}
+</script>
+</body>
+</html>

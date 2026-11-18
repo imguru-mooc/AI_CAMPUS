@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>시스템 구성도 · 프로젝트 1 산출물</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="crumb"><a href="../index.html">프로젝트 1 산출물</a> / Day 1 · 11.25(수)</div>
+  <header class="top">
+    <h1 class="page">시스템 구성도</h1>
+    <div class="meta"><span class="pill">Day 1 · 11.25(수)</span><span class="pill">제출: Day 1 8교시</span><span class="pill">파일명: docs/01_system_design.md</span></div>
+    <p class="lead">카메라에서 경보까지 데이터가 흐르는 길과 모듈별 담당을 한 장에 정리합니다. 그림은 Mermaid로 작성하면 GitHub와 Notion에서 바로 그려집니다.</p>
+  </header>
+  <div class="bar">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-t" aria-selected="true" aria-controls="pane-t">양식</button>
+      <button role="tab" id="tab-e" aria-selected="false" aria-controls="pane-e">작성 예시</button>
+    </div>
+    <button class="btn primary" id="copy">양식 Markdown 복사</button>
+    <a class="btn" href="../templates/01_system_design.md">양식 .md 열기</a>
+    <a class="btn" href="../examples/01_system_design.md">예시 .md 열기</a>
+    <span class="toast" id="toast" role="status"></span>
+  </div>
+  <section class="sheet" id="pane-t" role="tabpanel" aria-labelledby="tab-t"><h1>시스템 구성도 (양식)</h1>
+<blockquote>
+<p>프로젝트 1 · 현장 안전 모니터링 온디바이스 AI<br />
+Day 1 · 11.25(수) · 제출: Day 1 8교시</p>
+</blockquote>
+<p>카메라에서 경보까지 데이터가 흐르는 길과 모듈별 담당을 한 장에 정리합니다. 그림은 Mermaid로 작성하면 GitHub와 Notion에서 바로 그려집니다.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>조</th>
+<th>작성자</th>
+<th>작성일</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h2>구성도</h2>
+<p><em>작성 안내: 아래 뼈대를 조의 구조에 맞게 고칩니다.</em></p>
+<pre><code class="language-mermaid">flowchart LR
+  CAM[카메라] --&gt; CAP[캡처]
+  CAP --&gt; INF[추론]
+  INF --&gt; RULE[규칙 판단]
+  RULE --&gt; ALERT[경보]
+  RULE --&gt; LOG[기록]
+</code></pre>
+<h2>모듈</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>모듈</th>
+<th>파일</th>
+<th>입력</th>
+<th>출력</th>
+<th>담당</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h2>GPIO 핀 계획</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>부품</th>
+<th>BCM 핀</th>
+<th>방향</th>
+<th>비고</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h2>설계 메모</h2>
+<p><em>작성 안내: 모듈 사이에 주고받는 데이터 형식, 스레드 구조 등 합의한 내용을 적습니다.</em></p>
+<p>(여기에 작성)</p></section>
+  <section class="sheet" id="pane-e" role="tabpanel" aria-labelledby="tab-e" hidden><h1>시스템 구성도 (예시)</h1>
+<blockquote>
+<p>프로젝트 1 · 현장 안전 모니터링 온디바이스 AI<br />
+Day 1 · 11.25(수) · 제출: Day 1 8교시</p>
+</blockquote>
+<p><strong>이 문서는 작성 예시입니다. 조 이름, 수치, 파일명은 형식을 보여 주기 위한 가상 값입니다.</strong></p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>조</th>
+<th>작성자</th>
+<th>작성일</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0조 (예시)</td>
+<td>조원 F</td>
+<td>11.25(수)</td>
+</tr>
+</tbody>
+</table></div>
+<h2>구성도</h2>
+<pre><code class="language-mermaid">flowchart LR
+  CAM[Pi 카메라] --&gt; CAP[capture.py]
+  CAP --&gt; INF[infer.py&lt;br&gt;ONNX Runtime INT8]
+  INF --&gt; RULE[rules.py]
+  INF --&gt; VIEW[viewer.py&lt;br&gt;화면 오버레이]
+  RULE --&gt; ALERT[alert.py&lt;br&gt;LED 부저 경광등]
+  RULE --&gt; LOG[logger.py&lt;br&gt;CSV 스냅샷]
+  SENSOR[초음파 센서] --&gt; RULE
+</code></pre>
+<h2>모듈</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>모듈</th>
+<th>파일</th>
+<th>입력</th>
+<th>출력</th>
+<th>담당</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>캡처</td>
+<td>capture.py</td>
+<td>카메라</td>
+<td>BGR 프레임 640×480</td>
+<td>조원 E</td>
+</tr>
+<tr>
+<td>추론</td>
+<td>infer.py</td>
+<td>프레임</td>
+<td>박스 목록 (클래스, 점수, 좌표)</td>
+<td>조원 D</td>
+</tr>
+<tr>
+<td>규칙</td>
+<td>rules.py</td>
+<td>박스 목록, 구역 좌표</td>
+<td>상태 (정상/주의/위반)</td>
+<td>조원 A</td>
+</tr>
+<tr>
+<td>경보</td>
+<td>alert.py</td>
+<td>상태</td>
+<td>GPIO 출력</td>
+<td>조원 E</td>
+</tr>
+<tr>
+<td>기록</td>
+<td>logger.py</td>
+<td>상태, 프레임</td>
+<td>CSV, 스냅샷</td>
+<td>조원 F</td>
+</tr>
+<tr>
+<td>화면</td>
+<td>viewer.py</td>
+<td>프레임, 박스, 상태</td>
+<td>모니터 표시</td>
+<td>조원 F</td>
+</tr>
+</tbody>
+</table></div>
+<h2>GPIO 핀 계획</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>부품</th>
+<th>BCM 핀</th>
+<th>방향</th>
+<th>비고</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>녹색 LED</td>
+<td>17</td>
+<td>출력</td>
+<td>정상</td>
+</tr>
+<tr>
+<td>황색 LED</td>
+<td>27</td>
+<td>출력</td>
+<td>주의</td>
+</tr>
+<tr>
+<td>적색 LED</td>
+<td>22</td>
+<td>출력</td>
+<td>위반</td>
+</tr>
+<tr>
+<td>능동 부저</td>
+<td>18</td>
+<td>출력</td>
+<td></td>
+</tr>
+<tr>
+<td>릴레이(경광등)</td>
+<td>23</td>
+<td>출력</td>
+<td>별도 전원</td>
+</tr>
+<tr>
+<td>LCD1602 (I2C)</td>
+<td>2, 3</td>
+<td>I2C</td>
+<td>SDA, SCL</td>
+</tr>
+</tbody>
+</table></div>
+<h2>설계 메모</h2>
+<p>박스는 <code>(cls, score, x1, y1, x2, y2)</code> 튜플 목록으로 통일합니다. 좌표는 원본 프레임 기준 픽셀입니다. 캡처와 추론은 스레드를 나누고 최신 프레임만 사용합니다.</p></section>
+  <textarea id="raw" hidden># 시스템 구성도 (양식)
+
+&gt; 프로젝트 1 · 현장 안전 모니터링 온디바이스 AI  
+&gt; Day 1 · 11.25(수) · 제출: Day 1 8교시
+
+카메라에서 경보까지 데이터가 흐르는 길과 모듈별 담당을 한 장에 정리합니다. 그림은 Mermaid로 작성하면 GitHub와 Notion에서 바로 그려집니다.
+
+| 조 | 작성자 | 작성일 |
+| --- | --- | --- |
+|   |   |   |
+
+## 구성도
+
+_작성 안내: 아래 뼈대를 조의 구조에 맞게 고칩니다._
+
+```mermaid
+flowchart LR
+  CAM[카메라] --&gt; CAP[캡처]
+  CAP --&gt; INF[추론]
+  INF --&gt; RULE[규칙 판단]
+  RULE --&gt; ALERT[경보]
+  RULE --&gt; LOG[기록]
+```
+
+## 모듈
+
+| 모듈 | 파일 | 입력 | 출력 | 담당 |
+| --- | --- | --- | --- | --- |
+|   |   |   |   |   |
+|   |   |   |   |   |
+|   |   |   |   |   |
+|   |   |   |   |   |
+|   |   |   |   |   |
+
+## GPIO 핀 계획
+
+| 부품 | BCM 핀 | 방향 | 비고 |
+| --- | --- | --- | --- |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+|   |   |   |   |
+
+## 설계 메모
+
+_작성 안내: 모듈 사이에 주고받는 데이터 형식, 스레드 구조 등 합의한 내용을 적습니다._
+
+(여기에 작성)
+</textarea>
+</div>
+<script>
+const tabs = {t: document.getElementById("tab-t"), e: document.getElementById("tab-e")};
+const panes = {t: document.getElementById("pane-t"), e: document.getElementById("pane-e")};
+function show(k){ for (const x of ["t","e"]) { tabs[x].setAttribute("aria-selected", x===k); panes[x].hidden = x!==k; } drawMermaid(); }
+tabs.t.onclick = () => show("t"); tabs.e.onclick = () => show("e");
+if (location.hash === "#example") show("e");
+document.getElementById("copy").onclick = async () => {
+  const raw = document.getElementById("raw").value, toast = document.getElementById("toast");
+  try { await navigator.clipboard.writeText(raw); toast.textContent = "복사했습니다. 조 저장소의 docs/01_system_design.md 또는 Notion에 붙여 넣으세요."; }
+  catch (e) { toast.textContent = "복사하지 못했습니다. '양식 .md 열기'에서 직접 복사하세요."; }
+};
+let mermaidReady = null;
+function drawMermaid(){
+  const blocks = [...document.querySelectorAll("section:not([hidden]) pre > code.language-mermaid")];
+  if (!blocks.length) return;
+  mermaidReady = mermaidReady || new Promise((ok, no) => { const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
+  mermaidReady.then(() => {
+    mermaid.initialize({startOnLoad:false, theme:"neutral"});
+    for (const c of blocks) { const d = document.createElement("div"); d.className = "mermaid"; d.textContent = c.textContent; c.parentElement.replaceWith(d); }
+    mermaid.run({querySelector: "section:not([hidden]) .mermaid:not([data-processed])"});
+  }).catch(() => {});
+}
+drawMermaid();
+</script>
+</body>
+</html>

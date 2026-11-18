@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>경량화 비교표 · 프로젝트 1 산출물</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="crumb"><a href="../index.html">프로젝트 1 산출물</a> / Day 7 · 12.03(목)</div>
+  <header class="top">
+    <h1 class="page">경량화 비교표</h1>
+    <div class="meta"><span class="pill">Day 7 · 12.03(목)</span><span class="pill">제출: Day 7 8교시 (M3)</span><span class="pill">파일명: docs/07_optimization.md</span></div>
+    <p class="lead">양자화와 속도 최적화의 효과를 같은 조건에서 비교하고, 최종 배포 설정을 정합니다.</p>
+  </header>
+  <div class="bar">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-t" aria-selected="true" aria-controls="pane-t">양식</button>
+      <button role="tab" id="tab-e" aria-selected="false" aria-controls="pane-e">작성 예시</button>
+    </div>
+    <button class="btn primary" id="copy">양식 Markdown 복사</button>
+    <a class="btn" href="../templates/07_optimization.md">양식 .md 열기</a>
+    <a class="btn" href="../examples/07_optimization.md">예시 .md 열기</a>
+    <span class="toast" id="toast" role="status"></span>
+  </div>
+  <section class="sheet" id="pane-t" role="tabpanel" aria-labelledby="tab-t"><h1>경량화 비교표 (양식)</h1>
+<blockquote>
+<p>프로젝트 1 · 현장 안전 모니터링 온디바이스 AI<br />
+Day 7 · 12.03(목) · 제출: Day 7 8교시 (M3)</p>
+</blockquote>
+<p>양자화와 속도 최적화의 효과를 같은 조건에서 비교하고, 최종 배포 설정을 정합니다.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>조</th>
+<th>작성자</th>
+<th>작성일</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h2>양자화 설정</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>캘리브레이션 이미지</td>
+<td><em>장수와 고른 기준</em></td>
+</tr>
+<tr>
+<td>캘리브레이션 방식</td>
+<td><em>MinMax, Entropy 등</em></td>
+</tr>
+<tr>
+<td>양자화 형식</td>
+<td><em>QDQ / QOperator</em></td>
+</tr>
+<tr>
+<td>양자화에서 제외한 노드</td>
+<td><em>없으면 '없음'</em></td>
+</tr>
+</tbody>
+</table></div>
+<h2>비교</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>설정</th>
+<th>입력</th>
+<th>정밀도</th>
+<th>스레드</th>
+<th>mAP50</th>
+<th>추론(ms)</th>
+<th>전체 FPS</th>
+<th>크기(MB)</th>
+<th>온도(℃)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h2>최종 선택</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>배포 설정</td>
+<td></td>
+</tr>
+<tr>
+<td>이유</td>
+<td><em>정확도 하락과 속도 향상을 함께 설명</em></td>
+</tr>
+</tbody>
+</table></div>
+<h2>효과가 없었던 시도</h2>
+<p><em>작성 안내: 실패한 시도도 기록으로 남깁니다.</em></p>
+<p>(여기에 작성)</p></section>
+  <section class="sheet" id="pane-e" role="tabpanel" aria-labelledby="tab-e" hidden><h1>경량화 비교표 (예시)</h1>
+<blockquote>
+<p>프로젝트 1 · 현장 안전 모니터링 온디바이스 AI<br />
+Day 7 · 12.03(목) · 제출: Day 7 8교시 (M3)</p>
+</blockquote>
+<p><strong>이 문서는 작성 예시입니다. 조 이름, 수치, 파일명은 형식을 보여 주기 위한 가상 값입니다.</strong></p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>조</th>
+<th>작성자</th>
+<th>작성일</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0조 (예시)</td>
+<td>조원 F</td>
+<td>12.03(목)</td>
+</tr>
+</tbody>
+</table></div>
+<h2>양자화 설정</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>캘리브레이션 이미지</td>
+<td>200장. train에서 거리·조명별로 고르게 선택</td>
+</tr>
+<tr>
+<td>캘리브레이션 방식</td>
+<td>MinMax</td>
+</tr>
+<tr>
+<td>양자화 형식</td>
+<td>QDQ, 가중치 per-channel</td>
+</tr>
+<tr>
+<td>양자화에서 제외한 노드</td>
+<td>출력부(박스 디코딩) 노드</td>
+</tr>
+</tbody>
+</table></div>
+<h2>비교</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>설정</th>
+<th>입력</th>
+<th>정밀도</th>
+<th>스레드</th>
+<th>mAP50</th>
+<th>추론(ms)</th>
+<th>전체 FPS</th>
+<th>크기(MB)</th>
+<th>온도(℃)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A 베이스라인</td>
+<td>640</td>
+<td>FP32</td>
+<td>4</td>
+<td>0.86</td>
+<td>820</td>
+<td>1.2</td>
+<td>12.1</td>
+<td>71</td>
+</tr>
+<tr>
+<td>B</td>
+<td>320</td>
+<td>FP32</td>
+<td>4</td>
+<td>0.84</td>
+<td>210</td>
+<td>4.2</td>
+<td>12.1</td>
+<td>66</td>
+</tr>
+<tr>
+<td>C 전체 양자화</td>
+<td>320</td>
+<td>INT8</td>
+<td>4</td>
+<td>0.61</td>
+<td>115</td>
+<td>7.0</td>
+<td>3.3</td>
+<td>63</td>
+</tr>
+<tr>
+<td>D 출력부 제외</td>
+<td>320</td>
+<td>INT8</td>
+<td>4</td>
+<td>0.81</td>
+<td>125</td>
+<td>6.5</td>
+<td>3.4</td>
+<td>63</td>
+</tr>
+<tr>
+<td>E D + 2프레임마다 추론</td>
+<td>320</td>
+<td>INT8</td>
+<td>4</td>
+<td>0.81</td>
+<td>125</td>
+<td>화면 12 / 추론 6.5</td>
+<td>3.4</td>
+<td>58</td>
+</tr>
+</tbody>
+</table></div>
+<h2>최종 선택</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>배포 설정</td>
+<td>D (320, INT8, 출력부 제외)</td>
+</tr>
+<tr>
+<td>이유</td>
+<td>FP32 대비 mAP50 0.03 하락으로 속도 1.5배. 전체 양자화(C)는 정확도 하락이 커서 제외</td>
+</tr>
+</tbody>
+</table></div>
+<h2>효과가 없었던 시도</h2>
+<p>스레드를 4에서 2로 줄이면 온도는 내려가지만 추론 시간이 약 1.7배로 늘어 채택하지 않았습니다.</p></section>
+  <textarea id="raw" hidden># 경량화 비교표 (양식)
+
+&gt; 프로젝트 1 · 현장 안전 모니터링 온디바이스 AI  
+&gt; Day 7 · 12.03(목) · 제출: Day 7 8교시 (M3)
+
+양자화와 속도 최적화의 효과를 같은 조건에서 비교하고, 최종 배포 설정을 정합니다.
+
+| 조 | 작성자 | 작성일 |
+| --- | --- | --- |
+|   |   |   |
+
+## 양자화 설정
+
+| 항목 | 내용 |
+| --- | --- |
+| 캘리브레이션 이미지 | _장수와 고른 기준_ |
+| 캘리브레이션 방식 | _MinMax, Entropy 등_ |
+| 양자화 형식 | _QDQ / QOperator_ |
+| 양자화에서 제외한 노드 | _없으면 &#x27;없음&#x27;_ |
+
+## 비교
+
+| 설정 | 입력 | 정밀도 | 스레드 | mAP50 | 추론(ms) | 전체 FPS | 크기(MB) | 온도(℃) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+|   |   |   |   |   |   |   |   |   |
+|   |   |   |   |   |   |   |   |   |
+|   |   |   |   |   |   |   |   |   |
+|   |   |   |   |   |   |   |   |   |
+|   |   |   |   |   |   |   |   |   |
+
+## 최종 선택
+
+| 항목 | 내용 |
+| --- | --- |
+| 배포 설정 |   |
+| 이유 | _정확도 하락과 속도 향상을 함께 설명_ |
+
+## 효과가 없었던 시도
+
+_작성 안내: 실패한 시도도 기록으로 남깁니다._
+
+(여기에 작성)
+</textarea>
+</div>
+<script>
+const tabs = {t: document.getElementById("tab-t"), e: document.getElementById("tab-e")};
+const panes = {t: document.getElementById("pane-t"), e: document.getElementById("pane-e")};
+function show(k){ for (const x of ["t","e"]) { tabs[x].setAttribute("aria-selected", x===k); panes[x].hidden = x!==k; } drawMermaid(); }
+tabs.t.onclick = () => show("t"); tabs.e.onclick = () => show("e");
+if (location.hash === "#example") show("e");
+document.getElementById("copy").onclick = async () => {
+  const raw = document.getElementById("raw").value, toast = document.getElementById("toast");
+  try { await navigator.clipboard.writeText(raw); toast.textContent = "복사했습니다. 조 저장소의 docs/07_optimization.md 또는 Notion에 붙여 넣으세요."; }
+  catch (e) { toast.textContent = "복사하지 못했습니다. '양식 .md 열기'에서 직접 복사하세요."; }
+};
+let mermaidReady = null;
+function drawMermaid(){
+  const blocks = [...document.querySelectorAll("section:not([hidden]) pre > code.language-mermaid")];
+  if (!blocks.length) return;
+  mermaidReady = mermaidReady || new Promise((ok, no) => { const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
+  mermaidReady.then(() => {
+    mermaid.initialize({startOnLoad:false, theme:"neutral"});
+    for (const c of blocks) { const d = document.createElement("div"); d.className = "mermaid"; d.textContent = c.textContent; c.parentElement.replaceWith(d); }
+    mermaid.run({querySelector: "section:not([hidden]) .mermaid:not([data-processed])"});
+  }).catch(() => {});
+}
+drawMermaid();
+</script>
+</body>
+</html>
