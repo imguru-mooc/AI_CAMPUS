@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quantization·Pruning Day 4 복습 퀴즈</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:920px;margin:0 auto;padding:22px 20px 40px}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.primary{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700;padding:9px 18px;font-size:14px}
+  button.submit{background:#3a2e12;border-color:var(--amber);color:var(--amber);font-weight:700;padding:9px 18px;font-size:14px}
+  button:disabled{opacity:.5;cursor:default}
+  button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  input[type=text]{background:#0a0f1c;color:var(--text);border:1px solid #2a3a5c;border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:14px}
+  select{background:#0a0f1c;color:var(--text);border:1px solid #2a3a5c;border-radius:6px;padding:4px 8px;font-family:inherit;font-size:14px}
+  .tabs{display:flex;flex-wrap:wrap;gap:6px}
+  .tabs button .s{font-family:var(--mono);font-size:11px;color:var(--dim);margin-left:6px}
+  .tabs button.graded .s{color:var(--green)}
+  .legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .tag{font-size:11.5px;border:1px solid var(--line);border-radius:999px;padding:2px 9px;color:var(--dim);font-family:var(--mono)}
+  .head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .head .t{color:var(--amber);font-size:17px}
+  .head .a{font-size:13px;color:var(--teal);font-family:var(--mono)}
+  .q{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px;background:#0e1628}
+  .q.unans{border-color:#5a3a1a}
+  .q.ok{border-color:#1f6b45}.q.bad{border-color:#7a2e2e}
+  .qh{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .q .n{font-family:var(--mono);color:var(--dim);font-size:12px}
+  .ty{font-size:11.5px;border-radius:999px;padding:1px 9px;border:1px solid}
+  .q .p{margin:6px 0 10px;font-size:15px}
+  .q code,.fb code,.dg code{font-family:var(--mono);color:var(--blue);background:#0a0f1c;padding:1px 5px;border-radius:4px}
+  .q pre{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin:6px 0 4px;font-size:14px;white-space:pre;overflow-x:auto;line-height:1.9}
+  .q pre input{font-size:13px;padding:2px 6px;width:auto;min-width:5ch}
+  .opts{display:grid;gap:6px}
+  .opt{text-align:left;padding:8px 12px;font-size:14px}
+  .opt .box{display:inline-block;width:18px;font-family:var(--mono);color:var(--dim)}
+  .opt.sel{border-color:var(--amber);background:#1f1a0c}
+  .opt.ok{border-color:var(--green);color:var(--green);background:#0d2216}
+  .opt.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .opt.miss{border-color:var(--green);border-style:dashed}
+  .ox{display:flex;gap:10px}
+  .ox button{font-size:22px;width:78px;height:54px;font-weight:700}
+  .fill{line-height:2.3}
+  .mrow{display:grid;grid-template-columns:1fr 24px minmax(160px,1.2fr);gap:8px;align-items:center;margin-bottom:6px}
+  .mrow .l{background:#0a0f1c;border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-size:14px}
+  .mrow select{width:100%}
+  .mrow .arr{color:var(--dim);text-align:center}
+  .mrow.ok select{border-color:var(--green)}.mrow.bad select{border-color:var(--red)}
+  .ord{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+  .ord li{display:grid;grid-template-columns:28px 1fr auto;gap:8px;align-items:center;background:#0a0f1c;border:1px solid #2a3a5c;border-radius:8px;padding:7px 10px;cursor:grab;font-size:14px}
+  .ord li.drag{opacity:.4}.ord li.over{border-color:var(--amber)}
+  .ord li .k{font-family:var(--mono);color:var(--dim)}
+  .ord li .mv button{padding:2px 8px;margin-left:4px}
+  .ord li.ok{border-color:var(--green)}.ord li.bad{border-color:var(--red)}
+  .hot{background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:6px;overflow-x:auto}
+  .hot svg{display:block;max-width:100%;height:auto;margin:0 auto}
+  .hot .rg{cursor:pointer;fill:transparent;stroke:transparent;stroke-width:2.5}
+  .hot .rg:hover{stroke:#f5b94288}
+  .hot .rg.sel{stroke:var(--amber);fill:#f5b94222}
+  .hot .rg.ok{stroke:var(--green);fill:#4ade8026}
+  .hot .rg.bad{stroke:var(--red);fill:#f8717126}
+  .card{perspective:900px;max-width:560px}
+  .card .in{position:relative;min-height:130px;transition:transform .5s;transform-style:preserve-3d}
+  .card.flip .in{transform:rotateY(180deg)}
+  .card .f,.card .b{position:absolute;inset:0;backface-visibility:hidden;border-radius:10px;border:1px solid #2a3a5c;display:flex;align-items:center;justify-content:center;text-align:center;padding:14px 18px;font-size:16px}
+  .card .f{background:#14203a;color:var(--amber)}
+  .card .b{background:#0f2a27;color:var(--teal);transform:rotateY(180deg)}
+  @media (prefers-reduced-motion:reduce){.card .in{transition:none}}
+  .selfrow{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center}
+  .selfrow .hint{margin-left:4px}
+  .fb{margin-top:10px;font-size:13px;color:var(--dim);border-left:3px solid var(--line);padding-left:10px}
+  .fb.ok{border-left-color:var(--green)}.fb.bad{border-left-color:var(--red)}
+  .fb b.v{display:block;margin-bottom:2px}
+  .fb.ok b.v{color:var(--green)}.fb.bad b.v{color:var(--red)}
+  .fb .anim{color:var(--teal);font-family:var(--mono);font-size:12px;display:block;margin-top:3px}
+  .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+  .code{font-family:var(--mono);font-size:20px;color:var(--amber);letter-spacing:1px}
+  .score{font-family:var(--mono);color:var(--green);font-size:16px}
+  .hint{color:var(--dim);font-size:13px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:0;max-width:860px;width:92vw;max-height:88vh}
+  dialog::backdrop{background:#000a}
+  .dg{padding:18px 20px}
+  .dg h3{color:var(--amber);margin:0 0 4px;font-size:20px}
+  .dg .meta{color:var(--dim);font-size:13px;margin-bottom:12px;font-family:var(--mono)}
+  .dg .sec{margin:14px 0 6px;color:var(--teal);font-weight:700;font-size:14px}
+  .dg table{width:100%;border-collapse:collapse;font-size:13px}
+  .dg th{text-align:left;color:var(--dim);font-weight:600;padding:5px 8px;border-bottom:1px solid var(--line);font-size:12px}
+  .dg td{padding:5px 8px;border-bottom:1px solid #16203a;vertical-align:top}
+  .dg .ok{color:var(--green)}.dg .bad{color:var(--red)}.dg .none{color:var(--dim)}
+  .dg .sum{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0;font-family:var(--mono)}
+  .dgbar{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:10px 20px;display:flex;gap:8px;justify-content:flex-end;align-items:center}
+  .toast{color:var(--green);font-size:13px;margin-right:auto}
+  .body{overflow:auto;max-height:calc(88vh - 60px)}
+  @media(max-width:600px){.mrow{grid-template-columns:1fr;gap:4px}.mrow .arr{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Quantization·Pruning Day 4 복습 퀴즈</h1>
+  <p class="sub">Day 4 (1~8교시) 내용을 <b>24문항</b>으로 점검합니다 — 단일 · 다중 선택, O/X, 단답형, 선택형 빈칸, 짝 맞추기, 순서 배열, 핫스팟, 코드 완성 9가지 유형. 이름을 입력하고 모두 푼 뒤 <b style="color:var(--teal)">채점하기</b>를 누르면 정오 · 해설과 결과 코드가 나타납니다 (채점 후에는 답이 잠깁니다). 마지막으로 <b style="color:var(--amber)">제출 (오답 정리)</b>을 열어 <b>텍스트 복사</b> 또는 화면 캡처로 강사가 안내한 곳에 제출하세요.</p>
+
+  <div class="panel">
+    <div class="row"><label style="color:var(--dim);font-size:13px">이름 <input type="text" id="name" placeholder="홍길동"></label><span class="hint">이름은 결과 코드 계산에만 쓰이며 저장되지 않습니다.</span></div>
+  </div>
+  <div class="panel"><h2>문항 유형</h2><div class="tabs" id="tabs" style="display:none"></div><div class="legend" id="legend"></div></div>
+  <div class="panel" id="sheet"></div>
+  <div class="panel">
+    <div class="actions">
+      <button class="primary" id="gradeBtn">채점하기</button>
+      <span class="score" id="rscore"></span>
+      <span class="hint" id="rhint"></span>
+      <span class="code" id="rcode">—</span>
+    </div>
+    <div class="actions" style="margin-top:12px">
+      <button class="submit" id="submitBtn">제출 (오답 정리)</button>
+      <button id="resetBtn">다시 풀기</button>
+    </div>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <div class="body"><div class="dg" id="dgBody"></div></div>
+  <div class="dgbar"><span class="toast" id="toast"></span><button id="captureBtn" class="primary">📋 텍스트 복사 (제출용)</button><button id="closeBtn">닫기</button></div>
+</dialog>
+
+<script>
+const Q = [{"t": "Day 4 복습 퀴즈", "anim": "1~8교시 전체 · 24문항", "qs": [{"type": "single", "p": "<span style=\"color:var(--dim)\">[1교시]</span> ResNet-20 의 weight-only PTQ 를 8 → 2비트로 줄였을 때 정확도가 크게 무너지기 시작한 구간은?", "o": ["8비트 → 6비트 사이", "4비트 → 3비트 사이", "6비트 → 4비트 사이 (4비트에서 이미 0.5 아래)", "2비트에서도 0.8 이상을 유지한다"], "a": 1, "w": "실측: 8비트 0.844 · 6비트 0.844 · 4비트 0.836 · 3비트 0.730 · 2비트 0.12. 칸이 15개 → 7개로 줄어드는 곳에서 무너집니다.", "an": "D4-1 · 실습 1-2"}, {"type": "ox", "p": "<span style=\"color:var(--dim)\">[1교시]</span> ResNet-20 을 8비트 (W8A8) 로 양자화할 때는 QAT 가 PTQ 보다 정확도를 1%p 이상 크게 올려 준다.", "a": false, "w": "8비트 PTQ 0.843 vs QAT 0.841 ~ 0.848 — 차이가 측정 잡음 수준입니다. QAT 는 저비트에서 의미가 있습니다.", "an": "예제 1-A · 실습 6-2"}, {"type": "short", "p": "<span style=\"color:var(--dim)\">[1교시]</span> 3비트 채널별 대칭 양자화에서 qmax = 2^(b−1) − 1 의 값은? (숫자)", "a": ["3"], "w": "2^2 − 1 = 3 → 정수 범위 −3 ~ 3, 칸 7개.", "an": "실습 1-1"}, {"type": "code", "p": "<span style=\"color:var(--dim)\">[2교시]</span> 실습 2-1 — fake quant 함수를 완성하세요.", "code": "def fake_quant(x, scale, zp, qmin, qmax):\n    q = torch.clamp(torch.round(x / scale) + zp, qmin, qmax)\n    return ({{}} - zp) * {{}}", "a": [["q"], ["scale"]], "w": "quantize (round · clamp) → dequantize ((q − zp)·scale). 결과는 FP32 지만 2^b 가지 값만 나옵니다.", "an": "실습 2-1"}, {"type": "multi", "p": "<span style=\"color:var(--dim)\">[2교시]</span> fake quantization 에 대해 옳은 것을 모두 고르세요.", "o": ["forward 결과는 FP32 지만 2^bits 가지 값만 나온다", "weight 는 학습 중에도 FP32 로 저장 · 갱신된다", "fake quant 를 끼우면 학습 중 계산이 실제 INT8 정수 연산으로 바뀌어 빨라진다", "활성값은 보정으로 정한 범위를 학습 중 고정해 쓴다"], "a": [0, 1, 3], "w": "fake quant 는 양자화 '흉내' — 계산은 여전히 FP32 이고 오히려 조금 느려집니다. 진짜 INT8 은 배포 (TensorRT) 때 만듭니다.", "an": "D4-2"}, {"type": "hot", "p": "<span style=\"color:var(--dim)\">[2교시]</span> fake quant 그래프에서 <b>정수 칸으로 반올림하는 단계</b>를 클릭하세요.", "w": "÷ scale · round · + zp · clamp — 이 단계에서 값이 정수 칸으로 바뀝니다. 그 다음 (q − zp)·scale 이 FP32 로 되돌립니다.", "an": "D4-2", "viewBox": "0 0 770 260", "sw": 770, "svg": "<defs><marker id=\"ah\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#8a9bb8\"/></marker></defs><text x=\"20\" y=\"20\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"start\" font-family=\"Noto Sans KR,sans-serif\" font-weight=\"normal\" dominant-baseline=\"middle\">fake_quant(x) 의 단계</text><rect x=\"30\" y=\"110\" width=\"130\" height=\"70\" rx=\"6\" fill=\"#14203a\" stroke=\"#6b7280\" stroke-width=\"1\"/><text x=\"95.0\" y=\"135.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">x</text><text x=\"95.0\" y=\"156.0\" font-size=\"10.5\" fill=\"#8a9bb8\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"normal\" dominant-baseline=\"middle\">FP32</text><rect x=\"200\" y=\"110\" width=\"200\" height=\"70\" rx=\"6\" fill=\"#14203a\" stroke=\"#d97706\" stroke-width=\"1\"/><text x=\"300.0\" y=\"135.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">÷s · round · +zp · clamp</text><text x=\"300.0\" y=\"156.0\" font-size=\"10.5\" fill=\"#8a9bb8\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"normal\" dominant-baseline=\"middle\">quantize</text><rect x=\"440\" y=\"110\" width=\"120\" height=\"70\" rx=\"6\" fill=\"#14203a\" stroke=\"#7c3aed\" stroke-width=\"1\"/><text x=\"500.0\" y=\"135.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">q</text><text x=\"500.0\" y=\"156.0\" font-size=\"10.5\" fill=\"#8a9bb8\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"normal\" dominant-baseline=\"middle\">정수 칸</text><rect x=\"600\" y=\"110\" width=\"140\" height=\"70\" rx=\"6\" fill=\"#14203a\" stroke=\"#2563eb\" stroke-width=\"1\"/><text x=\"670.0\" y=\"135.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">(q − zp)·s</text><text x=\"670.0\" y=\"156.0\" font-size=\"10.5\" fill=\"#8a9bb8\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"normal\" dominant-baseline=\"middle\">dequantize</text><line x1=\"160\" y1=\"145\" x2=\"198\" y2=\"145\" stroke=\"#8a9bb8\" stroke-width=\"1.6\" marker-end=\"url(#ah)\"/><line x1=\"400\" y1=\"145\" x2=\"438\" y2=\"145\" stroke=\"#8a9bb8\" stroke-width=\"1.6\" marker-end=\"url(#ah)\"/><line x1=\"560\" y1=\"145\" x2=\"598\" y2=\"145\" stroke=\"#8a9bb8\" stroke-width=\"1.6\" marker-end=\"url(#ah)\"/>", "regions": [{"id": "x", "label": "x — FP32", "x": 30, "y": 110, "w": 130, "h": 70}, {"id": "q", "label": "÷s · round · +zp · clamp — quantize", "x": 200, "y": 110, "w": 200, "h": 70}, {"id": "int", "label": "q — 정수 칸", "x": 440, "y": 110, "w": 120, "h": 70}, {"id": "dq", "label": "(q − zp)·s — dequantize", "x": 600, "y": 110, "w": 140, "h": 70}], "a": "q"}, {"type": "single", "p": "<span style=\"color:var(--dim)\">[3교시]</span> STE (Straight-Through Estimator) 의 backward 동작으로 알맞은 것은?", "o": ["round 의 실제 미분값 0 을 그대로 써서 weight 를 고정한다", "위에서 온 기울기를 그대로 통과시킨다 (round 가 없는 것처럼)", "기울기의 부호만 남기고 크기는 1 로 만든다", "기울기에 scale 의 역수를 곱해 원래보다 훨씬 크게 만든다"], "a": 1, "w": "forward 는 round, backward 는 기울기 1 — torch.autograd.Function 의 backward 에서 g 를 그대로 돌려줍니다.", "an": "실습 3-1"}, {"type": "drop", "p": "<span style=\"color:var(--dim)\">[3교시]</span> 빈칸에 알맞은 것을 고르세요.", "p2": "torch.round 를 지나면 기울기가 {} 이 되어 학습이 멈춘다. STE 를 쓰면 범위 안 값의 기울기는 {} 이고, clamp 로 잘린 범위 밖 값의 기울기는 {} 이다.", "opts": [["0", "1", "무한대"], ["1", "0", "scale"], ["0", "1", "−1"]], "a": [0, 0, 0], "w": "3-2 실측: x = [−2.0, −0.4, 0.3, 0.6, 2.0] → 기울기 [0, 1, 1, 1, 0].", "an": "예제 2-A · 실습 3-2"}, {"type": "order", "p": "<span style=\"color:var(--dim)\">[3교시]</span> torch.autograd.Function 으로 STE 를 쓰는 순서대로 배열하세요.", "items": ["class RoundSTE(torch.autograd.Function) 정의", "forward(ctx, x) 에서 torch.round(x) 반환", "backward(ctx, g) 에서 g 그대로 반환", "fake_quant 안에서 RoundSTE.apply(x / scale) 호출", "loss.backward() 로 weight 에 기울기 전달"], "w": "@staticmethod forward · backward 를 정의하고 .apply 로 호출합니다.", "an": "실습 3-1 · 3-2"}, {"type": "match", "p": "<span style=\"color:var(--dim)\">[4교시]</span> 직접 만드는 QAT 의 함수와 하는 일을 짝지으세요.", "left": ["fold_all", "quantize_model", "calibrate"], "right": ["BN 을 Conv 에 접어 배포 때와 같은 weight 로", "Conv · Linear 를 FakeQuant 가 붙은 QConv2d · QLinear 로", "보정 500장으로 활성값 범위 고정 (= PTQ 상태)"], "a": [0, 1, 2], "w": "fold_all → quantize_model → calibrate (여기서 재면 PTQ) → train_qat (QAT).", "an": "D4-4"}, {"type": "ox", "p": "<span style=\"color:var(--dim)\">[4교시]</span> 직접 만든 QAT 에서 BN 을 먼저 접는 이유는, fake quant 가 본 weight 를 배포 때 실제로 양자화되는 (BN 이 접힌) weight 와 같게 만들기 위해서다.", "a": true, "w": "배포 때는 BN 이 Conv 에 접힌 W' 가 양자화됩니다 (Day 2 3교시). QAT 도 W' 를 보며 학습해야 숫자가 맞습니다.", "an": "예제 4-A"}, {"type": "single", "p": "<span style=\"color:var(--dim)\">[4교시]</span> QAT fine-tuning 설정으로 가장 알맞은 것은?", "o": ["lr 0.1 · 200 epoch — 처음부터 다시 학습", "lr 1e-3 (처음 학습의 약 1/100) · 짧게 3 epoch", "lr 0 · 1 epoch — weight 는 두고 활성값 범위만 다시 잰다", "lr 1.0 · 1 epoch — 크게 한 번에 옮긴다"], "a": 1, "w": "이미 학습된 weight 를 조금만 옮깁니다. 실측 W3A8: 0.728 → 1 epoch 0.829 → 3 epoch 0.832 — 첫 epoch 에 대부분 회복.", "an": "실습 4-2"}, {"type": "code", "p": "<span style=\"color:var(--dim)\">[5교시]</span> 실습 5-1 — ModelOpt 로 INT8 PTQ 를 하세요.", "code": "mo8 = mtq.{{}}(copy.deepcopy(rn20).to(DEV), mtq.INT8_DEFAULT_CFG,\n                   forward_loop={{}})", "a": [["quantize"], ["forward_loop"]], "w": "mtq.quantize(model, config, forward_loop) — 양자화기 삽입과 보정을 한 줄로.", "an": "실습 5-1"}, {"type": "multi", "p": "<span style=\"color:var(--dim)\">[5교시]</span> ModelOpt 에 대해 옳은 것을 모두 고르세요.", "o": ["Conv · Linear 에 입력 · weight 양자화기를 자동으로 넣는다", "INT8_DEFAULT_CFG 는 대칭이라 TensorRT 조건을 통과한다", "config 를 바꿀 때는 깊은 복사 없이 원본을 고쳐도 다른 셀에 영향이 없다", "W3A8 PTQ 정확도가 직접 만든 것과 거의 같았다 (0.728)"], "a": [0, 1, 3], "w": "깊은 복사 없이 고치면 mtq.INT8_DEFAULT_CFG 자체가 바뀌어 뒤의 'INT8' 모델까지 3비트가 됩니다.", "an": "D4-5 · 실습 5-2"}, {"type": "short", "p": "<span style=\"color:var(--dim)\">[5교시]</span> ModelOpt INT8_DEFAULT_CFG 로 ResNet-20 을 양자화했을 때 켜진 양자화기 수는? (숫자 · 강사 실측)", "a": ["45", "45개"], "w": "Conv 21 + Linear 1 의 input · weight (44) + pool 입력 1 = 45. 만들어진 자리는 110개지만 config 에 맞는 것만 켜집니다.", "an": "실습 5-1"}, {"type": "hot", "p": "<span style=\"color:var(--dim)\">[6교시]</span> ModelOpt QAT 모델을 <b>양자화 구조까지 함께 저장</b>하는 함수를 클릭하세요.", "w": "mto.save — 복원은 mto.restore(빈 모델, 경로). 일반 torch.save(state_dict) 는 양자화기 구조를 복원하지 못합니다.", "an": "D4-6 · 실습 6-2", "viewBox": "0 0 720 300", "sw": 720, "svg": "<defs><marker id=\"ah\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#8a9bb8\"/></marker></defs><text x=\"20\" y=\"20\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"start\" font-family=\"Noto Sans KR,sans-serif\" font-weight=\"normal\" dominant-baseline=\"middle\">체크포인트 함수</text><rect x=\"30\" y=\"100\" width=\"210\" height=\"70\" rx=\"6\" fill=\"#14203a\" stroke=\"#6b7280\" stroke-width=\"1\"/><text x=\"135.0\" y=\"125.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">torch.save</text><text x=\"135.0\" y=\"146.0\" font-size=\"10.5\" fill=\"#8a9bb8\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"normal\" dominant-baseline=\"middle\">state_dict</text><rect x=\"270\" y=\"100\" width=\"180\" height=\"70\" rx=\"6\" fill=\"#14203a\" stroke=\"#0d9488\" stroke-width=\"1\"/><text x=\"360.0\" y=\"125.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">mto.save</text><text x=\"360.0\" y=\"146.0\" font-size=\"10.5\" fill=\"#8a9bb8\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"normal\" dominant-baseline=\"middle\">modelopt.torch.opt</text><rect x=\"480\" y=\"100\" width=\"200\" height=\"70\" rx=\"6\" fill=\"#14203a\" stroke=\"#6b7280\" stroke-width=\"1\"/><text x=\"580.0\" y=\"135.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">torch.load</text><rect x=\"140\" y=\"200\" width=\"220\" height=\"70\" rx=\"6\" fill=\"#14203a\" stroke=\"#6b7280\" stroke-width=\"1\"/><text x=\"250.0\" y=\"235.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">onnx.save</text><rect x=\"400\" y=\"200\" width=\"220\" height=\"70\" rx=\"6\" fill=\"#14203a\" stroke=\"#6b7280\" stroke-width=\"1\"/><text x=\"510.0\" y=\"235.0\" font-size=\"12\" fill=\"#dbe4f0\" text-anchor=\"middle\" font-family=\"Consolas,D2Coding,monospace\" font-weight=\"bold\" dominant-baseline=\"middle\">pickle.dump</text>", "regions": [{"id": "ts", "label": "torch.save — state_dict", "x": 30, "y": 100, "w": 210, "h": 70}, {"id": "ms", "label": "mto.save — modelopt.torch.opt", "x": 270, "y": 100, "w": 180, "h": 70}, {"id": "tl", "label": "torch.load", "x": 480, "y": 100, "w": 200, "h": 70}, {"id": "ox", "label": "onnx.save", "x": 140, "y": 200, "w": 220, "h": 70}, {"id": "pk", "label": "pickle.dump", "x": 400, "y": 200, "w": 220, "h": 70}], "a": "ms"}, {"type": "drop", "p": "<span style=\"color:var(--dim)\">[6교시]</span> 빈칸에 알맞은 것을 고르세요.", "p2": "ModelOpt QAT 는 {} 한 모델을 평소처럼 학습하면 된다 — 양자화기 안에 {} 가 들어 있기 때문이다. W3A8 은 0.728 → {} 로 회복됐다.", "opts": [["mtq.quantize 로 PTQ", "torch.compile 로 컴파일", "ONNX 로 export"], ["STE", "Dropout", "BatchNorm"], ["0.832", "0.500", "0.946"]], "a": [0, 0, 0], "w": "QAT 전용 함수가 없습니다 — 4교시의 train_qat 를 그대로 씁니다.", "an": "실습 6-1"}, {"type": "ox", "p": "<span style=\"color:var(--dim)\">[6교시]</span> INT8 ModelOpt 모델을 QAT 했더니 PTQ 대비 정확도 변화가 ±0.5%p 안이었다 — 8비트에서는 QAT 이득이 측정 잡음 수준이다.", "a": true, "w": "실측 0.843 → 0.841. 학습 비용 (CPU 약 80초 · GPU 수십 초) 만 들었습니다.", "an": "실습 6-2"}, {"type": "single", "p": "<span style=\"color:var(--dim)\">[7교시]</span> ModelOpt QAT 모델을 export 한 QDQ ONNX 파일 (1,135 KB) 이 FP32 ONNX 와 크기가 비슷한 이유는?", "o": ["export 가 실패해 양자화가 빠졌기 때문", "weight 가 FP32 로 저장되고 Q/DQ 노드가 붙은 형태이기 때문", "INT8 weight 를 두 벌씩 저장하기 때문", "BatchNormalization 노드가 weight 를 4배로 늘리기 때문"], "a": 1, "w": "QDQ ONNX 는 '어디를 어떤 scale 로 양자화하라' 는 표시입니다. 진짜 INT8 weight 는 TensorRT 엔진에 들어갑니다.", "an": "실습 7-1"}, {"type": "drop", "p": "<span style=\"color:var(--dim)\">[7교시]</span> 빈칸에 알맞은 것을 고르세요.", "p2": "QAT 모델의 QDQ ONNX 에는 scale 이 이미 들어 있어 TensorRT 빌드에 {} 가 필요 없다. 빌드 플래그는 {} 이고, trtexec 로는 {} 와 같다.", "opts": [["보정 (calibration)", "학습 데이터 50,000장 전체", "GPU 두 장"], ["INT8 + FP16", "FP32 플래그만", "INT4 + BF16"], ["--int8 --fp16", "--best --int4", "--noTF32"]], "a": [0, 0, 0], "w": "Day 3 의 explicit (QDQ) 경로와 같습니다 — PTQ 모델이든 QAT 모델이든 같은 빌드 함수.", "an": "실습 7-2"}, {"type": "match", "p": "<span style=\"color:var(--dim)\">[7교시]</span> rn20_qat.onnx 를 Netron 으로 볼 때 노드와 역할을 짝지으세요.", "left": ["QuantizeLinear → DequantizeLinear (입력)", "QuantizeLinear → DequantizeLinear (weight)", "BatchNormalization"], "right": ["학습 때 input_quantizer · 텐서별 scale", "학습 때 weight_quantizer · 채널별 scale", "ModelOpt 가 접지 않음 · TensorRT 가 빌드 때 접음"], "a": [0, 1, 2], "w": "실측: Q 45 · DQ 45 · Conv 21 · BN 21 · zero_point 모두 0.", "an": "D4-7"}, {"type": "multi", "p": "<span style=\"color:var(--dim)\">[8교시]</span> PTQ vs QAT 대결 결과 (강사 실측) 로 옳은 것을 모두 고르세요.", "o": ["INT8 에서 QAT 이득은 약 +0.5%p 로 측정 잡음 수준이었다", "W3A8 에서 QAT 이득은 약 +10%p 였다", "QAT 는 항상 PTQ 보다 정확도가 높으므로 모든 모델에 쓰는 것이 좋다", "수작업 QAT 와 ModelOpt QAT 의 W3A8 정확도는 거의 같았다"], "a": [0, 1, 3], "w": "ModelOpt QAT INT8 (0.841) 은 PTQ (0.843) 보다 오히려 조금 낮았습니다. 이득과 비용을 숫자로 보고 고릅니다.", "an": "D4-8 · 과제 3"}, {"type": "order", "p": "<span style=\"color:var(--dim)\">[8교시]</span> 8교시 대결에서 결론을 내는 순서대로 배열하세요.", "items": ["5가지 방법의 정확도 · 학습 분 · 지연을 duel_df 로", "INT8 · W3A8 의 QAT 이득 계산", "이득이 문턱 (1%p) 을 넘는지로 need_qat 판정", "ptq_vs_qat.csv · qp_baseline.csv 저장", "결론 쓰기 (QAT 가 필요한 경우)"], "w": "같은 자로 재고 → 이득 → 판정 → 기록 → 결론.", "an": "과제 2 ~ 6"}, {"type": "short", "p": "<span style=\"color:var(--dim)\">[8교시]</span> Day 3 의 outlier 모델 BadQuantNet 처럼 QAT 로 잘 안 고쳐지는 경우, Day 3 에서 쓴 처방의 이름은? (영문 2단어)", "a": ["mixed precision", "Mixed Precision", "mixed-precision"], "w": "강사 실험에서 ModelOpt QAT 는 0.25 → 0.50 에 그쳤습니다. 범인 layer 를 FP32 로 남기는 mixed precision 이나 채널 균등화가 원인에 맞는 처방입니다.", "an": "1교시 표 · 과제 6"}]}];
+const NQ = Q.reduce((t, s) => t + s.qs.length, 0);
+const TYPES = {
+  single:{n:'단일 선택',c:'#60a5fa'}, multi:{n:'다중 선택',c:'#c084fc'}, ox:{n:'O/X',c:'#f5b942'},
+  short:{n:'단답형',c:'#2dd4bf'}, drop:{n:'선택형 빈칸',c:'#93c5fd'}, match:{n:'짝 맞추기',c:'#f472b6'},
+  order:{n:'순서 배열',c:'#fb923c'}, hot:{n:'핫스팟',c:'#4ade80'}, code:{n:'코드 완성',c:'#a3e635'}
+};
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const strip = h => { const d = document.createElement('div'); d.innerHTML = h; return d.textContent; };
+const norm = s => String(s ?? '').toLowerCase().replace(/\s+/g, '').replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+function rng(seed){ let h = 2166136261; for (const c of seed) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return () => { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return ((h >>> 0) % 100000) / 100000; }; }
+function shuffled(arr, seed){ const r = rng(seed), idx = arr.map((_, i) => i); for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; } if (idx.every((v, i) => v === i) && idx.length > 1) idx.push(idx.shift()); return idx; }
+
+// ── 상태 ──
+let tab = 0;
+const graded = Q.map(() => false);
+const ans = Q.map((s, i) => s.qs.map((q, k) => init(q, `${i}-${k}`)));
+function init(q, id){
+  switch (q.type) {
+    case 'single': case 'ox': case 'hot': return null;
+    case 'multi': return [];
+    case 'short': return '';
+    case 'drop': return q.opts.map(() => -1);
+    case 'match': return q.left.map(() => -1);
+    case 'order': return shuffled(q.items, 'o' + id);          // 현재 화면 순서(원래 인덱스)
+    case 'flash': return { flipped:false, self:null };
+    case 'code': return q.a.map(() => '');
+  }
+}
+function answered(q, a){
+  switch (q.type) {
+    case 'single': case 'ox': case 'hot': return a !== null;
+    case 'multi': return a.length > 0;
+    case 'short': return a.trim() !== '';
+    case 'drop': case 'match': return a.every(v => v >= 0);
+    case 'order': return true;
+    case 'flash': return a.self !== null;
+    case 'code': return a.every(v => v.trim() !== '');
+  }
+}
+function correct(q, a){
+  switch (q.type) {
+    case 'single': case 'hot': return a === q.a;
+    case 'ox': return a === q.a;
+    case 'multi': return a.length === q.a.length && q.a.every(x => a.includes(x));
+    case 'short': return q.a.some(x => norm(x) === norm(a));
+    case 'drop': return a.every((v, i) => v === q.a[i]);
+    case 'match': return a.every((v, i) => v === q.a[i]);
+    case 'order': return a.every((v, i) => v === i);
+    case 'flash': return a.self === true;
+    case 'code': return a.every((v, i) => q.a[i].some(x => norm(x) === norm(v)));
+  }
+}
+const scoreOf = i => ans[i].filter((a, k) => correct(Q[i].qs[k], a)).length;
+
+// ── 답 문자열 (오답 정리용) ──
+const L = '①②③④⑤⑥⑦⑧';
+function fmt(q, a, right){
+  switch (q.type) {
+    case 'single': return right ? `${L[q.a]} ${strip(q.o[q.a])}` : (a === null ? '미응답' : `${L[a]} ${strip(q.o[a])}`);
+    case 'multi': { const v = right ? q.a : a; return v.length ? [...v].sort().map(i => L[i]).join(' ') : '미응답'; }
+    case 'ox': { const v = right ? q.a : a; return v === null ? '미응답' : (v ? 'O' : 'X'); }
+    case 'short': return right ? q.a[0] : (a.trim() || '미응답');
+    case 'drop': return (right ? q.a : a).map((v, i) => v < 0 ? '?' : strip(q.opts[i][v])).join(' / ');
+    case 'match': return (right ? q.a : a).map((v, i) => `${strip(q.left[i])}→${v < 0 ? '?' : strip(q.right[v])}`).join(', ');
+    case 'order': return (right ? q.items.map((_, i) => i) : a).map(i => strip(q.items[i])).join(' → ');
+    case 'hot': { const v = right ? q.a : a; return v === null ? '미응답' : (q.regions.find(r => r.id === v) || {}).label; }
+    case 'flash': return right ? strip(q.back) : (a.self === null ? '미응답' : (a.self ? '알았다' : '몰랐다'));
+    case 'code': return (right ? q.a.map(x => x[0]) : a.map(v => v || '?')).join(' / ');
+  }
+}
+
+// ── 렌더 ──
+function renderTabs(){
+  $('#tabs').innerHTML = Q.map((s, i) => {
+    const n = ans[i].filter((a, k) => answered(s.qs[k], a)).length;
+    return `<button class="${i === tab ? 'active' : ''} ${graded[i] ? 'graded' : ''}" data-i="${i}">${s.t}<span class="s">${graded[i] ? scoreOf(i) + '/' + s.qs.length : n + '/' + s.qs.length}</span></button>`;
+  }).join('');
+  $('#tabs').querySelectorAll('button').forEach(b => b.onclick = () => { tab = +b.dataset.i; history.replaceState(null, '', '#t' + (tab + 1)); render(); window.scrollTo({ top: 0 }); });
+}
+function qHTML(q, k){
+  const a = ans[tab][k], g = graded[tab], id = `${tab}-${k}`, dis = g ? 'disabled' : '';
+  const ok = g && correct(q, a);
+  let body = '';
+  switch (q.type) {
+    case 'single':
+    case 'multi': {
+      const isM = q.type === 'multi';
+      body = (isM ? '<div class="hint" style="margin:-4px 0 8px">정답을 <b>모두</b> 고르세요.</div>' : '') + '<div class="opts">' + q.o.map((o, j) => {
+        const sel = isM ? a.includes(j) : a === j, isA = isM ? q.a.includes(j) : q.a === j;
+        let c = sel ? 'sel' : '';
+        if (g) c = isA && sel ? 'ok' : (sel ? 'bad' : (isA ? (isM ? 'miss' : 'ok') : ''));
+        const box = isM ? (sel ? '☑' : '☐') : L[j];
+        return `<button class="opt ${c}" data-k="${k}" data-j="${j}" ${dis}><span class="box">${box}</span> ${o}</button>`;
+      }).join('') + '</div>';
+      break;
+    }
+    case 'ox':
+      body = '<div class="ox">' + [true, false].map(v => {
+        let c = a === v ? 'active' : '';
+        if (g) c = (q.a === v ? 'opt ok' : (a === v ? 'opt bad' : ''));
+        return `<button class="oxb ${c}" data-k="${k}" data-v="${v}" ${dis} aria-label="${v ? '참' : '거짓'}">${v ? 'O' : 'X'}</button>`;
+      }).join('') + '</div>';
+      break;
+    case 'short':
+      body = `<input type="text" class="sa" data-k="${k}" value="${esc(a)}" placeholder="정답 입력" style="width:min(100%,320px)" ${dis}>`;
+      break;
+    case 'drop': {
+      let i = 0;
+      body = '<div class="fill">' + q.p2.replace(/\{\}/g, () => {
+        const n = i++;
+        const opts = q.opts[n].map((o, j) => `<option value="${j}" ${a[n] === j ? 'selected' : ''}>${esc(strip(o))}</option>`).join('');
+        const st = g ? `style="border-color:${a[n] === q.a[n] ? 'var(--green)' : 'var(--red)'}"` : '';
+        return `<select class="dd" data-k="${k}" data-n="${n}" ${dis} ${st}><option value="-1">선택</option>${opts}</select>`;
+      }) + '</div>';
+      break;
+    }
+    case 'match': {
+      const order = shuffled(q.right, 'm' + id);
+      body = q.left.map((l, i) => {
+        const opts = order.map(j => `<option value="${j}" ${a[i] === j ? 'selected' : ''}>${esc(strip(q.right[j]))}</option>`).join('');
+        const c = g ? (a[i] === q.a[i] ? 'ok' : 'bad') : '';
+        return `<div class="mrow ${c}"><span class="l">${l}</span><span class="arr">↔</span><select class="mm" data-k="${k}" data-i="${i}" ${dis}><option value="-1">짝 선택</option>${opts}</select></div>`;
+      }).join('');
+      break;
+    }
+    case 'order':
+      body = '<div class="hint" style="margin:-4px 0 8px">끌어다 놓거나 ▲▼ 버튼으로 순서를 바꾸세요.</div><ol class="ord" data-k="' + k + '">' + a.map((it, pos) => {
+        const c = g ? (it === pos ? 'ok' : 'bad') : '';
+        return `<li class="${c}" draggable="${!g}" data-pos="${pos}"><span class="k">${pos + 1}</span><span>${q.items[it]}</span><span class="mv"><button data-k="${k}" data-pos="${pos}" data-d="-1" ${dis || (pos === 0 ? 'disabled' : '')} aria-label="위로">▲</button><button data-k="${k}" data-pos="${pos}" data-d="1" ${dis || (pos === a.length - 1 ? 'disabled' : '')} aria-label="아래로">▼</button></span></li>`;
+      }).join('') + '</ol>';
+      break;
+    case 'hot': {
+      const regs = q.regions.map(r => {
+        let c = a === r.id ? 'sel' : '';
+        if (g) c = r.id === q.a ? 'ok' : (a === r.id ? 'bad' : '');
+        const shape = r.shape === 'circle' ? `<circle cx="${r.x}" cy="${r.y}" r="${r.r}"` : `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="6"`;
+        return `${shape} class="rg ${c}" data-k="${k}" data-r="${r.id}" tabindex="${g ? -1 : 0}" role="button" aria-label="${esc(r.label)}"><title>${esc(r.label)}</title>${r.shape === 'circle' ? '</circle>' : '</rect>'}`;
+      }).join('');
+      body = `<div class="hot"><svg viewBox="${q.viewBox}" width="${q.sw}" xmlns="http://www.w3.org/2000/svg">${q.svg}${regs}</svg></div>` +
+        `<div class="hint" style="margin-top:6px">선택: <b style="color:var(--amber)">${a === null ? '없음' : esc((q.regions.find(r => r.id === a) || {}).label)}</b></div>`;
+      break;
+    }
+    case 'flash':
+      body = `<div class="card ${a.flipped ? 'flip' : ''}" data-k="${k}"><div class="in"><div class="f">${q.front}</div><div class="b">${q.back}</div></div></div>` +
+        `<div class="selfrow"><button class="flipb" data-k="${k}" ${g ? 'disabled' : ''}>${a.flipped ? '앞면 보기' : '🔄 카드 뒤집기'}</button>` +
+        `<button class="selfb ${a.self === true ? 'active' : ''}" data-k="${k}" data-v="1" ${g || !a.flipped ? 'disabled' : ''}>✅ 알았다</button>` +
+        `<button class="selfb ${a.self === false ? 'active' : ''}" data-k="${k}" data-v="0" ${g || !a.flipped ? 'disabled' : ''}>❌ 몰랐다</button>` +
+        `<span class="hint">${a.flipped ? '정답과 비교해 스스로 채점하세요.' : '먼저 답을 떠올린 뒤 뒤집으세요.'}</span></div>`;
+      break;
+    case 'code': {
+      let i = 0;
+      body = '<pre>' + esc(q.code).replace(/\{\{\}\}/g, () => {
+        const n = i++;
+        const w = Math.max(5, (q.a[n][0] || '').length + 2);
+        const st = g ? `style="border-color:${q.a[n].some(x => norm(x) === norm(a[n])) ? 'var(--green)' : 'var(--red)'};width:${w}ch"` : `style="width:${w}ch"`;
+        return `<input type="text" class="ci" data-k="${k}" data-n="${n}" value="${esc(a[n])}" ${dis} ${st} aria-label="빈칸 ${n + 1}">`;
+      }) + '</pre>';
+      break;
+    }
+  }
+  const t = TYPES[q.type];
+  const prompt = q.type === 'drop' ? (q.p || '') : (q.type === 'flash' ? (q.p || '카드 앞면의 질문에 답을 떠올린 뒤 뒤집어 확인하세요.') : q.p);
+  let fb = '';
+  if (g) {
+    const right = q.type === 'flash' ? '' : `<div>정답: <b>${esc(fmt(q, a, true))}</b></div>`;
+    fb = `<div class="fb ${ok ? 'ok' : 'bad'}"><b class="v">${ok ? '정답' : '오답'}</b>${right}${q.w}<span class="anim">확인: ${q.an}</span></div>`;
+  }
+  const un = !g && !answered(q, a) && attempted[tab] ? 'unans' : '';
+  return `<div class="q ${g ? (ok ? 'ok' : 'bad') : un}"><div class="qh"><span class="n">문항 ${k + 1}</span><span class="ty" style="color:${t.c};border-color:${t.c}">${t.n}</span></div><div class="p">${prompt}</div>${body}${fb}</div>`;
+}
+const attempted = Q.map(() => false);
+function render(){
+  renderTabs();
+  const s = Q[tab];
+  $('#sheet').innerHTML = `<div class="head"><span class="t">${s.t}</span><span class="a">🎬 ${s.anim}</span></div>` + s.qs.map((q, k) => qHTML(q, k)).join('');
+  bind();
+  const nm = $('#name').value, g = graded[tab];
+  if (g) {
+    const sc = scoreOf(tab); $('#rscore').textContent = `${sc}/${s.qs.length}`;
+    if (nm.trim()) { $('#rcode').textContent = codeFor(nm, tab + 1, sc); $('#rhint').textContent = '결과 코드'; }
+    else { $('#rcode').textContent = '—'; $('#rhint').textContent = '이름을 입력하면 결과 코드가 나옵니다.'; }
+  } else {
+    $('#rcode').textContent = '—'; $('#rscore').textContent = '';
+    const n = ans[tab].filter((a, k) => answered(s.qs[k], a)).length;
+    $('#rhint').textContent = `${n}/${s.qs.length} 응답. 채점하기를 누르면 잠깁니다.`;
+  }
+  $('#gradeBtn').disabled = g;
+}
+function bind(){
+  const S = $('#sheet'), A = ans[tab];
+  S.querySelectorAll('.opt[data-j]').forEach(b => b.onclick = () => {
+    const k = +b.dataset.k, j = +b.dataset.j, q = Q[tab].qs[k];
+    if (q.type === 'multi') { const i = A[k].indexOf(j); i < 0 ? A[k].push(j) : A[k].splice(i, 1); }
+    else A[k] = A[k] === j ? null : j;
+    render();
+  });
+  S.querySelectorAll('.oxb').forEach(b => b.onclick = () => { const k = +b.dataset.k, v = b.dataset.v === 'true'; A[k] = A[k] === v ? null : v; render(); });
+  S.querySelectorAll('.sa').forEach(i => i.oninput = () => { A[+i.dataset.k] = i.value; renderTabs(); });
+  S.querySelectorAll('.ci').forEach(i => i.oninput = () => { A[+i.dataset.k][+i.dataset.n] = i.value; renderTabs(); });
+  S.querySelectorAll('.dd').forEach(s => s.onchange = () => { A[+s.dataset.k][+s.dataset.n] = +s.value; renderTabs(); });
+  S.querySelectorAll('.mm').forEach(s => s.onchange = () => { A[+s.dataset.k][+s.dataset.i] = +s.value; renderTabs(); });
+  S.querySelectorAll('.ord .mv button').forEach(b => b.onclick = () => {
+    const k = +b.dataset.k, p = +b.dataset.pos, d = +b.dataset.d, arr = A[k];
+    [arr[p], arr[p + d]] = [arr[p + d], arr[p]]; render();
+  });
+  S.querySelectorAll('.ord').forEach(ol => {
+    const k = +ol.dataset.k; let from = null;
+    ol.querySelectorAll('li').forEach(li => {
+      li.addEventListener('dragstart', e => { from = +li.dataset.pos; li.classList.add('drag'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(from)); });
+      li.addEventListener('dragend', () => li.classList.remove('drag'));
+      li.addEventListener('dragover', e => { if (from !== null) { e.preventDefault(); li.classList.add('over'); } });
+      li.addEventListener('dragleave', () => li.classList.remove('over'));
+      li.addEventListener('drop', e => { e.preventDefault(); const to = +li.dataset.pos; if (from === null || from === to) return; const arr = A[k]; const [x] = arr.splice(from, 1); arr.splice(to, 0, x); from = null; render(); });
+    });
+  });
+  S.querySelectorAll('.rg').forEach(r => {
+    const pick = () => { if (graded[tab]) return; const k = +r.dataset.k; A[k] = A[k] === r.dataset.r ? null : r.dataset.r; render(); };
+    r.addEventListener('click', pick);
+    r.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+  });
+  S.querySelectorAll('.flipb').forEach(b => b.onclick = () => { const k = +b.dataset.k; A[k].flipped = !A[k].flipped; render(); });
+  S.querySelectorAll('.card').forEach(c => c.onclick = () => { if (graded[tab]) return; const k = +c.dataset.k; A[k].flipped = !A[k].flipped; render(); });
+  S.querySelectorAll('.selfb').forEach(b => b.onclick = () => { const k = +b.dataset.k; A[k].self = b.dataset.v === '1'; render(); });
+}
+
+// ── 채점 · 결과 코드 ──
+function hash(s){ let h = 5381; for (const c of s) h = ((h << 5) + h + c.charCodeAt(0)) >>> 0; return h.toString(16).padStart(8, '0').slice(-4); }
+function codeFor(name, t, score){ return `${t}${'ABCDEFGHIJK'[Math.round(10 - score * 10 / Q[t - 1].qs.length)] || 'K'}-${hash(`${name.trim()}|${t}|${score}|qpday4quiz`)}`; }
+$('#gradeBtn').onclick = () => {
+  const s = Q[tab], n = ans[tab].filter((a, k) => answered(s.qs[k], a)).length;
+  attempted[tab] = true;
+  if (n < s.qs.length && !confirm(`아직 ${s.qs.length - n}문항에 답하지 않았습니다. 그래도 채점할까요? (미응답은 오답 처리)`)) { render(); return; }
+  graded[tab] = true; render();
+};
+$('#resetBtn').onclick = () => {
+  if (!confirm(`답을 모두 지우고 다시 풀까요?`)) return;
+  graded[tab] = false; attempted[tab] = false;
+  ans[tab] = Q[tab].qs.map((q, k) => init(q, `${tab}-${k}`)); render();
+};
+$('#name').oninput = render;
+
+// ── 제출 · 오답 정리 ──
+let lastHtml = '', lastText = '';
+function buildReport(){
+  const nm = $('#name').value.trim() || '(이름 없음)', ds = new Date().toLocaleString('ko-KR');
+  let h = `<h3>Quantization·Pruning Day 4 복습 퀴즈 — 오답 정리</h3><div class="meta">${esc(nm)} · ${ds}</div>`;
+  let t = `Quantization·Pruning Day 4 복습 퀴즈 — 오답 정리\n이름: ${nm}\n일시: ${ds}\n\n`;
+  let tot = 0, cnt = 0;
+  const byType = {};
+  Q.forEach((s, i) => {
+    if (!graded[i]) return;
+    const sc = scoreOf(i); tot += sc; cnt++;
+    s.qs.forEach((q, k) => { const b = byType[q.type] ||= [0, 0]; b[1]++; if (correct(q, ans[i][k])) b[0]++; });
+    const code = $('#name').value.trim() ? codeFor($('#name').value, i + 1, sc) : '—';
+    const wrong = s.qs.map((q, k) => ({ q, k, a: ans[i][k] })).filter(x => !correct(x.q, x.a));
+    h += `<div class="sec">${esc(s.t)} — ${sc}/${s.qs.length} · 결과 코드 ${code}</div>`;
+    t += `[${s.t}] ${sc}/${s.qs.length} · 결과 코드 ${code}\n`;
+    if (!wrong.length) { h += `<div class="ok">전부 정답 🎉</div>`; t += '  전부 정답\n\n'; return; }
+    h += '<table><tr><th>#</th><th>유형</th><th>문항</th><th>내 답</th><th>정답</th><th>다시 볼 곳</th></tr>';
+    wrong.forEach(({ q, k, a }) => {
+      const qt = strip(q.type === 'flash' ? q.front : (q.p || q.p2 || '')).replace(/\s+/g, ' ').slice(0, 70);
+      const my = fmt(q, a, false), co = fmt(q, a, true);
+      h += `<tr><td>${k + 1}</td><td>${TYPES[q.type].n}</td><td>${esc(qt)}</td><td class="bad">${esc(my)}</td><td class="ok">${esc(co)}</td><td>${esc(strip(q.an))}</td></tr>`;
+      t += `  ${k + 1}. [${TYPES[q.type].n}] ${qt}\n     내 답: ${my}\n     정답: ${co}\n     다시 볼 곳: ${strip(q.an)}\n`;
+    });
+    h += '</table>'; t += '\n';
+  });
+  const notGraded = Q.map((s, i) => graded[i] ? null : i + 1).filter(x => x);
+  const typeLine = Object.entries(byType).map(([k, [c, n]]) => `${TYPES[k].n} ${c}/${n}`).join(' · ');
+  const sum = `<div class="sum"><span>총점 ${tot}/${NQ} · ${Math.round(tot / NQ * 100)}점</span>${notGraded.length ? `<span class="none">미채점: ${notGraded.join(', ')}</span>` : ''}</div>` + (typeLine ? `<div class="meta">유형별 정답: ${typeLine}</div>` : '');
+  h = h.replace('</div>', '</div>' + sum);
+  t = t.replace('\n\n', `\n총점 ${tot}/${NQ} · ${Math.round(tot / NQ * 100)}점${notGraded.length ? ' · 미채점 ' + notGraded.join(', ') + '교시' : ''}\n유형별 정답: ${typeLine}\n\n`);
+  lastHtml = h; lastText = t;
+  return h;
+}
+$('#submitBtn').onclick = () => {
+  if (!graded.some(x => x)) { alert('먼저 채점하기를 누르세요.'); return; }
+  $('#dgBody').innerHTML = buildReport(); $('#toast').textContent = ''; $('#dlg').showModal();
+};
+$('#closeBtn').onclick = () => $('#dlg').close();
+$('#captureBtn').onclick = async () => {
+  const htmlDoc = `<meta charset="utf-8">` + lastHtml.replace(/ class="[^"]*"/g, '').replace(/<table>/g, '<table border="1" style="border-collapse:collapse">');
+  try {
+    if (navigator.clipboard && window.ClipboardItem) {
+      await navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([htmlDoc], { type: 'text/html' }), 'text/plain': new Blob([lastText], { type: 'text/plain' }) })]);
+      $('#toast').textContent = '복사했습니다 — 안내받은 제출처에 붙여 넣으세요.'; return;
+    }
+  } catch (e) {}
+  const ta = document.createElement('textarea'); ta.value = lastText; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  $('#dlg').appendChild(ta); ta.focus(); ta.select();
+  const ok = document.execCommand('copy'); ta.remove();
+  $('#toast').textContent = ok ? '텍스트로 복사했습니다.' : '복사하지 못했습니다 — 직접 선택해 복사하세요.';
+};
+
+$('#legend').innerHTML = Object.values(TYPES).map(t => `<span class="tag" style="color:${t.c};border-color:${t.c}55">${t.n}</span>`).join('');
+// worksheet.html#t3 → 3교시 탭으로 바로 열기 (노트북 교시별 링크)
+function fromHash(){ const m = location.hash.match(/^#t([1-8])$/); if (m) { tab = +m[1] - 1; } }
+fromHash();
+window.addEventListener('hashchange', () => { fromHash(); render(); window.scrollTo({ top: 0 }); });
+render();
+</script>
+</body>
+</html>
