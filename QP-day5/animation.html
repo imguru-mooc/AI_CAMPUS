@@ -1,0 +1,1672 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quantization·Pruning Day 5 애니메이션 — Pruning</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{display:grid;grid-template-columns:290px 1fr;min-height:100vh}
+  nav{background:#0a1020;border-right:1px solid var(--line);padding:24px 16px;position:sticky;top:0;height:100vh;overflow:auto}
+  nav h1{color:var(--amber);font-size:21px;margin:0 0 2px}
+  nav .sub{color:var(--dim);font-size:12.5px;margin:0 0 18px}
+  nav h2{color:var(--dim);font-size:12px;font-weight:600;letter-spacing:.5px;margin:18px 4px 8px}
+  nav button{all:unset;box-sizing:border-box;display:grid;grid-template-columns:62px 1fr;column-gap:8px;width:100%;padding:10px 10px;margin-bottom:6px;border:1px solid var(--line);border-radius:9px;background:var(--panel);cursor:pointer}
+  nav button:hover{border-color:var(--amber)}
+  nav button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  nav button[aria-current="true"]{border-color:var(--amber);background:#2a2210}
+  nav .p{font-family:var(--mono);font-size:11.5px;color:var(--teal);grid-row:1}
+  nav .no{font-family:var(--mono);font-size:11.5px;color:var(--dim);grid-row:2}
+  nav .tt{grid-column:2;grid-row:1;color:var(--amber);font-size:15px}
+  nav .d{grid-column:2;grid-row:2;color:var(--dim);font-size:12px;line-height:1.4}
+  nav .hint{color:var(--dim);font-size:12px;margin-top:16px}
+  nav kbd{font-family:var(--mono);background:#1a2540;border-radius:4px;padding:0 5px}
+  main{min-width:0}
+  section.lesson{display:none}
+  section.lesson.active{display:block}
+  iframe{display:block;width:100%;border:0;min-height:600px;background:var(--bg)}
+  @media(max-width:860px){
+    .app{grid-template-columns:1fr}
+    nav{position:sticky;top:0;z-index:5;height:auto;padding:12px 12px 8px;border-right:0;border-bottom:1px solid var(--line)}
+    nav .sub,nav h2,nav .hint,nav .d{display:none}
+    nav h1{font-size:16px;margin-bottom:8px}
+    .list{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+    nav button{flex:0 0 auto;width:auto;grid-template-columns:auto;padding:6px 10px;margin:0}
+    nav .p{display:none}
+    nav .no{grid-row:1;grid-column:1;font-size:10.5px}
+    nav .tt{grid-row:2;grid-column:1;font-size:13px;white-space:nowrap}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+<nav aria-label="애니메이션 선택">
+  <h1>Quantization·Pruning Day 5<br>애니메이션</h1>
+  <p class="sub">HYUNDAI AI Insight Campus 온디바이스 AI · Pruning · 11/20(금)</p>
+  <h2>1~8교시 시뮬레이션</h2>
+  <div class="list">
+<button data-id="d5-1" aria-current="false"><span class="p">1교시</span><span class="no">D5-1</span><span class="tt">가지치기 단위와 기준</span><span class="d">1교시 흐름 — 가지치기 단위 (weight · N:M · filter · layer) → 예제 1-A weight 분포: |w| < 0.05 가 76% → 실습 1-1 magnitude_mask → 실습 1-2 filter_l1 · 단위별 weight 수 1 · 144 · 288 · 4,608</span></button>
+<button data-id="d5-2" aria-current="false"><span class="p">2교시</span><span class="no">D5-2</span><span class="tt">mask 와 global</span><span class="d">2교시 흐름 — torch.nn.utils.prune 의 구조 (weight_orig × weight_mask) → 실습 2-1 prune · remove → 실습 2-2 global 0.8125 vs layer 별 0.789 → 예제 2-A sparsity 별 정확도: 70% 에서 붕괴</span></button>
+<button data-id="d5-3" aria-current="false"><span class="p">3교시</span><span class="no">D5-3</span><span class="tt">0 은 왜 빨라지지 않나</span><span class="d">3교시 흐름 — 실습 3-1 저장 크기 1,110 KB 그대로 · gzip 1,006 → 189 KB → 예제 3-A 지연: 0 이 90% 여도 약 1배 → 실습 3-2 2:4 mask 0.6485 → 하드웨어 (Ampere 이후만)</span></button>
+<button data-id="d5-4" aria-current="false"><span class="p">4교시</span><span class="no">D5-4</span><span class="tt">filter 를 직접 빼기</span><span class="d">4교시 흐름 — filter 를 빼면 conv1 · bn1 · conv2 를 함께 → 실습 4-1 prune_block (32 → 16) → 실습 4-2 manual_prune: params 272,474 → 138,506 · 정확도 0.168 → 예제 4-A 속도비 · residual 오류</span></button>
+<button data-id="d5-5" aria-current="false"><span class="p">5교시</span><span class="no">D5-5</span><span class="tt">torch-pruning</span><span class="d">5교시 흐름 — 예제 5-A DependencyGraph: 채널 2개에 Conv 9개가 함께 → 실습 5-1 MetaPruner 50%: MACs 41.2M → 10.5M → ignored_layers → 실습 5-2 비율별 표: 20% 만 잘라도 0.24</span></button>
+<button data-id="d5-6" aria-current="false"><span class="p">6교시</span><span class="no">D5-6</span><span class="tt">fine-tuning 과 iterative</span><span class="d">6교시 흐름 — fine-tuning 설정 (lr 1e-2) → 실습 6-1 회복 곡선 0.10 → 0.632 → 0.712 → 0.7225 → 실습 6-2 iterative 0.68 vs one-shot 0.7225 → torch.save(model) 로 저장</span></button>
+<button data-id="d5-7" aria-current="false"><span class="p">7교시</span><span class="no">D5-7</span><span class="tt">pruning 모델 배포</span><span class="d">7교시 흐름 — 실습 7-1 세 모델을 ONNX 로: 1,071 · 1,071 · 277 KB → 실습 7-2 배포 지연: unstructured 약 1.0배 · structured 약 2배 → MACs 1/4 ≠ 4배 · 채널 수 → qp_baseline</span></button>
+<button data-id="d5-8" aria-current="false"><span class="p">8교시</span><span class="no">D5-8</span><span class="tt">pruning 비율 탐색</span><span class="d">8교시 미니 프로젝트 흐름 — 과제 1 비율 0 · 20 · 40 · 60% sweep → 과제 2 MACs – 정확도 곡선 → 과제 3 FP32 − 3%p 기준으로 best_ratio → 과제 4 · 5 저장 · 요약 (지연이 늘 수도) → 결론</span></button>
+  </div>
+  <p class="hint"><kbd>←</kbd> <kbd>→</kbd> 키로 이전 · 다음 애니메이션</p>
+</nav>
+<main>
+<section class="lesson" id="d5-1" data-title="D5-1 가지치기 단위와 기준"><iframe title="D5-1 가지치기 단위와 기준" loading="lazy" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;ko&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+&lt;title&gt;가지치기 단위와 기준 — Quantization·Pruning Day 5&lt;/title&gt;
+&lt;style&gt;
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:&quot;Consolas&quot;,&quot;D2Coding&quot;,&quot;JetBrains Mono&quot;,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:&quot;Pretendard&quot;,&quot;Noto Sans KR&quot;,&quot;Segoe UI&quot;,sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  @media(max-width:520px){.app{padding:16px 12px 30px}}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .sub code,.explain code,.note code{font-family:var(--mono);color:var(--blue)}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono);max-width:100%;overflow-wrap:anywhere}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.red{color:var(--red);border-color:var(--red)}.pill.green{color:var(--green);border-color:var(--green)}.pill.purple{color:var(--purple);border-color:var(--purple)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;min-width:0}
+  @media(max-width:520px){.panel{padding:12px 10px}}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.run{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700}
+  button.sel{background:#123d33;border-color:var(--teal);color:var(--teal)}
+  button:disabled{opacity:.4;cursor:default}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .grid{display:grid;grid-template-columns:1.25fr 1fr;gap:14px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .grid&gt;*{min-width:0}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.two{grid-template-columns:1fr}}
+  .two&gt;*{min-width:0}
+  canvas{width:100%;display:block;background:#0a0f1c;border:1px solid var(--line);border-radius:8px}
+  svg{max-width:100%}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+  .lab{font-size:13px;color:var(--dim)}
+  .sl{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;margin:8px 0}
+  .sl label{color:var(--amber);width:70px;flex:none}
+  .sl input{flex:1;min-width:60px;accent-color:var(--amber)}
+  .sl output{width:64px;text-align:right;flex:none}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-family:var(--mono);font-size:13.5px}
+  .kv span:nth-child(odd){color:var(--dim)}
+  .kv b{font-weight:600;overflow-wrap:anywhere}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;white-space:pre-wrap;min-height:64px;overflow-wrap:anywhere}
+  .code .g{color:var(--green)}.code .e{color:var(--red)}.code .c{color:#5d7292}.code .a{color:var(--amber)}.code .b{color:var(--blue)}.code .t{color:var(--teal)}
+  .code .hl{background:#3a2e12;color:var(--amber);border-radius:3px;padding:0 2px}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px;overflow-wrap:anywhere;white-space:pre-line}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}.explain b.purple{color:var(--purple)}
+  table.tt{border-collapse:collapse;font-family:var(--mono);font-size:13px;width:100%}
+  table.tt th,table.tt td{border:1px solid var(--line);padding:4px 6px;text-align:center}
+  table.tt th{color:var(--dim);font-weight:600;background:#0e1628}
+  table.tt tr.cur td{background:#2a2210}
+  .ok1{color:var(--green)}.bad1{color:var(--red)}.dim{color:var(--dim)}
+  .scroll{overflow-x:auto;max-width:100%}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .note{font-size:12.5px;color:var(--dim);border-left:3px solid var(--amber);padding:4px 10px;margin-top:10px}
+  .chk{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--dim)}
+  .chk input{accent-color:var(--amber)}
+  .ctl button{font-family:var(--mono)}
+  input[type=number],input.num,select{background:#0a0f1c;border:1px solid #2a3a5c;color:var(--text);border-radius:6px;padding:4px 6px;font-family:var(--mono);font-size:13px;width:74px}
+  select{width:auto}
+  .seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+  .seg button{padding:5px 10px}
+  .mono{font-family:var(--mono)}
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+  .arr{color:var(--dim);font-family:var(--mono);flex:none}
+  .fb{border:1px solid #2a3a5c;border-radius:8px;padding:7px 10px;background:#0a0f1c;font-family:var(--mono);font-size:13px;transition:all .3s;min-width:0;overflow-wrap:anywhere}
+  .fb small{display:block;color:var(--dim);font-size:11.5px;font-family:inherit}
+  .fb.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber);box-shadow:0 0 0 2px #f5b94233}
+  .fb.done{border-color:var(--teal);color:var(--teal)}
+  .fb.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .fb.off{opacity:.35}
+  .cells{display:flex;flex-wrap:wrap;gap:4px}
+  .cell{min-width:38px;height:30px;padding:0 6px;border:1px solid #2a3a5c;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;background:#0a0f1c;transition:all .25s}
+  .cell.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber)}
+  .cell.w{border-color:#3b6aa8;color:var(--blue)}.cell.bb{border-color:#7a5a2a;color:var(--amber)}
+.goals ol{margin:4px 0 0 18px;padding:0;font-size:13.5px;line-height:1.75;color:var(--text)}
+.goals ol li b{color:var(--amber)}
+#quiz .q{margin:0 0 8px;font-size:14px;line-height:1.55}
+#quiz .opts{display:flex;flex-direction:column;gap:6px}
+#quiz .opts button{text-align:left;background:#0b1220;border:1px solid #334155;color:var(--text);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer}
+#quiz .opts button:hover:not(:disabled){border-color:var(--teal)}
+#quiz .opts button.ok{border-color:#34d399;background:#0f2a22;color:#6ee7b7}
+#quiz .opts button.no{border-color:#f87171;background:#2a1215;color:#fca5a5}
+#quiz .why{margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--text)}
+.tagrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:12px;color:var(--dim)}
+.kv .wait{grid-column:1/-1;color:var(--dim);font-size:12.5px}
+
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;app&quot;&gt;
+&lt;div id=&quot;root&quot;&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;script&gt;
+
+const $=s=&gt;document.querySelector(s), $$=s=&gt;[...document.querySelectorAll(s)];
+const RM=window.matchMedia&amp;&amp;window.matchMedia(&#x27;(prefers-reduced-motion: reduce)&#x27;).matches;
+const sleep=ms=&gt;new Promise(r=&gt;setTimeout(r,RM?Math.min(ms,80):ms));
+let busy=false, timer=null;
+function setStatus(c,m){const s=$(&#x27;#status&#x27;);s.className=&#x27;status &#x27;+c;s.innerHTML=m;}
+function setCode(h){$(&#x27;#code&#x27;).innerHTML=h;}
+function fitCanvas(c){const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;const w=Math.max(10,Math.round(r.width*d)),h=Math.max(10,Math.round(r.height*d));if(c.width!==w||c.height!==h){c.width=w;c.height=h;}const g=c.getContext(&#x27;2d&#x27;);g.setTransform(d,0,0,d,0,0);return [g,r.width,r.height];}
+function initPresets(P,stop){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;if(stop)stop();$$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#explain&#x27;).innerHTML=P[i].ex;try{await P[i].run();}finally{busy=false;}});}
+const esc=s=&gt;String(s).replace(/&amp;/g,&#x27;&amp;amp;&#x27;).replace(/&lt;/g,&#x27;&amp;lt;&#x27;).replace(/&gt;/g,&#x27;&amp;gt;&#x27;);
+const fmt=n=&gt;n.toLocaleString(&#x27;en-US&#x27;);
+function stopTimer(){if(timer){clearInterval(timer);timer=null;}}
+/* Day 2 · 3 공통 — 교시 흐름 (노트북 순서) + 먼저 예측 + 실측 공개 */
+const K={b:&#x27;#60a5fa&#x27;,a:&#x27;#f59e0b&#x27;,g:&#x27;#34d399&#x27;,r:&#x27;#f87171&#x27;,p:&#x27;#c084fc&#x27;,t:&#x27;#2dd4bf&#x27;,d:&#x27;#8a9bb8&#x27;,x:&#x27;#dbe4f0&#x27;,l:&#x27;#334155&#x27;,bg:&#x27;#111a2e&#x27;,z:&#x27;#1f2b45&#x27;};
+let R=false, CUR=null;
+function layout(o){document.getElementById(&#x27;root&#x27;).innerHTML=`
+&lt;h1&gt;${o.h1}&lt;/h1&gt;&lt;p class=&quot;sub&quot;&gt;${o.sub}&lt;/p&gt;
+&lt;div class=&quot;panel goals&quot;&gt;&lt;h2&gt;이 교시에서 배우는 것&lt;/h2&gt;&lt;ol&gt;${o.goals.map(g=&gt;`&lt;li&gt;${g}&lt;/li&gt;`).join(&#x27;&#x27;)}&lt;/ol&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;교시 흐름 — 노트북 순서대로 (누르면 재생)&lt;/h2&gt;&lt;div class=&quot;presets&quot; id=&quot;presets&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2 id=&quot;vt&quot;&gt;그림&lt;/h2&gt;&lt;canvas id=&quot;cv&quot; style=&quot;height:${o.h||250}px&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+&lt;div class=&quot;grid&quot;&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;🤔 먼저 예측 — 고르면 실측값이 나옵니다&lt;/h2&gt;&lt;div id=&quot;quiz&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;강사 실측 (노트북 실행 결과)&lt;/h2&gt;&lt;div class=&quot;kv&quot; id=&quot;kv&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;노트북 코드&lt;/h2&gt;&lt;div class=&quot;code&quot; id=&quot;code&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;상태&lt;/h2&gt;&lt;div class=&quot;status info&quot; id=&quot;status&quot;&gt;단계를 누르세요.&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;panel explain&quot; id=&quot;explain&quot;&gt;&lt;/div&gt;`;}
+function showKV(rows){$(&#x27;#kv&#x27;).innerHTML=rows.map(([k,v])=&gt;`&lt;span&gt;${k}&lt;/span&gt;&lt;b&gt;${v}&lt;/b&gt;`).join(&#x27;&#x27;);}
+function reveal(){if(!CUR||R)return;R=true;showKV(CUR.kv);setCode(CUR.code);$(&#x27;#explain&#x27;).innerHTML=CUR.ex;if(CUR.st)setStatus(CUR.st[0],CUR.st[1]);if(window.draw)draw();}
+function ask(q){const [qs,opts,ans,why]=q;
+  $(&#x27;#quiz&#x27;).innerHTML=`&lt;p class=&quot;q&quot;&gt;${qs}&lt;/p&gt;&lt;div class=&quot;opts&quot;&gt;${opts.map((o,i)=&gt;`&lt;button type=&quot;button&quot; data-i=&quot;${i}&quot;&gt;${o}&lt;/button&gt;`).join(&#x27;&#x27;)}&lt;/div&gt;&lt;p class=&quot;why&quot; hidden&gt;&lt;/p&gt;`;
+  $$(&#x27;#quiz .opts button&#x27;).forEach(b=&gt;b.onclick=()=&gt;{const i=+b.dataset.i;$$(&#x27;#quiz .opts button&#x27;).forEach((x,j)=&gt;{x.disabled=true;x.classList.toggle(&#x27;ok&#x27;,j===ans);x.classList.toggle(&#x27;no&#x27;,j===i&amp;&amp;i!==ans);});
+    const w=$(&#x27;#quiz .why&#x27;);w.hidden=false;w.innerHTML=(i===ans?&#x27;✅ 맞았습니다. &#x27;:&#x27;❌ 다시 생각해 봅시다. &#x27;)+why;reveal();});}
+function steps(P){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;stopTimer();const p=P[i];CUR=p;R=false;
+    $$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#vt&#x27;).textContent=p.vt||p.n;$(&#x27;#explain&#x27;).innerHTML=&#x27;&lt;p class=&quot;dim&quot;&gt;예측을 고르면 이 단계의 해설이 나타납니다.&lt;/p&gt;&#x27;;setCode(&#x27;&lt;span class=&quot;c&quot;&gt;# 예측을 고르면 이 단계의 노트북 코드가 나타납니다&lt;/span&gt;&#x27;);
+    $(&#x27;#kv&#x27;).innerHTML=&#x27;&lt;span class=&quot;wait&quot;&gt;왼쪽 위 예측을 먼저 고르세요 — 고르면 실측값이 나타납니다.&lt;/span&gt;&#x27;;setStatus(&#x27;info&#x27;,p.s0||&#x27;애니메이션을 보고 예측을 골라 보세요.&#x27;);ask(p.q);
+    try{await p.run();}finally{busy=false;}});
+  $(&#x27;#presets button&#x27;).click();}
+function cv(){const [g,W,H]=fitCanvas($(&#x27;#cv&#x27;));g.clearRect(0,0,W,H);g.textAlign=&#x27;left&#x27;;g.lineWidth=1;return [g,W,H];}
+function box(g,x,y,w,h,t,c,sub,on){g.fillStyle=on?c+&#x27;33&#x27;:K.bg;g.strokeStyle=c;g.lineWidth=on?2.5:1.2;g.beginPath();g.roundRect(x,y,w,h,7);g.fill();g.stroke();g.lineWidth=1;
+  g.fillStyle=K.x;g.font=&#x27;12px sans-serif&#x27;;g.textAlign=&#x27;center&#x27;;g.fillText(t,x+w/2,y+h/2+(sub?-3:4));if(sub){g.fillStyle=K.d;g.font=&#x27;10.5px sans-serif&#x27;;g.fillText(sub,x+w/2,y+h/2+12);}g.textAlign=&#x27;left&#x27;;}
+function arr(g,x1,y1,x2,y2,c){g.strokeStyle=c||K.d;g.fillStyle=c||K.d;g.lineWidth=1.5;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();const a=Math.atan2(y2-y1,x2-x1);g.beginPath();g.moveTo(x2,y2);g.lineTo(x2-8*Math.cos(a-.4),y2-8*Math.sin(a-.4));g.lineTo(x2-8*Math.cos(a+.4),y2-8*Math.sin(a+.4));g.fill();g.lineWidth=1;}
+function txt(g,s,x,y,c,f,al){g.fillStyle=c||K.x;g.font=f||&#x27;12px sans-serif&#x27;;g.textAlign=al||&#x27;left&#x27;;g.fillText(s,x,y);g.textAlign=&#x27;left&#x27;;}
+function hbar(g,x,y,w,h,frac,c,label,val){g.fillStyle=K.z;g.fillRect(x,y,w,h);g.fillStyle=c;g.fillRect(x,y,Math.max(0,w*Math.min(1,frac)),h);if(label)txt(g,label,x-6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;,&#x27;right&#x27;);if(val)txt(g,val,x+w*Math.min(1,frac)+6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;);}
+async function tween(n,ms,f){for(let k=1;k&lt;=n;k++){f(k/n);await sleep(ms);}}
+window.__d5={};
+
+layout({h1:&#x27;가지치기 단위와 기준 — 무엇을, 어떤 순서로 지울까&#x27;,sub:&#x27;1교시 노트북 순서: 단위 4가지 → weight 분포 (예제 1-A) → magnitude mask (1-1) → filter L1-norm · 단위별 크기 (1-2).&#x27;,
+ goals:[&#x27;가지치기 = &lt;b&gt;기준&lt;/b&gt; (magnitude) × &lt;b&gt;단위&lt;/b&gt; (weight · N:M · filter · layer) × 방식 × 회복&#x27;,&#x27;학습된 weight 는 &lt;b&gt;0 근처에 몰려 있다&lt;/b&gt; → 작은 것부터 지우는 magnitude 기준의 근거&#x27;,&#x27;&lt;b&gt;mask&lt;/b&gt; = weight 와 같은 모양의 0 / 1 텐서 · filter 하나 = 출력 채널 하나&#x27;]});
+let S=0,T=0;
+function draw(){const [g,W,H]=cv();const u=W/100;
+ if(S===0){txt(g,&#x27;개념도 — 지우는 단위&#x27;,2*u,20,K.d);
+  [[&#x27;weight 하나&#x27;,&#x27;unstructured&#x27;,&#x27;작음&#x27;,R?&#x27;일반 커널에서는 그대로&#x27;:&#x27;?&#x27;,K.b],[&#x27;4개 중 2개 (2:4)&#x27;,&#x27;semi-structured&#x27;,&#x27;중간&#x27;,R?&#x27;전용 하드웨어에서만&#x27;:&#x27;?&#x27;,K.p],[&#x27;filter · channel&#x27;,&#x27;structured&#x27;,&#x27;큼 → fine-tuning&#x27;,R?&#x27;어디서나 빨라짐&#x27;:&#x27;?&#x27;,K.g],[&#x27;layer · block&#x27;,&#x27;depth&#x27;,&#x27;매우 큼&#x27;,R?&#x27;빨라짐&#x27;:&#x27;?&#x27;,K.a]].forEach(([a,b,c,d,col],i)=&gt;{if(i/4&gt;T)return;const y=34+i*50;box(g,2*u,y,22*u,40,a,col,b);txt(g,&#x27;정확도 손해: &#x27;+c,27*u,y+25,K.x,&#x27;12.5px sans-serif&#x27;);txt(g,&#x27;속도: &#x27;+d,62*u,y+25,d===&#x27;?&#x27;?K.d:col,&#x27;12.5px sans-serif&#x27;);});}
+ if(S===1){txt(g,&#x27;ResNet-20 conv weight 270,256개 — |w| 가 임계값보다 작은 비율&#x27;,2*u,20,K.d);
+  [[.01,.21],[.02,.40],[.05,.76]].forEach(([t,v],i)=&gt;hbar(g,26*u,44+i*40,56*u,24,(R||i&lt;2?v:0)*T,i===2?K.g:K.b,&#x27;|w| &lt; &#x27;+t,R||i&lt;2?Math.round(v*100)+&#x27;%&#x27;:&#x27;?&#x27;));
+  txt(g,&#x27;개념도: 0 근처에 몰린 종 모양 분포&#x27;,2*u,186,K.d,&#x27;12px sans-serif&#x27;);
+  g.strokeStyle=K.b;g.beginPath();for(let x=0;x&lt;=60;x++){const z=(x-30)/9;const y=236-44*Math.exp(-z*z/2);x?g.lineTo(20*u+x*u,y):g.moveTo(20*u+x*u,y);}g.stroke();txt(g,&#x27;0&#x27;,49.5*u,250,K.d,&#x27;11px sans-serif&#x27;);}
+ if(S===2){const w=[0.1,-0.5,0.3,0.05,-0.2,0.4],m=[0,1,1,0,0,1];txt(g,&#x27;magnitude_mask(w, 0.5) — 절댓값이 작은 절반을 지운다&#x27;,2*u,20,K.d);
+  w.forEach((v,i)=&gt;{const x=6*u+i*15*u;box(g,x,40,12*u,40,String(v),K.b,&#x27;|w| &#x27;+Math.abs(v));if(T&gt;.4){arr(g,x+6*u,82,x+6*u,104);box(g,x,106,12*u,36,R?String(m[i]):&#x27;?&#x27;,R?(m[i]?K.g:K.r):K.l,&#x27;&#x27;,R);}
+   if(R&amp;&amp;T&gt;.8){box(g,x,166,12*u,36,m[i]?String(v):&#x27;0&#x27;,m[i]?K.b:K.z);}});
+  txt(g,&#x27;w&#x27;,1*u,64,K.d,&#x27;12px sans-serif&#x27;);txt(g,&#x27;mask&#x27;,0.5*u,128,K.d,&#x27;12px sans-serif&#x27;);txt(g,R?&#x27;w×m&#x27;:&#x27;&#x27;,0.5*u,188,K.d,&#x27;12px sans-serif&#x27;);
+  txt(g,&#x27;k = round(0.5 × 6) = 3 번째로 작은 |w| = 0.2 가 임계값 → |w| &gt; 0.2 만 남긴다&#x27;,2*u,232,K.x,&#x27;12.5px sans-serif&#x27;);}
+ if(S===3){txt(g,&#x27;layer2[0].conv1 (32 × 16 × 3 × 3) — 단위 하나를 지우면 사라지는 weight 수&#x27;,2*u,20,K.d);
+  [[&#x27;weight&#x27;,1],[&#x27;filter (출력 채널)&#x27;,144],[&#x27;in_channel&#x27;,288],[&#x27;layer&#x27;,4608]].forEach(([n,v],i)=&gt;hbar(g,30*u,40+i*34,50*u,22,Math.max(.004,Math.log10(v+1)/Math.log10(4609))*T,[K.b,K.g,K.p,K.a][i],n,i===1&amp;&amp;!R?&#x27;?&#x27;:v.toLocaleString()+&#x27;개&#x27;));
+  txt(g,&#x27;막대 길이는 로그 눈금&#x27;,30*u,188,K.d,&#x27;11px sans-serif&#x27;);txt(g,R?&#x27;layer1[0].conv1 의 filter L1-norm: 가장 작은 7.45 ~ 가장 큰 11.36&#x27;:&#x27;&#x27;,2*u,214,K.x,&#x27;12.5px sans-serif&#x27;);txt(g,R?&#x27;차이가 크면 &quot;작은 filter 부터&quot; 가 잘 맞고, 비슷하면 어느 것을 빼도 손해가 비슷하다&#x27;:&#x27;&#x27;,2*u,236,K.d,&#x27;12px sans-serif&#x27;);}
+}
+async function play(s,ms,n){S=s;await tween(n||20,ms||80,t=&gt;{T=t;draw();});}
+steps([
+ {n:&#x27;① 개념 — 가지치기 단위&#x27;,vt:&#x27;weight 에서 layer 까지&#x27;,run:()=&gt;play(0,300,4),
+  q:[&#x27;지우는 단위를 weight 하나 → filter → layer 로 키우면 어떻게 될까요?&#x27;,[&#x27;정확도 손해도 속도 이득도 함께 커진다&#x27;,&#x27;정확도 손해는 줄고 속도 이득은 커진다&#x27;,&#x27;정확도 손해는 커지지만 속도 이득은 그대로다&#x27;],0,&#x27;큰 단위에는 중요한 weight 도 섞여 있어 정확도 손해가 큽니다. 대신 텐서 모양이 진짜로 줄어 어떤 하드웨어에서나 빨라집니다. 오늘 하루가 이 맞교환을 숫자로 확인하는 과정입니다.&#x27;],
+  kv:[[&#x27;unstructured&#x27;,&#x27;손해 작음 · 일반 커널에서 속도 그대로&#x27;],[&#x27;structured&#x27;,&#x27;손해 큼 · 어디서나 빨라짐&#x27;],[&#x27;회복&#x27;,&#x27;fine-tuning (6교시)&#x27;]],st:[&#x27;info&#x27;,&#x27;기준 × 단위 × 방식 × 회복&#x27;],
+  code:`&lt;span class=&quot;c&quot;&gt;# 기준: magnitude (|w|) · gradient (w × ∂L/∂w)&lt;/span&gt;\n&lt;span class=&quot;c&quot;&gt;# 단위: weight · N:M · filter (channel) · layer&lt;/span&gt;`,
+  ex:&#x27;&lt;p&gt;오늘의 결론을 먼저 말하면 &lt;b&gt;실무에서 속도를 얻는 것은 structured pruning&lt;/b&gt; 입니다. 왜 그런지를 unstructured 부터 재 보며 확인합니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;② 예제 1-A — weight 분포&#x27;,vt:&#x27;작은 weight 가 얼마나 많은가&#x27;,run:()=&gt;play(1),
+  q:[&#x27;ResNet-20 의 conv weight 중 |w| &lt; 0.05 인 것은 얼마나 될까요? (|w| &lt; 0.01 은 21%, &lt; 0.02 는 40%)&#x27;,[&#x27;약 45%&#x27;,&#x27;약 76%&#x27;,&#x27;약 99%&#x27;],1,&#x27;76% 입니다. 학습된 weight 는 0 근처에 몰린 종 모양이라 &quot;작은 것부터 지우기&quot; 가 자연스러운 기준이 됩니다. 다만 &quot;작다&quot; 가 &quot;중요하지 않다&quot; 를 보장하지는 않습니다.&#x27;],
+  kv:[[&#x27;conv weight&#x27;,&#x27;270,256개&#x27;],[&#x27;|w| &lt; 0.01 · 0.02&#x27;,&#x27;21% · 40%&#x27;],[&#x27;|w| &lt; 0.05&#x27;,&#x27;76%&#x27;]],st:[&#x27;ok&#x27;,&#x27;0 근처에 몰려 있다&#x27;],
+  code:`w_all = torch.cat([m.weight.detach().abs().flatten() for n, m in convs(rn20) if isinstance(m, nn.Conv2d)])\nsmall = {t: float((w_all &lt; t).float().mean()) for t in [0.01, 0.02, 0.05]}`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;제공 코드 (실행만)&lt;/b&gt;: 히스토그램 (로그 눈금) 과 세 임계값의 비율을 출력합니다. 이 분포가 magnitude 기준의 근거입니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;③ 실습 1-1 — magnitude_mask&#x27;,vt:&#x27;작은 절반을 0 으로&#x27;,run:()=&gt;play(2),
+  q:[&#x27;w = [0.1, −0.5, 0.3, 0.05, −0.2, 0.4] 에 magnitude_mask(w, 0.5) 를 적용한 mask 는? (1 = 남김)&#x27;,[&#x27;[1, 0, 0, 1, 1, 0]&#x27;,&#x27;[0, 1, 1, 0, 0, 1]&#x27;,&#x27;[0, 0, 1, 0, 0, 1]&#x27;],1,&#x27;절댓값이 작은 3개 (0.05 · 0.1 · 0.2) 가 0 이 됩니다. 부호가 아니라 절댓값으로 고르므로 −0.5 는 남습니다. 3번째로 작은 |w| = 0.2 가 임계값입니다 (kthvalue).&#x27;],
+  kv:[[&#x27;k&#x27;,&#x27;round(0.5 × 6) = 3&#x27;],[&#x27;임계값&#x27;,&#x27;0.2 (3번째로 작은 |w|)&#x27;],[&#x27;mask&#x27;,&#x27;[0, 1, 1, 0, 0, 1]&#x27;]],st:[&#x27;ok&#x27;,&#x27;mask = weight 와 같은 모양의 0 / 1&#x27;],
+  code:`def magnitude_mask(w, sparsity):\n    k = int(round(sparsity * w.numel()))\n    if k == 0: return torch.ones_like(w)\n    thr = w.detach().abs().flatten().&lt;span class=&quot;hl&quot;&gt;kthvalue(k)&lt;/span&gt;.values\n    return (w.detach().abs() &gt; thr).float()`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: 실제 weight = 원래 weight × mask 입니다. 2교시의 &lt;code&gt;torch.nn.utils.prune&lt;/code&gt; 이 바로 이 구조 (weight_orig · weight_mask) 로 동작합니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;④ 실습 1-2 — filter_l1 · 단위별 크기&#x27;,vt:&#x27;filter 하나 = weight 몇 개&#x27;,run:()=&gt;play(3),
+  q:[&#x27;layer2[0].conv1 의 weight 는 (32, 16, 3, 3) 입니다. filter (출력 채널) 하나를 지우면 weight 몇 개가 사라질까요?&#x27;,[&#x27;9개&#x27;,&#x27;144개&#x27;,&#x27;288개&#x27;],1,&#x27;filter 하나 = 입력 16 × 3 × 3 = 144개. 입력 채널 하나는 출력 32 × 9 = 288개입니다. filter 를 지우면 출력 채널이 하나 사라지므로 다음 층의 입력 채널도 함께 줄여야 합니다 (4교시).&#x27;],
+  kv:[[&#x27;weight · filter&#x27;,&#x27;1 · 144&#x27;],[&#x27;in_channel · layer&#x27;,&#x27;288 · 4,608&#x27;],[&#x27;filter L1-norm&#x27;,&#x27;7.45 ~ 11.36 (layer1[0].conv1)&#x27;]],st:[&#x27;ok&#x27;,&#x27;filter 의 중요도 = L1-norm&#x27;],
+  code:`def filter_l1(conv):\n    return conv.weight.detach().abs().sum(&lt;span class=&quot;hl&quot;&gt;dim=(1, 2, 3)&lt;/span&gt;)      &lt;span class=&quot;c&quot;&gt;# 출력 채널 (dim 0) 마다 하나&lt;/span&gt;\n\nw2 = rn20.layer2[0].conv1.weight\nunits_df = pd.DataFrame([{&quot;unit&quot;: &quot;weight&quot;, &quot;removed&quot;: 1}, {&quot;unit&quot;: &quot;filter&quot;, &quot;removed&quot;: w2[0].numel()},\n                         {&quot;unit&quot;: &quot;in_channel&quot;, &quot;removed&quot;: w2[:, 0].numel()}, {&quot;unit&quot;: &quot;layer&quot;, &quot;removed&quot;: w2.numel()}])`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: &lt;code&gt;filter_l1&lt;/code&gt; 은 4교시 &lt;code&gt;prune_block&lt;/code&gt; 에서 &quot;어느 filter 를 남길지&quot; 를 정하는 데 다시 씁니다.&lt;/p&gt;&#x27;},
+]);
+
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe></section>
+<section class="lesson" id="d5-2" data-title="D5-2 mask 와 global"><iframe title="D5-2 mask 와 global" loading="lazy" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;ko&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+&lt;title&gt;mask 와 global — Quantization·Pruning Day 5&lt;/title&gt;
+&lt;style&gt;
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:&quot;Consolas&quot;,&quot;D2Coding&quot;,&quot;JetBrains Mono&quot;,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:&quot;Pretendard&quot;,&quot;Noto Sans KR&quot;,&quot;Segoe UI&quot;,sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  @media(max-width:520px){.app{padding:16px 12px 30px}}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .sub code,.explain code,.note code{font-family:var(--mono);color:var(--blue)}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono);max-width:100%;overflow-wrap:anywhere}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.red{color:var(--red);border-color:var(--red)}.pill.green{color:var(--green);border-color:var(--green)}.pill.purple{color:var(--purple);border-color:var(--purple)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;min-width:0}
+  @media(max-width:520px){.panel{padding:12px 10px}}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.run{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700}
+  button.sel{background:#123d33;border-color:var(--teal);color:var(--teal)}
+  button:disabled{opacity:.4;cursor:default}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .grid{display:grid;grid-template-columns:1.25fr 1fr;gap:14px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .grid&gt;*{min-width:0}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.two{grid-template-columns:1fr}}
+  .two&gt;*{min-width:0}
+  canvas{width:100%;display:block;background:#0a0f1c;border:1px solid var(--line);border-radius:8px}
+  svg{max-width:100%}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+  .lab{font-size:13px;color:var(--dim)}
+  .sl{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;margin:8px 0}
+  .sl label{color:var(--amber);width:70px;flex:none}
+  .sl input{flex:1;min-width:60px;accent-color:var(--amber)}
+  .sl output{width:64px;text-align:right;flex:none}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-family:var(--mono);font-size:13.5px}
+  .kv span:nth-child(odd){color:var(--dim)}
+  .kv b{font-weight:600;overflow-wrap:anywhere}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;white-space:pre-wrap;min-height:64px;overflow-wrap:anywhere}
+  .code .g{color:var(--green)}.code .e{color:var(--red)}.code .c{color:#5d7292}.code .a{color:var(--amber)}.code .b{color:var(--blue)}.code .t{color:var(--teal)}
+  .code .hl{background:#3a2e12;color:var(--amber);border-radius:3px;padding:0 2px}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px;overflow-wrap:anywhere;white-space:pre-line}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}.explain b.purple{color:var(--purple)}
+  table.tt{border-collapse:collapse;font-family:var(--mono);font-size:13px;width:100%}
+  table.tt th,table.tt td{border:1px solid var(--line);padding:4px 6px;text-align:center}
+  table.tt th{color:var(--dim);font-weight:600;background:#0e1628}
+  table.tt tr.cur td{background:#2a2210}
+  .ok1{color:var(--green)}.bad1{color:var(--red)}.dim{color:var(--dim)}
+  .scroll{overflow-x:auto;max-width:100%}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .note{font-size:12.5px;color:var(--dim);border-left:3px solid var(--amber);padding:4px 10px;margin-top:10px}
+  .chk{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--dim)}
+  .chk input{accent-color:var(--amber)}
+  .ctl button{font-family:var(--mono)}
+  input[type=number],input.num,select{background:#0a0f1c;border:1px solid #2a3a5c;color:var(--text);border-radius:6px;padding:4px 6px;font-family:var(--mono);font-size:13px;width:74px}
+  select{width:auto}
+  .seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+  .seg button{padding:5px 10px}
+  .mono{font-family:var(--mono)}
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+  .arr{color:var(--dim);font-family:var(--mono);flex:none}
+  .fb{border:1px solid #2a3a5c;border-radius:8px;padding:7px 10px;background:#0a0f1c;font-family:var(--mono);font-size:13px;transition:all .3s;min-width:0;overflow-wrap:anywhere}
+  .fb small{display:block;color:var(--dim);font-size:11.5px;font-family:inherit}
+  .fb.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber);box-shadow:0 0 0 2px #f5b94233}
+  .fb.done{border-color:var(--teal);color:var(--teal)}
+  .fb.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .fb.off{opacity:.35}
+  .cells{display:flex;flex-wrap:wrap;gap:4px}
+  .cell{min-width:38px;height:30px;padding:0 6px;border:1px solid #2a3a5c;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;background:#0a0f1c;transition:all .25s}
+  .cell.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber)}
+  .cell.w{border-color:#3b6aa8;color:var(--blue)}.cell.bb{border-color:#7a5a2a;color:var(--amber)}
+.goals ol{margin:4px 0 0 18px;padding:0;font-size:13.5px;line-height:1.75;color:var(--text)}
+.goals ol li b{color:var(--amber)}
+#quiz .q{margin:0 0 8px;font-size:14px;line-height:1.55}
+#quiz .opts{display:flex;flex-direction:column;gap:6px}
+#quiz .opts button{text-align:left;background:#0b1220;border:1px solid #334155;color:var(--text);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer}
+#quiz .opts button:hover:not(:disabled){border-color:var(--teal)}
+#quiz .opts button.ok{border-color:#34d399;background:#0f2a22;color:#6ee7b7}
+#quiz .opts button.no{border-color:#f87171;background:#2a1215;color:#fca5a5}
+#quiz .why{margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--text)}
+.tagrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:12px;color:var(--dim)}
+.kv .wait{grid-column:1/-1;color:var(--dim);font-size:12.5px}
+
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;app&quot;&gt;
+&lt;div id=&quot;root&quot;&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;script&gt;
+
+const $=s=&gt;document.querySelector(s), $$=s=&gt;[...document.querySelectorAll(s)];
+const RM=window.matchMedia&amp;&amp;window.matchMedia(&#x27;(prefers-reduced-motion: reduce)&#x27;).matches;
+const sleep=ms=&gt;new Promise(r=&gt;setTimeout(r,RM?Math.min(ms,80):ms));
+let busy=false, timer=null;
+function setStatus(c,m){const s=$(&#x27;#status&#x27;);s.className=&#x27;status &#x27;+c;s.innerHTML=m;}
+function setCode(h){$(&#x27;#code&#x27;).innerHTML=h;}
+function fitCanvas(c){const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;const w=Math.max(10,Math.round(r.width*d)),h=Math.max(10,Math.round(r.height*d));if(c.width!==w||c.height!==h){c.width=w;c.height=h;}const g=c.getContext(&#x27;2d&#x27;);g.setTransform(d,0,0,d,0,0);return [g,r.width,r.height];}
+function initPresets(P,stop){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;if(stop)stop();$$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#explain&#x27;).innerHTML=P[i].ex;try{await P[i].run();}finally{busy=false;}});}
+const esc=s=&gt;String(s).replace(/&amp;/g,&#x27;&amp;amp;&#x27;).replace(/&lt;/g,&#x27;&amp;lt;&#x27;).replace(/&gt;/g,&#x27;&amp;gt;&#x27;);
+const fmt=n=&gt;n.toLocaleString(&#x27;en-US&#x27;);
+function stopTimer(){if(timer){clearInterval(timer);timer=null;}}
+/* Day 2 · 3 공통 — 교시 흐름 (노트북 순서) + 먼저 예측 + 실측 공개 */
+const K={b:&#x27;#60a5fa&#x27;,a:&#x27;#f59e0b&#x27;,g:&#x27;#34d399&#x27;,r:&#x27;#f87171&#x27;,p:&#x27;#c084fc&#x27;,t:&#x27;#2dd4bf&#x27;,d:&#x27;#8a9bb8&#x27;,x:&#x27;#dbe4f0&#x27;,l:&#x27;#334155&#x27;,bg:&#x27;#111a2e&#x27;,z:&#x27;#1f2b45&#x27;};
+let R=false, CUR=null;
+function layout(o){document.getElementById(&#x27;root&#x27;).innerHTML=`
+&lt;h1&gt;${o.h1}&lt;/h1&gt;&lt;p class=&quot;sub&quot;&gt;${o.sub}&lt;/p&gt;
+&lt;div class=&quot;panel goals&quot;&gt;&lt;h2&gt;이 교시에서 배우는 것&lt;/h2&gt;&lt;ol&gt;${o.goals.map(g=&gt;`&lt;li&gt;${g}&lt;/li&gt;`).join(&#x27;&#x27;)}&lt;/ol&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;교시 흐름 — 노트북 순서대로 (누르면 재생)&lt;/h2&gt;&lt;div class=&quot;presets&quot; id=&quot;presets&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2 id=&quot;vt&quot;&gt;그림&lt;/h2&gt;&lt;canvas id=&quot;cv&quot; style=&quot;height:${o.h||250}px&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+&lt;div class=&quot;grid&quot;&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;🤔 먼저 예측 — 고르면 실측값이 나옵니다&lt;/h2&gt;&lt;div id=&quot;quiz&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;강사 실측 (노트북 실행 결과)&lt;/h2&gt;&lt;div class=&quot;kv&quot; id=&quot;kv&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;노트북 코드&lt;/h2&gt;&lt;div class=&quot;code&quot; id=&quot;code&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;상태&lt;/h2&gt;&lt;div class=&quot;status info&quot; id=&quot;status&quot;&gt;단계를 누르세요.&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;panel explain&quot; id=&quot;explain&quot;&gt;&lt;/div&gt;`;}
+function showKV(rows){$(&#x27;#kv&#x27;).innerHTML=rows.map(([k,v])=&gt;`&lt;span&gt;${k}&lt;/span&gt;&lt;b&gt;${v}&lt;/b&gt;`).join(&#x27;&#x27;);}
+function reveal(){if(!CUR||R)return;R=true;showKV(CUR.kv);setCode(CUR.code);$(&#x27;#explain&#x27;).innerHTML=CUR.ex;if(CUR.st)setStatus(CUR.st[0],CUR.st[1]);if(window.draw)draw();}
+function ask(q){const [qs,opts,ans,why]=q;
+  $(&#x27;#quiz&#x27;).innerHTML=`&lt;p class=&quot;q&quot;&gt;${qs}&lt;/p&gt;&lt;div class=&quot;opts&quot;&gt;${opts.map((o,i)=&gt;`&lt;button type=&quot;button&quot; data-i=&quot;${i}&quot;&gt;${o}&lt;/button&gt;`).join(&#x27;&#x27;)}&lt;/div&gt;&lt;p class=&quot;why&quot; hidden&gt;&lt;/p&gt;`;
+  $$(&#x27;#quiz .opts button&#x27;).forEach(b=&gt;b.onclick=()=&gt;{const i=+b.dataset.i;$$(&#x27;#quiz .opts button&#x27;).forEach((x,j)=&gt;{x.disabled=true;x.classList.toggle(&#x27;ok&#x27;,j===ans);x.classList.toggle(&#x27;no&#x27;,j===i&amp;&amp;i!==ans);});
+    const w=$(&#x27;#quiz .why&#x27;);w.hidden=false;w.innerHTML=(i===ans?&#x27;✅ 맞았습니다. &#x27;:&#x27;❌ 다시 생각해 봅시다. &#x27;)+why;reveal();});}
+function steps(P){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;stopTimer();const p=P[i];CUR=p;R=false;
+    $$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#vt&#x27;).textContent=p.vt||p.n;$(&#x27;#explain&#x27;).innerHTML=&#x27;&lt;p class=&quot;dim&quot;&gt;예측을 고르면 이 단계의 해설이 나타납니다.&lt;/p&gt;&#x27;;setCode(&#x27;&lt;span class=&quot;c&quot;&gt;# 예측을 고르면 이 단계의 노트북 코드가 나타납니다&lt;/span&gt;&#x27;);
+    $(&#x27;#kv&#x27;).innerHTML=&#x27;&lt;span class=&quot;wait&quot;&gt;왼쪽 위 예측을 먼저 고르세요 — 고르면 실측값이 나타납니다.&lt;/span&gt;&#x27;;setStatus(&#x27;info&#x27;,p.s0||&#x27;애니메이션을 보고 예측을 골라 보세요.&#x27;);ask(p.q);
+    try{await p.run();}finally{busy=false;}});
+  $(&#x27;#presets button&#x27;).click();}
+function cv(){const [g,W,H]=fitCanvas($(&#x27;#cv&#x27;));g.clearRect(0,0,W,H);g.textAlign=&#x27;left&#x27;;g.lineWidth=1;return [g,W,H];}
+function box(g,x,y,w,h,t,c,sub,on){g.fillStyle=on?c+&#x27;33&#x27;:K.bg;g.strokeStyle=c;g.lineWidth=on?2.5:1.2;g.beginPath();g.roundRect(x,y,w,h,7);g.fill();g.stroke();g.lineWidth=1;
+  g.fillStyle=K.x;g.font=&#x27;12px sans-serif&#x27;;g.textAlign=&#x27;center&#x27;;g.fillText(t,x+w/2,y+h/2+(sub?-3:4));if(sub){g.fillStyle=K.d;g.font=&#x27;10.5px sans-serif&#x27;;g.fillText(sub,x+w/2,y+h/2+12);}g.textAlign=&#x27;left&#x27;;}
+function arr(g,x1,y1,x2,y2,c){g.strokeStyle=c||K.d;g.fillStyle=c||K.d;g.lineWidth=1.5;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();const a=Math.atan2(y2-y1,x2-x1);g.beginPath();g.moveTo(x2,y2);g.lineTo(x2-8*Math.cos(a-.4),y2-8*Math.sin(a-.4));g.lineTo(x2-8*Math.cos(a+.4),y2-8*Math.sin(a+.4));g.fill();g.lineWidth=1;}
+function txt(g,s,x,y,c,f,al){g.fillStyle=c||K.x;g.font=f||&#x27;12px sans-serif&#x27;;g.textAlign=al||&#x27;left&#x27;;g.fillText(s,x,y);g.textAlign=&#x27;left&#x27;;}
+function hbar(g,x,y,w,h,frac,c,label,val){g.fillStyle=K.z;g.fillRect(x,y,w,h);g.fillStyle=c;g.fillRect(x,y,Math.max(0,w*Math.min(1,frac)),h);if(label)txt(g,label,x-6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;,&#x27;right&#x27;);if(val)txt(g,val,x+w*Math.min(1,frac)+6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;);}
+async function tween(n,ms,f){for(let k=1;k&lt;=n;k++){f(k/n);await sleep(ms);}}
+window.__d5={};
+
+layout({h1:&#x27;mask 와 global — unstructured pruning&#x27;,sub:&#x27;2교시 노트북 순서: prune 이 모듈을 어떻게 바꾸나 → 한 층에 적용 · remove (2-1) → global vs layer 별 (2-2) → sparsity 별 정확도 (예제 2-A).&#x27;,
+ goals:[&#x27;&lt;b&gt;prune.*&lt;/b&gt; 은 weight 를 지우지 않고 &lt;b&gt;weight_orig × weight_mask&lt;/b&gt; 로 바꾼다 · &lt;b&gt;prune.remove&lt;/b&gt; 로 영구 반영&#x27;,&#x27;&lt;b&gt;global&lt;/b&gt; 은 모든 층을 한데 모아 작은 것을 지운다 → 층마다 비율이 달라지고 정확도가 더 높다&#x27;,&#x27;ResNet-20 은 fine-tuning 없이 30 ~ 50% 까지 버티고 &lt;b&gt;70% 에서 무너진다&lt;/b&gt;&#x27;]});
+let S=0,T=0;
+function draw(){const [g,W,H]=cv();const u=W/100;
+ if(S===0){box(g,2*u,40,24*u,44,&#x27;weight&#x27;,K.b,&#x27;Parameter&#x27;);arr(g,26*u,62,36*u,62);box(g,36*u,26,26*u,40,&#x27;weight_orig&#x27;,K.b,&#x27;Parameter — 원래 값&#x27;,T&gt;.3);box(g,36*u,74,26*u,40,&#x27;weight_mask&#x27;,K.a,&#x27;buffer — 0 / 1&#x27;,T&gt;.3);
+  arr(g,62*u,46,72*u,62);arr(g,62*u,94,72*u,70);box(g,72*u,40,26*u,44,&#x27;weight&#x27;,K.g,R?&#x27;forward 전에 매번 곱해서 만든다&#x27;:&#x27;?&#x27;,T&gt;.6);
+  txt(g,&#x27;prune.l1_unstructured(module, &quot;weight&quot;, amount=0.5) 직후&#x27;,2*u,146,K.x,&#x27;12.5px sans-serif&#x27;);txt(g,R?&#x27;→ fine-tuning 중에도 지운 자리는 계속 0 (mask 가 매번 곱해지므로)&#x27;:&#x27;&#x27;,2*u,170,K.a,&#x27;12.5px sans-serif&#x27;);txt(g,&#x27;prune.remove(module, &quot;weight&quot;) → mask 를 weight 에 영구 반영 · weight 하나로 돌아옴&#x27;,2*u,206,K.d,&#x27;12px sans-serif&#x27;);}
+ if(S===1){txt(g,&#x27;layer1[0].conv1 에 l1_unstructured(amount=0.5) → remove&#x27;,2*u,20,K.d);
+  [[&#x27;적용 직후&#x27;,&#x27;parameters: weight_orig · buffers: weight_mask&#x27;,&#x27;0 비율 0.500&#x27;],[&#x27;prune.remove 뒤&#x27;,&#x27;parameters: weight&#x27;,R?&#x27;0 비율 0.500 — 그대로&#x27;:&#x27;0 비율 ?&#x27;]].forEach(([a,b,c],i)=&gt;{if(i/2&gt;T)return;const y=38+i*66;box(g,2*u,y,20*u,48,a,i?K.g:K.a,&#x27;&#x27;,true);txt(g,b,25*u,y+20,K.x,&#x27;12.5px monospace&#x27;);txt(g,c,25*u,y+40,i?K.a:K.d,&#x27;12.5px sans-serif&#x27;);});
+  txt(g,&#x27;개념도 — 텐서 모양&#x27;,2*u,186,K.d,&#x27;12px sans-serif&#x27;);for(let i=0;i&lt;24;i++){g.fillStyle=(i*7)%5&lt;2.5?K.b:K.z;g.fillRect(22*u+i*2.6*u,174,2.2*u,18);}
+  txt(g,R?&#x27;모양 · 크기는 전혀 줄지 않는다 — 0 이 채워져 있을 뿐&#x27;:&#x27;&#x27;,2*u,222,K.x,&#x27;12.5px sans-serif&#x27;);}
+ if(S===2){txt(g,&#x27;같은 50% — 층별 sparsity (global)&#x27;,2*u,20,K.d);
+  [[&#x27;fc&#x27;,.058],[&#x27;stem.0&#x27;,.125],[&#x27;layer2.0.shortcut.0&#x27;,.135],[&#x27;가장 많이 지운 층&#x27;,.80]].forEach(([n,v],i)=&gt;hbar(g,30*u,36+i*28,44*u,18,(R||i?v:0)*T,i&lt;3?K.g:K.r,n,R||i?(v*100).toFixed(1)+&#x27;%&#x27;:&#x27;?&#x27;));
+  g.strokeStyle=K.a;g.setLineDash([4,4]);g.beginPath();g.moveTo(30*u+22*u,30);g.lineTo(30*u+22*u,146);g.stroke();g.setLineDash([]);txt(g,&#x27;layer 별 = 모든 층 50%&#x27;,53*u,160,K.a,&#x27;11px sans-serif&#x27;);
+  hbar(g,30*u,180,44*u,20,.8125*T,K.g,&#x27;global 50% 정확도&#x27;,&#x27;0.8125&#x27;);hbar(g,30*u,206,44*u,20,.789*T,K.b,&#x27;layer 별 50% 정확도&#x27;,&#x27;0.7890&#x27;);}
+ if(S===3){const D=[[0,.846,.846],[.3,.8415,.838],[.5,.8125,.789],[.7,.482,.2945],[.9,.1,.1]],x0=12*u,w=64*u,py=a=&gt;H-36-a/.9*(H-70),px=s=&gt;x0+s/.9*w;txt(g,&#x27;sparsity 별 정확도 — fine-tuning 없음 (초록 global · 파랑 점선 layer 별)&#x27;,2*u,20,K.d);
+  [.2,.4,.6,.8].forEach(a=&gt;{g.strokeStyle=K.z;g.beginPath();g.moveTo(x0,py(a));g.lineTo(x0+w,py(a));g.stroke();txt(g,a.toFixed(1),5*u,py(a)+4,K.d,&#x27;10.5px sans-serif&#x27;);});
+  const n=R?Math.min(4,Math.floor(T*4.01)):2;[[1,K.g,[]],[2,K.b,[5,4]]].forEach(([j,c,d])=&gt;{g.strokeStyle=c;g.lineWidth=2;g.setLineDash(d);g.beginPath();D.slice(0,n+1).forEach((r,i)=&gt;i?g.lineTo(px(r[0]),py(r[j])):g.moveTo(px(r[0]),py(r[j])));g.stroke();g.setLineDash([]);g.lineWidth=1;});
+  D.slice(0,n+1).forEach(r=&gt;{g.fillStyle=K.g;g.beginPath();g.arc(px(r[0]),py(r[1]),4,0,7);g.fill();txt(g,r[1].toFixed(3),px(r[0])+6,py(r[1])-6,K.x,&#x27;11px sans-serif&#x27;);});
+  D.forEach(r=&gt;txt(g,Math.round(r[0]*100)+&#x27;%&#x27;,px(r[0])-8,H-16,K.d,&#x27;11px sans-serif&#x27;));if(!R)txt(g,&#x27;70% · 90% 는?&#x27;,px(.62),py(.5),K.a,&#x27;13px sans-serif&#x27;);}
+}
+async function play(s,ms,n){S=s;await tween(n||20,ms||80,t=&gt;{T=t;draw();});}
+steps([
+ {n:&#x27;① 개념 — prune 의 구조&#x27;,vt:&#x27;weight_orig × weight_mask&#x27;,run:()=&gt;play(0),
+  q:[&#x27;prune 을 적용한 채 fine-tuning 하면, 지운 자리 (mask 0) 의 weight 는 어떻게 될까요?&#x27;,[&#x27;학습이 진행되면서 다시 0 이 아닌 값으로 돌아온다&#x27;,&#x27;계속 0 이다 — mask 가 매번 곱해진다&#x27;,&#x27;첫 step 에서 모양 오류가 난다&#x27;],1,&#x27;weight 는 forward 전에 weight_orig × weight_mask 로 매번 다시 만들어집니다. weight_orig 는 학습되지만 mask 가 0 인 자리는 결과에 반영되지 않습니다.&#x27;],
+  kv:[[&#x27;weight_orig&#x27;,&#x27;Parameter (학습됨)&#x27;],[&#x27;weight_mask&#x27;,&#x27;buffer (0 / 1)&#x27;],[&#x27;weight&#x27;,&#x27;둘의 곱 — 매 forward&#x27;]],st:[&#x27;info&#x27;,&#x27;지우는 것이 아니라 가린다&#x27;],
+  code:`prune.l1_unstructured(module, &quot;weight&quot;, amount=0.5)      &lt;span class=&quot;c&quot;&gt;# 그 층에서 |w| 가 작은 50%&lt;/span&gt;\nprune.global_unstructured([(m1, &quot;weight&quot;), ...], pruning_method=prune.L1Unstructured, amount=0.5)\nprune.remove(module, &quot;weight&quot;)                           &lt;span class=&quot;c&quot;&gt;# 영구 반영&lt;/span&gt;`,
+  ex:&#x27;&lt;p&gt;1교시의 &lt;code&gt;magnitude_mask&lt;/code&gt; 와 같은 원리입니다 — PyTorch 가 mask 의 보관과 곱셈을 대신해 줍니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;② 실습 2-1 — prune · remove&#x27;,vt:&#x27;모듈 안이 어떻게 바뀌나&#x27;,run:()=&gt;play(1,500,2),
+  q:[&#x27;prune.remove 를 하고 나면 그 Conv weight 의 0 비율과 모양은?&#x27;,[&#x27;0 비율 0.5 · 모양 그대로&#x27;,&#x27;0 이 빠져 텐서가 절반 크기가 된다&#x27;,&#x27;원래 값으로 복구되어 0 비율이 0 이 된다&#x27;],0,&#x27;remove 는 &quot;가지치기 취소&quot; 가 아니라 &quot;mask 를 weight 에 영구 반영&quot; 입니다. 0 은 그대로 남고 텐서 모양 · 크기는 전혀 줄지 않습니다 — 3교시에 이것이 왜 문제인지 잽니다.&#x27;],
+  kv:[[&#x27;적용 직후&#x27;,&#x27;weight_orig + weight_mask&#x27;],[&#x27;remove 뒤&#x27;,&#x27;weight 하나&#x27;],[&#x27;0 비율&#x27;,&#x27;0.500 → 0.500&#x27;]],st:[&#x27;ok&#x27;,&#x27;모양은 그대로, 0 만 생긴다&#x27;],
+  code:`m = copy.deepcopy(rn20); conv = m.layer1[0].conv1\nprune.l1_unstructured(conv, &quot;weight&quot;, amount=0.5)\nparams_before = sorted(n for n, _ in conv.named_parameters())      &lt;span class=&quot;c&quot;&gt;# [&#x27;weight_orig&#x27;]&lt;/span&gt;\nbuffers = sorted(n for n, _ in conv.named_buffers())                &lt;span class=&quot;c&quot;&gt;# [&#x27;weight_mask&#x27;]&lt;/span&gt;\nprune.remove(conv, &quot;weight&quot;)`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: remove 를 해야 state_dict 가 원래 이름으로 돌아오고 ONNX 로 내보낼 수 있습니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;③ 실습 2-2 — global vs layer 별&#x27;,vt:&#x27;층마다 다른 비율&#x27;,run:()=&gt;play(2),
+  q:[&#x27;global 로 전체의 50% 를 지웠습니다. 마지막 fc 층은 얼마나 지워졌을까요?&#x27;,[&#x27;약 6%&#x27;,&#x27;정확히 50%&#x27;,&#x27;약 80%&#x27;],0,&#x27;global 은 모든 층의 weight 를 한 줄로 세워 작은 것부터 지웁니다. fc · stem 처럼 작고 값이 큰 층은 덜 (6 ~ 13%), layer3 의 큰 conv 는 더 (최대 80%) 지워집니다. 그래서 같은 50% 에서 정확도가 더 높습니다.&#x27;],
+  kv:[[&#x27;global 50%&#x27;,&#x27;0.8125&#x27;],[&#x27;layer 별 50%&#x27;,&#x27;0.7890&#x27;],[&#x27;global 의 층별 sparsity&#x27;,&#x27;0.06 ~ 0.80&#x27;]],st:[&#x27;ok&#x27;,&#x27;global 이 2.4%p 더 높다&#x27;],
+  code:`def prune_unstructured(model, amount, scope=&quot;global&quot;):\n    m = &lt;span class=&quot;hl&quot;&gt;copy.deepcopy&lt;/span&gt;(model)\n    targets = [(mod, &quot;weight&quot;) for n, mod in convs(m)]\n    if scope == &quot;global&quot;:\n        prune.global_unstructured(targets, pruning_method=prune.L1Unstructured, amount=amount)\n    else:\n        for mod, name in targets: prune.l1_unstructured(mod, name, amount=amount)\n    for mod, name in targets: prune.remove(mod, name)\n    return m`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: &lt;code&gt;sparsity(model)&lt;/code&gt; 과 함께 만듭니다. prune 함수는 모듈을 제자리에서 바꾸므로 복사본에 적용해 원본 rn20 을 지킵니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;④ 예제 2-A — sparsity 별 정확도&#x27;,vt:&#x27;어디서 무너지나&#x27;,run:()=&gt;play(3,300,4),
+  q:[&#x27;fine-tuning 없이 global 30% 는 0.842, 50% 는 0.813 입니다. 70% 는?&#x27;,[&#x27;약 0.78 — 완만하게 떨어진다&#x27;,&#x27;약 0.48 — 무너진다&#x27;,&#x27;0.10 — 무작위 수준&#x27;],1,&#x27;70% 에서 0.482 (layer 별은 0.295) 로 무너지고 90% 는 둘 다 0.10 (무작위) 입니다. 작은 ResNet-20 (27만 params) 은 여유가 적습니다. 큰 모델은 fine-tuning 과 함께 80 ~ 90% 까지 버티기도 합니다.&#x27;],
+  kv:[[&#x27;30% · 50%&#x27;,&#x27;0.8415 · 0.8125 (global)&#x27;],[&#x27;70%&#x27;,&#x27;0.482 (layer 별 0.2945)&#x27;],[&#x27;90%&#x27;,&#x27;0.10 · 0.10&#x27;]],st:[&#x27;warn&#x27;,&#x27;30% 는 거의 공짜, 70% 부터 붕괴&#x27;],
+  code:`rows = []\nfor s in [0.0, 0.3, 0.5, 0.7, 0.9]:\n    rows.append({&quot;sparsity&quot;: s, &quot;global&quot;: acc_torch(prune_unstructured(rn20, s, &quot;global&quot;)),\n                 &quot;layer&quot;: acc_torch(prune_unstructured(rn20, s, &quot;layer&quot;))})\nus_df = pd.DataFrame(rows)`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;제공 코드 (실행만)&lt;/b&gt;: 2-2 에서 만든 함수를 다섯 비율에 적용합니다. 이 &lt;code&gt;us_df&lt;/code&gt; 는 3교시 실습 3-2 의 비교 기준으로 다시 씁니다.&lt;/p&gt;&#x27;},
+]);
+
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe></section>
+<section class="lesson" id="d5-3" data-title="D5-3 0 은 왜 빨라지지 않나"><iframe title="D5-3 0 은 왜 빨라지지 않나" loading="lazy" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;ko&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+&lt;title&gt;0 은 왜 빨라지지 않나 — Quantization·Pruning Day 5&lt;/title&gt;
+&lt;style&gt;
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:&quot;Consolas&quot;,&quot;D2Coding&quot;,&quot;JetBrains Mono&quot;,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:&quot;Pretendard&quot;,&quot;Noto Sans KR&quot;,&quot;Segoe UI&quot;,sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  @media(max-width:520px){.app{padding:16px 12px 30px}}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .sub code,.explain code,.note code{font-family:var(--mono);color:var(--blue)}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono);max-width:100%;overflow-wrap:anywhere}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.red{color:var(--red);border-color:var(--red)}.pill.green{color:var(--green);border-color:var(--green)}.pill.purple{color:var(--purple);border-color:var(--purple)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;min-width:0}
+  @media(max-width:520px){.panel{padding:12px 10px}}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.run{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700}
+  button.sel{background:#123d33;border-color:var(--teal);color:var(--teal)}
+  button:disabled{opacity:.4;cursor:default}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .grid{display:grid;grid-template-columns:1.25fr 1fr;gap:14px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .grid&gt;*{min-width:0}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.two{grid-template-columns:1fr}}
+  .two&gt;*{min-width:0}
+  canvas{width:100%;display:block;background:#0a0f1c;border:1px solid var(--line);border-radius:8px}
+  svg{max-width:100%}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+  .lab{font-size:13px;color:var(--dim)}
+  .sl{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;margin:8px 0}
+  .sl label{color:var(--amber);width:70px;flex:none}
+  .sl input{flex:1;min-width:60px;accent-color:var(--amber)}
+  .sl output{width:64px;text-align:right;flex:none}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-family:var(--mono);font-size:13.5px}
+  .kv span:nth-child(odd){color:var(--dim)}
+  .kv b{font-weight:600;overflow-wrap:anywhere}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;white-space:pre-wrap;min-height:64px;overflow-wrap:anywhere}
+  .code .g{color:var(--green)}.code .e{color:var(--red)}.code .c{color:#5d7292}.code .a{color:var(--amber)}.code .b{color:var(--blue)}.code .t{color:var(--teal)}
+  .code .hl{background:#3a2e12;color:var(--amber);border-radius:3px;padding:0 2px}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px;overflow-wrap:anywhere;white-space:pre-line}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}.explain b.purple{color:var(--purple)}
+  table.tt{border-collapse:collapse;font-family:var(--mono);font-size:13px;width:100%}
+  table.tt th,table.tt td{border:1px solid var(--line);padding:4px 6px;text-align:center}
+  table.tt th{color:var(--dim);font-weight:600;background:#0e1628}
+  table.tt tr.cur td{background:#2a2210}
+  .ok1{color:var(--green)}.bad1{color:var(--red)}.dim{color:var(--dim)}
+  .scroll{overflow-x:auto;max-width:100%}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .note{font-size:12.5px;color:var(--dim);border-left:3px solid var(--amber);padding:4px 10px;margin-top:10px}
+  .chk{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--dim)}
+  .chk input{accent-color:var(--amber)}
+  .ctl button{font-family:var(--mono)}
+  input[type=number],input.num,select{background:#0a0f1c;border:1px solid #2a3a5c;color:var(--text);border-radius:6px;padding:4px 6px;font-family:var(--mono);font-size:13px;width:74px}
+  select{width:auto}
+  .seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+  .seg button{padding:5px 10px}
+  .mono{font-family:var(--mono)}
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+  .arr{color:var(--dim);font-family:var(--mono);flex:none}
+  .fb{border:1px solid #2a3a5c;border-radius:8px;padding:7px 10px;background:#0a0f1c;font-family:var(--mono);font-size:13px;transition:all .3s;min-width:0;overflow-wrap:anywhere}
+  .fb small{display:block;color:var(--dim);font-size:11.5px;font-family:inherit}
+  .fb.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber);box-shadow:0 0 0 2px #f5b94233}
+  .fb.done{border-color:var(--teal);color:var(--teal)}
+  .fb.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .fb.off{opacity:.35}
+  .cells{display:flex;flex-wrap:wrap;gap:4px}
+  .cell{min-width:38px;height:30px;padding:0 6px;border:1px solid #2a3a5c;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;background:#0a0f1c;transition:all .25s}
+  .cell.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber)}
+  .cell.w{border-color:#3b6aa8;color:var(--blue)}.cell.bb{border-color:#7a5a2a;color:var(--amber)}
+.goals ol{margin:4px 0 0 18px;padding:0;font-size:13.5px;line-height:1.75;color:var(--text)}
+.goals ol li b{color:var(--amber)}
+#quiz .q{margin:0 0 8px;font-size:14px;line-height:1.55}
+#quiz .opts{display:flex;flex-direction:column;gap:6px}
+#quiz .opts button{text-align:left;background:#0b1220;border:1px solid #334155;color:var(--text);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer}
+#quiz .opts button:hover:not(:disabled){border-color:var(--teal)}
+#quiz .opts button.ok{border-color:#34d399;background:#0f2a22;color:#6ee7b7}
+#quiz .opts button.no{border-color:#f87171;background:#2a1215;color:#fca5a5}
+#quiz .why{margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--text)}
+.tagrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:12px;color:var(--dim)}
+.kv .wait{grid-column:1/-1;color:var(--dim);font-size:12.5px}
+
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;app&quot;&gt;
+&lt;div id=&quot;root&quot;&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;script&gt;
+
+const $=s=&gt;document.querySelector(s), $$=s=&gt;[...document.querySelectorAll(s)];
+const RM=window.matchMedia&amp;&amp;window.matchMedia(&#x27;(prefers-reduced-motion: reduce)&#x27;).matches;
+const sleep=ms=&gt;new Promise(r=&gt;setTimeout(r,RM?Math.min(ms,80):ms));
+let busy=false, timer=null;
+function setStatus(c,m){const s=$(&#x27;#status&#x27;);s.className=&#x27;status &#x27;+c;s.innerHTML=m;}
+function setCode(h){$(&#x27;#code&#x27;).innerHTML=h;}
+function fitCanvas(c){const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;const w=Math.max(10,Math.round(r.width*d)),h=Math.max(10,Math.round(r.height*d));if(c.width!==w||c.height!==h){c.width=w;c.height=h;}const g=c.getContext(&#x27;2d&#x27;);g.setTransform(d,0,0,d,0,0);return [g,r.width,r.height];}
+function initPresets(P,stop){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;if(stop)stop();$$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#explain&#x27;).innerHTML=P[i].ex;try{await P[i].run();}finally{busy=false;}});}
+const esc=s=&gt;String(s).replace(/&amp;/g,&#x27;&amp;amp;&#x27;).replace(/&lt;/g,&#x27;&amp;lt;&#x27;).replace(/&gt;/g,&#x27;&amp;gt;&#x27;);
+const fmt=n=&gt;n.toLocaleString(&#x27;en-US&#x27;);
+function stopTimer(){if(timer){clearInterval(timer);timer=null;}}
+/* Day 2 · 3 공통 — 교시 흐름 (노트북 순서) + 먼저 예측 + 실측 공개 */
+const K={b:&#x27;#60a5fa&#x27;,a:&#x27;#f59e0b&#x27;,g:&#x27;#34d399&#x27;,r:&#x27;#f87171&#x27;,p:&#x27;#c084fc&#x27;,t:&#x27;#2dd4bf&#x27;,d:&#x27;#8a9bb8&#x27;,x:&#x27;#dbe4f0&#x27;,l:&#x27;#334155&#x27;,bg:&#x27;#111a2e&#x27;,z:&#x27;#1f2b45&#x27;};
+let R=false, CUR=null;
+function layout(o){document.getElementById(&#x27;root&#x27;).innerHTML=`
+&lt;h1&gt;${o.h1}&lt;/h1&gt;&lt;p class=&quot;sub&quot;&gt;${o.sub}&lt;/p&gt;
+&lt;div class=&quot;panel goals&quot;&gt;&lt;h2&gt;이 교시에서 배우는 것&lt;/h2&gt;&lt;ol&gt;${o.goals.map(g=&gt;`&lt;li&gt;${g}&lt;/li&gt;`).join(&#x27;&#x27;)}&lt;/ol&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;교시 흐름 — 노트북 순서대로 (누르면 재생)&lt;/h2&gt;&lt;div class=&quot;presets&quot; id=&quot;presets&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2 id=&quot;vt&quot;&gt;그림&lt;/h2&gt;&lt;canvas id=&quot;cv&quot; style=&quot;height:${o.h||250}px&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+&lt;div class=&quot;grid&quot;&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;🤔 먼저 예측 — 고르면 실측값이 나옵니다&lt;/h2&gt;&lt;div id=&quot;quiz&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;강사 실측 (노트북 실행 결과)&lt;/h2&gt;&lt;div class=&quot;kv&quot; id=&quot;kv&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;노트북 코드&lt;/h2&gt;&lt;div class=&quot;code&quot; id=&quot;code&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;상태&lt;/h2&gt;&lt;div class=&quot;status info&quot; id=&quot;status&quot;&gt;단계를 누르세요.&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;panel explain&quot; id=&quot;explain&quot;&gt;&lt;/div&gt;`;}
+function showKV(rows){$(&#x27;#kv&#x27;).innerHTML=rows.map(([k,v])=&gt;`&lt;span&gt;${k}&lt;/span&gt;&lt;b&gt;${v}&lt;/b&gt;`).join(&#x27;&#x27;);}
+function reveal(){if(!CUR||R)return;R=true;showKV(CUR.kv);setCode(CUR.code);$(&#x27;#explain&#x27;).innerHTML=CUR.ex;if(CUR.st)setStatus(CUR.st[0],CUR.st[1]);if(window.draw)draw();}
+function ask(q){const [qs,opts,ans,why]=q;
+  $(&#x27;#quiz&#x27;).innerHTML=`&lt;p class=&quot;q&quot;&gt;${qs}&lt;/p&gt;&lt;div class=&quot;opts&quot;&gt;${opts.map((o,i)=&gt;`&lt;button type=&quot;button&quot; data-i=&quot;${i}&quot;&gt;${o}&lt;/button&gt;`).join(&#x27;&#x27;)}&lt;/div&gt;&lt;p class=&quot;why&quot; hidden&gt;&lt;/p&gt;`;
+  $$(&#x27;#quiz .opts button&#x27;).forEach(b=&gt;b.onclick=()=&gt;{const i=+b.dataset.i;$$(&#x27;#quiz .opts button&#x27;).forEach((x,j)=&gt;{x.disabled=true;x.classList.toggle(&#x27;ok&#x27;,j===ans);x.classList.toggle(&#x27;no&#x27;,j===i&amp;&amp;i!==ans);});
+    const w=$(&#x27;#quiz .why&#x27;);w.hidden=false;w.innerHTML=(i===ans?&#x27;✅ 맞았습니다. &#x27;:&#x27;❌ 다시 생각해 봅시다. &#x27;)+why;reveal();});}
+function steps(P){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;stopTimer();const p=P[i];CUR=p;R=false;
+    $$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#vt&#x27;).textContent=p.vt||p.n;$(&#x27;#explain&#x27;).innerHTML=&#x27;&lt;p class=&quot;dim&quot;&gt;예측을 고르면 이 단계의 해설이 나타납니다.&lt;/p&gt;&#x27;;setCode(&#x27;&lt;span class=&quot;c&quot;&gt;# 예측을 고르면 이 단계의 노트북 코드가 나타납니다&lt;/span&gt;&#x27;);
+    $(&#x27;#kv&#x27;).innerHTML=&#x27;&lt;span class=&quot;wait&quot;&gt;왼쪽 위 예측을 먼저 고르세요 — 고르면 실측값이 나타납니다.&lt;/span&gt;&#x27;;setStatus(&#x27;info&#x27;,p.s0||&#x27;애니메이션을 보고 예측을 골라 보세요.&#x27;);ask(p.q);
+    try{await p.run();}finally{busy=false;}});
+  $(&#x27;#presets button&#x27;).click();}
+function cv(){const [g,W,H]=fitCanvas($(&#x27;#cv&#x27;));g.clearRect(0,0,W,H);g.textAlign=&#x27;left&#x27;;g.lineWidth=1;return [g,W,H];}
+function box(g,x,y,w,h,t,c,sub,on){g.fillStyle=on?c+&#x27;33&#x27;:K.bg;g.strokeStyle=c;g.lineWidth=on?2.5:1.2;g.beginPath();g.roundRect(x,y,w,h,7);g.fill();g.stroke();g.lineWidth=1;
+  g.fillStyle=K.x;g.font=&#x27;12px sans-serif&#x27;;g.textAlign=&#x27;center&#x27;;g.fillText(t,x+w/2,y+h/2+(sub?-3:4));if(sub){g.fillStyle=K.d;g.font=&#x27;10.5px sans-serif&#x27;;g.fillText(sub,x+w/2,y+h/2+12);}g.textAlign=&#x27;left&#x27;;}
+function arr(g,x1,y1,x2,y2,c){g.strokeStyle=c||K.d;g.fillStyle=c||K.d;g.lineWidth=1.5;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();const a=Math.atan2(y2-y1,x2-x1);g.beginPath();g.moveTo(x2,y2);g.lineTo(x2-8*Math.cos(a-.4),y2-8*Math.sin(a-.4));g.lineTo(x2-8*Math.cos(a+.4),y2-8*Math.sin(a+.4));g.fill();g.lineWidth=1;}
+function txt(g,s,x,y,c,f,al){g.fillStyle=c||K.x;g.font=f||&#x27;12px sans-serif&#x27;;g.textAlign=al||&#x27;left&#x27;;g.fillText(s,x,y);g.textAlign=&#x27;left&#x27;;}
+function hbar(g,x,y,w,h,frac,c,label,val){g.fillStyle=K.z;g.fillRect(x,y,w,h);g.fillStyle=c;g.fillRect(x,y,Math.max(0,w*Math.min(1,frac)),h);if(label)txt(g,label,x-6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;,&#x27;right&#x27;);if(val)txt(g,val,x+w*Math.min(1,frac)+6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;);}
+async function tween(n,ms,f){for(let k=1;k&lt;=n;k++){f(k/n);await sleep(ms);}}
+window.__d5={};
+
+layout({h1:&#x27;0 은 왜 빨라지지 않나 — 크기 · 지연 · 2:4&#x27;,sub:&#x27;3교시 노트북 순서: 저장 · 압축 크기 (3-1) → 지연 (예제 3-A) → 2:4 semi-structured mask (3-2) → 어떤 하드웨어에서 빨라지나.&#x27;,
+ goals:[&#x27;unstructured 의 0 은 &lt;b&gt;저장 크기 · 지연을 바꾸지 않는다&lt;/b&gt; — 압축 (gzip) 크기만 줄어든다&#x27;,&#x27;&lt;b&gt;2:4&lt;/b&gt; = 연속한 4개마다 2개가 0 — Ampere 이후 GPU 의 Sparse Tensor Core 에서만 빨라진다 (T4 미지원)&#x27;,&#x27;어디서나 빨라지려면 &lt;b&gt;텐서 모양 자체&lt;/b&gt;를 줄여야 한다 → structured (4교시)&#x27;]});
+let S=0,T=0;
+function draw(){const [g,W,H]=cv();const u=W/100;
+ if(S===0){txt(g,&#x27;state_dict 크기 (KB) — dense vs global 90% sparse&#x27;,2*u,20,K.d);
+  hbar(g,30*u,40,50*u,22,1109.7/1200*T,K.b,&#x27;dense · 저장&#x27;,&#x27;1,110&#x27;);hbar(g,30*u,68,50*u,22,(R?1109.7/1200:0)*T,K.r,&#x27;90% sparse · 저장&#x27;,R?&#x27;1,110&#x27;:&#x27;?&#x27;);
+  hbar(g,30*u,116,50*u,22,1006.2/1200*T,K.b,&#x27;dense · gzip&#x27;,&#x27;1,006&#x27;);hbar(g,30*u,144,50*u,22,(R?189.5/1200:0)*T,K.g,&#x27;90% sparse · gzip&#x27;,R?&#x27;189&#x27;:&#x27;?&#x27;);
+  txt(g,R?&#x27;0 도 FP32 4바이트로 저장된다 → 저장 크기는 같다. 0 이 반복되어 압축은 5.3배 잘 된다&#x27;:&#x27;&#x27;,2*u,200,K.x,&#x27;12.5px sans-serif&#x27;);txt(g,R?&#x27;메모리에 올리면 다시 dense 크기 (CSR 같은 sparse 형식으로 바꾸지 않는 한)&#x27;:&#x27;&#x27;,2*u,224,K.d,&#x27;12px sans-serif&#x27;);}
+ if(S===1){txt(g,&#x27;PyTorch CPU 배치 1 지연 — 0 의 비율을 바꿔도&#x27;,2*u,20,K.d);
+  [[&#x27;dense (0%)&#x27;,1],[&#x27;50% sparse&#x27;,R?1:0],[&#x27;90% sparse&#x27;,R?1:0]].forEach(([n,v],i)=&gt;hbar(g,26*u,44+i*36,50*u,24,v*.8*T,i?K.r:K.b,n,v?&#x27;약 1.7 ~ 1.8 ms&#x27;:&#x27;?&#x27;));
+  txt(g,R?&#x27;속도비 약 1배 (측정 잡음 수준) — 일반 Conv 커널 (cuDNN · MKL) 은 0 도 곱한다&#x27;:&#x27;&#x27;,2*u,176,K.a,&#x27;13px sans-serif&#x27;);txt(g,&#x27;개념도: 0.3×x + 0×x + 0×x + 0.6×x  — 0 을 곱하는 데도 같은 시간이 든다&#x27;,2*u,206,K.d,&#x27;12px monospace&#x27;);txt(g,&#x27;0 을 건너뛰는 sparse 커널은 sparsity 95% 이상 · 큰 행렬에서만 이득&#x27;,2*u,230,K.d,&#x27;12px sans-serif&#x27;);}
+ if(S===2){const w=[.3,-.1,.05,.6,-.4,.02,.2,-.01],m=[1,0,0,1,1,0,1,0];txt(g,&#x27;2:4 mask — 입력 채널 축으로 연속한 4개마다 큰 2개만 (예시 값)&#x27;,2*u,20,K.d);
+  w.forEach((v,i)=&gt;{const x=6*u+i*10.5*u+(i&gt;3?4*u:0);box(g,x,36,9*u,34,String(v),K.b);if(T&gt;.5)box(g,x,78,9*u,30,String(m[i]),m[i]?K.g:K.r);});
+  hbar(g,34*u,134,44*u,20,.8125*T,K.b,&#x27;global 50% (unstructured)&#x27;,&#x27;0.8125&#x27;);hbar(g,34*u,160,44*u,20,(R?.6485:0)*T,K.p,&#x27;2:4 (sparsity 0.498)&#x27;,R?&#x27;0.6485&#x27;:&#x27;?&#x27;);
+  txt(g,R?&#x27;&quot;4개 중 2개&quot; 규칙 때문에 큰 weight 도 지워질 수 있다 → 보통 fine-tuning 과 함께 쓴다&#x27;:&#x27;&#x27;,2*u,212,K.x,&#x27;12.5px sans-serif&#x27;);txt(g,&#x27;stem (입력 3채널) 은 4의 배수가 아니라 제외&#x27;,2*u,234,K.d,&#x27;12px sans-serif&#x27;);}
+ if(S===3){[[&#x27;T4 (Turing)&#x27;,R?&#x27;2:4 가속 없음 — dense 와 같은 속도&#x27;:&#x27;?&#x27;,K.r],[&#x27;A100 · RTX 30 · Jetson Orin (Ampere 이후)&#x27;,R?&#x27;Sparse Tensor Core — 최대 약 2배 (TensorRT SPARSE_WEIGHTS)&#x27;:&#x27;?&#x27;,K.g],[&#x27;어떤 하드웨어든&#x27;,R?&#x27;텐서 모양을 줄이는 structured pruning&#x27;:&#x27;?&#x27;,K.a]].forEach(([a,b,c],i)=&gt;{if(i/3&gt;T)return;const y=34+i*62;box(g,2*u,y,40*u,46,a,c,&#x27;&#x27;,true);txt(g,b,45*u,y+28,K.x,&#x27;12.5px sans-serif&#x27;);});
+  txt(g,&#x27;Sparse Tensor Core 의 속도 수치는 오늘 환경 (T4) 에서 재현되지 않습니다&#x27;,2*u,236,K.d,&#x27;12px sans-serif&#x27;);}
+}
+async function play(s,ms,n){S=s;await tween(n||20,ms||80,t=&gt;{T=t;draw();});}
+steps([
+ {n:&#x27;① 실습 3-1 — 저장 크기 vs 압축 크기&#x27;,vt:&#x27;90% 가 0 인 모델의 크기&#x27;,run:()=&gt;play(0),
+  q:[&#x27;weight 의 90% 가 0 인 모델을 torch.save 로 저장하면 크기는? (dense 는 1,110 KB)&#x27;,[&#x27;약 111 KB — 1/10&#x27;,&#x27;약 555 KB — 절반&#x27;,&#x27;1,110 KB — 그대로&#x27;],2,&#x27;0 도 FP32 4바이트로 저장되는 dense 텐서이므로 크기가 같습니다. 줄어드는 것은 압축 크기입니다: gzip 으로 dense 는 1,006 KB (거의 압축 안 됨), 90% sparse 는 189 KB (5.3배).&#x27;],
+  kv:[[&#x27;저장 크기&#x27;,&#x27;1,110 KB → 1,110 KB&#x27;],[&#x27;gzip 크기&#x27;,&#x27;1,006 KB → 189 KB&#x27;],[&#x27;압축 이득&#x27;,&#x27;5.3배&#x27;]],st:[&#x27;warn&#x27;,&#x27;작아지는 것은 &quot;압축해서 보낼 때&quot; 뿐&#x27;],
+  code:`def state_kb(model):\n    buf = io.BytesIO(); torch.save(model.state_dict(), buf); raw = buf.getvalue()\n    return len(raw) / 1024, len(&lt;span class=&quot;hl&quot;&gt;gzip.compress&lt;/span&gt;(raw)) / 1024\n\nm90 = prune_unstructured(rn20, 0.9, &quot;global&quot;)`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: &quot;unstructured pruning 으로 모델이 작아진다&quot; 는 말은 &quot;압축해서 보내면 작아진다&quot; 는 뜻입니다 — 배포 · 다운로드 크기에는 이득입니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;② 예제 3-A — 0 이 많으면 빨라지나&#x27;,vt:&#x27;지연 측정&#x27;,run:()=&gt;play(1),
+  q:[&#x27;weight 의 90% 가 0 인 모델은 dense 보다 몇 배 빠를까요? (PyTorch CPU · 배치 1)&#x27;,[&#x27;약 1배&#x27;,&#x27;약 2배 — 절반만 계산&#x27;,&#x27;약 10배 — 10% 만 계산&#x27;],0,&#x27;속도비는 약 1배 (실행마다 0.9 ~ 1.1배로 흔들리는 측정 잡음) 입니다. 일반 Conv 커널은 0 도 그대로 곱합니다. GPU · TensorRT 에서도 마찬가지이며 7교시에 엔진으로 다시 확인합니다.&#x27;],
+  kv:[[&#x27;dense · 50% · 90%&#x27;,&#x27;모두 약 1.7 ~ 1.8 ms&#x27;],[&#x27;속도비 (90%)&#x27;,&#x27;약 1배&#x27;],[&#x27;이유&#x27;,&#x27;dense 커널은 0 도 곱한다&#x27;]],st:[&#x27;warn&#x27;,&#x27;0 이 많아도 빨라지지 않는다&#x27;],
+  code:`m50 = prune_unstructured(rn20, 0.5, &quot;global&quot;)\nlat_df = pd.DataFrame([{&quot;model&quot;: name, &quot;sparsity&quot;: sparsity(m), &quot;latency_ms&quot;: latency_torch(m)}\n                       for name, m in [(&quot;dense&quot;, rn20), (&quot;50% sparse&quot;, m50), (&quot;90% sparse&quot;, m90)]])\nspeedup90 = lat_df.latency_ms[0] / lat_df.latency_ms[2]`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;제공 코드 (실행만)&lt;/b&gt;: 지연은 실행마다 조금 달라집니다 — 숫자 하나가 아니라 &quot;세 모델이 같은 수준&quot; 이라는 점을 보세요.&lt;/p&gt;&#x27;},
+ {n:&#x27;③ 실습 3-2 — 2:4 mask&#x27;,vt:&#x27;4개마다 정확히 2개&#x27;,run:()=&gt;play(2),
+  q:[&#x27;2:4 mask 도 weight 의 약 50% 를 지웁니다. 정확도는 global 50% unstructured (0.8125) 와 비교해 어떨까요?&#x27;,[&#x27;더 높다 (약 0.84)&#x27;,&#x27;더 낮다 (약 0.65)&#x27;,&#x27;똑같다 (0.8125)&#x27;],1,&#x27;0.6485 입니다. unstructured 는 전체에서 가장 작은 것만 고르지만, 2:4 는 &quot;4개 묶음마다 2개&quot; 라는 규칙 때문에 큰 weight 도 지워질 수 있습니다. 그래서 보통 fine-tuning 과 함께 씁니다.&#x27;],
+  kv:[[&#x27;2:4 sparsity&#x27;,&#x27;0.498&#x27;],[&#x27;2:4 정확도&#x27;,&#x27;0.6485&#x27;],[&#x27;global 50%&#x27;,&#x27;0.8125&#x27;]],st:[&#x27;warn&#x27;,&#x27;규칙이 생기면 정확도 손해가 커진다&#x27;],
+  code:`def mask_2to4(w):\n    wp = w.detach().permute(0, 2, 3, 1)                 &lt;span class=&quot;c&quot;&gt;# 입력 채널을 마지막 축으로&lt;/span&gt;\n    g = wp.abs().&lt;span class=&quot;hl&quot;&gt;reshape(-1, 4)&lt;/span&gt;\n    m = torch.zeros_like(g).scatter_(1, g.&lt;span class=&quot;hl&quot;&gt;topk(2, dim=1)&lt;/span&gt;.indices, 1.0)\n    return m.reshape(wp.shape).permute(0, 3, 1, 2).contiguous()`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: 한 행 (4개) 에서 큰 2개의 위치에 1 을 넣습니다. 입력 채널이 4의 배수인 Conv 에만 적용합니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;④ 정리 — 어떤 하드웨어에서&#x27;,vt:&#x27;T4 와 Ampere&#x27;,run:()=&gt;play(3,400,3),
+  q:[&#x27;오늘 실습 GPU 인 T4 에서 2:4 sparsity 모델은 빨라질까요?&#x27;,[&#x27;빨라진다 — TensorRT 가 모든 GPU 에서 2:4 를 가속한다&#x27;,&#x27;빨라지지 않는다 — Sparse Tensor Core 가 없다&#x27;,&#x27;빨라진다 — 단 FP16 플래그를 함께 켜야 한다&#x27;],1,&#x27;2:4 가속은 Ampere 이후 (A100 · RTX 30 · Jetson Orin) 의 Sparse Tensor Core 가 필요합니다. T4 (Turing) 는 지원하지 않습니다. 그래서 오늘의 주인공은 어떤 하드웨어에서나 통하는 structured pruning 입니다.&#x27;],
+  kv:[[&#x27;unstructured&#x27;,&#x27;크기 · 지연 그대로 · gzip 만 감소&#x27;],[&#x27;2:4&#x27;,&#x27;Ampere 이후에서만 최대 약 2배&#x27;],[&#x27;structured&#x27;,&#x27;어디서나 — 4교시&#x27;]],st:[&#x27;info&#x27;,&#x27;3교시 정리 — 모양을 줄여야 빨라진다&#x27;],
+  code:`&lt;span class=&quot;c&quot;&gt;# TensorRT: config.set_flag(trt.BuilderFlag.SPARSE_WEIGHTS)   — Ampere 이후 GPU&lt;/span&gt;`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;3교시 정리&lt;/b&gt;: 0 은 저장 크기 · 지연을 바꾸지 않는다 · 2:4 는 전용 하드웨어에서만 · 어디서나 빨라지려면 텐서 모양을 줄인다.&lt;/p&gt;&#x27;},
+]);
+
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe></section>
+<section class="lesson" id="d5-4" data-title="D5-4 filter 를 직접 빼기"><iframe title="D5-4 filter 를 직접 빼기" loading="lazy" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;ko&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+&lt;title&gt;filter 를 직접 빼기 — Quantization·Pruning Day 5&lt;/title&gt;
+&lt;style&gt;
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:&quot;Consolas&quot;,&quot;D2Coding&quot;,&quot;JetBrains Mono&quot;,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:&quot;Pretendard&quot;,&quot;Noto Sans KR&quot;,&quot;Segoe UI&quot;,sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  @media(max-width:520px){.app{padding:16px 12px 30px}}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .sub code,.explain code,.note code{font-family:var(--mono);color:var(--blue)}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono);max-width:100%;overflow-wrap:anywhere}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.red{color:var(--red);border-color:var(--red)}.pill.green{color:var(--green);border-color:var(--green)}.pill.purple{color:var(--purple);border-color:var(--purple)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;min-width:0}
+  @media(max-width:520px){.panel{padding:12px 10px}}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.run{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700}
+  button.sel{background:#123d33;border-color:var(--teal);color:var(--teal)}
+  button:disabled{opacity:.4;cursor:default}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .grid{display:grid;grid-template-columns:1.25fr 1fr;gap:14px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .grid&gt;*{min-width:0}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.two{grid-template-columns:1fr}}
+  .two&gt;*{min-width:0}
+  canvas{width:100%;display:block;background:#0a0f1c;border:1px solid var(--line);border-radius:8px}
+  svg{max-width:100%}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+  .lab{font-size:13px;color:var(--dim)}
+  .sl{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;margin:8px 0}
+  .sl label{color:var(--amber);width:70px;flex:none}
+  .sl input{flex:1;min-width:60px;accent-color:var(--amber)}
+  .sl output{width:64px;text-align:right;flex:none}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-family:var(--mono);font-size:13.5px}
+  .kv span:nth-child(odd){color:var(--dim)}
+  .kv b{font-weight:600;overflow-wrap:anywhere}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;white-space:pre-wrap;min-height:64px;overflow-wrap:anywhere}
+  .code .g{color:var(--green)}.code .e{color:var(--red)}.code .c{color:#5d7292}.code .a{color:var(--amber)}.code .b{color:var(--blue)}.code .t{color:var(--teal)}
+  .code .hl{background:#3a2e12;color:var(--amber);border-radius:3px;padding:0 2px}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px;overflow-wrap:anywhere;white-space:pre-line}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}.explain b.purple{color:var(--purple)}
+  table.tt{border-collapse:collapse;font-family:var(--mono);font-size:13px;width:100%}
+  table.tt th,table.tt td{border:1px solid var(--line);padding:4px 6px;text-align:center}
+  table.tt th{color:var(--dim);font-weight:600;background:#0e1628}
+  table.tt tr.cur td{background:#2a2210}
+  .ok1{color:var(--green)}.bad1{color:var(--red)}.dim{color:var(--dim)}
+  .scroll{overflow-x:auto;max-width:100%}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .note{font-size:12.5px;color:var(--dim);border-left:3px solid var(--amber);padding:4px 10px;margin-top:10px}
+  .chk{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--dim)}
+  .chk input{accent-color:var(--amber)}
+  .ctl button{font-family:var(--mono)}
+  input[type=number],input.num,select{background:#0a0f1c;border:1px solid #2a3a5c;color:var(--text);border-radius:6px;padding:4px 6px;font-family:var(--mono);font-size:13px;width:74px}
+  select{width:auto}
+  .seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+  .seg button{padding:5px 10px}
+  .mono{font-family:var(--mono)}
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+  .arr{color:var(--dim);font-family:var(--mono);flex:none}
+  .fb{border:1px solid #2a3a5c;border-radius:8px;padding:7px 10px;background:#0a0f1c;font-family:var(--mono);font-size:13px;transition:all .3s;min-width:0;overflow-wrap:anywhere}
+  .fb small{display:block;color:var(--dim);font-size:11.5px;font-family:inherit}
+  .fb.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber);box-shadow:0 0 0 2px #f5b94233}
+  .fb.done{border-color:var(--teal);color:var(--teal)}
+  .fb.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .fb.off{opacity:.35}
+  .cells{display:flex;flex-wrap:wrap;gap:4px}
+  .cell{min-width:38px;height:30px;padding:0 6px;border:1px solid #2a3a5c;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;background:#0a0f1c;transition:all .25s}
+  .cell.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber)}
+  .cell.w{border-color:#3b6aa8;color:var(--blue)}.cell.bb{border-color:#7a5a2a;color:var(--amber)}
+.goals ol{margin:4px 0 0 18px;padding:0;font-size:13.5px;line-height:1.75;color:var(--text)}
+.goals ol li b{color:var(--amber)}
+#quiz .q{margin:0 0 8px;font-size:14px;line-height:1.55}
+#quiz .opts{display:flex;flex-direction:column;gap:6px}
+#quiz .opts button{text-align:left;background:#0b1220;border:1px solid #334155;color:var(--text);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer}
+#quiz .opts button:hover:not(:disabled){border-color:var(--teal)}
+#quiz .opts button.ok{border-color:#34d399;background:#0f2a22;color:#6ee7b7}
+#quiz .opts button.no{border-color:#f87171;background:#2a1215;color:#fca5a5}
+#quiz .why{margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--text)}
+.tagrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:12px;color:var(--dim)}
+.kv .wait{grid-column:1/-1;color:var(--dim);font-size:12.5px}
+
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;app&quot;&gt;
+&lt;div id=&quot;root&quot;&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;script&gt;
+
+const $=s=&gt;document.querySelector(s), $$=s=&gt;[...document.querySelectorAll(s)];
+const RM=window.matchMedia&amp;&amp;window.matchMedia(&#x27;(prefers-reduced-motion: reduce)&#x27;).matches;
+const sleep=ms=&gt;new Promise(r=&gt;setTimeout(r,RM?Math.min(ms,80):ms));
+let busy=false, timer=null;
+function setStatus(c,m){const s=$(&#x27;#status&#x27;);s.className=&#x27;status &#x27;+c;s.innerHTML=m;}
+function setCode(h){$(&#x27;#code&#x27;).innerHTML=h;}
+function fitCanvas(c){const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;const w=Math.max(10,Math.round(r.width*d)),h=Math.max(10,Math.round(r.height*d));if(c.width!==w||c.height!==h){c.width=w;c.height=h;}const g=c.getContext(&#x27;2d&#x27;);g.setTransform(d,0,0,d,0,0);return [g,r.width,r.height];}
+function initPresets(P,stop){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;if(stop)stop();$$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#explain&#x27;).innerHTML=P[i].ex;try{await P[i].run();}finally{busy=false;}});}
+const esc=s=&gt;String(s).replace(/&amp;/g,&#x27;&amp;amp;&#x27;).replace(/&lt;/g,&#x27;&amp;lt;&#x27;).replace(/&gt;/g,&#x27;&amp;gt;&#x27;);
+const fmt=n=&gt;n.toLocaleString(&#x27;en-US&#x27;);
+function stopTimer(){if(timer){clearInterval(timer);timer=null;}}
+/* Day 2 · 3 공통 — 교시 흐름 (노트북 순서) + 먼저 예측 + 실측 공개 */
+const K={b:&#x27;#60a5fa&#x27;,a:&#x27;#f59e0b&#x27;,g:&#x27;#34d399&#x27;,r:&#x27;#f87171&#x27;,p:&#x27;#c084fc&#x27;,t:&#x27;#2dd4bf&#x27;,d:&#x27;#8a9bb8&#x27;,x:&#x27;#dbe4f0&#x27;,l:&#x27;#334155&#x27;,bg:&#x27;#111a2e&#x27;,z:&#x27;#1f2b45&#x27;};
+let R=false, CUR=null;
+function layout(o){document.getElementById(&#x27;root&#x27;).innerHTML=`
+&lt;h1&gt;${o.h1}&lt;/h1&gt;&lt;p class=&quot;sub&quot;&gt;${o.sub}&lt;/p&gt;
+&lt;div class=&quot;panel goals&quot;&gt;&lt;h2&gt;이 교시에서 배우는 것&lt;/h2&gt;&lt;ol&gt;${o.goals.map(g=&gt;`&lt;li&gt;${g}&lt;/li&gt;`).join(&#x27;&#x27;)}&lt;/ol&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;교시 흐름 — 노트북 순서대로 (누르면 재생)&lt;/h2&gt;&lt;div class=&quot;presets&quot; id=&quot;presets&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2 id=&quot;vt&quot;&gt;그림&lt;/h2&gt;&lt;canvas id=&quot;cv&quot; style=&quot;height:${o.h||250}px&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+&lt;div class=&quot;grid&quot;&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;🤔 먼저 예측 — 고르면 실측값이 나옵니다&lt;/h2&gt;&lt;div id=&quot;quiz&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;강사 실측 (노트북 실행 결과)&lt;/h2&gt;&lt;div class=&quot;kv&quot; id=&quot;kv&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;노트북 코드&lt;/h2&gt;&lt;div class=&quot;code&quot; id=&quot;code&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;상태&lt;/h2&gt;&lt;div class=&quot;status info&quot; id=&quot;status&quot;&gt;단계를 누르세요.&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;panel explain&quot; id=&quot;explain&quot;&gt;&lt;/div&gt;`;}
+function showKV(rows){$(&#x27;#kv&#x27;).innerHTML=rows.map(([k,v])=&gt;`&lt;span&gt;${k}&lt;/span&gt;&lt;b&gt;${v}&lt;/b&gt;`).join(&#x27;&#x27;);}
+function reveal(){if(!CUR||R)return;R=true;showKV(CUR.kv);setCode(CUR.code);$(&#x27;#explain&#x27;).innerHTML=CUR.ex;if(CUR.st)setStatus(CUR.st[0],CUR.st[1]);if(window.draw)draw();}
+function ask(q){const [qs,opts,ans,why]=q;
+  $(&#x27;#quiz&#x27;).innerHTML=`&lt;p class=&quot;q&quot;&gt;${qs}&lt;/p&gt;&lt;div class=&quot;opts&quot;&gt;${opts.map((o,i)=&gt;`&lt;button type=&quot;button&quot; data-i=&quot;${i}&quot;&gt;${o}&lt;/button&gt;`).join(&#x27;&#x27;)}&lt;/div&gt;&lt;p class=&quot;why&quot; hidden&gt;&lt;/p&gt;`;
+  $$(&#x27;#quiz .opts button&#x27;).forEach(b=&gt;b.onclick=()=&gt;{const i=+b.dataset.i;$$(&#x27;#quiz .opts button&#x27;).forEach((x,j)=&gt;{x.disabled=true;x.classList.toggle(&#x27;ok&#x27;,j===ans);x.classList.toggle(&#x27;no&#x27;,j===i&amp;&amp;i!==ans);});
+    const w=$(&#x27;#quiz .why&#x27;);w.hidden=false;w.innerHTML=(i===ans?&#x27;✅ 맞았습니다. &#x27;:&#x27;❌ 다시 생각해 봅시다. &#x27;)+why;reveal();});}
+function steps(P){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;stopTimer();const p=P[i];CUR=p;R=false;
+    $$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#vt&#x27;).textContent=p.vt||p.n;$(&#x27;#explain&#x27;).innerHTML=&#x27;&lt;p class=&quot;dim&quot;&gt;예측을 고르면 이 단계의 해설이 나타납니다.&lt;/p&gt;&#x27;;setCode(&#x27;&lt;span class=&quot;c&quot;&gt;# 예측을 고르면 이 단계의 노트북 코드가 나타납니다&lt;/span&gt;&#x27;);
+    $(&#x27;#kv&#x27;).innerHTML=&#x27;&lt;span class=&quot;wait&quot;&gt;왼쪽 위 예측을 먼저 고르세요 — 고르면 실측값이 나타납니다.&lt;/span&gt;&#x27;;setStatus(&#x27;info&#x27;,p.s0||&#x27;애니메이션을 보고 예측을 골라 보세요.&#x27;);ask(p.q);
+    try{await p.run();}finally{busy=false;}});
+  $(&#x27;#presets button&#x27;).click();}
+function cv(){const [g,W,H]=fitCanvas($(&#x27;#cv&#x27;));g.clearRect(0,0,W,H);g.textAlign=&#x27;left&#x27;;g.lineWidth=1;return [g,W,H];}
+function box(g,x,y,w,h,t,c,sub,on){g.fillStyle=on?c+&#x27;33&#x27;:K.bg;g.strokeStyle=c;g.lineWidth=on?2.5:1.2;g.beginPath();g.roundRect(x,y,w,h,7);g.fill();g.stroke();g.lineWidth=1;
+  g.fillStyle=K.x;g.font=&#x27;12px sans-serif&#x27;;g.textAlign=&#x27;center&#x27;;g.fillText(t,x+w/2,y+h/2+(sub?-3:4));if(sub){g.fillStyle=K.d;g.font=&#x27;10.5px sans-serif&#x27;;g.fillText(sub,x+w/2,y+h/2+12);}g.textAlign=&#x27;left&#x27;;}
+function arr(g,x1,y1,x2,y2,c){g.strokeStyle=c||K.d;g.fillStyle=c||K.d;g.lineWidth=1.5;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();const a=Math.atan2(y2-y1,x2-x1);g.beginPath();g.moveTo(x2,y2);g.lineTo(x2-8*Math.cos(a-.4),y2-8*Math.sin(a-.4));g.lineTo(x2-8*Math.cos(a+.4),y2-8*Math.sin(a+.4));g.fill();g.lineWidth=1;}
+function txt(g,s,x,y,c,f,al){g.fillStyle=c||K.x;g.font=f||&#x27;12px sans-serif&#x27;;g.textAlign=al||&#x27;left&#x27;;g.fillText(s,x,y);g.textAlign=&#x27;left&#x27;;}
+function hbar(g,x,y,w,h,frac,c,label,val){g.fillStyle=K.z;g.fillRect(x,y,w,h);g.fillStyle=c;g.fillRect(x,y,Math.max(0,w*Math.min(1,frac)),h);if(label)txt(g,label,x-6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;,&#x27;right&#x27;);if(val)txt(g,val,x+w*Math.min(1,frac)+6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;);}
+async function tween(n,ms,f){for(let k=1;k&lt;=n;k++){f(k/n);await sleep(ms);}}
+window.__d5={};
+
+layout({h1:&#x27;filter 를 직접 빼기 — structured pruning&#x27;,sub:&#x27;4교시 노트북 순서: 함께 줄여야 하는 곳 → 블록 하나 (4-1) → 9개 블록 전체 (4-2) → 속도비와 residual 의 제약 (예제 4-A).&#x27;,
+ goals:[&#x27;filter 를 지우면 &lt;b&gt;conv1 (출력) → bn1 (4가지 값) → conv2 (입력)&lt;/b&gt; 를 같은 keep 으로 함께 줄인다&#x27;,&#x27;structured 는 같은 비율에서 정확도 손해가 크지만 &lt;b&gt;텐서가 진짜로 작아져 바로 빨라진다&lt;/b&gt;&#x27;,&#x27;&lt;b&gt;residual 덧셈&lt;/b&gt;은 &quot;같이 잘라야 하는 채널 묶음&quot; 을 만든다 → 의존성 그래프 (5교시)&#x27;]});
+let S=0,T=0;
+function draw(){const [g,W,H]=cv();const u=W/100;
+ if(S===0){txt(g,&#x27;개념도 — BasicBlock 안쪽 채널 C → C′&#x27;,2*u,20,K.d);
+  [[&#x27;conv1&#x27;,&#x27;weight[keep]&#x27;,&#x27;출력 C → C′&#x27;,K.b],[&#x27;bn1&#x27;,R?&#x27;γ · β · μ · σ² [keep]&#x27;:&#x27;? [keep]&#x27;,&#x27;C → C′&#x27;,K.a],[&#x27;ReLU&#x27;,&#x27;&#x27;,&#x27;&#x27;,K.l],[&#x27;conv2&#x27;,&#x27;weight[:, keep]&#x27;,&#x27;입력 C → C′&#x27;,K.g]].forEach(([a,b,c,col],i)=&gt;{if(i/4&gt;T)return;const x=2*u+i*25*u;box(g,x,44,20*u,50,a,col,c,i!==2);txt(g,b,x,116,K.x,&#x27;12px monospace&#x27;);if(i&lt;3)arr(g,x+20*u,69,x+25*u,69);});
+  txt(g,&#x27;세 곳이 같은 keep (남길 채널 번호) 을 써야 채널끼리 짝이 맞는다&#x27;,2*u,158,K.x,&#x27;12.5px sans-serif&#x27;);txt(g,&#x27;블록의 입력 · 출력 채널 (바깥쪽) 은 그대로 — 안쪽만 줄인다&#x27;,2*u,182,K.d,&#x27;12.5px sans-serif&#x27;);txt(g,R?&#x27;새로 만든 BN 은 train 모드로 태어난다 → .train(b1.training) 으로 원래 모드를 따르게&#x27;:&#x27;&#x27;,2*u,216,K.a,&#x27;12.5px sans-serif&#x27;);}
+ if(S===1){txt(g,&#x27;prune_block(layer2[1], 0.5) — weight 모양&#x27;,2*u,20,K.d);
+  [[&#x27;conv1&#x27;,&#x27;(32, 32, 3, 3)&#x27;,&#x27;(16, 32, 3, 3)&#x27;,&#x27;출력 축 dim 0&#x27;],[&#x27;bn1&#x27;,&#x27;32&#x27;,&#x27;16&#x27;,&#x27;4가지 값&#x27;],[&#x27;conv2&#x27;,&#x27;(32, 32, 3, 3)&#x27;,R?&#x27;(32, 16, 3, 3)&#x27;:&#x27;?&#x27;,R?&#x27;입력 축 dim 1&#x27;:&#x27;어느 축?&#x27;]].forEach(([a,b,c,d],i)=&gt;{if(i/3&gt;T)return;const y=38+i*52;box(g,2*u,y,14*u,40,a,[K.b,K.a,K.g][i]);box(g,20*u,y,22*u,40,b,K.l);arr(g,42*u,y+20,50*u,y+20);box(g,50*u,y,22*u,40,c,[K.b,K.a,K.g][i],&#x27;&#x27;,true);txt(g,d,75*u,y+25,K.d,&#x27;12.5px sans-serif&#x27;);});
+  txt(g,&#x27;keep = L1-norm 이 큰 16개 (오름차순): [1, 2, 3, 4, 6, 7, 15, 17, 18, 21, 23, 25, 27, 28, 30, 31]&#x27;,2*u,212,K.x,&#x27;11.5px monospace&#x27;);txt(g,&#x27;블록 출력 모양 (2, 32, 16, 16) 은 그대로&#x27;,2*u,234,K.d,&#x27;12px sans-serif&#x27;);}
+ if(S===2){txt(g,&#x27;manual_prune — 9개 블록의 안쪽 채널 (fine-tuning 전)&#x27;,2*u,20,K.d);
+  [[0,272474,.846],[.25,205490,.5025],[.5,138506,.168]].forEach(([r,p,a],i)=&gt;{const y=40+i*62;txt(g,&#x27;ratio &#x27;+r,2*u,y+26,K.x,&#x27;bold 13px sans-serif&#x27;);hbar(g,26*u,y,46*u,20,p/272474*T,K.b,&#x27;params&#x27;,p.toLocaleString());hbar(g,26*u,y+24,46*u,20,(i===2&amp;&amp;!R?0:a)*T,i?K.r:K.g,&#x27;정확도&#x27;,i===2&amp;&amp;!R?&#x27;?&#x27;:a.toFixed(4));});
+  txt(g,R?&#x27;unstructured 50% (0.8125) 보다 훨씬 많이 떨어진다 — filter 하나에는 큰 weight 도 섞여 있다&#x27;:&#x27;&#x27;,2*u,236,K.a,&#x27;12.5px sans-serif&#x27;);}
+ if(S===3){hbar(g,34*u,30,40*u,20,.5*T,K.r,&#x27;unstructured 90%&#x27;,&#x27;약 1.0배&#x27;);hbar(g,34*u,56,40*u,20,.68*T,K.g,&#x27;structured 50% (블록 안쪽)&#x27;,&#x27;약 1.1 ~ 1.4배&#x27;);txt(g,&#x27;PyTorch CPU 속도비 (실행마다 조금 다름)&#x27;,34*u,94,K.d,&#x27;11px sans-serif&#x27;);
+  box(g,2*u,116,20*u,40,&#x27;x (16채널)&#x27;,K.l);arr(g,22*u,136,30*u,136);box(g,30*u,116,22*u,40,&#x27;conv2 → 8채널&#x27;,K.r,&#x27;&#x27;,true);arr(g,52*u,136,62*u,136);box(g,62*u,116,10*u,40,&#x27;+&#x27;,K.a,&#x27;&#x27;,true);arr(g,12*u,156,12*u,184);arr(g,12*u,184,67*u,184);arr(g,67*u,184,67*u,158);txt(g,&#x27;shortcut (16채널)&#x27;,30*u,200,K.d,&#x27;12px sans-serif&#x27;);
+  txt(g,R?&#x27;RuntimeError: The size of tensor a (8) must match the size of tensor b (16)&#x27;:&#x27;8채널 + 16채널 = ?&#x27;,2*u,232,R?K.r:K.d,&#x27;12.5px monospace&#x27;);}
+}
+async function play(s,ms,n){S=s;await tween(n||20,ms||80,t=&gt;{T=t;draw();});}
+steps([
+ {n:&#x27;① 개념 — 함께 줄여야 하는 곳&#x27;,vt:&#x27;conv1 → bn1 → conv2&#x27;,run:()=&gt;play(0,300,4),
+  q:[&#x27;conv1 의 filter 를 절반으로 줄였습니다. 뒤따르는 BatchNorm 에서는 채널마다 몇 가지 값을 함께 골라내야 할까요?&#x27;,[&#x27;1가지 — γ 만 고르면 나머지는 자동으로 맞춰진다&#x27;,&#x27;2가지 — 학습되는 γ (weight) 와 β (bias)&#x27;,&#x27;4가지 — γ · β · 평균 · 분산&#x27;],2,&#x27;BN 은 채널마다 γ · β · 평균 · 분산을 가집니다. 하나라도 빠뜨리면 모양 오류가 나거나 엉뚱한 통계로 정규화됩니다. 그리고 다음 conv2 는 출력이 아니라 입력 축을 줄입니다.&#x27;],
+  kv:[[&#x27;conv1&#x27;,&#x27;weight[keep] — 출력 축&#x27;],[&#x27;bn1&#x27;,&#x27;γ · β · μ · σ² 모두 [keep]&#x27;],[&#x27;conv2&#x27;,&#x27;weight[:, keep] — 입력 축&#x27;]],st:[&#x27;info&#x27;,&#x27;filter 하나를 빼면 세 곳이 바뀐다&#x27;],
+  code:`new1.weight.data = c1.weight.data[keep].clone()\nfor a in [&quot;weight&quot;, &quot;bias&quot;, &quot;running_mean&quot;, &quot;running_var&quot;]:\n    getattr(nb, a).data = getattr(b1, a).data[keep].clone()\nnew2.weight.data = c2.weight.data[:, keep].clone()`,
+  ex:&#x27;&lt;p&gt;ResNet 블록에서 &lt;b&gt;안쪽&lt;/b&gt; (conv1 출력 = conv2 입력) 은 자유롭게 자를 수 있습니다. &lt;b&gt;바깥쪽&lt;/b&gt; (conv2 출력) 은 residual 덧셈 때문에 다른 블록과 함께 잘라야 합니다 — 예제 4-A 에서 확인합니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;② 실습 4-1 — prune_block&#x27;,vt:&#x27;블록 하나의 안쪽 32 → 16&#x27;,run:()=&gt;play(1,400,3),
+  q:[&#x27;conv1 의 filter 를 32 → 16 으로 줄였습니다. conv2 의 weight (32, 32, 3, 3) 는 어떻게 바뀌어야 할까요?&#x27;,[&#x27;(16, 32, 3, 3) — 출력 축을 줄인다&#x27;,&#x27;(32, 16, 3, 3) — 입력 축을 줄인다&#x27;,&#x27;(16, 16, 3, 3) — 두 축을 모두 줄인다&#x27;],1,&#x27;conv2 는 conv1 의 출력을 입력으로 받으므로 입력 축 (dim 1) 만 16 으로 줄입니다. 출력 32 는 블록 바깥으로 나가 shortcut 과 더해지므로 그대로 둡니다 — 그래서 블록의 입출력 모양이 변하지 않습니다.&#x27;],
+  kv:[[&#x27;conv1&#x27;,&#x27;(32, 32, 3, 3) → (16, 32, 3, 3)&#x27;],[&#x27;conv2&#x27;,&#x27;(32, 32, 3, 3) → (32, 16, 3, 3)&#x27;],[&#x27;블록 출력&#x27;,&#x27;(2, 32, 16, 16) 그대로&#x27;]],st:[&#x27;ok&#x27;,&#x27;안쪽만 줄이면 블록 밖은 모른다&#x27;],
+  code:`def prune_block(block, ratio):\n    c1, b1, c2 = block.conv1, block.bn1, block.conv2\n    n_keep = int(round(c1.out_channels * (1 - ratio)))\n    keep = &lt;span class=&quot;hl&quot;&gt;filter_l1(c1)&lt;/span&gt;.argsort(descending=True)[:n_keep].sort().values\n    ...   &lt;span class=&quot;c&quot;&gt;# 새 conv1 · bn1 · conv2 를 만들어 block 에 넣는다&lt;/span&gt;\n    return keep`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: 1교시의 &lt;code&gt;filter_l1&lt;/code&gt; 로 남길 filter 를 고릅니다. 확인 셀은 ratio 0 일 때 출력이 원래와 같은지도 봅니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;③ 실습 4-2 — manual_prune&#x27;,vt:&#x27;9개 블록 모두&#x27;,run:()=&gt;play(2),
+  q:[&#x27;9개 블록의 안쪽 채널을 50% 줄였습니다 (params 272,474 → 138,506). fine-tuning 전 정확도는? (25% 는 0.50)&#x27;,[&#x27;약 0.81 — unstructured 50% 와 비슷&#x27;,&#x27;약 0.17 — 거의 무너진다&#x27;,&#x27;0.846 — 안쪽만 줄였으므로 그대로&#x27;],1,&#x27;0.168 입니다. unstructured 50% (0.8125) 보다 훨씬 많이 떨어집니다 — filter 를 통째로 빼면 그 안의 큰 weight 도 함께 사라지기 때문입니다. 떨어진 정확도는 6교시 fine-tuning 으로 되찾습니다.&#x27;],
+  kv:[[&#x27;ratio 0.25&#x27;,&#x27;205,490 params · 0.5025&#x27;],[&#x27;ratio 0.5&#x27;,&#x27;138,506 params · 0.1680&#x27;],[&#x27;unstructured 50%&#x27;,&#x27;0.8125 (비교)&#x27;]],st:[&#x27;warn&#x27;,&#x27;structured 는 fine-tuning 과 한 세트&#x27;],
+  code:`def manual_prune(model, ratio):\n    m = copy.deepcopy(model)\n    for layer in [m.layer1, m.layer2, m.layer3]:\n        for block in layer:\n            prune_block(block, ratio)\n    return m`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: &lt;code&gt;manual_df&lt;/code&gt; (ratio · params · acc · latency_ms) 를 만듭니다. params 가 진짜로 줄었다는 점이 unstructured 와 다릅니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;④ 예제 4-A — 속도비 · residual&#x27;,vt:&#x27;바깥쪽 채널을 자르면&#x27;,run:()=&gt;play(3),
+  q:[&#x27;블록의 conv2 출력 (바깥쪽) 을 16 → 8채널로 바꾸고 forward 하면?&#x27;,[&#x27;residual 덧셈에서 오류가 난다&#x27;,&#x27;문제없이 돌고 블록 출력이 8채널이 된다&#x27;,&#x27;돌기는 하지만 정확도가 조금 떨어진다&#x27;],0,&#x27;conv2 출력 (8) 과 shortcut (16) 을 더할 수 없어 RuntimeError 가 납니다. 바깥쪽을 자르려면 shortcut · 앞뒤 블록 · stem 까지 같은 채널을 함께 잘라야 합니다 — 5교시의 DependencyGraph 가 하는 일입니다.&#x27;],
+  kv:[[&#x27;structured 50% 속도비&#x27;,&#x27;약 1.1 ~ 1.4배 (PyTorch CPU)&#x27;],[&#x27;unstructured 90%&#x27;,&#x27;약 1.0배&#x27;],[&#x27;conv2 출력을 자르면&#x27;,&#x27;size of tensor a (8) ≠ b (16)&#x27;]],st:[&#x27;ok&#x27;,&#x27;텐서가 작아지면 바로 빨라진다&#x27;],
+  code:`speedup_manual = manual_df.latency_ms[0] / manual_df.latency_ms[2]\nb_ = copy.deepcopy(rn20.layer1[0])\nb_.conv2 = nn.Conv2d(16, 8, 3, padding=1, bias=False); b_.bn2 = nn.BatchNorm2d(8)\ntry: b_.eval()(torch.randn(1, 16, 32, 32)); err = None\nexcept RuntimeError as e: err = str(e)`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;제공 코드 (실행만)&lt;/b&gt;: 0 을 90% 채운 것보다 채널을 절반으로 줄인 것이 빠릅니다. 그리고 손으로 자르는 방법의 한계 (residual) 를 오류로 확인합니다.&lt;/p&gt;&#x27;},
+]);
+
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe></section>
+<section class="lesson" id="d5-5" data-title="D5-5 torch-pruning"><iframe title="D5-5 torch-pruning" loading="lazy" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;ko&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+&lt;title&gt;torch-pruning — Quantization·Pruning Day 5&lt;/title&gt;
+&lt;style&gt;
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:&quot;Consolas&quot;,&quot;D2Coding&quot;,&quot;JetBrains Mono&quot;,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:&quot;Pretendard&quot;,&quot;Noto Sans KR&quot;,&quot;Segoe UI&quot;,sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  @media(max-width:520px){.app{padding:16px 12px 30px}}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .sub code,.explain code,.note code{font-family:var(--mono);color:var(--blue)}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono);max-width:100%;overflow-wrap:anywhere}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.red{color:var(--red);border-color:var(--red)}.pill.green{color:var(--green);border-color:var(--green)}.pill.purple{color:var(--purple);border-color:var(--purple)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;min-width:0}
+  @media(max-width:520px){.panel{padding:12px 10px}}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.run{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700}
+  button.sel{background:#123d33;border-color:var(--teal);color:var(--teal)}
+  button:disabled{opacity:.4;cursor:default}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .grid{display:grid;grid-template-columns:1.25fr 1fr;gap:14px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .grid&gt;*{min-width:0}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.two{grid-template-columns:1fr}}
+  .two&gt;*{min-width:0}
+  canvas{width:100%;display:block;background:#0a0f1c;border:1px solid var(--line);border-radius:8px}
+  svg{max-width:100%}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+  .lab{font-size:13px;color:var(--dim)}
+  .sl{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;margin:8px 0}
+  .sl label{color:var(--amber);width:70px;flex:none}
+  .sl input{flex:1;min-width:60px;accent-color:var(--amber)}
+  .sl output{width:64px;text-align:right;flex:none}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-family:var(--mono);font-size:13.5px}
+  .kv span:nth-child(odd){color:var(--dim)}
+  .kv b{font-weight:600;overflow-wrap:anywhere}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;white-space:pre-wrap;min-height:64px;overflow-wrap:anywhere}
+  .code .g{color:var(--green)}.code .e{color:var(--red)}.code .c{color:#5d7292}.code .a{color:var(--amber)}.code .b{color:var(--blue)}.code .t{color:var(--teal)}
+  .code .hl{background:#3a2e12;color:var(--amber);border-radius:3px;padding:0 2px}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px;overflow-wrap:anywhere;white-space:pre-line}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}.explain b.purple{color:var(--purple)}
+  table.tt{border-collapse:collapse;font-family:var(--mono);font-size:13px;width:100%}
+  table.tt th,table.tt td{border:1px solid var(--line);padding:4px 6px;text-align:center}
+  table.tt th{color:var(--dim);font-weight:600;background:#0e1628}
+  table.tt tr.cur td{background:#2a2210}
+  .ok1{color:var(--green)}.bad1{color:var(--red)}.dim{color:var(--dim)}
+  .scroll{overflow-x:auto;max-width:100%}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .note{font-size:12.5px;color:var(--dim);border-left:3px solid var(--amber);padding:4px 10px;margin-top:10px}
+  .chk{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--dim)}
+  .chk input{accent-color:var(--amber)}
+  .ctl button{font-family:var(--mono)}
+  input[type=number],input.num,select{background:#0a0f1c;border:1px solid #2a3a5c;color:var(--text);border-radius:6px;padding:4px 6px;font-family:var(--mono);font-size:13px;width:74px}
+  select{width:auto}
+  .seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+  .seg button{padding:5px 10px}
+  .mono{font-family:var(--mono)}
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+  .arr{color:var(--dim);font-family:var(--mono);flex:none}
+  .fb{border:1px solid #2a3a5c;border-radius:8px;padding:7px 10px;background:#0a0f1c;font-family:var(--mono);font-size:13px;transition:all .3s;min-width:0;overflow-wrap:anywhere}
+  .fb small{display:block;color:var(--dim);font-size:11.5px;font-family:inherit}
+  .fb.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber);box-shadow:0 0 0 2px #f5b94233}
+  .fb.done{border-color:var(--teal);color:var(--teal)}
+  .fb.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .fb.off{opacity:.35}
+  .cells{display:flex;flex-wrap:wrap;gap:4px}
+  .cell{min-width:38px;height:30px;padding:0 6px;border:1px solid #2a3a5c;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;background:#0a0f1c;transition:all .25s}
+  .cell.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber)}
+  .cell.w{border-color:#3b6aa8;color:var(--blue)}.cell.bb{border-color:#7a5a2a;color:var(--amber)}
+.goals ol{margin:4px 0 0 18px;padding:0;font-size:13.5px;line-height:1.75;color:var(--text)}
+.goals ol li b{color:var(--amber)}
+#quiz .q{margin:0 0 8px;font-size:14px;line-height:1.55}
+#quiz .opts{display:flex;flex-direction:column;gap:6px}
+#quiz .opts button{text-align:left;background:#0b1220;border:1px solid #334155;color:var(--text);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer}
+#quiz .opts button:hover:not(:disabled){border-color:var(--teal)}
+#quiz .opts button.ok{border-color:#34d399;background:#0f2a22;color:#6ee7b7}
+#quiz .opts button.no{border-color:#f87171;background:#2a1215;color:#fca5a5}
+#quiz .why{margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--text)}
+.tagrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:12px;color:var(--dim)}
+.kv .wait{grid-column:1/-1;color:var(--dim);font-size:12.5px}
+
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;app&quot;&gt;
+&lt;div id=&quot;root&quot;&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;script&gt;
+
+const $=s=&gt;document.querySelector(s), $$=s=&gt;[...document.querySelectorAll(s)];
+const RM=window.matchMedia&amp;&amp;window.matchMedia(&#x27;(prefers-reduced-motion: reduce)&#x27;).matches;
+const sleep=ms=&gt;new Promise(r=&gt;setTimeout(r,RM?Math.min(ms,80):ms));
+let busy=false, timer=null;
+function setStatus(c,m){const s=$(&#x27;#status&#x27;);s.className=&#x27;status &#x27;+c;s.innerHTML=m;}
+function setCode(h){$(&#x27;#code&#x27;).innerHTML=h;}
+function fitCanvas(c){const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;const w=Math.max(10,Math.round(r.width*d)),h=Math.max(10,Math.round(r.height*d));if(c.width!==w||c.height!==h){c.width=w;c.height=h;}const g=c.getContext(&#x27;2d&#x27;);g.setTransform(d,0,0,d,0,0);return [g,r.width,r.height];}
+function initPresets(P,stop){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;if(stop)stop();$$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#explain&#x27;).innerHTML=P[i].ex;try{await P[i].run();}finally{busy=false;}});}
+const esc=s=&gt;String(s).replace(/&amp;/g,&#x27;&amp;amp;&#x27;).replace(/&lt;/g,&#x27;&amp;lt;&#x27;).replace(/&gt;/g,&#x27;&amp;gt;&#x27;);
+const fmt=n=&gt;n.toLocaleString(&#x27;en-US&#x27;);
+function stopTimer(){if(timer){clearInterval(timer);timer=null;}}
+/* Day 2 · 3 공통 — 교시 흐름 (노트북 순서) + 먼저 예측 + 실측 공개 */
+const K={b:&#x27;#60a5fa&#x27;,a:&#x27;#f59e0b&#x27;,g:&#x27;#34d399&#x27;,r:&#x27;#f87171&#x27;,p:&#x27;#c084fc&#x27;,t:&#x27;#2dd4bf&#x27;,d:&#x27;#8a9bb8&#x27;,x:&#x27;#dbe4f0&#x27;,l:&#x27;#334155&#x27;,bg:&#x27;#111a2e&#x27;,z:&#x27;#1f2b45&#x27;};
+let R=false, CUR=null;
+function layout(o){document.getElementById(&#x27;root&#x27;).innerHTML=`
+&lt;h1&gt;${o.h1}&lt;/h1&gt;&lt;p class=&quot;sub&quot;&gt;${o.sub}&lt;/p&gt;
+&lt;div class=&quot;panel goals&quot;&gt;&lt;h2&gt;이 교시에서 배우는 것&lt;/h2&gt;&lt;ol&gt;${o.goals.map(g=&gt;`&lt;li&gt;${g}&lt;/li&gt;`).join(&#x27;&#x27;)}&lt;/ol&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;교시 흐름 — 노트북 순서대로 (누르면 재생)&lt;/h2&gt;&lt;div class=&quot;presets&quot; id=&quot;presets&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2 id=&quot;vt&quot;&gt;그림&lt;/h2&gt;&lt;canvas id=&quot;cv&quot; style=&quot;height:${o.h||250}px&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+&lt;div class=&quot;grid&quot;&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;🤔 먼저 예측 — 고르면 실측값이 나옵니다&lt;/h2&gt;&lt;div id=&quot;quiz&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;강사 실측 (노트북 실행 결과)&lt;/h2&gt;&lt;div class=&quot;kv&quot; id=&quot;kv&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;노트북 코드&lt;/h2&gt;&lt;div class=&quot;code&quot; id=&quot;code&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;상태&lt;/h2&gt;&lt;div class=&quot;status info&quot; id=&quot;status&quot;&gt;단계를 누르세요.&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;panel explain&quot; id=&quot;explain&quot;&gt;&lt;/div&gt;`;}
+function showKV(rows){$(&#x27;#kv&#x27;).innerHTML=rows.map(([k,v])=&gt;`&lt;span&gt;${k}&lt;/span&gt;&lt;b&gt;${v}&lt;/b&gt;`).join(&#x27;&#x27;);}
+function reveal(){if(!CUR||R)return;R=true;showKV(CUR.kv);setCode(CUR.code);$(&#x27;#explain&#x27;).innerHTML=CUR.ex;if(CUR.st)setStatus(CUR.st[0],CUR.st[1]);if(window.draw)draw();}
+function ask(q){const [qs,opts,ans,why]=q;
+  $(&#x27;#quiz&#x27;).innerHTML=`&lt;p class=&quot;q&quot;&gt;${qs}&lt;/p&gt;&lt;div class=&quot;opts&quot;&gt;${opts.map((o,i)=&gt;`&lt;button type=&quot;button&quot; data-i=&quot;${i}&quot;&gt;${o}&lt;/button&gt;`).join(&#x27;&#x27;)}&lt;/div&gt;&lt;p class=&quot;why&quot; hidden&gt;&lt;/p&gt;`;
+  $$(&#x27;#quiz .opts button&#x27;).forEach(b=&gt;b.onclick=()=&gt;{const i=+b.dataset.i;$$(&#x27;#quiz .opts button&#x27;).forEach((x,j)=&gt;{x.disabled=true;x.classList.toggle(&#x27;ok&#x27;,j===ans);x.classList.toggle(&#x27;no&#x27;,j===i&amp;&amp;i!==ans);});
+    const w=$(&#x27;#quiz .why&#x27;);w.hidden=false;w.innerHTML=(i===ans?&#x27;✅ 맞았습니다. &#x27;:&#x27;❌ 다시 생각해 봅시다. &#x27;)+why;reveal();});}
+function steps(P){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;stopTimer();const p=P[i];CUR=p;R=false;
+    $$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#vt&#x27;).textContent=p.vt||p.n;$(&#x27;#explain&#x27;).innerHTML=&#x27;&lt;p class=&quot;dim&quot;&gt;예측을 고르면 이 단계의 해설이 나타납니다.&lt;/p&gt;&#x27;;setCode(&#x27;&lt;span class=&quot;c&quot;&gt;# 예측을 고르면 이 단계의 노트북 코드가 나타납니다&lt;/span&gt;&#x27;);
+    $(&#x27;#kv&#x27;).innerHTML=&#x27;&lt;span class=&quot;wait&quot;&gt;왼쪽 위 예측을 먼저 고르세요 — 고르면 실측값이 나타납니다.&lt;/span&gt;&#x27;;setStatus(&#x27;info&#x27;,p.s0||&#x27;애니메이션을 보고 예측을 골라 보세요.&#x27;);ask(p.q);
+    try{await p.run();}finally{busy=false;}});
+  $(&#x27;#presets button&#x27;).click();}
+function cv(){const [g,W,H]=fitCanvas($(&#x27;#cv&#x27;));g.clearRect(0,0,W,H);g.textAlign=&#x27;left&#x27;;g.lineWidth=1;return [g,W,H];}
+function box(g,x,y,w,h,t,c,sub,on){g.fillStyle=on?c+&#x27;33&#x27;:K.bg;g.strokeStyle=c;g.lineWidth=on?2.5:1.2;g.beginPath();g.roundRect(x,y,w,h,7);g.fill();g.stroke();g.lineWidth=1;
+  g.fillStyle=K.x;g.font=&#x27;12px sans-serif&#x27;;g.textAlign=&#x27;center&#x27;;g.fillText(t,x+w/2,y+h/2+(sub?-3:4));if(sub){g.fillStyle=K.d;g.font=&#x27;10.5px sans-serif&#x27;;g.fillText(sub,x+w/2,y+h/2+12);}g.textAlign=&#x27;left&#x27;;}
+function arr(g,x1,y1,x2,y2,c){g.strokeStyle=c||K.d;g.fillStyle=c||K.d;g.lineWidth=1.5;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();const a=Math.atan2(y2-y1,x2-x1);g.beginPath();g.moveTo(x2,y2);g.lineTo(x2-8*Math.cos(a-.4),y2-8*Math.sin(a-.4));g.lineTo(x2-8*Math.cos(a+.4),y2-8*Math.sin(a+.4));g.fill();g.lineWidth=1;}
+function txt(g,s,x,y,c,f,al){g.fillStyle=c||K.x;g.font=f||&#x27;12px sans-serif&#x27;;g.textAlign=al||&#x27;left&#x27;;g.fillText(s,x,y);g.textAlign=&#x27;left&#x27;;}
+function hbar(g,x,y,w,h,frac,c,label,val){g.fillStyle=K.z;g.fillRect(x,y,w,h);g.fillStyle=c;g.fillRect(x,y,Math.max(0,w*Math.min(1,frac)),h);if(label)txt(g,label,x-6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;,&#x27;right&#x27;);if(val)txt(g,val,x+w*Math.min(1,frac)+6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;);}
+async function tween(n,ms,f){for(let k=1;k&lt;=n;k++){f(k/n);await sleep(ms);}}
+window.__d5={};
+
+layout({h1:&#x27;torch-pruning — 의존성을 도구가 따라간다&#x27;,sub:&#x27;5교시 노트북 순서: DependencyGraph 로 함께 잘릴 곳 찾기 (예제 5-A) → MetaPruner · MACs (5-1) → ignored_layers → 비율별 표 (5-2).&#x27;,
+ goals:[&#x27;&lt;b&gt;DependencyGraph&lt;/b&gt; 가 residual 로 묶인 채널을 찾아 &lt;b&gt;group&lt;/b&gt; 으로 함께 자른다&#x27;,&#x27;&lt;b&gt;MetaPruner&lt;/b&gt; = 모든 group 의 중요도 (L1) 를 매겨 비율만큼 자동으로 · &lt;b&gt;ignored_layers&lt;/b&gt; 로 fc 출력을 지킨다&#x27;,&#x27;채널을 r 만큼 자르면 &lt;b&gt;MACs 는 약 (1 − r)²&lt;/b&gt; — fine-tuning 전 정확도는 무너진다&#x27;]});
+let S=0,T=0;
+function draw(){const [g,W,H]=cv();const u=W/100;
+ if(S===0){txt(g,&#x27;개념도 — layer1 의 residual 통로 (16채널). layer1[0].conv2 의 출력 채널 2개를 자르면&#x27;,2*u,20,K.d);
+  const N=[&#x27;stem.0&#x27;,&#x27;L1.0.conv1&#x27;,&#x27;L1.0.conv2&#x27;,&#x27;L1.1.conv1&#x27;,&#x27;L1.1.conv2&#x27;,&#x27;L1.2.conv1&#x27;,&#x27;L1.2.conv2&#x27;,&#x27;L2.0.conv1&#x27;,&#x27;L2.0.shortcut&#x27;];
+  N.forEach((n,i)=&gt;{const on=R?i/9&lt;=T:i===2;box(g,2*u+(i%5)*19.5*u,40+Math.floor(i/5)*56,17.5*u,40,n,on?K.g:K.l,on?(i===2?&#x27;출력 −2&#x27;:(/conv1|shortcut/.test(n)?&#x27;입력 −2&#x27;:&#x27;출력 −2&#x27;)):&#x27;&#x27;,on);});
+  txt(g,R?&#x27;group 항목 20개 · 그중 Conv2d 9개 (+ BN 등) — 통로 전체가 함께 14채널이 된다&#x27;:&#x27;함께 바뀌는 Conv 는 몇 개?&#x27;,2*u,176,R?K.x:K.a,&#x27;13px sans-serif&#x27;);txt(g,R?&#x27;채널 2개만 잘랐는데 정확도 0.846 → 0.634 — 통로 채널은 모든 블록이 쓰는 중요한 채널&#x27;:&#x27;&#x27;,2*u,202,K.a,&#x27;12.5px sans-serif&#x27;);txt(g,&#x27;4교시에 손으로 하다 오류가 났던 작업을 그래프가 대신한다&#x27;,2*u,228,K.d,&#x27;12px sans-serif&#x27;);}
+ if(S===1){txt(g,&#x27;prune_channels(rn20, 0.5) — MetaPruner 한 번&#x27;,2*u,20,K.d);
+  hbar(g,30*u,40,50*u,22,T,K.b,&#x27;FP32 · MACs&#x27;,&#x27;41.2M&#x27;);hbar(g,30*u,68,50*u,22,(R?10.53/41.24:0)*T,K.g,&#x27;structured 50% · MACs&#x27;,R?&#x27;10.5M (26%)&#x27;:&#x27;?&#x27;);
+  hbar(g,30*u,116,50*u,22,T,K.b,&#x27;FP32 · params&#x27;,&#x27;272,474&#x27;);hbar(g,30*u,144,50*u,22,(R?68786/272474:0)*T,K.g,&#x27;structured 50% · params&#x27;,R?&#x27;68,786 (25%)&#x27;:&#x27;?&#x27;);
+  txt(g,&#x27;Conv 의 MACs = H × W × C_out × C_in × k²&#x27;,2*u,198,K.x,&#x27;12.5px monospace&#x27;);txt(g,R?&#x27;C_in · C_out 이 모두 절반 → 1/2 × 1/2 = 1/4&#x27;:&#x27;&#x27;,2*u,222,K.a,&#x27;12.5px sans-serif&#x27;);}
+ if(S===2){txt(g,&#x27;p50 의 마지막 층 — ignored_layers=[model.fc]&#x27;,2*u,20,K.d);
+  box(g,2*u,44,26*u,50,&#x27;layer3 출력&#x27;,K.b,&#x27;64 → 32 채널&#x27;);arr(g,28*u,69,38*u,69);box(g,38*u,44,26*u,50,&#x27;fc&#x27;,K.g,R?&#x27;Linear(32 → 10)&#x27;:&#x27;Linear(? → ?)&#x27;,true);arr(g,64*u,69,74*u,69);box(g,74*u,44,22*u,50,&#x27;클래스 10개&#x27;,K.a,R?&#x27;그대로&#x27;:&#x27;?&#x27;,T&gt;.6);
+  txt(g,R?&#x27;ignored_layers 는 fc 의 &quot;출력&quot; 을 지킨다 — 입력 (64 → 32) 은 앞 층을 따라 줄어든다&#x27;:&#x27;&#x27;,2*u,134,K.x,&#x27;12.5px sans-serif&#x27;);txt(g,&#x27;importance = tp.importance.MagnitudeImportance(p=1) — group 안 weight 의 L1-norm 합 (4교시 filter_l1 의 일반화)&#x27;,2*u,170,K.d,&#x27;12px sans-serif&#x27;);txt(g,&#x27;pruning_ratio 는 채널 수 기준&#x27;,2*u,196,K.d,&#x27;12px sans-serif&#x27;);}
+ if(S===3){txt(g,&#x27;tp_df — 비율별 (fine-tuning 전)&#x27;,2*u,20,K.d);
+  [[0,41.2,.846],[.2,24.9,.2415],[.4,14.2,.101],[.6,6.2,.100]].forEach(([r,m,a],i)=&gt;{const y=38+i*46;txt(g,Math.round(r*100)+&#x27;%&#x27;,2*u,y+24,K.x,&#x27;bold 13px sans-serif&#x27;);hbar(g,24*u,y,44*u,17,m/41.2*T,K.b,&#x27;MACs&#x27;,m+&#x27;M&#x27;);hbar(g,24*u,y+20,44*u,17,(i&amp;&amp;!R?0:a)*T,i?K.r:K.g,&#x27;정확도&#x27;,i&amp;&amp;!R?&#x27;?&#x27;:a.toFixed(4));});
+  txt(g,R?&#x27;통로 (residual) 채널까지 자르므로 20% 만 잘라도 0.24 — 4교시 &quot;안쪽만 25%&quot; 는 0.50 이었다&#x27;:&#x27;&#x27;,2*u,236,K.a,&#x27;12.5px sans-serif&#x27;);}
+}
+async function play(s,ms,n){S=s;await tween(n||20,ms||80,t=&gt;{T=t;draw();});}
+steps([
+ {n:&#x27;① 예제 5-A — DependencyGraph&#x27;,vt:&#x27;함께 잘리는 묶음&#x27;,run:()=&gt;play(0,250,9),
+  q:[&#x27;layer1[0].conv2 의 출력 채널 2개를 자르려 합니다. 함께 바뀌어야 하는 Conv 는 모두 몇 개일까요?&#x27;,[&#x27;1개 — 그 conv2 만&#x27;,&#x27;3개 — 그 블록의 conv1 · conv2 · 다음 블록의 conv1&#x27;,&#x27;9개 — stem 부터 layer2[0] 의 입력까지&#x27;],2,&#x27;layer1 의 세 블록은 모두 같은 통로 (stem 출력 16채널) 에 덧셈으로 연결됩니다. stem · 세 블록의 conv2 (출력) · conv1 (입력) · layer2[0] 의 conv1 과 shortcut (입력) 까지 9개가 함께 바뀝니다.&#x27;],
+  kv:[[&#x27;group&#x27;,&#x27;항목 20개 · Conv2d 9개&#x27;],[&#x27;자른 뒤&#x27;,&#x27;stem 출력 16 → 14&#x27;],[&#x27;정확도&#x27;,&#x27;0.846 → 0.634 (채널 2개)&#x27;]],st:[&#x27;ok&#x27;,&#x27;residual 통로 전체가 한 묶음&#x27;],
+  code:`DG = tp.DependencyGraph().build_dependency(m_dg, example_inputs=EX_IN)\ngroup = DG.&lt;span class=&quot;hl&quot;&gt;get_pruning_group&lt;/span&gt;(m_dg.layer1[0].conv2, tp.prune_conv_out_channels, idxs=[0, 1])\ngroup.prune()`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;제공 코드 (실행만)&lt;/b&gt;: 예시 입력 하나를 흘려 연산 그래프를 따라가며 &quot;이 채널을 자르면 함께 잘라야 하는 모든 곳&quot; 을 찾습니다. 출력된 Conv 이름 9개를 4교시의 오류와 연결해 보세요.&lt;/p&gt;&#x27;},
+ {n:&#x27;② 실습 5-1 — MetaPruner · MACs&#x27;,vt:&#x27;채널 50% 를 자동으로&#x27;,run:()=&gt;play(1),
+  q:[&#x27;모든 층의 채널을 50% 줄이면 MACs (곱셈-누산 횟수) 는 원래의 몇 % 가 될까요?&#x27;,[&#x27;약 75%&#x27;,&#x27;약 50%&#x27;,&#x27;약 25%&#x27;],2,&#x27;Conv 의 MACs 는 C_in × C_out 에 비례합니다. 둘 다 절반이면 1/4 입니다. 실측 41.2M → 10.5M (26%), params 272,474 → 68,786 (25%).&#x27;],
+  kv:[[&#x27;MACs&#x27;,&#x27;41.2M → 10.5M (26%)&#x27;],[&#x27;params&#x27;,&#x27;272,474 → 68,786 (25%)&#x27;],[&#x27;규칙&#x27;,&#x27;채널 r → MACs 약 (1 − r)²&#x27;]],st:[&#x27;ok&#x27;,&#x27;채널 절반 = 계산 1/4&#x27;],
+  code:`def make_pruner(model, ratio, steps=1):\n    return tp.pruner.&lt;span class=&quot;hl&quot;&gt;MetaPruner&lt;/span&gt;(model, EX_IN, importance=tp.importance.MagnitudeImportance(p=1),\n                                pruning_ratio=ratio, iterative_steps=steps, ignored_layers=[model.fc])\n\ndef prune_channels(model, ratio):\n    m = copy.deepcopy(model).cpu().eval()\n    make_pruner(m, ratio).step()\n    return m`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: &lt;code&gt;make_pruner&lt;/code&gt; 는 6교시 iterative (steps=3) 에서 다시 씁니다. &lt;code&gt;tp.utils.count_ops_and_params&lt;/code&gt; 로 MACs · params 를 셉니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;③ 개념 — ignored_layers&#x27;,vt:&#x27;자르면 안 되는 곳&#x27;,run:()=&gt;play(2),
+  q:[&#x27;ignored_layers=[model.fc] 로 50% 를 자른 모델의 fc 는 어떤 모양일까요? (원래 Linear(64 → 10))&#x27;,[&#x27;Linear(64 → 10) — fc 는 전혀 바뀌지 않는다&#x27;,&#x27;Linear(32 → 10) — 입력만 줄어든다&#x27;,&#x27;Linear(32 → 5) — 입력 · 출력 모두 줄어든다&#x27;],1,&#x27;ignored_layers 는 그 층의 &quot;출력 채널&quot; 을 자르지 않게 합니다 — 클래스 10개는 지켜야 합니다. 입력 (64 → 32) 은 앞 층의 출력이 줄었으므로 의존성에 따라 함께 줄어듭니다.&#x27;],
+  kv:[[&#x27;fc&#x27;,&#x27;Linear(64 → 10) → Linear(32 → 10)&#x27;],[&#x27;중요도&#x27;,&#x27;MagnitudeImportance(p=1) — L1&#x27;],[&#x27;ratio&#x27;,&#x27;채널 수 기준&#x27;]],st:[&#x27;info&#x27;,&#x27;출력 클래스 수는 지킨다&#x27;],
+  code:`print(p50.fc)                &lt;span class=&quot;c&quot;&gt;# Linear(in_features=32, out_features=10, bias=True)&lt;/span&gt;\nprint(p50.layer3[0].conv1)   &lt;span class=&quot;c&quot;&gt;# Conv2d(16, 32, kernel_size=(3, 3), stride=(2, 2), ...)&lt;/span&gt;`,
+  ex:&#x27;&lt;p&gt;검출 모델이라면 head 의 출력 (클래스 · 박스 수) 을 ignored_layers 에 넣습니다. 지켜야 하는 층을 빠뜨리면 출력 모양이 바뀌어 버립니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;④ 실습 5-2 — 비율별 표&#x27;,vt:&#x27;fine-tuning 전 정확도&#x27;,run:()=&gt;play(3),
+  q:[&#x27;torch-pruning 으로 채널 20% 만 잘랐습니다. fine-tuning 전 정확도는? (FP32 0.846)&#x27;,[&#x27;약 0.80 — 조금 떨어진다&#x27;,&#x27;약 0.24 — 크게 무너진다&#x27;,&#x27;0.846 — 20% 는 영향이 없다&#x27;],1,&#x27;0.2415 입니다. 40% · 60% 는 0.10 (무작위) 입니다. 통로 (residual) 채널까지 자르기 때문에 4교시의 &quot;블록 안쪽만&quot; 보다 훨씬 많이 떨어집니다. structured pruning 은 fine-tuning 과 한 세트입니다 → 6교시.&#x27;],
+  kv:[[&#x27;20%&#x27;,&#x27;MACs 24.9M · 0.2415&#x27;],[&#x27;40% · 60%&#x27;,&#x27;14.2M · 0.101 / 6.2M · 0.100&#x27;],[&#x27;지연&#x27;,&#x27;줄어든다 (값은 노트북에서 측정)&#x27;]],st:[&#x27;warn&#x27;,&#x27;MACs 는 줄었지만 정확도가 무너졌다&#x27;],
+  code:`rows = []\nfor r in [0.0, 0.2, 0.4, 0.6]:\n    m = prune_channels(rn20, r) if r &gt; 0 else rn20\n    macs, params = tp.utils.count_ops_and_params(m, EX_IN)\n    rows.append({&quot;ratio&quot;: r, &quot;macs_m&quot;: macs / 1e6, &quot;params&quot;: int(params), &quot;acc&quot;: acc_torch(m), &quot;latency_ms&quot;: latency_torch(m)})\ntp_df = pd.DataFrame(rows)`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: 작은 모델은 MACs 가 줄어도 층마다 드는 고정 비용 때문에 지연이 MACs 만큼 줄지는 않습니다 — &lt;code&gt;latency_ms&lt;/code&gt; 열에서 확인하세요.&lt;/p&gt;&#x27;},
+]);
+
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe></section>
+<section class="lesson" id="d5-6" data-title="D5-6 fine-tuning 과 iterative"><iframe title="D5-6 fine-tuning 과 iterative" loading="lazy" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;ko&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+&lt;title&gt;fine-tuning 과 iterative — Quantization·Pruning Day 5&lt;/title&gt;
+&lt;style&gt;
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:&quot;Consolas&quot;,&quot;D2Coding&quot;,&quot;JetBrains Mono&quot;,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:&quot;Pretendard&quot;,&quot;Noto Sans KR&quot;,&quot;Segoe UI&quot;,sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  @media(max-width:520px){.app{padding:16px 12px 30px}}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .sub code,.explain code,.note code{font-family:var(--mono);color:var(--blue)}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono);max-width:100%;overflow-wrap:anywhere}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.red{color:var(--red);border-color:var(--red)}.pill.green{color:var(--green);border-color:var(--green)}.pill.purple{color:var(--purple);border-color:var(--purple)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;min-width:0}
+  @media(max-width:520px){.panel{padding:12px 10px}}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.run{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700}
+  button.sel{background:#123d33;border-color:var(--teal);color:var(--teal)}
+  button:disabled{opacity:.4;cursor:default}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .grid{display:grid;grid-template-columns:1.25fr 1fr;gap:14px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .grid&gt;*{min-width:0}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.two{grid-template-columns:1fr}}
+  .two&gt;*{min-width:0}
+  canvas{width:100%;display:block;background:#0a0f1c;border:1px solid var(--line);border-radius:8px}
+  svg{max-width:100%}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+  .lab{font-size:13px;color:var(--dim)}
+  .sl{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;margin:8px 0}
+  .sl label{color:var(--amber);width:70px;flex:none}
+  .sl input{flex:1;min-width:60px;accent-color:var(--amber)}
+  .sl output{width:64px;text-align:right;flex:none}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-family:var(--mono);font-size:13.5px}
+  .kv span:nth-child(odd){color:var(--dim)}
+  .kv b{font-weight:600;overflow-wrap:anywhere}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;white-space:pre-wrap;min-height:64px;overflow-wrap:anywhere}
+  .code .g{color:var(--green)}.code .e{color:var(--red)}.code .c{color:#5d7292}.code .a{color:var(--amber)}.code .b{color:var(--blue)}.code .t{color:var(--teal)}
+  .code .hl{background:#3a2e12;color:var(--amber);border-radius:3px;padding:0 2px}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px;overflow-wrap:anywhere;white-space:pre-line}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}.explain b.purple{color:var(--purple)}
+  table.tt{border-collapse:collapse;font-family:var(--mono);font-size:13px;width:100%}
+  table.tt th,table.tt td{border:1px solid var(--line);padding:4px 6px;text-align:center}
+  table.tt th{color:var(--dim);font-weight:600;background:#0e1628}
+  table.tt tr.cur td{background:#2a2210}
+  .ok1{color:var(--green)}.bad1{color:var(--red)}.dim{color:var(--dim)}
+  .scroll{overflow-x:auto;max-width:100%}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .note{font-size:12.5px;color:var(--dim);border-left:3px solid var(--amber);padding:4px 10px;margin-top:10px}
+  .chk{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--dim)}
+  .chk input{accent-color:var(--amber)}
+  .ctl button{font-family:var(--mono)}
+  input[type=number],input.num,select{background:#0a0f1c;border:1px solid #2a3a5c;color:var(--text);border-radius:6px;padding:4px 6px;font-family:var(--mono);font-size:13px;width:74px}
+  select{width:auto}
+  .seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+  .seg button{padding:5px 10px}
+  .mono{font-family:var(--mono)}
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+  .arr{color:var(--dim);font-family:var(--mono);flex:none}
+  .fb{border:1px solid #2a3a5c;border-radius:8px;padding:7px 10px;background:#0a0f1c;font-family:var(--mono);font-size:13px;transition:all .3s;min-width:0;overflow-wrap:anywhere}
+  .fb small{display:block;color:var(--dim);font-size:11.5px;font-family:inherit}
+  .fb.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber);box-shadow:0 0 0 2px #f5b94233}
+  .fb.done{border-color:var(--teal);color:var(--teal)}
+  .fb.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .fb.off{opacity:.35}
+  .cells{display:flex;flex-wrap:wrap;gap:4px}
+  .cell{min-width:38px;height:30px;padding:0 6px;border:1px solid #2a3a5c;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;background:#0a0f1c;transition:all .25s}
+  .cell.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber)}
+  .cell.w{border-color:#3b6aa8;color:var(--blue)}.cell.bb{border-color:#7a5a2a;color:var(--amber)}
+.goals ol{margin:4px 0 0 18px;padding:0;font-size:13.5px;line-height:1.75;color:var(--text)}
+.goals ol li b{color:var(--amber)}
+#quiz .q{margin:0 0 8px;font-size:14px;line-height:1.55}
+#quiz .opts{display:flex;flex-direction:column;gap:6px}
+#quiz .opts button{text-align:left;background:#0b1220;border:1px solid #334155;color:var(--text);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer}
+#quiz .opts button:hover:not(:disabled){border-color:var(--teal)}
+#quiz .opts button.ok{border-color:#34d399;background:#0f2a22;color:#6ee7b7}
+#quiz .opts button.no{border-color:#f87171;background:#2a1215;color:#fca5a5}
+#quiz .why{margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--text)}
+.tagrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:12px;color:var(--dim)}
+.kv .wait{grid-column:1/-1;color:var(--dim);font-size:12.5px}
+
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;app&quot;&gt;
+&lt;div id=&quot;root&quot;&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;script&gt;
+
+const $=s=&gt;document.querySelector(s), $$=s=&gt;[...document.querySelectorAll(s)];
+const RM=window.matchMedia&amp;&amp;window.matchMedia(&#x27;(prefers-reduced-motion: reduce)&#x27;).matches;
+const sleep=ms=&gt;new Promise(r=&gt;setTimeout(r,RM?Math.min(ms,80):ms));
+let busy=false, timer=null;
+function setStatus(c,m){const s=$(&#x27;#status&#x27;);s.className=&#x27;status &#x27;+c;s.innerHTML=m;}
+function setCode(h){$(&#x27;#code&#x27;).innerHTML=h;}
+function fitCanvas(c){const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;const w=Math.max(10,Math.round(r.width*d)),h=Math.max(10,Math.round(r.height*d));if(c.width!==w||c.height!==h){c.width=w;c.height=h;}const g=c.getContext(&#x27;2d&#x27;);g.setTransform(d,0,0,d,0,0);return [g,r.width,r.height];}
+function initPresets(P,stop){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;if(stop)stop();$$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#explain&#x27;).innerHTML=P[i].ex;try{await P[i].run();}finally{busy=false;}});}
+const esc=s=&gt;String(s).replace(/&amp;/g,&#x27;&amp;amp;&#x27;).replace(/&lt;/g,&#x27;&amp;lt;&#x27;).replace(/&gt;/g,&#x27;&amp;gt;&#x27;);
+const fmt=n=&gt;n.toLocaleString(&#x27;en-US&#x27;);
+function stopTimer(){if(timer){clearInterval(timer);timer=null;}}
+/* Day 2 · 3 공통 — 교시 흐름 (노트북 순서) + 먼저 예측 + 실측 공개 */
+const K={b:&#x27;#60a5fa&#x27;,a:&#x27;#f59e0b&#x27;,g:&#x27;#34d399&#x27;,r:&#x27;#f87171&#x27;,p:&#x27;#c084fc&#x27;,t:&#x27;#2dd4bf&#x27;,d:&#x27;#8a9bb8&#x27;,x:&#x27;#dbe4f0&#x27;,l:&#x27;#334155&#x27;,bg:&#x27;#111a2e&#x27;,z:&#x27;#1f2b45&#x27;};
+let R=false, CUR=null;
+function layout(o){document.getElementById(&#x27;root&#x27;).innerHTML=`
+&lt;h1&gt;${o.h1}&lt;/h1&gt;&lt;p class=&quot;sub&quot;&gt;${o.sub}&lt;/p&gt;
+&lt;div class=&quot;panel goals&quot;&gt;&lt;h2&gt;이 교시에서 배우는 것&lt;/h2&gt;&lt;ol&gt;${o.goals.map(g=&gt;`&lt;li&gt;${g}&lt;/li&gt;`).join(&#x27;&#x27;)}&lt;/ol&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;교시 흐름 — 노트북 순서대로 (누르면 재생)&lt;/h2&gt;&lt;div class=&quot;presets&quot; id=&quot;presets&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2 id=&quot;vt&quot;&gt;그림&lt;/h2&gt;&lt;canvas id=&quot;cv&quot; style=&quot;height:${o.h||250}px&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+&lt;div class=&quot;grid&quot;&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;🤔 먼저 예측 — 고르면 실측값이 나옵니다&lt;/h2&gt;&lt;div id=&quot;quiz&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;강사 실측 (노트북 실행 결과)&lt;/h2&gt;&lt;div class=&quot;kv&quot; id=&quot;kv&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;노트북 코드&lt;/h2&gt;&lt;div class=&quot;code&quot; id=&quot;code&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;상태&lt;/h2&gt;&lt;div class=&quot;status info&quot; id=&quot;status&quot;&gt;단계를 누르세요.&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;panel explain&quot; id=&quot;explain&quot;&gt;&lt;/div&gt;`;}
+function showKV(rows){$(&#x27;#kv&#x27;).innerHTML=rows.map(([k,v])=&gt;`&lt;span&gt;${k}&lt;/span&gt;&lt;b&gt;${v}&lt;/b&gt;`).join(&#x27;&#x27;);}
+function reveal(){if(!CUR||R)return;R=true;showKV(CUR.kv);setCode(CUR.code);$(&#x27;#explain&#x27;).innerHTML=CUR.ex;if(CUR.st)setStatus(CUR.st[0],CUR.st[1]);if(window.draw)draw();}
+function ask(q){const [qs,opts,ans,why]=q;
+  $(&#x27;#quiz&#x27;).innerHTML=`&lt;p class=&quot;q&quot;&gt;${qs}&lt;/p&gt;&lt;div class=&quot;opts&quot;&gt;${opts.map((o,i)=&gt;`&lt;button type=&quot;button&quot; data-i=&quot;${i}&quot;&gt;${o}&lt;/button&gt;`).join(&#x27;&#x27;)}&lt;/div&gt;&lt;p class=&quot;why&quot; hidden&gt;&lt;/p&gt;`;
+  $$(&#x27;#quiz .opts button&#x27;).forEach(b=&gt;b.onclick=()=&gt;{const i=+b.dataset.i;$$(&#x27;#quiz .opts button&#x27;).forEach((x,j)=&gt;{x.disabled=true;x.classList.toggle(&#x27;ok&#x27;,j===ans);x.classList.toggle(&#x27;no&#x27;,j===i&amp;&amp;i!==ans);});
+    const w=$(&#x27;#quiz .why&#x27;);w.hidden=false;w.innerHTML=(i===ans?&#x27;✅ 맞았습니다. &#x27;:&#x27;❌ 다시 생각해 봅시다. &#x27;)+why;reveal();});}
+function steps(P){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;stopTimer();const p=P[i];CUR=p;R=false;
+    $$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#vt&#x27;).textContent=p.vt||p.n;$(&#x27;#explain&#x27;).innerHTML=&#x27;&lt;p class=&quot;dim&quot;&gt;예측을 고르면 이 단계의 해설이 나타납니다.&lt;/p&gt;&#x27;;setCode(&#x27;&lt;span class=&quot;c&quot;&gt;# 예측을 고르면 이 단계의 노트북 코드가 나타납니다&lt;/span&gt;&#x27;);
+    $(&#x27;#kv&#x27;).innerHTML=&#x27;&lt;span class=&quot;wait&quot;&gt;왼쪽 위 예측을 먼저 고르세요 — 고르면 실측값이 나타납니다.&lt;/span&gt;&#x27;;setStatus(&#x27;info&#x27;,p.s0||&#x27;애니메이션을 보고 예측을 골라 보세요.&#x27;);ask(p.q);
+    try{await p.run();}finally{busy=false;}});
+  $(&#x27;#presets button&#x27;).click();}
+function cv(){const [g,W,H]=fitCanvas($(&#x27;#cv&#x27;));g.clearRect(0,0,W,H);g.textAlign=&#x27;left&#x27;;g.lineWidth=1;return [g,W,H];}
+function box(g,x,y,w,h,t,c,sub,on){g.fillStyle=on?c+&#x27;33&#x27;:K.bg;g.strokeStyle=c;g.lineWidth=on?2.5:1.2;g.beginPath();g.roundRect(x,y,w,h,7);g.fill();g.stroke();g.lineWidth=1;
+  g.fillStyle=K.x;g.font=&#x27;12px sans-serif&#x27;;g.textAlign=&#x27;center&#x27;;g.fillText(t,x+w/2,y+h/2+(sub?-3:4));if(sub){g.fillStyle=K.d;g.font=&#x27;10.5px sans-serif&#x27;;g.fillText(sub,x+w/2,y+h/2+12);}g.textAlign=&#x27;left&#x27;;}
+function arr(g,x1,y1,x2,y2,c){g.strokeStyle=c||K.d;g.fillStyle=c||K.d;g.lineWidth=1.5;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();const a=Math.atan2(y2-y1,x2-x1);g.beginPath();g.moveTo(x2,y2);g.lineTo(x2-8*Math.cos(a-.4),y2-8*Math.sin(a-.4));g.lineTo(x2-8*Math.cos(a+.4),y2-8*Math.sin(a+.4));g.fill();g.lineWidth=1;}
+function txt(g,s,x,y,c,f,al){g.fillStyle=c||K.x;g.font=f||&#x27;12px sans-serif&#x27;;g.textAlign=al||&#x27;left&#x27;;g.fillText(s,x,y);g.textAlign=&#x27;left&#x27;;}
+function hbar(g,x,y,w,h,frac,c,label,val){g.fillStyle=K.z;g.fillRect(x,y,w,h);g.fillStyle=c;g.fillRect(x,y,Math.max(0,w*Math.min(1,frac)),h);if(label)txt(g,label,x-6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;,&#x27;right&#x27;);if(val)txt(g,val,x+w*Math.min(1,frac)+6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;);}
+async function tween(n,ms,f){for(let k=1;k&lt;=n;k++){f(k/n);await sleep(ms);}}
+window.__d5={};
+
+layout({h1:&#x27;fine-tuning 과 iterative — 잘라 낸 모델 되살리기&#x27;,sub:&#x27;6교시 노트북 순서: fine-tuning 설정 → 회복 곡선 (6-1) → iterative pruning (6-2) → 저장과 내일 (Day 6) 로의 연결.&#x27;,
+ goals:[&#x27;fine-tuning = Day 4 train_qat 와 같은 루프, &lt;b&gt;lr 만 1e-2&lt;/b&gt; — 크게 망가진 모델을 다시 세운다&#x27;,&#x27;50% 모델이 3 epoch 로 &lt;b&gt;0.10 → 0.72&lt;/b&gt; 까지 회복 (MACs 25%)&#x27;,&#x27;one-shot vs iterative 는 &lt;b&gt;같은 학습 예산&lt;/b&gt;으로 비교한다 · 구조가 바뀐 모델은 &lt;b&gt;torch.save(model)&lt;/b&gt;&#x27;]});
+let S=0,T=0;
+function draw(){const [g,W,H]=cv();const u=W/100;
+ if(S===0){txt(g,&#x27;같은 학습 루프 — 다른 learning rate&#x27;,2*u,20,K.d);
+  [[&#x27;Day 4 QAT&#x27;,&#x27;lr 1e-3&#x27;,&#x27;거의 다 된 모델을 살짝 다듬는다&#x27;,K.b],[&#x27;오늘 fine-tuning&#x27;,R?&#x27;lr 1e-2&#x27;:&#x27;lr ?&#x27;,&#x27;크게 망가진 모델 (0.10) 을 다시 세운다&#x27;,K.g]].forEach(([a,b,c,col],i)=&gt;{if(i/2&gt;T)return;const y=40+i*64;box(g,2*u,y,24*u,46,a,col,b,true);txt(g,c,29*u,y+28,K.x,&#x27;12.5px sans-serif&#x27;);});
+  txt(g,&#x27;공통: 학습용 10,000장 · 증강 · SGD momentum 0.9 · cosine · 3 epoch&#x27;,2*u,186,K.d,&#x27;12.5px sans-serif&#x27;);txt(g,R?&#x27;강사 실험: lr 1e-3 으로 fine-tuning 하면 0.59 에서 멈춘다&#x27;:&#x27;&#x27;,2*u,212,K.a,&#x27;12.5px sans-serif&#x27;);}
+ if(S===1){const D=[[0,.1],[1,.632],[2,.712],[3,.7225]],x0=10*u,w=64*u,py=a=&gt;H-40-a/.9*(H-78),px=e=&gt;x0+e/3*w;txt(g,&#x27;structured 50% (MACs 25%) — fine-tuning 회복 곡선&#x27;,2*u,20,K.d);
+  [.2,.4,.6,.8].forEach(a=&gt;{g.strokeStyle=K.z;g.beginPath();g.moveTo(x0,py(a));g.lineTo(x0+w,py(a));g.stroke();txt(g,a.toFixed(1),4*u,py(a)+4,K.d,&#x27;10.5px sans-serif&#x27;);});
+  g.strokeStyle=K.x;g.setLineDash([5,4]);g.beginPath();g.moveTo(x0,py(.846));g.lineTo(x0+w,py(.846));g.stroke();g.setLineDash([]);txt(g,&#x27;FP32 0.846&#x27;,x0+w+6,py(.846)+4,K.x,&#x27;11px sans-serif&#x27;);
+  const n=R?Math.min(3,Math.floor(T*3.01)):0;g.strokeStyle=K.g;g.lineWidth=2.5;g.beginPath();D.slice(0,n+1).forEach(([e,a],i)=&gt;i?g.lineTo(px(e),py(a)):g.moveTo(px(e),py(a)));g.stroke();g.lineWidth=1;
+  D.slice(0,n+1).forEach(([e,a])=&gt;{g.fillStyle=e?K.g:K.r;g.beginPath();g.arc(px(e),py(a),5,0,7);g.fill();txt(g,a.toFixed(4),px(e)+8,py(a)+16,K.x,&#x27;11.5px sans-serif&#x27;);});
+  D.forEach(([e])=&gt;txt(g,&#x27;epoch &#x27;+e,px(e)-16,H-20,K.d,&#x27;11px sans-serif&#x27;));if(R&amp;&amp;n&gt;=3)txt(g,&#x27;FP32 와 12.3%p 차이가 남는다 — 10,000장 · 3 epoch 라는 짧은 예산&#x27;,x0,H-2,K.a,&#x27;12px sans-serif&#x27;);}
+ if(S===2){txt(g,&#x27;같은 50% · 같은 총 3 epoch — iterative (자르고 1 epoch × 3)&#x27;,2*u,20,K.d);
+  [[1,27.7,.8135],[2,17.3,.7465],[3,10.5,.68]].forEach(([s,m,a],i)=&gt;{if(i/3&gt;T)return;const x=2*u+i*26*u;box(g,x,36,22*u,44,&#x27;step &#x27;+s,K.p,&#x27;MACs &#x27;+m+&#x27;M&#x27;);txt(g,i===2&amp;&amp;!R?&#x27;?&#x27;:a.toFixed(4),x+7*u,102,K.x,&#x27;bold 14px sans-serif&#x27;);if(i&lt;2)arr(g,x+22*u,58,x+26*u,58);});
+  hbar(g,30*u,130,46*u,22,.7225*T,K.g,&#x27;one-shot (6-1)&#x27;,&#x27;0.7225&#x27;);hbar(g,30*u,158,46*u,22,(R?.68:0)*T,K.p,&#x27;iterative&#x27;,R?&#x27;0.6800&#x27;:&#x27;?&#x27;);
+  txt(g,R?&#x27;마지막 자르기 뒤 회복할 시간이 1 epoch 뿐 — &quot;iterative 가 낫다&quot; 는 단계마다 충분히 학습할 때의 이야기&#x27;:&#x27;&#x27;,2*u,210,K.a,&#x27;12.5px sans-serif&#x27;);txt(g,R?&#x27;중간 단계 (MACs 27.7M · 0.81) 가 가장 쓸 만하다 → 8교시&#x27;:&#x27;&#x27;,2*u,234,K.d,&#x27;12px sans-serif&#x27;);}
+ if(S===3){[[&#x27;torch.save(p50_ft.state_dict())&#x27;,R?&#x27;ResNet() 에 load 하면 모양 오류 — 채널 수가 다르다&#x27;:&#x27;새 ResNet() 에 load 하면?&#x27;,K.r],[&#x27;torch.save(p50_ft, &quot;rn20_p50_ft.pth&quot;)&#x27;,R?&#x27;구조까지 통째로 저장 → torch.load(path, weights_only=False)&#x27;:&#x27;&#x27;,K.g]].forEach(([a,b,c],i)=&gt;{if(i/2&gt;T)return;const y=36+i*70;box(g,2*u,y,44*u,46,a,c,&#x27;&#x27;,true);txt(g,b,48*u,y+28,c===K.r?K.r:K.x,&#x27;12px sans-serif&#x27;);});
+  txt(g,&#x27;rn20_p50_ft.pth (324 KB) → 7교시 배포 · 내일 Day 6 지식 증류 (KD) 의 학생 모델&#x27;,2*u,196,K.x,&#x27;12.5px sans-serif&#x27;);txt(g,&#x27;불러오는 쪽에 같은 ResNet 클래스가 정의되어 있어야 한다&#x27;,2*u,220,K.d,&#x27;12px sans-serif&#x27;);}
+}
+async function play(s,ms,n){S=s;await tween(n||20,ms||80,t=&gt;{T=t;draw();});}
+steps([
+ {n:&#x27;① 개념 — fine-tuning 설정&#x27;,vt:&#x27;QAT 와 무엇이 다른가&#x27;,run:()=&gt;play(0,500,2),
+  q:[&#x27;Day 4 QAT 는 lr 1e-3 을 썼습니다. 정확도 0.10 까지 망가진 pruning 모델의 fine-tuning 에는?&#x27;,[&#x27;더 큰 lr (1e-2)&#x27;,&#x27;같은 lr (1e-3) — 학습 루프가 같으므로&#x27;,&#x27;더 작은 lr (1e-4) — 남은 weight 를 지키도록&#x27;],0,&#x27;QAT 는 거의 다 된 모델을 살짝 다듬지만, 채널을 절반 잃은 모델은 남은 weight 가 빠진 채널의 역할을 다시 나눠 맡아야 합니다. lr 1e-3 이면 0.59 에서 멈춥니다 (강사 실험).&#x27;],
+  kv:[[&#x27;QAT (Day 4)&#x27;,&#x27;lr 1e-3&#x27;],[&#x27;fine-tuning (오늘)&#x27;,&#x27;lr 1e-2&#x27;],[&#x27;공통&#x27;,&#x27;SGD 0.9 · cosine · 3 epoch&#x27;]],st:[&#x27;info&#x27;,&#x27;같은 루프, 다른 learning rate&#x27;],
+  code:`def finetune(model, epochs=EPOCHS, &lt;span class=&quot;hl&quot;&gt;lr=1e-2&lt;/span&gt;, on_epoch=None):\n    model.to(DEV)\n    opt = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=5e-4)\n    ...   &lt;span class=&quot;c&quot;&gt;# Day 4 train_qat 와 같은 구조&lt;/span&gt;`,
+  ex:&#x27;&lt;p&gt;one-shot 은 목표 비율까지 한 번에 자르고 fine-tuning, iterative 는 조금 자르고 fine-tuning 을 반복합니다 — 실습 6-2 에서 비교합니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;② 실습 6-1 — 회복 곡선&#x27;,vt:&#x27;0.10 에서 어디까지&#x27;,run:()=&gt;play(1,400,3),
+  q:[&#x27;채널 50% 를 자른 모델 (정확도 0.10) 을 3 epoch fine-tuning 하면?&#x27;,[&#x27;0.846 — FP32 정확도를 완전히 되찾는다&#x27;,&#x27;약 0.72 — 회복하지만 차이가 남는다&#x27;,&#x27;약 0.30 — 거의 회복하지 못한다&#x27;],1,&#x27;0.10 → 0.632 → 0.712 → 0.7225. MACs 가 1/4 인 모델이 12.3%p 차이까지 따라옵니다. 남은 차이는 짧은 학습 예산 (10,000장 · 3 epoch) 때문이며, 내일 KD 로 더 줄여 봅니다.&#x27;],
+  kv:[[&#x27;epoch 0 → 1&#x27;,&#x27;0.100 → 0.632&#x27;],[&#x27;epoch 2 → 3&#x27;,&#x27;0.712 → 0.7225&#x27;],[&#x27;시간&#x27;,&#x27;약 30초 (CPU)&#x27;]],st:[&#x27;ok&#x27;,&#x27;첫 epoch 에 대부분 회복&#x27;],
+  code:`p50_ft = copy.deepcopy(p50)\nhist = [{&quot;epoch&quot;: 0, &quot;acc&quot;: acc_torch(p50_ft)}]\nt_ft = finetune(p50_ft, on_epoch=lambda ep, m: hist.append({&quot;epoch&quot;: ep + 1, &quot;acc&quot;: acc_torch(m)}))\nhist_df = pd.DataFrame(hist)\ntorch.save(p50_ft.cpu(), &quot;rn20_p50_ft.pth&quot;)`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: &lt;code&gt;finetune&lt;/code&gt; 을 만들고 5-1 의 &lt;code&gt;p50&lt;/code&gt; 을 되살립니다. epoch 0 에는 fine-tuning 전 정확도를 넣습니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;③ 실습 6-2 — iterative&#x27;,vt:&#x27;같은 예산으로 비교&#x27;,run:()=&gt;play(2,400,3),
+  q:[&#x27;같은 50% 를 3단계로 나눠 자르며 단계마다 1 epoch 씩 fine-tuning 했습니다 (총 3 epoch). one-shot (0.7225) 과 비교하면?&#x27;,[&#x27;iterative 가 더 높다 (약 0.78)&#x27;,&#x27;iterative 가 더 낮다 (0.68)&#x27;,&#x27;똑같다 (0.7225)&#x27;],1,&#x27;step 1 (27.7M) 0.8135 → step 2 (17.3M) 0.7465 → step 3 (10.5M) 0.68. 마지막 자르기 뒤 회복 시간이 1 epoch 뿐이라 one-shot 보다 낮습니다. 교과서의 &quot;iterative 가 낫다&quot; 는 단계마다 충분히 학습할 때의 이야기입니다.&#x27;],
+  kv:[[&#x27;iterative&#x27;,&#x27;0.8135 → 0.7465 → 0.6800&#x27;],[&#x27;one-shot&#x27;,&#x27;0.7225&#x27;],[&#x27;조건&#x27;,&#x27;같은 MACs (10.5M) · 같은 3 epoch&#x27;]],st:[&#x27;warn&#x27;,&#x27;짧은 예산에서는 one-shot 이 나았다&#x27;],
+  code:`pruner = make_pruner(m_it, 0.5, &lt;span class=&quot;hl&quot;&gt;steps=3&lt;/span&gt;)\nfor s in range(3):\n    m_it.cpu(); pruner.step()                       &lt;span class=&quot;c&quot;&gt;# 0.5 의 1/3 씩 더 자른다&lt;/span&gt;\n    macs, _ = tp.utils.count_ops_and_params(m_it, EX_IN)\n    finetune(m_it, epochs=1)\n    rows.append({&quot;step&quot;: s + 1, &quot;macs_m&quot;: macs / 1e6, &quot;acc&quot;: acc_torch(m_it)})`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: 방법을 비교할 때는 학습 예산을 맞춰야 공정합니다. 예산을 늘리면 결론이 바뀔 수 있다는 것도 함께 적어 두세요.&lt;/p&gt;&#x27;},
+ {n:&#x27;④ 정리 — 저장&#x27;,vt:&#x27;구조가 바뀐 모델&#x27;,run:()=&gt;play(3,500,2),
+  q:[&#x27;채널 수가 줄어든 p50_ft 를 state_dict 로만 저장했습니다. 새로 만든 ResNet() 에 load_state_dict 하면?&#x27;,[&#x27;모양 오류가 난다&#x27;,&#x27;문제없이 복원된다 — 이름이 같으므로&#x27;,&#x27;복원되지만 잘린 채널이 0 으로 채워진다&#x27;],0,&#x27;새 ResNet() 은 원래 채널 수 (16 · 32 · 64) 로 만들어지므로 weight 모양이 맞지 않습니다. 그래서 torch.save(model) 로 구조까지 통째로 저장합니다. Day 4 의 mto.save 와 같은 이유입니다.&#x27;],
+  kv:[[&#x27;저장&#x27;,&#x27;torch.save(p50_ft.cpu(), &quot;rn20_p50_ft.pth&quot;)&#x27;],[&#x27;불러오기&#x27;,&#x27;torch.load(path, weights_only=False)&#x27;],[&#x27;크기&#x27;,&#x27;324 KB&#x27;]],st:[&#x27;ok&#x27;,&#x27;구조가 바뀌면 구조까지 저장&#x27;],
+  code:`torch.save(p50_ft.cpu(), &quot;rn20_p50_ft.pth&quot;)\nm = torch.load(&quot;rn20_p50_ft.pth&quot;, &lt;span class=&quot;hl&quot;&gt;weights_only=False&lt;/span&gt;)`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;6교시 정리&lt;/b&gt;: lr 1e-2 · 3 epoch 로 0.10 → 0.72 · 비교는 같은 예산으로 · 이 모델이 7교시 배포와 Day 6 KD 의 재료입니다.&lt;/p&gt;&#x27;},
+]);
+
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe></section>
+<section class="lesson" id="d5-7" data-title="D5-7 pruning 모델 배포"><iframe title="D5-7 pruning 모델 배포" loading="lazy" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;ko&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+&lt;title&gt;pruning 모델 배포 — Quantization·Pruning Day 5&lt;/title&gt;
+&lt;style&gt;
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:&quot;Consolas&quot;,&quot;D2Coding&quot;,&quot;JetBrains Mono&quot;,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:&quot;Pretendard&quot;,&quot;Noto Sans KR&quot;,&quot;Segoe UI&quot;,sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  @media(max-width:520px){.app{padding:16px 12px 30px}}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .sub code,.explain code,.note code{font-family:var(--mono);color:var(--blue)}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono);max-width:100%;overflow-wrap:anywhere}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.red{color:var(--red);border-color:var(--red)}.pill.green{color:var(--green);border-color:var(--green)}.pill.purple{color:var(--purple);border-color:var(--purple)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;min-width:0}
+  @media(max-width:520px){.panel{padding:12px 10px}}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.run{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700}
+  button.sel{background:#123d33;border-color:var(--teal);color:var(--teal)}
+  button:disabled{opacity:.4;cursor:default}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .grid{display:grid;grid-template-columns:1.25fr 1fr;gap:14px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .grid&gt;*{min-width:0}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.two{grid-template-columns:1fr}}
+  .two&gt;*{min-width:0}
+  canvas{width:100%;display:block;background:#0a0f1c;border:1px solid var(--line);border-radius:8px}
+  svg{max-width:100%}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+  .lab{font-size:13px;color:var(--dim)}
+  .sl{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;margin:8px 0}
+  .sl label{color:var(--amber);width:70px;flex:none}
+  .sl input{flex:1;min-width:60px;accent-color:var(--amber)}
+  .sl output{width:64px;text-align:right;flex:none}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-family:var(--mono);font-size:13.5px}
+  .kv span:nth-child(odd){color:var(--dim)}
+  .kv b{font-weight:600;overflow-wrap:anywhere}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;white-space:pre-wrap;min-height:64px;overflow-wrap:anywhere}
+  .code .g{color:var(--green)}.code .e{color:var(--red)}.code .c{color:#5d7292}.code .a{color:var(--amber)}.code .b{color:var(--blue)}.code .t{color:var(--teal)}
+  .code .hl{background:#3a2e12;color:var(--amber);border-radius:3px;padding:0 2px}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px;overflow-wrap:anywhere;white-space:pre-line}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}.explain b.purple{color:var(--purple)}
+  table.tt{border-collapse:collapse;font-family:var(--mono);font-size:13px;width:100%}
+  table.tt th,table.tt td{border:1px solid var(--line);padding:4px 6px;text-align:center}
+  table.tt th{color:var(--dim);font-weight:600;background:#0e1628}
+  table.tt tr.cur td{background:#2a2210}
+  .ok1{color:var(--green)}.bad1{color:var(--red)}.dim{color:var(--dim)}
+  .scroll{overflow-x:auto;max-width:100%}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .note{font-size:12.5px;color:var(--dim);border-left:3px solid var(--amber);padding:4px 10px;margin-top:10px}
+  .chk{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--dim)}
+  .chk input{accent-color:var(--amber)}
+  .ctl button{font-family:var(--mono)}
+  input[type=number],input.num,select{background:#0a0f1c;border:1px solid #2a3a5c;color:var(--text);border-radius:6px;padding:4px 6px;font-family:var(--mono);font-size:13px;width:74px}
+  select{width:auto}
+  .seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+  .seg button{padding:5px 10px}
+  .mono{font-family:var(--mono)}
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+  .arr{color:var(--dim);font-family:var(--mono);flex:none}
+  .fb{border:1px solid #2a3a5c;border-radius:8px;padding:7px 10px;background:#0a0f1c;font-family:var(--mono);font-size:13px;transition:all .3s;min-width:0;overflow-wrap:anywhere}
+  .fb small{display:block;color:var(--dim);font-size:11.5px;font-family:inherit}
+  .fb.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber);box-shadow:0 0 0 2px #f5b94233}
+  .fb.done{border-color:var(--teal);color:var(--teal)}
+  .fb.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .fb.off{opacity:.35}
+  .cells{display:flex;flex-wrap:wrap;gap:4px}
+  .cell{min-width:38px;height:30px;padding:0 6px;border:1px solid #2a3a5c;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;background:#0a0f1c;transition:all .25s}
+  .cell.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber)}
+  .cell.w{border-color:#3b6aa8;color:var(--blue)}.cell.bb{border-color:#7a5a2a;color:var(--amber)}
+.goals ol{margin:4px 0 0 18px;padding:0;font-size:13.5px;line-height:1.75;color:var(--text)}
+.goals ol li b{color:var(--amber)}
+#quiz .q{margin:0 0 8px;font-size:14px;line-height:1.55}
+#quiz .opts{display:flex;flex-direction:column;gap:6px}
+#quiz .opts button{text-align:left;background:#0b1220;border:1px solid #334155;color:var(--text);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer}
+#quiz .opts button:hover:not(:disabled){border-color:var(--teal)}
+#quiz .opts button.ok{border-color:#34d399;background:#0f2a22;color:#6ee7b7}
+#quiz .opts button.no{border-color:#f87171;background:#2a1215;color:#fca5a5}
+#quiz .why{margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--text)}
+.tagrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:12px;color:var(--dim)}
+.kv .wait{grid-column:1/-1;color:var(--dim);font-size:12.5px}
+
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;app&quot;&gt;
+&lt;div id=&quot;root&quot;&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;script&gt;
+
+const $=s=&gt;document.querySelector(s), $$=s=&gt;[...document.querySelectorAll(s)];
+const RM=window.matchMedia&amp;&amp;window.matchMedia(&#x27;(prefers-reduced-motion: reduce)&#x27;).matches;
+const sleep=ms=&gt;new Promise(r=&gt;setTimeout(r,RM?Math.min(ms,80):ms));
+let busy=false, timer=null;
+function setStatus(c,m){const s=$(&#x27;#status&#x27;);s.className=&#x27;status &#x27;+c;s.innerHTML=m;}
+function setCode(h){$(&#x27;#code&#x27;).innerHTML=h;}
+function fitCanvas(c){const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;const w=Math.max(10,Math.round(r.width*d)),h=Math.max(10,Math.round(r.height*d));if(c.width!==w||c.height!==h){c.width=w;c.height=h;}const g=c.getContext(&#x27;2d&#x27;);g.setTransform(d,0,0,d,0,0);return [g,r.width,r.height];}
+function initPresets(P,stop){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;if(stop)stop();$$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#explain&#x27;).innerHTML=P[i].ex;try{await P[i].run();}finally{busy=false;}});}
+const esc=s=&gt;String(s).replace(/&amp;/g,&#x27;&amp;amp;&#x27;).replace(/&lt;/g,&#x27;&amp;lt;&#x27;).replace(/&gt;/g,&#x27;&amp;gt;&#x27;);
+const fmt=n=&gt;n.toLocaleString(&#x27;en-US&#x27;);
+function stopTimer(){if(timer){clearInterval(timer);timer=null;}}
+/* Day 2 · 3 공통 — 교시 흐름 (노트북 순서) + 먼저 예측 + 실측 공개 */
+const K={b:&#x27;#60a5fa&#x27;,a:&#x27;#f59e0b&#x27;,g:&#x27;#34d399&#x27;,r:&#x27;#f87171&#x27;,p:&#x27;#c084fc&#x27;,t:&#x27;#2dd4bf&#x27;,d:&#x27;#8a9bb8&#x27;,x:&#x27;#dbe4f0&#x27;,l:&#x27;#334155&#x27;,bg:&#x27;#111a2e&#x27;,z:&#x27;#1f2b45&#x27;};
+let R=false, CUR=null;
+function layout(o){document.getElementById(&#x27;root&#x27;).innerHTML=`
+&lt;h1&gt;${o.h1}&lt;/h1&gt;&lt;p class=&quot;sub&quot;&gt;${o.sub}&lt;/p&gt;
+&lt;div class=&quot;panel goals&quot;&gt;&lt;h2&gt;이 교시에서 배우는 것&lt;/h2&gt;&lt;ol&gt;${o.goals.map(g=&gt;`&lt;li&gt;${g}&lt;/li&gt;`).join(&#x27;&#x27;)}&lt;/ol&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;교시 흐름 — 노트북 순서대로 (누르면 재생)&lt;/h2&gt;&lt;div class=&quot;presets&quot; id=&quot;presets&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2 id=&quot;vt&quot;&gt;그림&lt;/h2&gt;&lt;canvas id=&quot;cv&quot; style=&quot;height:${o.h||250}px&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+&lt;div class=&quot;grid&quot;&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;🤔 먼저 예측 — 고르면 실측값이 나옵니다&lt;/h2&gt;&lt;div id=&quot;quiz&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;강사 실측 (노트북 실행 결과)&lt;/h2&gt;&lt;div class=&quot;kv&quot; id=&quot;kv&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;노트북 코드&lt;/h2&gt;&lt;div class=&quot;code&quot; id=&quot;code&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;상태&lt;/h2&gt;&lt;div class=&quot;status info&quot; id=&quot;status&quot;&gt;단계를 누르세요.&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;panel explain&quot; id=&quot;explain&quot;&gt;&lt;/div&gt;`;}
+function showKV(rows){$(&#x27;#kv&#x27;).innerHTML=rows.map(([k,v])=&gt;`&lt;span&gt;${k}&lt;/span&gt;&lt;b&gt;${v}&lt;/b&gt;`).join(&#x27;&#x27;);}
+function reveal(){if(!CUR||R)return;R=true;showKV(CUR.kv);setCode(CUR.code);$(&#x27;#explain&#x27;).innerHTML=CUR.ex;if(CUR.st)setStatus(CUR.st[0],CUR.st[1]);if(window.draw)draw();}
+function ask(q){const [qs,opts,ans,why]=q;
+  $(&#x27;#quiz&#x27;).innerHTML=`&lt;p class=&quot;q&quot;&gt;${qs}&lt;/p&gt;&lt;div class=&quot;opts&quot;&gt;${opts.map((o,i)=&gt;`&lt;button type=&quot;button&quot; data-i=&quot;${i}&quot;&gt;${o}&lt;/button&gt;`).join(&#x27;&#x27;)}&lt;/div&gt;&lt;p class=&quot;why&quot; hidden&gt;&lt;/p&gt;`;
+  $$(&#x27;#quiz .opts button&#x27;).forEach(b=&gt;b.onclick=()=&gt;{const i=+b.dataset.i;$$(&#x27;#quiz .opts button&#x27;).forEach((x,j)=&gt;{x.disabled=true;x.classList.toggle(&#x27;ok&#x27;,j===ans);x.classList.toggle(&#x27;no&#x27;,j===i&amp;&amp;i!==ans);});
+    const w=$(&#x27;#quiz .why&#x27;);w.hidden=false;w.innerHTML=(i===ans?&#x27;✅ 맞았습니다. &#x27;:&#x27;❌ 다시 생각해 봅시다. &#x27;)+why;reveal();});}
+function steps(P){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;stopTimer();const p=P[i];CUR=p;R=false;
+    $$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#vt&#x27;).textContent=p.vt||p.n;$(&#x27;#explain&#x27;).innerHTML=&#x27;&lt;p class=&quot;dim&quot;&gt;예측을 고르면 이 단계의 해설이 나타납니다.&lt;/p&gt;&#x27;;setCode(&#x27;&lt;span class=&quot;c&quot;&gt;# 예측을 고르면 이 단계의 노트북 코드가 나타납니다&lt;/span&gt;&#x27;);
+    $(&#x27;#kv&#x27;).innerHTML=&#x27;&lt;span class=&quot;wait&quot;&gt;왼쪽 위 예측을 먼저 고르세요 — 고르면 실측값이 나타납니다.&lt;/span&gt;&#x27;;setStatus(&#x27;info&#x27;,p.s0||&#x27;애니메이션을 보고 예측을 골라 보세요.&#x27;);ask(p.q);
+    try{await p.run();}finally{busy=false;}});
+  $(&#x27;#presets button&#x27;).click();}
+function cv(){const [g,W,H]=fitCanvas($(&#x27;#cv&#x27;));g.clearRect(0,0,W,H);g.textAlign=&#x27;left&#x27;;g.lineWidth=1;return [g,W,H];}
+function box(g,x,y,w,h,t,c,sub,on){g.fillStyle=on?c+&#x27;33&#x27;:K.bg;g.strokeStyle=c;g.lineWidth=on?2.5:1.2;g.beginPath();g.roundRect(x,y,w,h,7);g.fill();g.stroke();g.lineWidth=1;
+  g.fillStyle=K.x;g.font=&#x27;12px sans-serif&#x27;;g.textAlign=&#x27;center&#x27;;g.fillText(t,x+w/2,y+h/2+(sub?-3:4));if(sub){g.fillStyle=K.d;g.font=&#x27;10.5px sans-serif&#x27;;g.fillText(sub,x+w/2,y+h/2+12);}g.textAlign=&#x27;left&#x27;;}
+function arr(g,x1,y1,x2,y2,c){g.strokeStyle=c||K.d;g.fillStyle=c||K.d;g.lineWidth=1.5;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();const a=Math.atan2(y2-y1,x2-x1);g.beginPath();g.moveTo(x2,y2);g.lineTo(x2-8*Math.cos(a-.4),y2-8*Math.sin(a-.4));g.lineTo(x2-8*Math.cos(a+.4),y2-8*Math.sin(a+.4));g.fill();g.lineWidth=1;}
+function txt(g,s,x,y,c,f,al){g.fillStyle=c||K.x;g.font=f||&#x27;12px sans-serif&#x27;;g.textAlign=al||&#x27;left&#x27;;g.fillText(s,x,y);g.textAlign=&#x27;left&#x27;;}
+function hbar(g,x,y,w,h,frac,c,label,val){g.fillStyle=K.z;g.fillRect(x,y,w,h);g.fillStyle=c;g.fillRect(x,y,Math.max(0,w*Math.min(1,frac)),h);if(label)txt(g,label,x-6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;,&#x27;right&#x27;);if(val)txt(g,val,x+w*Math.min(1,frac)+6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;);}
+async function tween(n,ms,f){for(let k=1;k&lt;=n;k++){f(k/n);await sleep(ms);}}
+window.__d5={};
+
+layout({h1:&#x27;pruning 모델 배포 — 엔진에서 정말 빨라지나&#x27;,sub:&#x27;7교시 노트북 순서: 세 모델을 ONNX 로 (7-1) → 같은 방법으로 지연 측정 (7-2) → MACs 와 지연의 차이 → qp_baseline.csv.&#x27;,
+ goals:[&#x27;&lt;b&gt;unstructured 50%&lt;/b&gt;: ONNX 크기 · Conv 모양 · 엔진 속도 모두 dense 와 같다&#x27;,&#x27;&lt;b&gt;structured 50%&lt;/b&gt;: Conv 가 진짜로 작아져 ONNX 1/4 크기, 엔진에서도 빨라진다&#x27;,&#x27;&lt;b&gt;MACs 4배 감소 ≠ 4배 빠름&lt;/b&gt; — 지연은 반드시 실제 엔진에서 잰다&#x27;]});
+let S=0,T=0;
+function draw(){const [g,W,H]=cv();const u=W/100;
+ if(S===0){txt(g,&#x27;세 모델의 ONNX — 크기 (KB) 와 Conv weight 의 0 비율&#x27;,2*u,20,K.d);
+  [[&#x27;dense&#x27;,1071,&#x27;0 비율 0.000 · conv params 270,256&#x27;,K.b,1],[&#x27;unstructured 50%&#x27;,1071,&#x27;0 비율 0.501 · conv params 270,256&#x27;,K.r,R],[&#x27;structured 50% + FT&#x27;,277,&#x27;0 비율 0.000 · conv params 67,672&#x27;,K.g,R]].forEach(([n,v,d,c,on],i)=&gt;{const y=40+i*58;hbar(g,30*u,y,46*u,24,(on?v/1100:0)*T,c,n,on?v.toLocaleString()+&#x27; KB&#x27;:&#x27;? KB&#x27;);txt(g,on?d:&#x27;&#x27;,30*u,y+44,K.d,&#x27;12px sans-serif&#x27;);});
+  txt(g,R?&#x27;unstructured 는 0 만 많을 뿐 모양 · 크기가 같다. structured 는 Conv 자체가 1/4&#x27;:&#x27;&#x27;,2*u,232,K.a,&#x27;12.5px sans-serif&#x27;);}
+ if(S===1){txt(g,&#x27;배포 지연 속도비 (dense = 1) — 이 화면은 ONNX Runtime CPU 값입니다&#x27;,2*u,20,K.d);
+  [[&#x27;dense&#x27;,1,&#x27;1.00배 (약 0.6 ms)&#x27;,K.b,1],[&#x27;unstructured 50%&#x27;,1,&#x27;약 1.0배&#x27;,K.r,R],[&#x27;structured 50% + FT&#x27;,2.1,&#x27;약 2배 (약 0.3 ms)&#x27;,K.g,R]].forEach(([n,v,d,c,on],i)=&gt;hbar(g,30*u,44+i*40,46*u,26,(on?v/2.4:0)*T,c,n,on?d:&#x27;?&#x27;));
+  txt(g,&#x27;정확도: dense 0.846 · unstructured 0.8125 · structured + FT 0.7225&#x27;,2*u,184,K.x,&#x27;12.5px sans-serif&#x27;);txt(g,&#x27;GPU 에서는 TensorRT FP16 엔진으로 잰 값이 나옵니다 — 수업에서 직접 확인합니다&#x27;,2*u,210,K.d,&#x27;12px sans-serif&#x27;);txt(g,&#x27;지연은 실행마다 조금 달라집니다&#x27;,2*u,232,K.d,&#x27;12px sans-serif&#x27;);}
+ if(S===2){hbar(g,30*u,34,46*u,22,.25*T,K.b,&#x27;MACs (structured 50%)&#x27;,&#x27;1/4&#x27;);hbar(g,30*u,62,46*u,22,(R?.48:0)*T,K.g,&#x27;지연 (ORT CPU)&#x27;,R?&#x27;약 1/2&#x27;:&#x27;?&#x27;);
+  txt(g,R?&#x27;작은 모델 · 배치 1 은 층마다 드는 고정 비용 (커널 실행 오버헤드) 이 커서 MACs 만큼 줄지 않는다&#x27;:&#x27;&#x27;,2*u,116,K.x,&#x27;12.5px sans-serif&#x27;);
+  txt(g,&#x27;채널 수도 속도를 좌우한다&#x27;,2*u,150,K.a,&#x27;bold 13px sans-serif&#x27;);box(g,2*u,160,44*u,40,&#x27;50% 모델: 8 · 16 · 32&#x27;,K.g,&#x27;묶음 (4 · 8 · 16) 에 딱 맞는다&#x27;);box(g,50*u,160,46*u,40,&#x27;20% 모델: 13 · 26 · 51&#x27;,K.r,&#x27;어중간 — 느려질 수 있다 (8교시)&#x27;);
+  txt(g,&#x27;torch-pruning 의 round_to=8 같은 옵션으로 채널 수를 배수로 맞출 수 있다&#x27;,2*u,228,K.d,&#x27;12px sans-serif&#x27;);}
+ if(S===3){txt(g,&#x27;qp_baseline.csv — Day 2 ~ 4 (양자화) 뒤에 오늘 3행&#x27;,2*u,20,K.d);
+  [[&#x27;rn20_dense&#x27;,&#x27;FP32 (dense)&#x27;,&#x27;1,071 KB&#x27;,&#x27;0.8460&#x27;],[&#x27;rn20_us50&#x27;,&#x27;FP32 (unstructured 50%)&#x27;,&#x27;1,071 KB&#x27;,&#x27;0.8125&#x27;],[&#x27;rn20_p50&#x27;,&#x27;FP32 (structured 50% + FT)&#x27;,&#x27;277 KB&#x27;,&#x27;0.7225&#x27;]].forEach((r,i)=&gt;{if(i/3&gt;T)return;const y=56+i*30;g.fillStyle=i%2?&#x27;#0e1628&#x27;:K.bg;g.fillRect(1*u,y-18,98*u,26);[2,22,58,78].forEach((x,j)=&gt;txt(g,r[j],x*u,y,j?K.x:[K.b,K.r,K.g][i],&#x27;12px &#x27;+(j&gt;1?&#x27;monospace&#x27;:&#x27;sans-serif&#x27;)));});
+  [&#x27;model&#x27;,&#x27;quant&#x27;,&#x27;size_kb&#x27;,&#x27;acc&#x27;].forEach((h,j)=&gt;txt(g,h,[2,22,58,78][j]*u,34,K.d,&#x27;11.5px monospace&#x27;));
+  txt(g,R?&#x27;실무에서 속도를 얻는 것은 structured pruning — unstructured 는 압축 크기만&#x27;:&#x27;&#x27;,2*u,170,K.a,&#x27;13px sans-serif&#x27;);txt(g,&#x27;mean_ms 열에는 실행한 환경의 지연이 들어갑니다 (GPU: TensorRT FP16 · 아니면 ORT CPU)&#x27;,2*u,198,K.d,&#x27;12px sans-serif&#x27;);}
+}
+async function play(s,ms,n){S=s;await tween(n||20,ms||80,t=&gt;{T=t;draw();});}
+steps([
+ {n:&#x27;① 실습 7-1 — 세 모델을 ONNX 로&#x27;,vt:&#x27;크기와 Conv 모양&#x27;,run:()=&gt;play(0),
+  q:[&#x27;dense ONNX 는 1,071 KB 입니다. weight 의 절반이 0 인 unstructured 50% 모델의 ONNX 크기는?&#x27;,[&#x27;약 536 KB — 절반&#x27;,&#x27;1,071 KB — 그대로&#x27;,&#x27;약 277 KB — 1/4&#x27;],1,&#x27;ONNX 도 dense 텐서로 저장하므로 크기가 같고, Conv weight 의 50.1% 가 0 일 뿐입니다. structured 50% 는 Conv 자체가 작아져 277 KB (conv params 270,256 → 67,672) 입니다.&#x27;],
+  kv:[[&#x27;dense · unstructured&#x27;,&#x27;1,071 KB · 1,071 KB&#x27;],[&#x27;structured 50% + FT&#x27;,&#x27;277 KB&#x27;],[&#x27;ORT 정확도&#x27;,&#x27;0.846 · 0.8125 · 0.7225&#x27;]],st:[&#x27;ok&#x27;,&#x27;줄어드는 것은 structured 뿐&#x27;],
+  code:`models = {&quot;dense&quot;: rn20, &quot;unstructured 50%&quot;: prune_unstructured(rn20, 0.5),\n          &quot;structured 50% + FT&quot;: torch.load(&quot;rn20_p50_ft.pth&quot;, weights_only=False)}\nfor name, m in models.items():\n    p = export_b1(m, paths[name])\n    rows.append({&quot;model&quot;: name, &quot;size_kb&quot;: size_kb(p), **onnx_conv_stats(p), &quot;acc&quot;: onnx_acc(p)})`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: structured 모델의 ONNX 를 Netron 으로 열면 Conv 의 채널 수가 바뀐 것이 보입니다. 정확도는 PyTorch 와 같아야 정상입니다 (FP32 그대로 내보냄).&lt;/p&gt;&#x27;},
+ {n:&#x27;② 실습 7-2 — 배포 지연&#x27;,vt:&#x27;같은 자로 잰다&#x27;,run:()=&gt;play(1),
+  q:[&#x27;세 ONNX 를 같은 방법으로 돌려 지연을 쟀습니다. dense 보다 빨라진 모델은?&#x27;,[&#x27;unstructured 50% 와 structured 50% 둘 다&#x27;,&#x27;structured 50% 만&#x27;,&#x27;unstructured 50% 만&#x27;],1,&#x27;unstructured 는 약 1.0배 (dense 와 같음), structured 는 약 2배입니다 (ORT CPU). 엔진은 0 이 많아도 dense 커널을 쓰기 때문입니다. TensorRT FP16 엔진의 값은 수업에서 GPU 로 측정합니다.&#x27;],
+  kv:[[&#x27;unstructured 50%&#x27;,&#x27;약 1.0배&#x27;],[&#x27;structured 50% + FT&#x27;,&#x27;약 2배 (ORT CPU)&#x27;],[&#x27;TensorRT FP16&#x27;,&#x27;수업에서 GPU 로 측정&#x27;]],st:[&#x27;ok&#x27;,&#x27;속도는 structured 에서만&#x27;],
+  code:`deploy_df = onnx_df[[&quot;model&quot;, &quot;acc&quot;]].copy()\ndeploy_df[&quot;latency_ms&quot;] = [&lt;span class=&quot;hl&quot;&gt;deploy_lat&lt;/span&gt;(paths[m]) for m in deploy_df.model]\ndeploy_df[&quot;speedup&quot;] = deploy_df.latency_ms[0] / deploy_df.latency_ms`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: &lt;code&gt;deploy_lat&lt;/code&gt; (제공) 은 GPU 면 TensorRT FP16 엔진, 아니면 ONNX Runtime CPU 로 배치 1 평균 지연을 잽니다. 결과 3행을 &lt;code&gt;qp_baseline.csv&lt;/code&gt; 에 추가합니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;③ 주의 — MACs 와 지연&#x27;,vt:&#x27;1/4 이 4배는 아니다&#x27;,run:()=&gt;play(2),
+  q:[&#x27;structured 50% 모델은 MACs 가 1/4 입니다. 실제 지연 (ORT CPU) 은 얼마나 줄었을까요?&#x27;,[&#x27;약 1/4 — MACs 와 같은 비율&#x27;,&#x27;약 1/2&#x27;,&#x27;거의 줄지 않았다&#x27;],1,&#x27;약 2배 빨라졌습니다 (1/2). ResNet-20 처럼 작은 모델 · 배치 1 에서는 층마다 드는 고정 비용이 커서 MACs 비율만큼 줄지 않습니다. T4 + TensorRT 에서는 이득이 더 작게 보일 수 있고, 배치를 키우면 MACs 비율에 가까워집니다.&#x27;],
+  kv:[[&#x27;MACs&#x27;,&#x27;1/4&#x27;],[&#x27;지연 (ORT CPU)&#x27;,&#x27;약 1/2&#x27;],[&#x27;채널 수&#x27;,&#x27;8 · 16 · 32 처럼 배수가 유리&#x27;]],st:[&#x27;warn&#x27;,&#x27;MACs 는 예상, 지연은 측정&#x27;],
+  code:`&lt;span class=&quot;c&quot;&gt;# tp.pruner.MetaPruner(..., round_to=8)   — 채널 수를 8의 배수로 맞춘다&lt;/span&gt;`,
+  ex:&#x27;&lt;p&gt;커널은 채널을 4 · 8 · 16 개씩 묶어 계산합니다. 13 · 26 · 51 처럼 어중간한 채널 수는 MACs 가 줄어도 느려질 수 있습니다 — 8교시 미니 프로젝트에서 직접 만나게 됩니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;④ 정리 — qp_baseline&#x27;,vt:&#x27;결과를 한 표에&#x27;,run:()=&gt;play(3,400,3),
+  q:[&#x27;T4 에 배포할 때 &quot;속도&quot; 가 목표라면 어떤 pruning 을 골라야 할까요?&#x27;,[&#x27;unstructured — 정확도 손해가 가장 작으므로&#x27;,&#x27;structured — 텐서 모양이 줄어야 빨라지므로&#x27;,&#x27;2:4 — sparsity 가 50% 로 정해져 있으므로&#x27;],1,&#x27;unstructured 는 크기 · 속도가 그대로이고 2:4 는 T4 에서 가속되지 않습니다. 텐서 모양을 줄이는 structured 만 어떤 엔진에서나 빨라집니다. 대신 fine-tuning 이 꼭 필요합니다.&#x27;],
+  kv:[[&#x27;unstructured&#x27;,&#x27;압축 크기만 이득&#x27;],[&#x27;structured&#x27;,&#x27;크기 1/4 · 약 2배 · fine-tuning 필요&#x27;],[&#x27;기록&#x27;,&#x27;qp_baseline.csv 에 Day5 3행&#x27;]],st:[&#x27;info&#x27;,&#x27;7교시 정리 — 8교시에 비율을 고릅니다&#x27;],
+  code:`base = pd.concat([base, pd.DataFrame(rows)], ignore_index=True).drop_duplicates(subset=[&quot;day&quot;, &quot;model&quot;], keep=&quot;last&quot;)\nbase.to_csv(&quot;qp_baseline.csv&quot;, index=False)`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;7교시 정리&lt;/b&gt;: unstructured 는 dense 와 같은 크기 · 속도 · structured 는 진짜로 작고 빠르다 · MACs 는 지연이 아니다.&lt;/p&gt;&#x27;},
+]);
+
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe></section>
+<section class="lesson" id="d5-8" data-title="D5-8 pruning 비율 탐색"><iframe title="D5-8 pruning 비율 탐색" loading="lazy" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;ko&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+&lt;title&gt;pruning 비율 탐색 — Quantization·Pruning Day 5&lt;/title&gt;
+&lt;style&gt;
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:&quot;Consolas&quot;,&quot;D2Coding&quot;,&quot;JetBrains Mono&quot;,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:&quot;Pretendard&quot;,&quot;Noto Sans KR&quot;,&quot;Segoe UI&quot;,sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  @media(max-width:520px){.app{padding:16px 12px 30px}}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .sub code,.explain code,.note code{font-family:var(--mono);color:var(--blue)}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono);max-width:100%;overflow-wrap:anywhere}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.red{color:var(--red);border-color:var(--red)}.pill.green{color:var(--green);border-color:var(--green)}.pill.purple{color:var(--purple);border-color:var(--purple)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;min-width:0}
+  @media(max-width:520px){.panel{padding:12px 10px}}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.run{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700}
+  button.sel{background:#123d33;border-color:var(--teal);color:var(--teal)}
+  button:disabled{opacity:.4;cursor:default}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .grid{display:grid;grid-template-columns:1.25fr 1fr;gap:14px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .grid&gt;*{min-width:0}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.two{grid-template-columns:1fr}}
+  .two&gt;*{min-width:0}
+  canvas{width:100%;display:block;background:#0a0f1c;border:1px solid var(--line);border-radius:8px}
+  svg{max-width:100%}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+  .lab{font-size:13px;color:var(--dim)}
+  .sl{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;margin:8px 0}
+  .sl label{color:var(--amber);width:70px;flex:none}
+  .sl input{flex:1;min-width:60px;accent-color:var(--amber)}
+  .sl output{width:64px;text-align:right;flex:none}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-family:var(--mono);font-size:13.5px}
+  .kv span:nth-child(odd){color:var(--dim)}
+  .kv b{font-weight:600;overflow-wrap:anywhere}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;white-space:pre-wrap;min-height:64px;overflow-wrap:anywhere}
+  .code .g{color:var(--green)}.code .e{color:var(--red)}.code .c{color:#5d7292}.code .a{color:var(--amber)}.code .b{color:var(--blue)}.code .t{color:var(--teal)}
+  .code .hl{background:#3a2e12;color:var(--amber);border-radius:3px;padding:0 2px}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px;overflow-wrap:anywhere;white-space:pre-line}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}.explain b.purple{color:var(--purple)}
+  table.tt{border-collapse:collapse;font-family:var(--mono);font-size:13px;width:100%}
+  table.tt th,table.tt td{border:1px solid var(--line);padding:4px 6px;text-align:center}
+  table.tt th{color:var(--dim);font-weight:600;background:#0e1628}
+  table.tt tr.cur td{background:#2a2210}
+  .ok1{color:var(--green)}.bad1{color:var(--red)}.dim{color:var(--dim)}
+  .scroll{overflow-x:auto;max-width:100%}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .note{font-size:12.5px;color:var(--dim);border-left:3px solid var(--amber);padding:4px 10px;margin-top:10px}
+  .chk{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--dim)}
+  .chk input{accent-color:var(--amber)}
+  .ctl button{font-family:var(--mono)}
+  input[type=number],input.num,select{background:#0a0f1c;border:1px solid #2a3a5c;color:var(--text);border-radius:6px;padding:4px 6px;font-family:var(--mono);font-size:13px;width:74px}
+  select{width:auto}
+  .seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+  .seg button{padding:5px 10px}
+  .mono{font-family:var(--mono)}
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+  .arr{color:var(--dim);font-family:var(--mono);flex:none}
+  .fb{border:1px solid #2a3a5c;border-radius:8px;padding:7px 10px;background:#0a0f1c;font-family:var(--mono);font-size:13px;transition:all .3s;min-width:0;overflow-wrap:anywhere}
+  .fb small{display:block;color:var(--dim);font-size:11.5px;font-family:inherit}
+  .fb.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber);box-shadow:0 0 0 2px #f5b94233}
+  .fb.done{border-color:var(--teal);color:var(--teal)}
+  .fb.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .fb.off{opacity:.35}
+  .cells{display:flex;flex-wrap:wrap;gap:4px}
+  .cell{min-width:38px;height:30px;padding:0 6px;border:1px solid #2a3a5c;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;background:#0a0f1c;transition:all .25s}
+  .cell.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber)}
+  .cell.w{border-color:#3b6aa8;color:var(--blue)}.cell.bb{border-color:#7a5a2a;color:var(--amber)}
+.goals ol{margin:4px 0 0 18px;padding:0;font-size:13.5px;line-height:1.75;color:var(--text)}
+.goals ol li b{color:var(--amber)}
+#quiz .q{margin:0 0 8px;font-size:14px;line-height:1.55}
+#quiz .opts{display:flex;flex-direction:column;gap:6px}
+#quiz .opts button{text-align:left;background:#0b1220;border:1px solid #334155;color:var(--text);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer}
+#quiz .opts button:hover:not(:disabled){border-color:var(--teal)}
+#quiz .opts button.ok{border-color:#34d399;background:#0f2a22;color:#6ee7b7}
+#quiz .opts button.no{border-color:#f87171;background:#2a1215;color:#fca5a5}
+#quiz .why{margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--text)}
+.tagrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:12px;color:var(--dim)}
+.kv .wait{grid-column:1/-1;color:var(--dim);font-size:12.5px}
+
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;app&quot;&gt;
+&lt;div id=&quot;root&quot;&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;script&gt;
+
+const $=s=&gt;document.querySelector(s), $$=s=&gt;[...document.querySelectorAll(s)];
+const RM=window.matchMedia&amp;&amp;window.matchMedia(&#x27;(prefers-reduced-motion: reduce)&#x27;).matches;
+const sleep=ms=&gt;new Promise(r=&gt;setTimeout(r,RM?Math.min(ms,80):ms));
+let busy=false, timer=null;
+function setStatus(c,m){const s=$(&#x27;#status&#x27;);s.className=&#x27;status &#x27;+c;s.innerHTML=m;}
+function setCode(h){$(&#x27;#code&#x27;).innerHTML=h;}
+function fitCanvas(c){const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;const w=Math.max(10,Math.round(r.width*d)),h=Math.max(10,Math.round(r.height*d));if(c.width!==w||c.height!==h){c.width=w;c.height=h;}const g=c.getContext(&#x27;2d&#x27;);g.setTransform(d,0,0,d,0,0);return [g,r.width,r.height];}
+function initPresets(P,stop){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;if(stop)stop();$$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#explain&#x27;).innerHTML=P[i].ex;try{await P[i].run();}finally{busy=false;}});}
+const esc=s=&gt;String(s).replace(/&amp;/g,&#x27;&amp;amp;&#x27;).replace(/&lt;/g,&#x27;&amp;lt;&#x27;).replace(/&gt;/g,&#x27;&amp;gt;&#x27;);
+const fmt=n=&gt;n.toLocaleString(&#x27;en-US&#x27;);
+function stopTimer(){if(timer){clearInterval(timer);timer=null;}}
+/* Day 2 · 3 공통 — 교시 흐름 (노트북 순서) + 먼저 예측 + 실측 공개 */
+const K={b:&#x27;#60a5fa&#x27;,a:&#x27;#f59e0b&#x27;,g:&#x27;#34d399&#x27;,r:&#x27;#f87171&#x27;,p:&#x27;#c084fc&#x27;,t:&#x27;#2dd4bf&#x27;,d:&#x27;#8a9bb8&#x27;,x:&#x27;#dbe4f0&#x27;,l:&#x27;#334155&#x27;,bg:&#x27;#111a2e&#x27;,z:&#x27;#1f2b45&#x27;};
+let R=false, CUR=null;
+function layout(o){document.getElementById(&#x27;root&#x27;).innerHTML=`
+&lt;h1&gt;${o.h1}&lt;/h1&gt;&lt;p class=&quot;sub&quot;&gt;${o.sub}&lt;/p&gt;
+&lt;div class=&quot;panel goals&quot;&gt;&lt;h2&gt;이 교시에서 배우는 것&lt;/h2&gt;&lt;ol&gt;${o.goals.map(g=&gt;`&lt;li&gt;${g}&lt;/li&gt;`).join(&#x27;&#x27;)}&lt;/ol&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;교시 흐름 — 노트북 순서대로 (누르면 재생)&lt;/h2&gt;&lt;div class=&quot;presets&quot; id=&quot;presets&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2 id=&quot;vt&quot;&gt;그림&lt;/h2&gt;&lt;canvas id=&quot;cv&quot; style=&quot;height:${o.h||250}px&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+&lt;div class=&quot;grid&quot;&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;🤔 먼저 예측 — 고르면 실측값이 나옵니다&lt;/h2&gt;&lt;div id=&quot;quiz&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;강사 실측 (노트북 실행 결과)&lt;/h2&gt;&lt;div class=&quot;kv&quot; id=&quot;kv&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;노트북 코드&lt;/h2&gt;&lt;div class=&quot;code&quot; id=&quot;code&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;상태&lt;/h2&gt;&lt;div class=&quot;status info&quot; id=&quot;status&quot;&gt;단계를 누르세요.&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;panel explain&quot; id=&quot;explain&quot;&gt;&lt;/div&gt;`;}
+function showKV(rows){$(&#x27;#kv&#x27;).innerHTML=rows.map(([k,v])=&gt;`&lt;span&gt;${k}&lt;/span&gt;&lt;b&gt;${v}&lt;/b&gt;`).join(&#x27;&#x27;);}
+function reveal(){if(!CUR||R)return;R=true;showKV(CUR.kv);setCode(CUR.code);$(&#x27;#explain&#x27;).innerHTML=CUR.ex;if(CUR.st)setStatus(CUR.st[0],CUR.st[1]);if(window.draw)draw();}
+function ask(q){const [qs,opts,ans,why]=q;
+  $(&#x27;#quiz&#x27;).innerHTML=`&lt;p class=&quot;q&quot;&gt;${qs}&lt;/p&gt;&lt;div class=&quot;opts&quot;&gt;${opts.map((o,i)=&gt;`&lt;button type=&quot;button&quot; data-i=&quot;${i}&quot;&gt;${o}&lt;/button&gt;`).join(&#x27;&#x27;)}&lt;/div&gt;&lt;p class=&quot;why&quot; hidden&gt;&lt;/p&gt;`;
+  $$(&#x27;#quiz .opts button&#x27;).forEach(b=&gt;b.onclick=()=&gt;{const i=+b.dataset.i;$$(&#x27;#quiz .opts button&#x27;).forEach((x,j)=&gt;{x.disabled=true;x.classList.toggle(&#x27;ok&#x27;,j===ans);x.classList.toggle(&#x27;no&#x27;,j===i&amp;&amp;i!==ans);});
+    const w=$(&#x27;#quiz .why&#x27;);w.hidden=false;w.innerHTML=(i===ans?&#x27;✅ 맞았습니다. &#x27;:&#x27;❌ 다시 생각해 봅시다. &#x27;)+why;reveal();});}
+function steps(P){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;stopTimer();const p=P[i];CUR=p;R=false;
+    $$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#vt&#x27;).textContent=p.vt||p.n;$(&#x27;#explain&#x27;).innerHTML=&#x27;&lt;p class=&quot;dim&quot;&gt;예측을 고르면 이 단계의 해설이 나타납니다.&lt;/p&gt;&#x27;;setCode(&#x27;&lt;span class=&quot;c&quot;&gt;# 예측을 고르면 이 단계의 노트북 코드가 나타납니다&lt;/span&gt;&#x27;);
+    $(&#x27;#kv&#x27;).innerHTML=&#x27;&lt;span class=&quot;wait&quot;&gt;왼쪽 위 예측을 먼저 고르세요 — 고르면 실측값이 나타납니다.&lt;/span&gt;&#x27;;setStatus(&#x27;info&#x27;,p.s0||&#x27;애니메이션을 보고 예측을 골라 보세요.&#x27;);ask(p.q);
+    try{await p.run();}finally{busy=false;}});
+  $(&#x27;#presets button&#x27;).click();}
+function cv(){const [g,W,H]=fitCanvas($(&#x27;#cv&#x27;));g.clearRect(0,0,W,H);g.textAlign=&#x27;left&#x27;;g.lineWidth=1;return [g,W,H];}
+function box(g,x,y,w,h,t,c,sub,on){g.fillStyle=on?c+&#x27;33&#x27;:K.bg;g.strokeStyle=c;g.lineWidth=on?2.5:1.2;g.beginPath();g.roundRect(x,y,w,h,7);g.fill();g.stroke();g.lineWidth=1;
+  g.fillStyle=K.x;g.font=&#x27;12px sans-serif&#x27;;g.textAlign=&#x27;center&#x27;;g.fillText(t,x+w/2,y+h/2+(sub?-3:4));if(sub){g.fillStyle=K.d;g.font=&#x27;10.5px sans-serif&#x27;;g.fillText(sub,x+w/2,y+h/2+12);}g.textAlign=&#x27;left&#x27;;}
+function arr(g,x1,y1,x2,y2,c){g.strokeStyle=c||K.d;g.fillStyle=c||K.d;g.lineWidth=1.5;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();const a=Math.atan2(y2-y1,x2-x1);g.beginPath();g.moveTo(x2,y2);g.lineTo(x2-8*Math.cos(a-.4),y2-8*Math.sin(a-.4));g.lineTo(x2-8*Math.cos(a+.4),y2-8*Math.sin(a+.4));g.fill();g.lineWidth=1;}
+function txt(g,s,x,y,c,f,al){g.fillStyle=c||K.x;g.font=f||&#x27;12px sans-serif&#x27;;g.textAlign=al||&#x27;left&#x27;;g.fillText(s,x,y);g.textAlign=&#x27;left&#x27;;}
+function hbar(g,x,y,w,h,frac,c,label,val){g.fillStyle=K.z;g.fillRect(x,y,w,h);g.fillStyle=c;g.fillRect(x,y,Math.max(0,w*Math.min(1,frac)),h);if(label)txt(g,label,x-6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;,&#x27;right&#x27;);if(val)txt(g,val,x+w*Math.min(1,frac)+6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;);}
+async function tween(n,ms,f){for(let k=1;k&lt;=n;k++){f(k/n);await sleep(ms);}}
+window.__d5={};
+
+layout({h1:&#x27;pruning 비율 탐색 — 얼마나 자를까&#x27;,sub:&#x27;8교시 미니 프로젝트의 흐름입니다 (정답 코드는 없습니다). 과제마다 무엇을 만들고 어떻게 판단하는지 먼저 그려 보세요.&#x27;,
+ goals:[&#x27;비율 &lt;b&gt;0 · 20 · 40 · 60%&lt;/b&gt; 를 같은 fine-tuning 으로 비교해 &lt;b&gt;MACs – 정확도 곡선&lt;/b&gt;을 그린다&#x27;,&#x27;&lt;b&gt;기준 (FP32 대비 3%p 이내)&lt;/b&gt; 을 먼저 정하고 그 안에서 가장 큰 비율을 고른다&#x27;,&#x27;고른 모델의 이득은 MACs 가 아니라 &lt;b&gt;실제 지연&lt;/b&gt;으로 확인한다&#x27;],h:270});
+let S=0,T=0;const D=[[0,41.2,.846,.842],[.2,24.9,.2415,.8195],[.4,14.2,.101,.7595],[.6,6.2,.100,.603]];
+function draw(){const [g,W,H]=cv();const u=W/100;
+ if(S===0){txt(g,&#x27;sweep_df — prune → fine-tuning (lr 1e-2 · 3 epoch) → 측정&#x27;,2*u,20,K.d);const xs=[2,20,40,62];[&#x27;ratio&#x27;,&#x27;macs_m&#x27;,&#x27;acc_before&#x27;,&#x27;acc (FT 뒤)&#x27;].forEach((h,j)=&gt;txt(g,h,xs[j]*u,46,K.d,&#x27;11.5px monospace&#x27;));
+  D.forEach((r,i)=&gt;{if(i/4&gt;T)return;const y=72+i*30;g.fillStyle=i%2?&#x27;#0e1628&#x27;:K.bg;g.fillRect(1*u,y-18,98*u,26);[r[0].toFixed(1),r[1].toFixed(1),r[2].toFixed(3),R||!i?r[3].toFixed(4):&#x27;?&#x27;].forEach((v,j)=&gt;txt(g,v,xs[j]*u,y,j===3?K.g:K.x,&#x27;12.5px monospace&#x27;));});
+  txt(g,R?&#x27;ratio 0 (자르지 않고 fine-tuning 만) 0.842 ≈ FP32 0.846 → 짧은 fine-tuning 자체는 손해도 이득도 거의 없다&#x27;:&#x27;ratio 0 도 fine-tuning 한다 — 왜?&#x27;,2*u,214,R?K.x:K.a,&#x27;12.5px sans-serif&#x27;);txt(g,&#x27;latency_ms · ft_s 열은 노트북에서 측정&#x27;,2*u,238,K.d,&#x27;12px sans-serif&#x27;);}
+ if(S===1||S===2){const x0=10*u,w=62*u,py=a=&gt;H-44-(a-.55)/.33*(H-92),px=m=&gt;x0+m/44*w;txt(g,&#x27;MACs – 정확도 (fine-tuning 뒤) · 점선 = FP32 − 3%p (0.816)&#x27;,2*u,20,K.d);
+  [.6,.7,.8].forEach(a=&gt;{g.strokeStyle=K.z;g.beginPath();g.moveTo(x0,py(a));g.lineTo(x0+w,py(a));g.stroke();txt(g,a.toFixed(1),4*u,py(a)+4,K.d,&#x27;10.5px sans-serif&#x27;);});
+  g.strokeStyle=K.r;g.setLineDash([5,4]);g.beginPath();g.moveTo(x0,py(.816));g.lineTo(x0+w,py(.816));g.stroke();g.setLineDash([]);
+  g.strokeStyle=K.b;g.lineWidth=2;g.beginPath();D.forEach((r,i)=&gt;{if(i/4&gt;T)return;i?g.lineTo(px(r[1]),py(r[3])):g.moveTo(px(r[1]),py(r[3]));});g.stroke();g.lineWidth=1;
+  D.forEach((r,i)=&gt;{if(i/4&gt;T)return;const best=S===2&amp;&amp;R&amp;&amp;i===1;g.fillStyle=best?K.g:K.b;g.beginPath();g.arc(px(r[1]),py(r[3]),best?8:5,0,7);g.fill();txt(g,Math.round(r[0]*100)+&#x27;% · &#x27;+r[3].toFixed(3),px(r[1])+8,py(r[3])-8,best?K.g:K.x,&#x27;11.5px sans-serif&#x27;);});
+  txt(g,&#x27;MACs (M) →&#x27;,x0+w-8*u,H-26,K.d,&#x27;11px sans-serif&#x27;);
+  txt(g,S===1?(R?&#x27;20% → 40% 사이에서 급히 꺾인다 (0.82 → 0.76) — 곡선의 &quot;무릎&quot;&#x27;:&#x27;&#x27;):(R?&#x27;기준을 넘는 가장 큰 비율 = 20% (0.8195 ≥ 0.816). 40% (0.7595) 는 탈락&#x27;:&#x27;&#x27;),2*u,H-4,K.a,&#x27;12.5px sans-serif&#x27;);}
+ if(S===3){txt(g,&#x27;summary — 고른 20% 모델 (ratio 0 대비 · ORT CPU 실측 예시)&#x27;,2*u,20,K.d);
+  [[&#x27;macs_x&#x27;,&#x27;1.66배 감소&#x27;,K.g],[&#x27;params_x&#x27;,&#x27;1.60배 감소&#x27;,K.g],[&#x27;acc_drop_pp&#x27;,&#x27;−2.65%p&#x27;,K.a],[&#x27;speedup&#x27;,R?&#x27;약 0.8배 — 오히려 느려졌다&#x27;:&#x27;?&#x27;,R?K.r:K.l]].forEach(([a,b,c],i)=&gt;{if(i/4&gt;T)return;box(g,2*u+(i%2)*49*u,36+Math.floor(i/2)*58,46*u,46,a,c,b,i===3);});
+  txt(g,R?&#x27;20% 모델의 채널 수 13 · 26 · 51 — 4 · 8 의 배수가 아니라 CPU 의 SIMD 커널이 비효율적으로 돈다&#x27;:&#x27;&#x27;,2*u,176,K.x,&#x27;12.5px sans-serif&#x27;);txt(g,R?&#x27;50% 모델 (8 · 16 · 32) 은 약 2배 빨랐다. GPU 에서의 값은 수업에서 측정해 비교합니다&#x27;:&#x27;&#x27;,2*u,200,K.d,&#x27;12px sans-serif&#x27;);txt(g,&#x27;저장: pruning_sweep.csv · rn20_pruned_best.onnx · qp_baseline.csv 1행&#x27;,2*u,232,K.d,&#x27;12px sans-serif&#x27;);}
+ if(S===4){[[&#x27;채널 수 맞추기&#x27;,R?&#x27;MetaPruner(round_to=4 또는 8) — 강사 실측 round_to=4: 약 0.56 ms (dense 보다 빠름) · 0.8085&#x27;:&#x27;어떻게 고칠까?&#x27;,K.g],[&#x27;1%p 기준이라면&#x27;,&#x27;데이터 · epoch 를 늘리고 Day 6 의 KD 를 더한다&#x27;,K.b],[&#x27;양자화와 함께&#x27;,R?&#x27;prune → fine-tuning → PTQ (손실이 크면 QAT)&#x27;:&#x27;어떤 순서?&#x27;,K.a]].forEach(([a,b,c],i)=&gt;{if(i/3&gt;T)return;const y=34+i*62;box(g,2*u,y,22*u,46,a,c,&#x27;&#x27;,true);txt(g,b,27*u,y+28,K.x,&#x27;12.5px sans-serif&#x27;);});
+  txt(g,&#x27;과제 6 — 고른 비율의 근거 · T4 에 배포할 모델 · 지연이 늘어난 이유 · 양자화 순서&#x27;,2*u,236,K.d,&#x27;12px sans-serif&#x27;);}
+}
+async function play(s,ms,n){S=s;await tween(n||20,ms||80,t=&gt;{T=t;draw();});}
+steps([
+ {n:&#x27;① 과제 1 — 비율 sweep&#x27;,vt:&#x27;네 비율을 같은 조건으로&#x27;,run:()=&gt;play(0,300,4),
+  q:[&#x27;비율 0 (자르지 않은 모델) 에도 똑같이 fine-tuning 을 하는 이유는?&#x27;,[&#x27;fine-tuning 은 어떤 모델이든 정확도를 올려 주므로&#x27;,&#x27;자른 효과와 학습 효과를 분리하려고&#x27;,&#x27;ONNX 로 내보내려면 학습이 한 번 필요하므로&#x27;],1,&#x27;기준선도 같은 학습을 거쳐야 비교가 공정합니다. 실측: 0% + fine-tuning 0.842 (FP32 0.846 과 거의 같음) → 짧은 fine-tuning 자체는 손해도 이득도 거의 없고, 나머지 차이는 모두 &quot;자른 효과&quot; 입니다.&#x27;],
+  kv:[[&#x27;0% · 20%&#x27;,&#x27;0.842 · 0.8195&#x27;],[&#x27;40% · 60%&#x27;,&#x27;0.7595 · 0.603&#x27;],[&#x27;fine-tuning 전&#x27;,&#x27;0.846 · 0.24 · 0.10 · 0.10&#x27;]],st:[&#x27;info&#x27;,&#x27;기준선도 같은 fine-tuning 을 한다&#x27;],
+  code:`&lt;span class=&quot;c&quot;&gt;# TODO: RATIOS = [0.0, 0.2, 0.4, 0.6] 마다&lt;/span&gt;\n&lt;span class=&quot;c&quot;&gt;#   prune_channels → MACs · params → acc_before → finetune → acc → ONNX → deploy_lat&lt;/span&gt;\n&lt;span class=&quot;c&quot;&gt;#   sweep_df (ratio, macs_m, params, acc_before, acc, latency_ms, ft_s) · sweep_models[ratio]&lt;/span&gt;`,
+  ex:&#x27;&lt;p&gt;미니 프로젝트에는 &lt;b&gt;정답 보기 셀이 없습니다&lt;/b&gt;. 5 · 6 · 7교시에 만든 &lt;code&gt;prune_channels&lt;/code&gt; · &lt;code&gt;finetune&lt;/code&gt; · &lt;code&gt;deploy_lat&lt;/code&gt; 을 조합합니다. fine-tuning 4번 — CPU 로 약 4분.&lt;/p&gt;&#x27;},
+ {n:&#x27;② 과제 2 — 곡선&#x27;,vt:&#x27;무릎을 찾는다&#x27;,run:()=&gt;play(1,300,4),
+  q:[&#x27;fine-tuning 뒤 정확도는 0% 0.842 · 20% 0.820 입니다. 곡선이 급히 꺾이는 곳은?&#x27;,[&#x27;0% → 20% 사이&#x27;,&#x27;20% → 40% 사이&#x27;,&#x27;60% 까지 꺾이지 않는다&#x27;],1,&#x27;20% → 40% 에서 0.82 → 0.76 (−6%p), 40% → 60% 에서 0.76 → 0.60 (−16%p) 으로 점점 가파르게 떨어집니다. 0% → 20% 는 −2.3%p 입니다. 정확도가 급히 꺾이기 시작하는 &quot;무릎&quot; 앞이 쓸 만한 구간입니다.&#x27;],
+  kv:[[&#x27;0% → 20%&#x27;,&#x27;−2.3%p (MACs 41.2M → 24.9M)&#x27;],[&#x27;20% → 40%&#x27;,&#x27;−6.0%p&#x27;],[&#x27;40% → 60%&#x27;,&#x27;−15.7%p&#x27;]],st:[&#x27;ok&#x27;,&#x27;무릎은 20% 와 40% 사이&#x27;],
+  code:`&lt;span class=&quot;c&quot;&gt;# TODO: 두 칸 그림 — 왼쪽 x = MACs, 오른쪽 x = 지연, y = 정확도&lt;/span&gt;\n&lt;span class=&quot;c&quot;&gt;#       점마다 비율 표시 · FP32 − 3%p 기준선 (점선) → prune_curve.png&lt;/span&gt;`,
+  ex:&#x27;&lt;p&gt;MACs 축에서는 점이 고르게 퍼지지만 지연 축에서는 다르게 놓입니다 — 두 그림을 나란히 그리는 이유입니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;③ 과제 3 — best_ratio&#x27;,vt:&#x27;기준으로 고른다&#x27;,run:()=&gt;play(2,300,4),
+  q:[&#x27;기준은 &quot;정확도가 FP32 (0.846) 대비 3%p 이내 (0.816 이상) 인 가장 큰 비율&quot; 입니다. best_ratio 는?&#x27;,[&#x27;0.2&#x27;,&#x27;0.4&#x27;,&#x27;0.6&#x27;],0,&#x27;20% (0.8195) 만 기준을 넘고 40% (0.7595) 는 탈락합니다. 20% 가 기준선에 가까워 세션에 따라 0.0 이 나올 수도 있습니다 — 그래서 한 번의 측정보다 곡선 전체를 보고 판단합니다.&#x27;],
+  kv:[[&#x27;기준&#x27;,&#x27;0.846 − 0.03 = 0.816&#x27;],[&#x27;통과&#x27;,&#x27;0% (0.842) · 20% (0.8195)&#x27;],[&#x27;best_ratio&#x27;,&#x27;0.2&#x27;]],st:[&#x27;ok&#x27;,&#x27;기준을 먼저 정하고 고른다&#x27;],
+  code:`&lt;span class=&quot;c&quot;&gt;# TODO: sweep_df.acc &gt;= FP32_ACC - 0.03 인 비율 중 가장 큰 것 → best_ratio (없으면 0.0)&lt;/span&gt;\n&lt;span class=&quot;c&quot;&gt;#       best_row = 그 행 (Series)&lt;/span&gt;`,
+  ex:&#x27;&lt;p&gt;기준이 &quot;1%p&quot; 가 아니라 &quot;3%p&quot; 인 이유: 오늘의 fine-tuning 은 10,000장 · 3 epoch 라는 짧은 예산이기 때문입니다. 실무에서는 전체 데이터로 충분히 학습한 뒤 1%p 기준을 씁니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;④ 과제 4 · 5 — 저장 · 요약&#x27;,vt:&#x27;이득을 숫자로&#x27;,run:()=&gt;play(3,300,4),
+  q:[&#x27;고른 20% 모델은 MACs 가 1.66배 줄었습니다. ONNX Runtime CPU 지연은 dense 와 비교해 어땠을까요? (강사 실측)&#x27;,[&#x27;약 1.66배 빨라졌다&#x27;,&#x27;오히려 느려졌다&#x27;,&#x27;똑같았다&#x27;],1,&#x27;speedup 약 0.8배 — 느려졌습니다. 20% 모델의 채널 수가 13 · 26 · 51 로 4 · 8 의 배수가 아니라 CPU 커널이 비효율적으로 돌기 때문입니다. &quot;MACs ≠ 지연&quot; 을 숫자로 확인하는 것이 오늘의 결론입니다. 여러분의 환경 (GPU) 에서는 다를 수 있으니 직접 재 보세요.&#x27;],
+  kv:[[&#x27;MACs · params&#x27;,&#x27;1.66배 · 1.60배 감소&#x27;],[&#x27;정확도&#x27;,&#x27;−2.65%p&#x27;],[&#x27;speedup (ORT CPU)&#x27;,&#x27;약 0.8배&#x27;]],st:[&#x27;warn&#x27;,&#x27;MACs 가 줄어도 지연은 늘 수 있다&#x27;],
+  code:`&lt;span class=&quot;c&quot;&gt;# TODO: pruning_sweep.csv · rn20_pruned_best.onnx · qp_baseline.csv 1행&lt;/span&gt;\n&lt;span class=&quot;c&quot;&gt;# TODO: summary = {&quot;best_ratio&quot;, &quot;macs_x&quot;, &quot;params_x&quot;, &quot;speedup&quot;, &quot;acc_drop_pp&quot;}  (ratio 0 대비)&lt;/span&gt;`,
+  ex:&#x27;&lt;p&gt;&lt;code&gt;summary&lt;/code&gt; 의 speedup 이 1 보다 작게 나와도 틀린 것이 아닙니다 — 측정한 그대로 적고, 이유를 과제 6 에 씁니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;⑤ 결론 — 얼마나, 어떻게&#x27;,vt:&#x27;과제 6 으로&#x27;,run:()=&gt;play(4,300,3),
+  q:[&#x27;이 pruning 모델에 Day 2 ~ 4 의 INT8 양자화까지 더하려 합니다. 어떤 순서가 좋을까요?&#x27;,[&#x27;양자화 (QAT) → pruning → fine-tuning&#x27;,&#x27;pruning → fine-tuning → 양자화&#x27;,&#x27;pruning → 양자화 → fine-tuning&#x27;],1,&#x27;구조와 정확도를 먼저 확정한 뒤 그 모델을 양자화합니다. 양자화를 먼저 하면 가지치기 · 재학습 중에 weight 분포가 바뀌어 양자화 범위를 다시 잡아야 합니다. 채널 수를 8 · 16 의 배수로 맞추면 INT8 커널 효율도 좋아집니다.&#x27;],
+  kv:[[&#x27;채널 수&#x27;,&#x27;round_to=4 · 8 로 배수 맞추기&#x27;],[&#x27;더 좋은 정확도&#x27;,&#x27;데이터 · epoch · KD (Day 6)&#x27;],[&#x27;양자화와&#x27;,&#x27;prune → FT → PTQ / QAT&#x27;]],st:[&#x27;info&#x27;,&#x27;과제 6 — 결론 쓰기 (강사 채점 10점)&#x27;],
+  code:`&lt;span class=&quot;c&quot;&gt;# 과제 6: 1) 고른 비율과 근거 · 1%p 기준이면?  2) unstructured 70% vs structured 20% — T4 에는?&lt;/span&gt;\n&lt;span class=&quot;c&quot;&gt;#         3) MACs 는 줄었는데 지연이 늘었다면?  4) 양자화와의 순서&lt;/span&gt;`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;오늘의 정리&lt;/b&gt;: unstructured 는 0 만 만들고 (1 ~ 3교시), structured 는 텐서를 줄이며 (4 · 5교시), fine-tuning 으로 되살리고 (6교시), 엔진에서 확인한 뒤 (7교시), 기준으로 비율을 골랐습니다. 내일은 작은 모델의 정확도를 끌어올리는 지식 증류 (KD) 입니다.&lt;/p&gt;&#x27;},
+]);
+
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe></section>
+</main>
+</div>
+<script>
+const ids = [...document.querySelectorAll('nav button')].map(b => b.dataset.id);
+function fit(fr) {
+  try {
+    const d = fr.contentDocument; if (!d || !d.body) return;
+    fr.style.height = Math.max(600, d.documentElement.scrollHeight) + 'px';
+  } catch (e) {}
+}
+function show(id, push) {
+  if (!ids.includes(id)) id = ids[0];
+  document.querySelectorAll('section.lesson').forEach(s => s.classList.toggle('active', s.id === id));
+  document.querySelectorAll('nav button').forEach(b => b.setAttribute('aria-current', b.dataset.id === id ? 'true' : 'false'));
+  const sec = document.getElementById(id);
+  document.title = sec.dataset.title + ' — Quantization·Pruning Day 5';
+  const fr = sec.querySelector('iframe');
+  fr.loading = 'eager'; fit(fr);
+  if (push) history.replaceState(null, '', '#' + id);
+  window.scrollTo({ top: 0 });
+}
+document.querySelectorAll('section.lesson iframe').forEach(fr => {
+  fr.addEventListener('load', () => {
+    fit(fr);
+    try {
+      new ResizeObserver(() => fit(fr)).observe(fr.contentDocument.body);
+      fr.contentDocument.addEventListener('keydown', key);   // iframe 안에서도 ← → 동작
+    } catch (e) {}
+  });
+});
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => show(b.dataset.id, true));
+function key(e) {
+  if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  const cur = ids.indexOf(location.hash.slice(1) || ids[0]);
+  if (e.key === 'ArrowRight' && cur < ids.length - 1) show(ids[cur + 1], true);
+  if (e.key === 'ArrowLeft' && cur > 0) show(ids[cur - 1], true);
+}
+document.addEventListener('keydown', key);
+window.addEventListener('resize', () => document.querySelectorAll('section.lesson.active iframe').forEach(fit));
+window.addEventListener('hashchange', () => show(location.hash.slice(1), false));   // 주소창에서 #d1-N 을 바꿔도 이동
+show(location.hash.slice(1), false);
+</script>
+</body>
+</html>
