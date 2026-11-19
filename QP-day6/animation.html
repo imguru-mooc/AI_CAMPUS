@@ -1,0 +1,1664 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quantization·Pruning Day 6 애니메이션 — 통합 경량화</title>
+<style>
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--mono:"Consolas","D2Coding","JetBrains Mono",monospace}
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR","Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+  .app{display:grid;grid-template-columns:290px 1fr;min-height:100vh}
+  nav{background:#0a1020;border-right:1px solid var(--line);padding:24px 16px;position:sticky;top:0;height:100vh;overflow:auto}
+  nav h1{color:var(--amber);font-size:21px;margin:0 0 2px}
+  nav .sub{color:var(--dim);font-size:12.5px;margin:0 0 18px}
+  nav h2{color:var(--dim);font-size:12px;font-weight:600;letter-spacing:.5px;margin:18px 4px 8px}
+  nav button{all:unset;box-sizing:border-box;display:grid;grid-template-columns:62px 1fr;column-gap:8px;width:100%;padding:10px 10px;margin-bottom:6px;border:1px solid var(--line);border-radius:9px;background:var(--panel);cursor:pointer}
+  nav button:hover{border-color:var(--amber)}
+  nav button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  nav button[aria-current="true"]{border-color:var(--amber);background:#2a2210}
+  nav .p{font-family:var(--mono);font-size:11.5px;color:var(--teal);grid-row:1}
+  nav .no{font-family:var(--mono);font-size:11.5px;color:var(--dim);grid-row:2}
+  nav .tt{grid-column:2;grid-row:1;color:var(--amber);font-size:15px}
+  nav .d{grid-column:2;grid-row:2;color:var(--dim);font-size:12px;line-height:1.4}
+  nav .hint{color:var(--dim);font-size:12px;margin-top:16px}
+  nav kbd{font-family:var(--mono);background:#1a2540;border-radius:4px;padding:0 5px}
+  main{min-width:0}
+  section.lesson{display:none}
+  section.lesson.active{display:block}
+  iframe{display:block;width:100%;border:0;min-height:600px;background:var(--bg)}
+  @media(max-width:860px){
+    .app{grid-template-columns:1fr}
+    nav{position:sticky;top:0;z-index:5;height:auto;padding:12px 12px 8px;border-right:0;border-bottom:1px solid var(--line)}
+    nav .sub,nav h2,nav .hint,nav .d{display:none}
+    nav h1{font-size:16px;margin-bottom:8px}
+    .list{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+    nav button{flex:0 0 auto;width:auto;grid-template-columns:auto;padding:6px 10px;margin:0}
+    nav .p{display:none}
+    nav .no{grid-row:1;grid-column:1;font-size:10.5px}
+    nav .tt{grid-row:2;grid-column:1;font-size:13px;white-space:nowrap}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+<nav aria-label="애니메이션 선택">
+  <h1>Quantization·Pruning Day 6<br>애니메이션</h1>
+  <p class="sub">HYUNDAI AI Insight Campus 온디바이스 AI · 통합 경량화 파이프라인 · 11/23(월)</p>
+  <h2>1~8교시 시뮬레이션</h2>
+  <div class="list">
+<button data-id="d6-1" aria-current="false"><span class="p">1교시</span><span class="no">D6-1</span><span class="tt">Knowledge Distillation</span><span class="d">1교시 흐름 — 선생님 · 학생 → 예제 1-A temperature (horse 1.000 → 0.813 → 0.335) → 실습 1-1 soft · 1등 외 확률 0.118 → 0.512 → 실습 1-2 kd_loss = α·CE + (1 − α)·T²·KL</span></button>
+<button data-id="d6-2" aria-current="false"><span class="p">2교시</span><span class="no">D6-2</span><span class="tt">Pruning + KD</span><span class="d">2교시 흐름 — 자르기 전 원본이 선생님 → 실습 2-1 train_kd: 0.10 → 0.6415 → 0.7345 → 0.7475 → 실습 2-2 fine-tuning 0.7225 vs KD 0.7475 → 예제 2-A 20% 모델 0.8195 vs 0.8215</span></button>
+<button data-id="d6-3" aria-current="false"><span class="p">3교시</span><span class="no">D6-3</span><span class="tt">순서의 문제</span><span class="d">3교시 흐름 — Prune → KD → INT8 → 엔진 → 실습 3-1 INT8 PTQ 0.7475 → 0.7455 · need_qat False → 실습 3-2 양자화 → 가지치기: 크기 오류 → 예제 3-A compress.py · 단계별 표</span></button>
+<button data-id="d6-4" aria-current="false"><span class="p">4교시</span><span class="no">D6-4</span><span class="tt">탐지 모델 INT8 준비</span><span class="d">4교시 흐름 — 재학습 없이 할 수 있는 것 → 실습 4-1 배포 영상으로 보정 48장 (프레임 0 ~ 470) → 실습 4-2 head 24개 제외 · INT8 · INT8-mixed · 엔진 3종 → 정리</span></button>
+<button data-id="d6-5" aria-current="false"><span class="p">5교시</span><span class="no">D6-5</span><span class="tt">파이프라인 엔진 교체</span><span class="d">5교시 흐름 — 프레임 시간 4단계 (read · pre · infer · post) → 실습 5-1 time_stages: CPU 에서는 추론이 92 ~ 95% → 실습 5-2 run_intrusion: 엔진만 바꿔 영상 3개 · 이벤트 CSV 3개 → 산출물</span></button>
+<button data-id="d6-6" aria-current="false"><span class="p">6교시</span><span class="no">D6-6</span><span class="tt">이벤트 일치율과 병목</span><span class="d">6교시 흐름 — 실습 6-1 프레임 일치율: 사람 수 79% · 경보 97.5% → 실습 6-2 이벤트 재현율 5건 중 4건 (놓친 것은 0.2초짜리) → 예제 6-A Amdahl: 병목의 이동 → 정리</span></button>
+<button data-id="d6-7" aria-current="false"><span class="p">7교시</span><span class="no">D6-7</span><span class="tt">배포 판단</span><span class="d">7교시 흐름 — 기법 선택 순서 → 실습 7-1 최종 qp_baseline.csv (Day6 5행) → 실습 7-2 recommend · 경량화 결정표 (Jetson · Raspberry Pi · MCU) → 정리</span></button>
+<button data-id="d6-8" aria-current="false"><span class="p">8교시</span><span class="no">D6-8</span><span class="tt">평가 대비 정리</span><span class="d">8교시 미니 프로젝트 흐름 — 과제 1 (쉬움) static PTQ 표 → 과제 2 (중간) structured pruning 30% + 학습 결과표 → 과제 3 저장 · 요약 → 제출 원칙 → 6일 정리</span></button>
+  </div>
+  <p class="hint"><kbd>←</kbd> <kbd>→</kbd> 키로 이전 · 다음 애니메이션</p>
+</nav>
+<main>
+<section class="lesson" id="d6-1" data-title="D6-1 Knowledge Distillation"><iframe title="D6-1 Knowledge Distillation" loading="lazy" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;ko&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+&lt;title&gt;Knowledge Distillation — Quantization·Pruning Day 6&lt;/title&gt;
+&lt;style&gt;
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:&quot;Consolas&quot;,&quot;D2Coding&quot;,&quot;JetBrains Mono&quot;,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:&quot;Pretendard&quot;,&quot;Noto Sans KR&quot;,&quot;Segoe UI&quot;,sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  @media(max-width:520px){.app{padding:16px 12px 30px}}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .sub code,.explain code,.note code{font-family:var(--mono);color:var(--blue)}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono);max-width:100%;overflow-wrap:anywhere}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.red{color:var(--red);border-color:var(--red)}.pill.green{color:var(--green);border-color:var(--green)}.pill.purple{color:var(--purple);border-color:var(--purple)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;min-width:0}
+  @media(max-width:520px){.panel{padding:12px 10px}}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.run{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700}
+  button.sel{background:#123d33;border-color:var(--teal);color:var(--teal)}
+  button:disabled{opacity:.4;cursor:default}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .grid{display:grid;grid-template-columns:1.25fr 1fr;gap:14px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .grid&gt;*{min-width:0}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.two{grid-template-columns:1fr}}
+  .two&gt;*{min-width:0}
+  canvas{width:100%;display:block;background:#0a0f1c;border:1px solid var(--line);border-radius:8px}
+  svg{max-width:100%}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+  .lab{font-size:13px;color:var(--dim)}
+  .sl{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;margin:8px 0}
+  .sl label{color:var(--amber);width:70px;flex:none}
+  .sl input{flex:1;min-width:60px;accent-color:var(--amber)}
+  .sl output{width:64px;text-align:right;flex:none}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-family:var(--mono);font-size:13.5px}
+  .kv span:nth-child(odd){color:var(--dim)}
+  .kv b{font-weight:600;overflow-wrap:anywhere}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;white-space:pre-wrap;min-height:64px;overflow-wrap:anywhere}
+  .code .g{color:var(--green)}.code .e{color:var(--red)}.code .c{color:#5d7292}.code .a{color:var(--amber)}.code .b{color:var(--blue)}.code .t{color:var(--teal)}
+  .code .hl{background:#3a2e12;color:var(--amber);border-radius:3px;padding:0 2px}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px;overflow-wrap:anywhere;white-space:pre-line}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}.explain b.purple{color:var(--purple)}
+  table.tt{border-collapse:collapse;font-family:var(--mono);font-size:13px;width:100%}
+  table.tt th,table.tt td{border:1px solid var(--line);padding:4px 6px;text-align:center}
+  table.tt th{color:var(--dim);font-weight:600;background:#0e1628}
+  table.tt tr.cur td{background:#2a2210}
+  .ok1{color:var(--green)}.bad1{color:var(--red)}.dim{color:var(--dim)}
+  .scroll{overflow-x:auto;max-width:100%}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .note{font-size:12.5px;color:var(--dim);border-left:3px solid var(--amber);padding:4px 10px;margin-top:10px}
+  .chk{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--dim)}
+  .chk input{accent-color:var(--amber)}
+  .ctl button{font-family:var(--mono)}
+  input[type=number],input.num,select{background:#0a0f1c;border:1px solid #2a3a5c;color:var(--text);border-radius:6px;padding:4px 6px;font-family:var(--mono);font-size:13px;width:74px}
+  select{width:auto}
+  .seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+  .seg button{padding:5px 10px}
+  .mono{font-family:var(--mono)}
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+  .arr{color:var(--dim);font-family:var(--mono);flex:none}
+  .fb{border:1px solid #2a3a5c;border-radius:8px;padding:7px 10px;background:#0a0f1c;font-family:var(--mono);font-size:13px;transition:all .3s;min-width:0;overflow-wrap:anywhere}
+  .fb small{display:block;color:var(--dim);font-size:11.5px;font-family:inherit}
+  .fb.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber);box-shadow:0 0 0 2px #f5b94233}
+  .fb.done{border-color:var(--teal);color:var(--teal)}
+  .fb.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .fb.off{opacity:.35}
+  .cells{display:flex;flex-wrap:wrap;gap:4px}
+  .cell{min-width:38px;height:30px;padding:0 6px;border:1px solid #2a3a5c;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;background:#0a0f1c;transition:all .25s}
+  .cell.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber)}
+  .cell.w{border-color:#3b6aa8;color:var(--blue)}.cell.bb{border-color:#7a5a2a;color:var(--amber)}
+.goals ol{margin:4px 0 0 18px;padding:0;font-size:13.5px;line-height:1.75;color:var(--text)}
+.goals ol li b{color:var(--amber)}
+#quiz .q{margin:0 0 8px;font-size:14px;line-height:1.55}
+#quiz .opts{display:flex;flex-direction:column;gap:6px}
+#quiz .opts button{text-align:left;background:#0b1220;border:1px solid #334155;color:var(--text);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer}
+#quiz .opts button:hover:not(:disabled){border-color:var(--teal)}
+#quiz .opts button.ok{border-color:#34d399;background:#0f2a22;color:#6ee7b7}
+#quiz .opts button.no{border-color:#f87171;background:#2a1215;color:#fca5a5}
+#quiz .why{margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--text)}
+.tagrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:12px;color:var(--dim)}
+.kv .wait{grid-column:1/-1;color:var(--dim);font-size:12.5px}
+
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;app&quot;&gt;
+&lt;div id=&quot;root&quot;&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;script&gt;
+
+const $=s=&gt;document.querySelector(s), $$=s=&gt;[...document.querySelectorAll(s)];
+const RM=window.matchMedia&amp;&amp;window.matchMedia(&#x27;(prefers-reduced-motion: reduce)&#x27;).matches;
+const sleep=ms=&gt;new Promise(r=&gt;setTimeout(r,RM?Math.min(ms,80):ms));
+let busy=false, timer=null;
+function setStatus(c,m){const s=$(&#x27;#status&#x27;);s.className=&#x27;status &#x27;+c;s.innerHTML=m;}
+function setCode(h){$(&#x27;#code&#x27;).innerHTML=h;}
+function fitCanvas(c){const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;const w=Math.max(10,Math.round(r.width*d)),h=Math.max(10,Math.round(r.height*d));if(c.width!==w||c.height!==h){c.width=w;c.height=h;}const g=c.getContext(&#x27;2d&#x27;);g.setTransform(d,0,0,d,0,0);return [g,r.width,r.height];}
+function initPresets(P,stop){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;if(stop)stop();$$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#explain&#x27;).innerHTML=P[i].ex;try{await P[i].run();}finally{busy=false;}});}
+const esc=s=&gt;String(s).replace(/&amp;/g,&#x27;&amp;amp;&#x27;).replace(/&lt;/g,&#x27;&amp;lt;&#x27;).replace(/&gt;/g,&#x27;&amp;gt;&#x27;);
+const fmt=n=&gt;n.toLocaleString(&#x27;en-US&#x27;);
+function stopTimer(){if(timer){clearInterval(timer);timer=null;}}
+/* Day 2 · 3 공통 — 교시 흐름 (노트북 순서) + 먼저 예측 + 실측 공개 */
+const K={b:&#x27;#60a5fa&#x27;,a:&#x27;#f59e0b&#x27;,g:&#x27;#34d399&#x27;,r:&#x27;#f87171&#x27;,p:&#x27;#c084fc&#x27;,t:&#x27;#2dd4bf&#x27;,d:&#x27;#8a9bb8&#x27;,x:&#x27;#dbe4f0&#x27;,l:&#x27;#334155&#x27;,bg:&#x27;#111a2e&#x27;,z:&#x27;#1f2b45&#x27;};
+let R=false, CUR=null;
+function layout(o){document.getElementById(&#x27;root&#x27;).innerHTML=`
+&lt;h1&gt;${o.h1}&lt;/h1&gt;&lt;p class=&quot;sub&quot;&gt;${o.sub}&lt;/p&gt;
+&lt;div class=&quot;panel goals&quot;&gt;&lt;h2&gt;이 교시에서 배우는 것&lt;/h2&gt;&lt;ol&gt;${o.goals.map(g=&gt;`&lt;li&gt;${g}&lt;/li&gt;`).join(&#x27;&#x27;)}&lt;/ol&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;교시 흐름 — 노트북 순서대로 (누르면 재생)&lt;/h2&gt;&lt;div class=&quot;presets&quot; id=&quot;presets&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2 id=&quot;vt&quot;&gt;그림&lt;/h2&gt;&lt;canvas id=&quot;cv&quot; style=&quot;height:${o.h||250}px&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+&lt;div class=&quot;grid&quot;&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;🤔 먼저 예측 — 고르면 실측값이 나옵니다&lt;/h2&gt;&lt;div id=&quot;quiz&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;강사 실측 (노트북 실행 결과)&lt;/h2&gt;&lt;div class=&quot;kv&quot; id=&quot;kv&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;노트북 코드&lt;/h2&gt;&lt;div class=&quot;code&quot; id=&quot;code&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;상태&lt;/h2&gt;&lt;div class=&quot;status info&quot; id=&quot;status&quot;&gt;단계를 누르세요.&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;panel explain&quot; id=&quot;explain&quot;&gt;&lt;/div&gt;`;}
+function showKV(rows){$(&#x27;#kv&#x27;).innerHTML=rows.map(([k,v])=&gt;`&lt;span&gt;${k}&lt;/span&gt;&lt;b&gt;${v}&lt;/b&gt;`).join(&#x27;&#x27;);}
+function reveal(){if(!CUR||R)return;R=true;showKV(CUR.kv);setCode(CUR.code);$(&#x27;#explain&#x27;).innerHTML=CUR.ex;if(CUR.st)setStatus(CUR.st[0],CUR.st[1]);if(window.draw)draw();}
+function ask(q){const [qs,opts,ans,why]=q;
+  $(&#x27;#quiz&#x27;).innerHTML=`&lt;p class=&quot;q&quot;&gt;${qs}&lt;/p&gt;&lt;div class=&quot;opts&quot;&gt;${opts.map((o,i)=&gt;`&lt;button type=&quot;button&quot; data-i=&quot;${i}&quot;&gt;${o}&lt;/button&gt;`).join(&#x27;&#x27;)}&lt;/div&gt;&lt;p class=&quot;why&quot; hidden&gt;&lt;/p&gt;`;
+  $$(&#x27;#quiz .opts button&#x27;).forEach(b=&gt;b.onclick=()=&gt;{const i=+b.dataset.i;$$(&#x27;#quiz .opts button&#x27;).forEach((x,j)=&gt;{x.disabled=true;x.classList.toggle(&#x27;ok&#x27;,j===ans);x.classList.toggle(&#x27;no&#x27;,j===i&amp;&amp;i!==ans);});
+    const w=$(&#x27;#quiz .why&#x27;);w.hidden=false;w.innerHTML=(i===ans?&#x27;✅ 맞았습니다. &#x27;:&#x27;❌ 다시 생각해 봅시다. &#x27;)+why;reveal();});}
+function steps(P){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;stopTimer();const p=P[i];CUR=p;R=false;
+    $$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#vt&#x27;).textContent=p.vt||p.n;$(&#x27;#explain&#x27;).innerHTML=&#x27;&lt;p class=&quot;dim&quot;&gt;예측을 고르면 이 단계의 해설이 나타납니다.&lt;/p&gt;&#x27;;setCode(&#x27;&lt;span class=&quot;c&quot;&gt;# 예측을 고르면 이 단계의 노트북 코드가 나타납니다&lt;/span&gt;&#x27;);
+    $(&#x27;#kv&#x27;).innerHTML=&#x27;&lt;span class=&quot;wait&quot;&gt;왼쪽 위 예측을 먼저 고르세요 — 고르면 실측값이 나타납니다.&lt;/span&gt;&#x27;;setStatus(&#x27;info&#x27;,p.s0||&#x27;애니메이션을 보고 예측을 골라 보세요.&#x27;);ask(p.q);
+    try{await p.run();}finally{busy=false;}});
+  $(&#x27;#presets button&#x27;).click();}
+function cv(){const [g,W,H]=fitCanvas($(&#x27;#cv&#x27;));g.clearRect(0,0,W,H);g.textAlign=&#x27;left&#x27;;g.lineWidth=1;return [g,W,H];}
+function box(g,x,y,w,h,t,c,sub,on){g.fillStyle=on?c+&#x27;33&#x27;:K.bg;g.strokeStyle=c;g.lineWidth=on?2.5:1.2;g.beginPath();g.roundRect(x,y,w,h,7);g.fill();g.stroke();g.lineWidth=1;
+  g.fillStyle=K.x;g.font=&#x27;12px sans-serif&#x27;;g.textAlign=&#x27;center&#x27;;g.fillText(t,x+w/2,y+h/2+(sub?-3:4));if(sub){g.fillStyle=K.d;g.font=&#x27;10.5px sans-serif&#x27;;g.fillText(sub,x+w/2,y+h/2+12);}g.textAlign=&#x27;left&#x27;;}
+function arr(g,x1,y1,x2,y2,c){g.strokeStyle=c||K.d;g.fillStyle=c||K.d;g.lineWidth=1.5;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();const a=Math.atan2(y2-y1,x2-x1);g.beginPath();g.moveTo(x2,y2);g.lineTo(x2-8*Math.cos(a-.4),y2-8*Math.sin(a-.4));g.lineTo(x2-8*Math.cos(a+.4),y2-8*Math.sin(a+.4));g.fill();g.lineWidth=1;}
+function txt(g,s,x,y,c,f,al){g.fillStyle=c||K.x;g.font=f||&#x27;12px sans-serif&#x27;;g.textAlign=al||&#x27;left&#x27;;g.fillText(s,x,y);g.textAlign=&#x27;left&#x27;;}
+function hbar(g,x,y,w,h,frac,c,label,val){g.fillStyle=K.z;g.fillRect(x,y,w,h);g.fillStyle=c;g.fillRect(x,y,Math.max(0,w*Math.min(1,frac)),h);if(label)txt(g,label,x-6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;,&#x27;right&#x27;);if(val)txt(g,val,x+w*Math.min(1,frac)+6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;);}
+async function tween(n,ms,f){for(let k=1;k&lt;=n;k++){f(k/n);await sleep(ms);}}
+window.__d6={};
+
+layout({h1:&#x27;Knowledge Distillation — 선생님의 출력 분포를 따라 한다&#x27;,sub:&#x27;1교시 노트북 순서: 선생님과 학생 → temperature (예제 1-A) → soft target (1-1) → KD loss (1-2).&#x27;,
+ goals:[&#x27;학생은 &lt;b&gt;정답 (CE)&lt;/b&gt; 과 &lt;b&gt;선생님의 soft target (KL)&lt;/b&gt; 을 함께 따라 한다 — 선생님은 학습하지 않는다&#x27;,&#x27;&lt;b&gt;temperature T&lt;/b&gt; 가 클수록 분포가 평평해져 1등 외 클래스의 정보가 드러난다&#x27;,&#x27;&lt;b&gt;loss = α·CE + (1 − α)·T²·KL&lt;/b&gt; — F.kl_div(log 확률, 확률, reduction=&quot;batchmean&quot;)&#x27;]});
+let S=0,T=0;
+function draw(){const [g,W,H]=cv();const u=W/100;
+ if(S===0){txt(g,&#x27;개념도 — 학습할 때와 배포할 때&#x27;,2*u,20,K.d);
+  box(g,2*u,40,16*u,40,&#x27;입력&#x27;,K.l);arr(g,18*u,52,26*u,46);arr(g,18*u,68,26*u,104);box(g,26*u,30,26*u,40,&#x27;선생님 (teacher)&#x27;,K.b,&#x27;고정 · no_grad&#x27;,true);box(g,26*u,90,26*u,40,&#x27;학생 (student)&#x27;,K.g,&#x27;학습됨&#x27;,true);
+  arr(g,52*u,50,60*u,50);arr(g,52*u,110,60*u,110);box(g,60*u,30,36*u,40,&#x27;(1 − α) · T² · KL&#x27;,K.a,&#x27;선생님의 분포 따라 하기&#x27;,T&gt;.4);box(g,60*u,90,36*u,40,&#x27;α · CE(학생, 정답)&#x27;,K.a,&#x27;정답 맞히기&#x27;,T&gt;.4);arr(g,52*u,100,60*u,62,K.d);
+  txt(g,&#x27;배포 (추론) 할 때&#x27;,2*u,176,K.x,&#x27;bold 13px sans-serif&#x27;);box(g,2*u,186,16*u,40,&#x27;입력&#x27;,K.l);arr(g,18*u,206,26*u,206);box(g,26*u,186,26*u,40,R?&#x27;학생만&#x27;:&#x27;?&#x27;,R?K.g:K.l,R?&#x27;선생님은 필요 없다&#x27;:&#x27;&#x27;,true);txt(g,R?&#x27;→ 배포 비용은 늘지 않는다&#x27;:&#x27;&#x27;,56*u,210,K.a,&#x27;13px sans-serif&#x27;);}
+ if(S===1){txt(g,&#x27;선생님이 사진 한 장 (정답 horse) 에 낸 logits: horse 13.86 · dog 3.12 · cat 0.05&#x27;,2*u,20,K.d);
+  [[1,[1.000,0.000,0.000]],[4,[0.813,0.055,0.026]],[10,[0.335,0.114,0.084]]].forEach(([t,p],i)=&gt;{const y=38+i*68;txt(g,&#x27;T = &#x27;+t,2*u,y+30,K.x,&#x27;bold 14px sans-serif&#x27;);[&#x27;horse&#x27;,&#x27;dog&#x27;,&#x27;cat&#x27;].forEach((n,j)=&gt;hbar(g,24*u,y+j*19,48*u,15,(i&amp;&amp;!R?0:p[j])*T,j?K.a:K.b,n,i&amp;&amp;!R?&#x27;?&#x27;:p[j].toFixed(3)));});
+  txt(g,R?&#x27;T 가 커질수록 2등 · 3등 (말과 닮은 개 · 고양이) 의 확률이 드러난다&#x27;:&#x27;&#x27;,2*u,H-6,K.a,&#x27;12.5px sans-serif&#x27;);}
+ if(S===2){txt(g,&#x27;평가용 500장 — 1등이 아닌 클래스에 준 확률의 평균 (1 − 최대 확률)&#x27;,2*u,20,K.d);
+  [[1,.118],[2,.262],[4,.512],[8,.730]].forEach(([t,v],i)=&gt;hbar(g,22*u,42+i*38,56*u,24,(i===2&amp;&amp;!R?0:v)*T,i===2?K.g:K.b,&#x27;T = &#x27;+t,i===2&amp;&amp;!R?&#x27;?&#x27;:v.toFixed(3)));
+  txt(g,R?&#x27;T = 1: 선생님은 평균 88% 를 1등에 준다 → hard label 과 거의 같다&#x27;:&#x27;&#x27;,2*u,206,K.x,&#x27;12.5px sans-serif&#x27;);txt(g,R?&#x27;T = 4: 절반 이상이 다른 클래스로 → 클래스 사이의 닮음 (dark knowledge) 이 보인다&#x27;:&#x27;&#x27;,2*u,230,K.a,&#x27;12.5px sans-serif&#x27;);}
+ if(S===3){txt(g,&#x27;kd_loss(s, t, y, T=4, alpha=0.5)&#x27;,2*u,20,K.d,&#x27;12.5px monospace&#x27;);
+  box(g,2*u,36,30*u,48,&#x27;α · CE(s, y)&#x27;,K.b,&#x27;0.5 × 0.6216&#x27;);txt(g,&#x27;+&#x27;,34.5*u,66,K.x,&#x27;bold 18px sans-serif&#x27;);box(g,38*u,36,38*u,48,&#x27;(1 − α) · T² · KL(t ‖ s)&#x27;,K.a,R?&#x27;학생 = 선생님이면 0&#x27;:&#x27;학생 = 선생님이면 ?&#x27;,true);txt(g,&#x27;=&#x27;,78*u,66,K.x,&#x27;bold 18px sans-serif&#x27;);box(g,82*u,36,16*u,48,R?&#x27;0.3108&#x27;:&#x27;?&#x27;,K.g,&#x27;&#x27;,true);
+  txt(g,&#x27;F.kl_div( F.log_softmax(s / T, dim=1),  soft(t, T),  reduction=&quot;batchmean&quot; )&#x27;,2*u,118,K.x,&#x27;12px monospace&#x27;);txt(g,&#x27;            ↑ 학생의 log 확률           ↑ 선생님의 확률&#x27;,2*u,138,K.d,&#x27;12px monospace&#x27;);
+  txt(g,&#x27;T² 를 곱하는 이유: soft 항의 기울기는 1/T² 로 작아진다 — 곱해 주지 않으면 T 를 키울수록 soft 항이 무시된다&#x27;,2*u,178,K.d,&#x27;12px sans-serif&#x27;);txt(g,R?&#x27;α = 1 이면 일반 CE (fine-tuning) 와 같다&#x27;:&#x27;&#x27;,2*u,204,K.a,&#x27;12.5px sans-serif&#x27;);}
+}
+async function play(s,ms,n){S=s;await tween(n||20,ms||80,t=&gt;{T=t;draw();});}
+steps([
+ {n:&#x27;① 개념 — 선생님과 학생&#x27;,vt:&#x27;학습할 때 · 배포할 때&#x27;,run:()=&gt;play(0),
+  q:[&#x27;KD 로 학습을 마친 뒤, 장치에 배포해 추론할 때 필요한 모델은?&#x27;,[&#x27;선생님과 학생 둘 다 — soft target 을 계속 만들어야 한다&#x27;,&#x27;학생만&#x27;,&#x27;선생님만 — 학생은 학습용 보조 모델이다&#x27;],1,&#x27;선생님은 학습할 때 soft target 을 만들어 주는 역할만 합니다 (no_grad · eval). 추론은 학생 혼자 하므로 배포 비용 (크기 · 지연) 은 늘지 않습니다.&#x27;],
+  kv:[[&#x27;선생님&#x27;,&#x27;고정 — torch.no_grad() · eval()&#x27;],[&#x27;학생&#x27;,&#x27;CE + KL 로 학습&#x27;],[&#x27;배포&#x27;,&#x27;학생만&#x27;]],st:[&#x27;info&#x27;,&#x27;학습 방법만 바뀌고 배포 모델은 그대로&#x27;],
+  code:`loss = α · CE(student, 정답)  +  (1 − α) · T² · KL( softmax(teacher / T) ‖ softmax(student / T) )`,
+  ex:&#x27;&lt;p&gt;hard label 은 &quot;이 사진은 말&quot; 이라는 정보 하나를 줍니다. 선생님의 출력은 &quot;말 0.81 · 개 0.06 · 고양이 0.03&quot; 처럼 &lt;b&gt;클래스 사이의 닮음&lt;/b&gt; 까지 알려 줍니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;② 예제 1-A — temperature&#x27;,vt:&#x27;logits 를 T 로 나누면&#x27;,run:()=&gt;play(1),
+  q:[&#x27;T = 1 에서 선생님은 horse 에 1.000 을 줍니다. T = 4 로 올리면 2등 dog 의 확률은?&#x27;,[&#x27;그대로 0.000&#x27;,&#x27;커진다 (0.055)&#x27;,&#x27;horse 를 넘어선다 (0.6)&#x27;],1,&#x27;logits 를 T 로 나누면 차이가 줄어 분포가 평평해집니다: T = 4 에서 horse 0.813 · dog 0.055 · cat 0.026, T = 10 에서 0.335 · 0.114 · 0.084. 순위는 바뀌지 않습니다.&#x27;],
+  kv:[[&#x27;T = 1&#x27;,&#x27;horse 1.000&#x27;],[&#x27;T = 4&#x27;,&#x27;horse 0.813 · dog 0.055 · cat 0.026&#x27;],[&#x27;T = 10&#x27;,&#x27;horse 0.335 · dog 0.114 · cat 0.084&#x27;]],st:[&#x27;ok&#x27;,&#x27;T 가 클수록 2등 · 3등이 보인다&#x27;],
+  code:`for T in [1, 4, 10]:\n    p = F.softmax(z_demo / T, 0)      &lt;span class=&quot;c&quot;&gt;# logits 를 T 로 나눈 뒤 softmax&lt;/span&gt;`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;제공 코드 (실행만)&lt;/b&gt;: T 가 너무 크면 모든 클래스가 1/10 에 가까워져 정보가 다시 사라집니다. 보통 2 ~ 8 을 씁니다 (오늘은 4).&lt;/p&gt;&#x27;},
+ {n:&#x27;③ 실습 1-1 — soft · dark knowledge&#x27;,vt:&#x27;1등 외 확률의 평균&#x27;,run:()=&gt;play(2),
+  q:[&#x27;평가용 500장에서 선생님이 &quot;1등이 아닌 클래스&quot; 에 준 확률의 평균은 T = 1 에서 0.118, T = 2 에서 0.262 입니다. T = 4 에서는?&#x27;,[&#x27;약 0.30&#x27;,&#x27;약 0.51&#x27;,&#x27;약 0.95&#x27;],1,&#x27;0.512 입니다 (T = 8 은 0.730). T = 4 에서는 확률의 절반 이상이 1등 외 클래스로 나뉘어 학생에게 줄 정보가 많아집니다.&#x27;],
+  kv:[[&#x27;T = 1 · 2&#x27;,&#x27;0.118 · 0.262&#x27;],[&#x27;T = 4&#x27;,&#x27;0.512&#x27;],[&#x27;T = 8&#x27;,&#x27;0.730&#x27;]],st:[&#x27;ok&#x27;,&#x27;soft target 에 담긴 정보량은 T 가 정한다&#x27;],
+  code:`def soft(logits, T=1.0):\n    return F.softmax(logits / T, &lt;span class=&quot;hl&quot;&gt;dim=1&lt;/span&gt;)\n\ndark = {T: float(1 - soft(t_logits, T).max(1).values.mean()) for T in [1, 2, 4, 8]}`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: &lt;code&gt;dim=1&lt;/code&gt; (클래스 축) 로 softmax 해야 합니다. dim 을 0 으로 두면 배치 축으로 정규화되어 오류 없이 틀립니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;④ 실습 1-2 — kd_loss&#x27;,vt:&#x27;α·CE + (1 − α)·T²·KL&#x27;,run:()=&gt;play(3),
+  q:[&#x27;학생의 logits 가 선생님의 logits 와 똑같다면 kd_loss (α = 0.5) 는 얼마가 될까요?&#x27;,[&#x27;0 — 완벽히 따라 했으므로&#x27;,&#x27;0.5 × CE — soft 항만 0 이 된다&#x27;,&#x27;CE 그대로 — soft 항은 영향을 주지 않는다&#x27;],1,&#x27;KL(t ‖ s) 는 두 분포가 같으면 0 입니다. 정답과의 CE 는 남으므로 α · CE = 0.5 × 0.6216 = 0.3108. 확인 셀이 이 성질로 구현을 검사합니다.&#x27;],
+  kv:[[&#x27;학생 = 선생님&#x27;,&#x27;0.5 × CE = 0.3108&#x27;],[&#x27;α = 1&#x27;,&#x27;일반 CE (fine-tuning)&#x27;],[&#x27;kl_div 인자&#x27;,&#x27;(학생 log 확률, 선생님 확률)&#x27;]],st:[&#x27;ok&#x27;,&#x27;KD loss 완성 — 2교시에 학습에 넣는다&#x27;],
+  code:`def kd_loss(s_logits, t_logits, y, T=4.0, alpha=0.5):\n    ce = F.cross_entropy(s_logits, y)\n    kl = F.kl_div(&lt;span class=&quot;hl&quot;&gt;F.log_softmax&lt;/span&gt;(s_logits / T, dim=1), soft(t_logits, T), reduction=&lt;span class=&quot;hl&quot;&gt;&quot;batchmean&quot;&lt;/span&gt;)\n    return alpha * ce + (1 - alpha) * T * T * kl`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: &lt;code&gt;F.kl_div&lt;/code&gt; 는 첫 인자가 &lt;b&gt;log 확률&lt;/b&gt; 입니다. 순서나 log 를 틀려도 오류 없이 엉뚱한 값이 나오므로 확인 셀의 검산이 중요합니다.&lt;/p&gt;&#x27;},
+]);
+
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe></section>
+<section class="lesson" id="d6-2" data-title="D6-2 Pruning + KD"><iframe title="D6-2 Pruning + KD" loading="lazy" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;ko&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+&lt;title&gt;Pruning + KD — Quantization·Pruning Day 6&lt;/title&gt;
+&lt;style&gt;
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:&quot;Consolas&quot;,&quot;D2Coding&quot;,&quot;JetBrains Mono&quot;,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:&quot;Pretendard&quot;,&quot;Noto Sans KR&quot;,&quot;Segoe UI&quot;,sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  @media(max-width:520px){.app{padding:16px 12px 30px}}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .sub code,.explain code,.note code{font-family:var(--mono);color:var(--blue)}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono);max-width:100%;overflow-wrap:anywhere}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.red{color:var(--red);border-color:var(--red)}.pill.green{color:var(--green);border-color:var(--green)}.pill.purple{color:var(--purple);border-color:var(--purple)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;min-width:0}
+  @media(max-width:520px){.panel{padding:12px 10px}}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.run{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700}
+  button.sel{background:#123d33;border-color:var(--teal);color:var(--teal)}
+  button:disabled{opacity:.4;cursor:default}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .grid{display:grid;grid-template-columns:1.25fr 1fr;gap:14px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .grid&gt;*{min-width:0}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.two{grid-template-columns:1fr}}
+  .two&gt;*{min-width:0}
+  canvas{width:100%;display:block;background:#0a0f1c;border:1px solid var(--line);border-radius:8px}
+  svg{max-width:100%}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+  .lab{font-size:13px;color:var(--dim)}
+  .sl{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;margin:8px 0}
+  .sl label{color:var(--amber);width:70px;flex:none}
+  .sl input{flex:1;min-width:60px;accent-color:var(--amber)}
+  .sl output{width:64px;text-align:right;flex:none}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-family:var(--mono);font-size:13.5px}
+  .kv span:nth-child(odd){color:var(--dim)}
+  .kv b{font-weight:600;overflow-wrap:anywhere}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;white-space:pre-wrap;min-height:64px;overflow-wrap:anywhere}
+  .code .g{color:var(--green)}.code .e{color:var(--red)}.code .c{color:#5d7292}.code .a{color:var(--amber)}.code .b{color:var(--blue)}.code .t{color:var(--teal)}
+  .code .hl{background:#3a2e12;color:var(--amber);border-radius:3px;padding:0 2px}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px;overflow-wrap:anywhere;white-space:pre-line}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}.explain b.purple{color:var(--purple)}
+  table.tt{border-collapse:collapse;font-family:var(--mono);font-size:13px;width:100%}
+  table.tt th,table.tt td{border:1px solid var(--line);padding:4px 6px;text-align:center}
+  table.tt th{color:var(--dim);font-weight:600;background:#0e1628}
+  table.tt tr.cur td{background:#2a2210}
+  .ok1{color:var(--green)}.bad1{color:var(--red)}.dim{color:var(--dim)}
+  .scroll{overflow-x:auto;max-width:100%}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .note{font-size:12.5px;color:var(--dim);border-left:3px solid var(--amber);padding:4px 10px;margin-top:10px}
+  .chk{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--dim)}
+  .chk input{accent-color:var(--amber)}
+  .ctl button{font-family:var(--mono)}
+  input[type=number],input.num,select{background:#0a0f1c;border:1px solid #2a3a5c;color:var(--text);border-radius:6px;padding:4px 6px;font-family:var(--mono);font-size:13px;width:74px}
+  select{width:auto}
+  .seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+  .seg button{padding:5px 10px}
+  .mono{font-family:var(--mono)}
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+  .arr{color:var(--dim);font-family:var(--mono);flex:none}
+  .fb{border:1px solid #2a3a5c;border-radius:8px;padding:7px 10px;background:#0a0f1c;font-family:var(--mono);font-size:13px;transition:all .3s;min-width:0;overflow-wrap:anywhere}
+  .fb small{display:block;color:var(--dim);font-size:11.5px;font-family:inherit}
+  .fb.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber);box-shadow:0 0 0 2px #f5b94233}
+  .fb.done{border-color:var(--teal);color:var(--teal)}
+  .fb.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .fb.off{opacity:.35}
+  .cells{display:flex;flex-wrap:wrap;gap:4px}
+  .cell{min-width:38px;height:30px;padding:0 6px;border:1px solid #2a3a5c;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;background:#0a0f1c;transition:all .25s}
+  .cell.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber)}
+  .cell.w{border-color:#3b6aa8;color:var(--blue)}.cell.bb{border-color:#7a5a2a;color:var(--amber)}
+.goals ol{margin:4px 0 0 18px;padding:0;font-size:13.5px;line-height:1.75;color:var(--text)}
+.goals ol li b{color:var(--amber)}
+#quiz .q{margin:0 0 8px;font-size:14px;line-height:1.55}
+#quiz .opts{display:flex;flex-direction:column;gap:6px}
+#quiz .opts button{text-align:left;background:#0b1220;border:1px solid #334155;color:var(--text);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer}
+#quiz .opts button:hover:not(:disabled){border-color:var(--teal)}
+#quiz .opts button.ok{border-color:#34d399;background:#0f2a22;color:#6ee7b7}
+#quiz .opts button.no{border-color:#f87171;background:#2a1215;color:#fca5a5}
+#quiz .why{margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--text)}
+.tagrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:12px;color:var(--dim)}
+.kv .wait{grid-column:1/-1;color:var(--dim);font-size:12.5px}
+
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;app&quot;&gt;
+&lt;div id=&quot;root&quot;&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;script&gt;
+
+const $=s=&gt;document.querySelector(s), $$=s=&gt;[...document.querySelectorAll(s)];
+const RM=window.matchMedia&amp;&amp;window.matchMedia(&#x27;(prefers-reduced-motion: reduce)&#x27;).matches;
+const sleep=ms=&gt;new Promise(r=&gt;setTimeout(r,RM?Math.min(ms,80):ms));
+let busy=false, timer=null;
+function setStatus(c,m){const s=$(&#x27;#status&#x27;);s.className=&#x27;status &#x27;+c;s.innerHTML=m;}
+function setCode(h){$(&#x27;#code&#x27;).innerHTML=h;}
+function fitCanvas(c){const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;const w=Math.max(10,Math.round(r.width*d)),h=Math.max(10,Math.round(r.height*d));if(c.width!==w||c.height!==h){c.width=w;c.height=h;}const g=c.getContext(&#x27;2d&#x27;);g.setTransform(d,0,0,d,0,0);return [g,r.width,r.height];}
+function initPresets(P,stop){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;if(stop)stop();$$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#explain&#x27;).innerHTML=P[i].ex;try{await P[i].run();}finally{busy=false;}});}
+const esc=s=&gt;String(s).replace(/&amp;/g,&#x27;&amp;amp;&#x27;).replace(/&lt;/g,&#x27;&amp;lt;&#x27;).replace(/&gt;/g,&#x27;&amp;gt;&#x27;);
+const fmt=n=&gt;n.toLocaleString(&#x27;en-US&#x27;);
+function stopTimer(){if(timer){clearInterval(timer);timer=null;}}
+/* Day 2 · 3 공통 — 교시 흐름 (노트북 순서) + 먼저 예측 + 실측 공개 */
+const K={b:&#x27;#60a5fa&#x27;,a:&#x27;#f59e0b&#x27;,g:&#x27;#34d399&#x27;,r:&#x27;#f87171&#x27;,p:&#x27;#c084fc&#x27;,t:&#x27;#2dd4bf&#x27;,d:&#x27;#8a9bb8&#x27;,x:&#x27;#dbe4f0&#x27;,l:&#x27;#334155&#x27;,bg:&#x27;#111a2e&#x27;,z:&#x27;#1f2b45&#x27;};
+let R=false, CUR=null;
+function layout(o){document.getElementById(&#x27;root&#x27;).innerHTML=`
+&lt;h1&gt;${o.h1}&lt;/h1&gt;&lt;p class=&quot;sub&quot;&gt;${o.sub}&lt;/p&gt;
+&lt;div class=&quot;panel goals&quot;&gt;&lt;h2&gt;이 교시에서 배우는 것&lt;/h2&gt;&lt;ol&gt;${o.goals.map(g=&gt;`&lt;li&gt;${g}&lt;/li&gt;`).join(&#x27;&#x27;)}&lt;/ol&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;교시 흐름 — 노트북 순서대로 (누르면 재생)&lt;/h2&gt;&lt;div class=&quot;presets&quot; id=&quot;presets&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2 id=&quot;vt&quot;&gt;그림&lt;/h2&gt;&lt;canvas id=&quot;cv&quot; style=&quot;height:${o.h||250}px&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+&lt;div class=&quot;grid&quot;&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;🤔 먼저 예측 — 고르면 실측값이 나옵니다&lt;/h2&gt;&lt;div id=&quot;quiz&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;강사 실측 (노트북 실행 결과)&lt;/h2&gt;&lt;div class=&quot;kv&quot; id=&quot;kv&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;노트북 코드&lt;/h2&gt;&lt;div class=&quot;code&quot; id=&quot;code&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;상태&lt;/h2&gt;&lt;div class=&quot;status info&quot; id=&quot;status&quot;&gt;단계를 누르세요.&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;panel explain&quot; id=&quot;explain&quot;&gt;&lt;/div&gt;`;}
+function showKV(rows){$(&#x27;#kv&#x27;).innerHTML=rows.map(([k,v])=&gt;`&lt;span&gt;${k}&lt;/span&gt;&lt;b&gt;${v}&lt;/b&gt;`).join(&#x27;&#x27;);}
+function reveal(){if(!CUR||R)return;R=true;showKV(CUR.kv);setCode(CUR.code);$(&#x27;#explain&#x27;).innerHTML=CUR.ex;if(CUR.st)setStatus(CUR.st[0],CUR.st[1]);if(window.draw)draw();}
+function ask(q){const [qs,opts,ans,why]=q;
+  $(&#x27;#quiz&#x27;).innerHTML=`&lt;p class=&quot;q&quot;&gt;${qs}&lt;/p&gt;&lt;div class=&quot;opts&quot;&gt;${opts.map((o,i)=&gt;`&lt;button type=&quot;button&quot; data-i=&quot;${i}&quot;&gt;${o}&lt;/button&gt;`).join(&#x27;&#x27;)}&lt;/div&gt;&lt;p class=&quot;why&quot; hidden&gt;&lt;/p&gt;`;
+  $$(&#x27;#quiz .opts button&#x27;).forEach(b=&gt;b.onclick=()=&gt;{const i=+b.dataset.i;$$(&#x27;#quiz .opts button&#x27;).forEach((x,j)=&gt;{x.disabled=true;x.classList.toggle(&#x27;ok&#x27;,j===ans);x.classList.toggle(&#x27;no&#x27;,j===i&amp;&amp;i!==ans);});
+    const w=$(&#x27;#quiz .why&#x27;);w.hidden=false;w.innerHTML=(i===ans?&#x27;✅ 맞았습니다. &#x27;:&#x27;❌ 다시 생각해 봅시다. &#x27;)+why;reveal();});}
+function steps(P){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;stopTimer();const p=P[i];CUR=p;R=false;
+    $$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#vt&#x27;).textContent=p.vt||p.n;$(&#x27;#explain&#x27;).innerHTML=&#x27;&lt;p class=&quot;dim&quot;&gt;예측을 고르면 이 단계의 해설이 나타납니다.&lt;/p&gt;&#x27;;setCode(&#x27;&lt;span class=&quot;c&quot;&gt;# 예측을 고르면 이 단계의 노트북 코드가 나타납니다&lt;/span&gt;&#x27;);
+    $(&#x27;#kv&#x27;).innerHTML=&#x27;&lt;span class=&quot;wait&quot;&gt;왼쪽 위 예측을 먼저 고르세요 — 고르면 실측값이 나타납니다.&lt;/span&gt;&#x27;;setStatus(&#x27;info&#x27;,p.s0||&#x27;애니메이션을 보고 예측을 골라 보세요.&#x27;);ask(p.q);
+    try{await p.run();}finally{busy=false;}});
+  $(&#x27;#presets button&#x27;).click();}
+function cv(){const [g,W,H]=fitCanvas($(&#x27;#cv&#x27;));g.clearRect(0,0,W,H);g.textAlign=&#x27;left&#x27;;g.lineWidth=1;return [g,W,H];}
+function box(g,x,y,w,h,t,c,sub,on){g.fillStyle=on?c+&#x27;33&#x27;:K.bg;g.strokeStyle=c;g.lineWidth=on?2.5:1.2;g.beginPath();g.roundRect(x,y,w,h,7);g.fill();g.stroke();g.lineWidth=1;
+  g.fillStyle=K.x;g.font=&#x27;12px sans-serif&#x27;;g.textAlign=&#x27;center&#x27;;g.fillText(t,x+w/2,y+h/2+(sub?-3:4));if(sub){g.fillStyle=K.d;g.font=&#x27;10.5px sans-serif&#x27;;g.fillText(sub,x+w/2,y+h/2+12);}g.textAlign=&#x27;left&#x27;;}
+function arr(g,x1,y1,x2,y2,c){g.strokeStyle=c||K.d;g.fillStyle=c||K.d;g.lineWidth=1.5;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();const a=Math.atan2(y2-y1,x2-x1);g.beginPath();g.moveTo(x2,y2);g.lineTo(x2-8*Math.cos(a-.4),y2-8*Math.sin(a-.4));g.lineTo(x2-8*Math.cos(a+.4),y2-8*Math.sin(a+.4));g.fill();g.lineWidth=1;}
+function txt(g,s,x,y,c,f,al){g.fillStyle=c||K.x;g.font=f||&#x27;12px sans-serif&#x27;;g.textAlign=al||&#x27;left&#x27;;g.fillText(s,x,y);g.textAlign=&#x27;left&#x27;;}
+function hbar(g,x,y,w,h,frac,c,label,val){g.fillStyle=K.z;g.fillRect(x,y,w,h);g.fillStyle=c;g.fillRect(x,y,Math.max(0,w*Math.min(1,frac)),h);if(label)txt(g,label,x-6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;,&#x27;right&#x27;);if(val)txt(g,val,x+w*Math.min(1,frac)+6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;);}
+async function tween(n,ms,f){for(let k=1;k&lt;=n;k++){f(k/n);await sleep(ms);}}
+window.__d6={};
+
+layout({h1:&#x27;Pruning + KD — 가지치기한 모델을 선생님에게 배우게 하기&#x27;,sub:&#x27;2교시 노트북 순서: 선생님은 어디서 오나 → train_kd (2-1) → fine-tuning 과 같은 예산으로 비교 (2-2) → 20% 모델 (예제 2-A).&#x27;,
+ goals:[&#x27;가지치기에서는 &lt;b&gt;자르기 전의 원본이 선생님&lt;/b&gt; — 따로 큰 모델을 학습할 필요가 없다&#x27;,&#x27;&lt;b&gt;같은 예산&lt;/b&gt; (10,000장 · 3 epoch · lr 1e-2) 에서 loss 만 바꿔 비교한다&#x27;,&#x27;KD 의 이득은 &lt;b&gt;많이 망가진 학생일수록&lt;/b&gt; 크다 (50% +2.5%p · 20% +0.2%p)&#x27;]});
+let S=0,T=0;
+function draw(){const [g,W,H]=cv();const u=W/100;
+ if(S===0){box(g,2*u,40,26*u,50,&#x27;원본 ResNet-20&#x27;,K.b,&#x27;0.846 · MACs 41.2M&#x27;,true);arr(g,28*u,65,40*u,65);txt(g,&#x27;prune 50%&#x27;,29*u,54,K.d,&#x27;11.5px sans-serif&#x27;);box(g,40*u,40,26*u,50,&#x27;학생&#x27;,K.r,&#x27;0.10 · MACs 10.5M&#x27;,true);arr(g,66*u,65,76*u,65);box(g,76*u,40,22*u,50,&#x27;학습 3 epoch&#x27;,K.g,&#x27;&#x27;,T&gt;.5);
+  arr(g,15*u,90,15*u,130,K.b);arr(g,15*u,130,87*u,130,K.b);arr(g,87*u,130,87*u,92,K.b);txt(g,R?&#x27;soft target — 원본이 선생님 (고정)&#x27;:&#x27;선생님은 어디서?&#x27;,34*u,148,R?K.b:K.a,&#x27;12.5px sans-serif&#x27;);
+  txt(g,&#x27;비교 조건: 같은 학생 · 같은 데이터 10,000장 · 같은 3 epoch · lr 1e-2&#x27;,2*u,190,K.x,&#x27;12.5px sans-serif&#x27;);txt(g,&#x27;fine-tuning: loss = CE          KD: loss = α·CE + (1 − α)·T²·KL&#x27;,2*u,214,K.d,&#x27;12px monospace&#x27;);}
+ if(S===1||S===2){const A=[[0,.1],[1,.6415],[2,.7345],[3,.7475]],B=[[0,.1],[1,.632],[2,.712],[3,.7225]],x0=10*u,w=60*u,py=a=&gt;H-40-a/.9*(H-78),px=e=&gt;x0+e/3*w;txt(g,&#x27;50% 모델 (MACs 10.5M) — KD (초록) · fine-tuning (회색 점선)&#x27;,2*u,20,K.d);
+  [.2,.4,.6,.8].forEach(a=&gt;{g.strokeStyle=K.z;g.beginPath();g.moveTo(x0,py(a));g.lineTo(x0+w,py(a));g.stroke();txt(g,a.toFixed(1),4*u,py(a)+4,K.d,&#x27;10.5px sans-serif&#x27;);});
+  g.strokeStyle=K.x;g.setLineDash([5,4]);g.beginPath();g.moveTo(x0,py(.846));g.lineTo(x0+w,py(.846));g.stroke();g.setLineDash([]);txt(g,&#x27;FP32 0.846&#x27;,x0+w+6,py(.846)+4,K.x,&#x27;11px sans-serif&#x27;);
+  if(S===2){g.strokeStyle=K.d;g.setLineDash([5,4]);g.beginPath();B.forEach(([e,a],i)=&gt;i?g.lineTo(px(e),py(a)):g.moveTo(px(e),py(a)));g.stroke();g.setLineDash([]);txt(g,&#x27;fine-tuning 0.7225&#x27;,px(3)+8,py(.7225)+16,K.d,&#x27;11.5px sans-serif&#x27;);}
+  const n=(S===2||R)?Math.min(3,Math.floor(T*3.01)):0;g.strokeStyle=K.g;g.lineWidth=2.5;g.beginPath();A.slice(0,n+1).forEach(([e,a],i)=&gt;i?g.lineTo(px(e),py(a)):g.moveTo(px(e),py(a)));g.stroke();g.lineWidth=1;
+  A.slice(0,n+1).forEach(([e,a])=&gt;{g.fillStyle=e?K.g:K.r;g.beginPath();g.arc(px(e),py(a),5,0,7);g.fill();if(S===1||e===3&amp;&amp;R)txt(g,a.toFixed(4),px(e)+8,py(a)-8,K.x,&#x27;11.5px sans-serif&#x27;);});
+  A.forEach(([e])=&gt;txt(g,&#x27;epoch &#x27;+e,px(e)-16,H-20,K.d,&#x27;11px sans-serif&#x27;));if(S===2)txt(g,R?&#x27;KD 이득 +2.5%p — 학습 시간은 선생님 forward 만큼 늘어난다 (CPU 약 27초 → 43초)&#x27;:&#x27;KD 는 fine-tuning 보다?&#x27;,x0,H-2,K.a,&#x27;12.5px sans-serif&#x27;);}
+ if(S===3){txt(g,&#x27;KD 이득 = KD 정확도 − fine-tuning 정확도 (같은 예산)&#x27;,2*u,20,K.d);
+  [[&#x27;50% 모델&#x27;,.7225,.7475,&#x27;+2.5%p&#x27;],[&#x27;20% 모델&#x27;,.8195,.8215,&#x27;+0.2%p&#x27;]].forEach(([n,a,b,d],i)=&gt;{const y=42+i*84;txt(g,n,2*u,y+28,K.x,&#x27;bold 14px sans-serif&#x27;);hbar(g,26*u,y,46*u,20,(a-.6)/.26*T,K.b,&#x27;fine-tuning&#x27;,a.toFixed(4));hbar(g,26*u,y+26,46*u,20,(i&amp;&amp;!R?0:(b-.6)/.26)*T,K.g,&#x27;KD&#x27;,i&amp;&amp;!R?&#x27;?&#x27;:b.toFixed(4));txt(g,i&amp;&amp;!R?&#x27;?&#x27;:d,80*u,y+30,K.a,&#x27;bold 15px sans-serif&#x27;);});
+  txt(g,&#x27;막대는 0.60 ~ 0.86 구간 확대&#x27;,26*u,212,K.d,&#x27;11px sans-serif&#x27;);txt(g,R?&#x27;덜 자른 모델은 정답만으로도 많이 회복한다 — KD 는 &quot;같은 예산에서 조금 더&quot;&#x27;:&#x27;&#x27;,2*u,236,K.a,&#x27;12.5px sans-serif&#x27;);}
+}
+async function play(s,ms,n){S=s;await tween(n||20,ms||80,t=&gt;{T=t;draw();});}
+steps([
+ {n:&#x27;① 개념 — 선생님은 어디서&#x27;,vt:&#x27;자르기 전의 원본&#x27;,run:()=&gt;play(0),
+  q:[&#x27;가지치기한 모델에 KD 를 쓰려면 선생님 모델은 어떻게 마련할까요?&#x27;,[&#x27;더 큰 모델을 처음부터 새로 학습한다&#x27;,&#x27;자르기 전의 원본을 그대로 쓴다&#x27;,&#x27;가지치기한 모델을 복사해 선생님으로 쓴다&#x27;],1,&#x27;원본 ResNet-20 (0.846) 이 이미 있습니다. 같은 구조에서 채널만 줄인 학생이 원본의 출력 분포를 따라 하도록 학습합니다 — 선생님을 만드는 비용이 0 입니다.&#x27;],
+  kv:[[&#x27;선생님&#x27;,&#x27;원본 rn20 (0.846 · 41.2M)&#x27;],[&#x27;학생&#x27;,&#x27;prune_channels(rn20, 0.5) (0.10 · 10.5M)&#x27;],[&#x27;비교&#x27;,&#x27;loss 만 다르게&#x27;]],st:[&#x27;info&#x27;,&#x27;가지치기는 선생님이 공짜로 생긴다&#x27;],
+  code:`p50 = prune_channels(rn20, 0.5)        &lt;span class=&quot;c&quot;&gt;# 학생 — Day 5 의 50% 모델과 같은 구조&lt;/span&gt;\n&lt;span class=&quot;c&quot;&gt;# 선생님 = rn20 (자르기 전의 원본)&lt;/span&gt;`,
+  ex:&#x27;&lt;p&gt;Day 5 에서는 이 학생을 정답만으로 fine-tuning 해 0.7225 를 얻었습니다. 오늘은 같은 예산으로 loss 만 KD 로 바꿉니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;② 실습 2-1 — train_kd&#x27;,vt:&#x27;KD 회복 곡선&#x27;,run:()=&gt;play(1,400,3),
+  q:[&#x27;train_kd 안에서 선생님의 forward 를 torch.no_grad() 로 감싸는 이유는?&#x27;,[&#x27;선생님의 출력을 더 정확하고 안정적으로 만들려고&#x27;,&#x27;선생님 쪽 기울기 계산을 없애려고&#x27;,&#x27;학생의 기울기가 선생님으로 복사되게 하려고&#x27;],1,&#x27;선생님은 학습하지 않으므로 기울기가 필요 없습니다. no_grad 로 감싸면 선생님 쪽 계산 그래프가 만들어지지 않아 메모리 · 시간이 절약됩니다. 결과: 0.10 → 0.6415 → 0.7345 → 0.7475.&#x27;],
+  kv:[[&#x27;epoch 0 → 1&#x27;,&#x27;0.100 → 0.6415&#x27;],[&#x27;epoch 2 → 3&#x27;,&#x27;0.7345 → 0.7475&#x27;],[&#x27;시간&#x27;,&#x27;약 43초 (CPU)&#x27;]],st:[&#x27;ok&#x27;,&#x27;KD 로 0.10 → 0.7475&#x27;],
+  code:`for xb, yb in batches(seed=ep):\n    with &lt;span class=&quot;hl&quot;&gt;torch.no_grad()&lt;/span&gt;:\n        t_out = teacher(xb)                      &lt;span class=&quot;c&quot;&gt;# 같은 증강 배치를 선생님도 본다&lt;/span&gt;\n    loss = kd_loss(student(xb), t_out, yb, T, alpha)\n    opt.zero_grad(); loss.backward(); opt.step(); sched.step()`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: 데이터 셀의 &lt;code&gt;finetune&lt;/code&gt; 과 같은 구조입니다. 달라지는 것은 선생님을 &lt;code&gt;eval()&lt;/code&gt; 로 두고 loss 를 &lt;code&gt;kd_loss&lt;/code&gt; 로 바꾸는 것뿐입니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;③ 실습 2-2 — fine-tuning vs KD&#x27;,vt:&#x27;같은 예산으로&#x27;,run:()=&gt;play(2,300,3),
+  q:[&#x27;같은 학생 · 같은 3 epoch 에서 fine-tuning 은 0.7225 였습니다. KD 는?&#x27;,[&#x27;더 낮다 (약 0.70) — loss 가 복잡해져서&#x27;,&#x27;더 높다 (0.7475)&#x27;,&#x27;똑같다 (0.7225)&#x27;],1,&#x27;+2.5%p 입니다. 데이터 · epoch 를 늘리지 않고 loss 만 바꿔 얻은 이득입니다. 대신 step 마다 선생님 forward 가 한 번 더 들어 학습 시간이 늘어납니다 (CPU 약 27초 → 43초).&#x27;],
+  kv:[[&#x27;fine-tuning&#x27;,&#x27;0.7225&#x27;],[&#x27;KD&#x27;,&#x27;0.7475 (+2.5%p)&#x27;],[&#x27;FP32 와의 차이&#x27;,&#x27;9.8%p 남음&#x27;]],st:[&#x27;ok&#x27;,&#x27;loss 만 바꿔 +2.5%p&#x27;],
+  code:`p50_ft = copy.deepcopy(p50); t_ft = finetune(p50_ft)\nkd_df = pd.DataFrame([{&quot;method&quot;: &quot;fine-tuning&quot;, &quot;acc&quot;: acc_torch(p50_ft), &quot;train_s&quot;: t_ft},\n                      {&quot;method&quot;: &quot;KD&quot;, &quot;acc&quot;: hist_kd[-1], &quot;train_s&quot;: t_kd}])\ntorch.save(p50_kd.cpu(), &quot;rn20_p50_kd.pth&quot;)`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: 그래도 FP32 와 약 10%p 차이가 남습니다 — 50% 는 이 예산에서 너무 많이 자른 것입니다. 이 KD 모델을 3교시에 양자화합니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;④ 예제 2-A — 20% 모델&#x27;,vt:&#x27;덜 자른 모델에서는&#x27;,run:()=&gt;play(3),
+  q:[&#x27;20% 만 자른 모델은 fine-tuning 으로 0.8195 까지 회복합니다. 여기에 KD 를 쓰면 이득은 50% 모델 (+2.5%p) 과 비교해 어떨까요?&#x27;,[&#x27;더 크다 (약 +5.0%p)&#x27;,&#x27;더 작다 (+0.2%p)&#x27;,&#x27;똑같다 (약 +2.5%p)&#x27;],1,&#x27;0.8195 → 0.8215 (+0.2%p) 입니다. 덜 자른 모델은 정답만으로도 대부분 회복하므로 선생님이 더 줄 것이 적습니다. KD 는 많이 망가진 학생일수록 도움이 됩니다.&#x27;],
+  kv:[[&#x27;20% fine-tuning&#x27;,&#x27;0.8195&#x27;],[&#x27;20% KD&#x27;,&#x27;0.8215 (+0.2%p)&#x27;],[&#x27;FP32 대비&#x27;,&#x27;−2.45%p&#x27;]],st:[&#x27;info&#x27;,&#x27;KD 는 공짜 점심이 아니다&#x27;],
+  code:`p20 = prune_channels(rn20, 0.2)\np20_ft, p20_kd = copy.deepcopy(p20), copy.deepcopy(p20)\nfinetune(p20_ft); train_kd(p20_kd, rn20)`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;제공 코드 (실행만)&lt;/b&gt;: 1%p 기준 안에 들려면 KD 와 함께 학습 데이터 · epoch 도 늘려야 합니다.&lt;/p&gt;&#x27;},
+]);
+
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe></section>
+<section class="lesson" id="d6-3" data-title="D6-3 순서의 문제"><iframe title="D6-3 순서의 문제" loading="lazy" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;ko&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+&lt;title&gt;순서의 문제 — Quantization·Pruning Day 6&lt;/title&gt;
+&lt;style&gt;
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:&quot;Consolas&quot;,&quot;D2Coding&quot;,&quot;JetBrains Mono&quot;,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:&quot;Pretendard&quot;,&quot;Noto Sans KR&quot;,&quot;Segoe UI&quot;,sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  @media(max-width:520px){.app{padding:16px 12px 30px}}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .sub code,.explain code,.note code{font-family:var(--mono);color:var(--blue)}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono);max-width:100%;overflow-wrap:anywhere}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.red{color:var(--red);border-color:var(--red)}.pill.green{color:var(--green);border-color:var(--green)}.pill.purple{color:var(--purple);border-color:var(--purple)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;min-width:0}
+  @media(max-width:520px){.panel{padding:12px 10px}}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.run{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700}
+  button.sel{background:#123d33;border-color:var(--teal);color:var(--teal)}
+  button:disabled{opacity:.4;cursor:default}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .grid{display:grid;grid-template-columns:1.25fr 1fr;gap:14px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .grid&gt;*{min-width:0}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.two{grid-template-columns:1fr}}
+  .two&gt;*{min-width:0}
+  canvas{width:100%;display:block;background:#0a0f1c;border:1px solid var(--line);border-radius:8px}
+  svg{max-width:100%}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+  .lab{font-size:13px;color:var(--dim)}
+  .sl{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;margin:8px 0}
+  .sl label{color:var(--amber);width:70px;flex:none}
+  .sl input{flex:1;min-width:60px;accent-color:var(--amber)}
+  .sl output{width:64px;text-align:right;flex:none}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-family:var(--mono);font-size:13.5px}
+  .kv span:nth-child(odd){color:var(--dim)}
+  .kv b{font-weight:600;overflow-wrap:anywhere}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;white-space:pre-wrap;min-height:64px;overflow-wrap:anywhere}
+  .code .g{color:var(--green)}.code .e{color:var(--red)}.code .c{color:#5d7292}.code .a{color:var(--amber)}.code .b{color:var(--blue)}.code .t{color:var(--teal)}
+  .code .hl{background:#3a2e12;color:var(--amber);border-radius:3px;padding:0 2px}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px;overflow-wrap:anywhere;white-space:pre-line}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}.explain b.purple{color:var(--purple)}
+  table.tt{border-collapse:collapse;font-family:var(--mono);font-size:13px;width:100%}
+  table.tt th,table.tt td{border:1px solid var(--line);padding:4px 6px;text-align:center}
+  table.tt th{color:var(--dim);font-weight:600;background:#0e1628}
+  table.tt tr.cur td{background:#2a2210}
+  .ok1{color:var(--green)}.bad1{color:var(--red)}.dim{color:var(--dim)}
+  .scroll{overflow-x:auto;max-width:100%}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .note{font-size:12.5px;color:var(--dim);border-left:3px solid var(--amber);padding:4px 10px;margin-top:10px}
+  .chk{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--dim)}
+  .chk input{accent-color:var(--amber)}
+  .ctl button{font-family:var(--mono)}
+  input[type=number],input.num,select{background:#0a0f1c;border:1px solid #2a3a5c;color:var(--text);border-radius:6px;padding:4px 6px;font-family:var(--mono);font-size:13px;width:74px}
+  select{width:auto}
+  .seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+  .seg button{padding:5px 10px}
+  .mono{font-family:var(--mono)}
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+  .arr{color:var(--dim);font-family:var(--mono);flex:none}
+  .fb{border:1px solid #2a3a5c;border-radius:8px;padding:7px 10px;background:#0a0f1c;font-family:var(--mono);font-size:13px;transition:all .3s;min-width:0;overflow-wrap:anywhere}
+  .fb small{display:block;color:var(--dim);font-size:11.5px;font-family:inherit}
+  .fb.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber);box-shadow:0 0 0 2px #f5b94233}
+  .fb.done{border-color:var(--teal);color:var(--teal)}
+  .fb.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .fb.off{opacity:.35}
+  .cells{display:flex;flex-wrap:wrap;gap:4px}
+  .cell{min-width:38px;height:30px;padding:0 6px;border:1px solid #2a3a5c;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;background:#0a0f1c;transition:all .25s}
+  .cell.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber)}
+  .cell.w{border-color:#3b6aa8;color:var(--blue)}.cell.bb{border-color:#7a5a2a;color:var(--amber)}
+.goals ol{margin:4px 0 0 18px;padding:0;font-size:13.5px;line-height:1.75;color:var(--text)}
+.goals ol li b{color:var(--amber)}
+#quiz .q{margin:0 0 8px;font-size:14px;line-height:1.55}
+#quiz .opts{display:flex;flex-direction:column;gap:6px}
+#quiz .opts button{text-align:left;background:#0b1220;border:1px solid #334155;color:var(--text);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer}
+#quiz .opts button:hover:not(:disabled){border-color:var(--teal)}
+#quiz .opts button.ok{border-color:#34d399;background:#0f2a22;color:#6ee7b7}
+#quiz .opts button.no{border-color:#f87171;background:#2a1215;color:#fca5a5}
+#quiz .why{margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--text)}
+.tagrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:12px;color:var(--dim)}
+.kv .wait{grid-column:1/-1;color:var(--dim);font-size:12.5px}
+
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;app&quot;&gt;
+&lt;div id=&quot;root&quot;&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;script&gt;
+
+const $=s=&gt;document.querySelector(s), $$=s=&gt;[...document.querySelectorAll(s)];
+const RM=window.matchMedia&amp;&amp;window.matchMedia(&#x27;(prefers-reduced-motion: reduce)&#x27;).matches;
+const sleep=ms=&gt;new Promise(r=&gt;setTimeout(r,RM?Math.min(ms,80):ms));
+let busy=false, timer=null;
+function setStatus(c,m){const s=$(&#x27;#status&#x27;);s.className=&#x27;status &#x27;+c;s.innerHTML=m;}
+function setCode(h){$(&#x27;#code&#x27;).innerHTML=h;}
+function fitCanvas(c){const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;const w=Math.max(10,Math.round(r.width*d)),h=Math.max(10,Math.round(r.height*d));if(c.width!==w||c.height!==h){c.width=w;c.height=h;}const g=c.getContext(&#x27;2d&#x27;);g.setTransform(d,0,0,d,0,0);return [g,r.width,r.height];}
+function initPresets(P,stop){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;if(stop)stop();$$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#explain&#x27;).innerHTML=P[i].ex;try{await P[i].run();}finally{busy=false;}});}
+const esc=s=&gt;String(s).replace(/&amp;/g,&#x27;&amp;amp;&#x27;).replace(/&lt;/g,&#x27;&amp;lt;&#x27;).replace(/&gt;/g,&#x27;&amp;gt;&#x27;);
+const fmt=n=&gt;n.toLocaleString(&#x27;en-US&#x27;);
+function stopTimer(){if(timer){clearInterval(timer);timer=null;}}
+/* Day 2 · 3 공통 — 교시 흐름 (노트북 순서) + 먼저 예측 + 실측 공개 */
+const K={b:&#x27;#60a5fa&#x27;,a:&#x27;#f59e0b&#x27;,g:&#x27;#34d399&#x27;,r:&#x27;#f87171&#x27;,p:&#x27;#c084fc&#x27;,t:&#x27;#2dd4bf&#x27;,d:&#x27;#8a9bb8&#x27;,x:&#x27;#dbe4f0&#x27;,l:&#x27;#334155&#x27;,bg:&#x27;#111a2e&#x27;,z:&#x27;#1f2b45&#x27;};
+let R=false, CUR=null;
+function layout(o){document.getElementById(&#x27;root&#x27;).innerHTML=`
+&lt;h1&gt;${o.h1}&lt;/h1&gt;&lt;p class=&quot;sub&quot;&gt;${o.sub}&lt;/p&gt;
+&lt;div class=&quot;panel goals&quot;&gt;&lt;h2&gt;이 교시에서 배우는 것&lt;/h2&gt;&lt;ol&gt;${o.goals.map(g=&gt;`&lt;li&gt;${g}&lt;/li&gt;`).join(&#x27;&#x27;)}&lt;/ol&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;교시 흐름 — 노트북 순서대로 (누르면 재생)&lt;/h2&gt;&lt;div class=&quot;presets&quot; id=&quot;presets&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2 id=&quot;vt&quot;&gt;그림&lt;/h2&gt;&lt;canvas id=&quot;cv&quot; style=&quot;height:${o.h||250}px&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+&lt;div class=&quot;grid&quot;&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;🤔 먼저 예측 — 고르면 실측값이 나옵니다&lt;/h2&gt;&lt;div id=&quot;quiz&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;강사 실측 (노트북 실행 결과)&lt;/h2&gt;&lt;div class=&quot;kv&quot; id=&quot;kv&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;노트북 코드&lt;/h2&gt;&lt;div class=&quot;code&quot; id=&quot;code&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;상태&lt;/h2&gt;&lt;div class=&quot;status info&quot; id=&quot;status&quot;&gt;단계를 누르세요.&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;panel explain&quot; id=&quot;explain&quot;&gt;&lt;/div&gt;`;}
+function showKV(rows){$(&#x27;#kv&#x27;).innerHTML=rows.map(([k,v])=&gt;`&lt;span&gt;${k}&lt;/span&gt;&lt;b&gt;${v}&lt;/b&gt;`).join(&#x27;&#x27;);}
+function reveal(){if(!CUR||R)return;R=true;showKV(CUR.kv);setCode(CUR.code);$(&#x27;#explain&#x27;).innerHTML=CUR.ex;if(CUR.st)setStatus(CUR.st[0],CUR.st[1]);if(window.draw)draw();}
+function ask(q){const [qs,opts,ans,why]=q;
+  $(&#x27;#quiz&#x27;).innerHTML=`&lt;p class=&quot;q&quot;&gt;${qs}&lt;/p&gt;&lt;div class=&quot;opts&quot;&gt;${opts.map((o,i)=&gt;`&lt;button type=&quot;button&quot; data-i=&quot;${i}&quot;&gt;${o}&lt;/button&gt;`).join(&#x27;&#x27;)}&lt;/div&gt;&lt;p class=&quot;why&quot; hidden&gt;&lt;/p&gt;`;
+  $$(&#x27;#quiz .opts button&#x27;).forEach(b=&gt;b.onclick=()=&gt;{const i=+b.dataset.i;$$(&#x27;#quiz .opts button&#x27;).forEach((x,j)=&gt;{x.disabled=true;x.classList.toggle(&#x27;ok&#x27;,j===ans);x.classList.toggle(&#x27;no&#x27;,j===i&amp;&amp;i!==ans);});
+    const w=$(&#x27;#quiz .why&#x27;);w.hidden=false;w.innerHTML=(i===ans?&#x27;✅ 맞았습니다. &#x27;:&#x27;❌ 다시 생각해 봅시다. &#x27;)+why;reveal();});}
+function steps(P){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;stopTimer();const p=P[i];CUR=p;R=false;
+    $$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#vt&#x27;).textContent=p.vt||p.n;$(&#x27;#explain&#x27;).innerHTML=&#x27;&lt;p class=&quot;dim&quot;&gt;예측을 고르면 이 단계의 해설이 나타납니다.&lt;/p&gt;&#x27;;setCode(&#x27;&lt;span class=&quot;c&quot;&gt;# 예측을 고르면 이 단계의 노트북 코드가 나타납니다&lt;/span&gt;&#x27;);
+    $(&#x27;#kv&#x27;).innerHTML=&#x27;&lt;span class=&quot;wait&quot;&gt;왼쪽 위 예측을 먼저 고르세요 — 고르면 실측값이 나타납니다.&lt;/span&gt;&#x27;;setStatus(&#x27;info&#x27;,p.s0||&#x27;애니메이션을 보고 예측을 골라 보세요.&#x27;);ask(p.q);
+    try{await p.run();}finally{busy=false;}});
+  $(&#x27;#presets button&#x27;).click();}
+function cv(){const [g,W,H]=fitCanvas($(&#x27;#cv&#x27;));g.clearRect(0,0,W,H);g.textAlign=&#x27;left&#x27;;g.lineWidth=1;return [g,W,H];}
+function box(g,x,y,w,h,t,c,sub,on){g.fillStyle=on?c+&#x27;33&#x27;:K.bg;g.strokeStyle=c;g.lineWidth=on?2.5:1.2;g.beginPath();g.roundRect(x,y,w,h,7);g.fill();g.stroke();g.lineWidth=1;
+  g.fillStyle=K.x;g.font=&#x27;12px sans-serif&#x27;;g.textAlign=&#x27;center&#x27;;g.fillText(t,x+w/2,y+h/2+(sub?-3:4));if(sub){g.fillStyle=K.d;g.font=&#x27;10.5px sans-serif&#x27;;g.fillText(sub,x+w/2,y+h/2+12);}g.textAlign=&#x27;left&#x27;;}
+function arr(g,x1,y1,x2,y2,c){g.strokeStyle=c||K.d;g.fillStyle=c||K.d;g.lineWidth=1.5;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();const a=Math.atan2(y2-y1,x2-x1);g.beginPath();g.moveTo(x2,y2);g.lineTo(x2-8*Math.cos(a-.4),y2-8*Math.sin(a-.4));g.lineTo(x2-8*Math.cos(a+.4),y2-8*Math.sin(a+.4));g.fill();g.lineWidth=1;}
+function txt(g,s,x,y,c,f,al){g.fillStyle=c||K.x;g.font=f||&#x27;12px sans-serif&#x27;;g.textAlign=al||&#x27;left&#x27;;g.fillText(s,x,y);g.textAlign=&#x27;left&#x27;;}
+function hbar(g,x,y,w,h,frac,c,label,val){g.fillStyle=K.z;g.fillRect(x,y,w,h);g.fillStyle=c;g.fillRect(x,y,Math.max(0,w*Math.min(1,frac)),h);if(label)txt(g,label,x-6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;,&#x27;right&#x27;);if(val)txt(g,val,x+w*Math.min(1,frac)+6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;);}
+async function tween(n,ms,f){for(let k=1;k&lt;=n;k++){f(k/n);await sleep(ms);}}
+window.__d6={};
+
+layout({h1:&#x27;순서의 문제 — Prune → KD → INT8 → TensorRT&#x27;,sub:&#x27;3교시 노트북 순서: 왜 이 순서인가 → KD 모델을 INT8 로 (3-1) → 순서를 바꾸면 (3-2) → compress.py 와 단계별 표 (예제 3-A).&#x27;,
+ goals:[&#x27;순서: &lt;b&gt;구조 (prune) → 회복 (KD) → 양자화 (INT8) → 엔진&lt;/b&gt;&#x27;,&#x27;양자화 범위는 &lt;b&gt;최종 weight · 활성값&lt;/b&gt; 으로 정한다 — 양자화 뒤에 채널을 자르면 깨진다&#x27;,&#x27;가지치기 + KD 모델도 8비트는 &lt;b&gt;PTQ 로 충분&lt;/b&gt; 했다 (need_qat False) — 그래도 재 보고 판정한다&#x27;]});
+let S=0,T=0;
+function draw(){const [g,W,H]=cv();const u=W/100;
+ if(S===0){[[&#x27;① Prune&#x27;,&#x27;구조 확정&#x27;,K.b],[&#x27;② KD&#x27;,&#x27;정확도 회복&#x27;,K.g],[&#x27;③ INT8&#x27;,R?&#x27;PTQ → 필요하면 QAT&#x27;:&#x27;?&#x27;,K.a],[&#x27;④ 엔진&#x27;,&#x27;QDQ ONNX → TensorRT&#x27;,K.p]].forEach(([a,b,c],i)=&gt;{if(i/4&gt;T)return;const x=2*u+i*24.5*u;box(g,x,40,21*u,50,a,c,b,i===2);if(i&lt;3)arr(g,x+21*u,65,x+24.5*u,65);});
+  txt(g,&#x27;구조를 먼저: 채널 수가 바뀌면 그 뒤의 모든 것이 다시 정해져야 한다&#x27;,2*u,130,K.x,&#x27;12.5px sans-serif&#x27;);txt(g,R?&#x27;양자화를 마지막에: scale 은 최종 weight · 활성값으로 정해야 한다&#x27;:&#x27;양자화는 어디에?&#x27;,2*u,156,R?K.a:K.d,&#x27;12.5px sans-serif&#x27;);txt(g,&#x27;PTQ 를 먼저, QAT 는 손실이 1%p 를 넘을 때만 (Day 4)&#x27;,2*u,182,K.d,&#x27;12.5px sans-serif&#x27;);}
+ if(S===1){txt(g,&#x27;p50_kd (가지치기 50% + KD) 를 ModelOpt 로 INT8 PTQ&#x27;,2*u,20,K.d);
+  hbar(g,30*u,42,48*u,24,.7475/.8*T,K.g,&#x27;KD (FP32)&#x27;,&#x27;0.7475&#x27;);hbar(g,30*u,72,48*u,24,(R?.7455/.8:0)*T,K.a,&#x27;INT8 PTQ&#x27;,R?&#x27;0.7455&#x27;:&#x27;?&#x27;);hbar(g,30*u,102,48*u,24,(R?.746/.8:0)*T,K.p,&#x27;QDQ ONNX (ORT)&#x27;,R?&#x27;0.7460&#x27;:&#x27;?&#x27;);
+  txt(g,R?&#x27;손실 0.2%p &lt; 1%p → need_qat = False&#x27;:&#x27;&#x27;,2*u,160,K.a,&#x27;13px sans-serif&#x27;);txt(g,R?&#x27;trt_check: qdq 90 · zero_point 모두 0 → TensorRT INT8 + FP16 엔진으로 바로&#x27;:&#x27;&#x27;,2*u,186,K.x,&#x27;12.5px sans-serif&#x27;);txt(g,&#x27;Day 4 의 기준: PTQ 손실이 1%p 를 넘을 때만 QAT&#x27;,2*u,212,K.d,&#x27;12px sans-serif&#x27;);}
+ if(S===2){txt(g,&#x27;순서를 바꾸면: ① 양자화 (0.843) → ② 채널 50% 가지치기&#x27;,2*u,20,K.d);
+  box(g,2*u,40,30*u,50,&#x27;conv1.weight&#x27;,K.b,R?&#x27;(8, 8, 3, 3) — 채널 8개로 줄었다&#x27;:&#x27;가지치기 뒤 채널 8개&#x27;);box(g,36*u,40,36*u,50,&#x27;weight 양자화기의 amax&#x27;,K.r,R?&#x27;16개 — 예전 개수 그대로&#x27;:&#x27;? 개&#x27;,true);
+  for(let i=0;i&lt;8;i++){g.fillStyle=K.b;g.fillRect(4*u+i*3.2*u,104,2.6*u,16);}for(let i=0;i&lt;16;i++){g.fillStyle=R?(i&lt;8?K.a:K.r):K.z;g.fillRect(36*u+i*2.2*u,104,1.8*u,16);}
+  txt(g,R?&#x27;RuntimeError: The size of tensor a (8) must match the size of tensor b (16)&#x27;:&#x27;forward 하면?&#x27;,2*u,158,R?K.r:K.a,&#x27;12.5px monospace&#x27;);txt(g,R?&#x27;torch-pruning 은 Conv · BN 은 줄였지만 양자화기 안의 채널별 범위는 모른다&#x27;:&#x27;&#x27;,2*u,186,K.x,&#x27;12.5px sans-serif&#x27;);txt(g,R?&#x27;오류가 안 나는 조합이라도: 구조 · weight 가 바뀌면 범위를 처음부터 다시 잡아야 한다&#x27;:&#x27;&#x27;,2*u,210,K.d,&#x27;12px sans-serif&#x27;);}
+ if(S===3){txt(g,&#x27;pipe_df — 단계별 MACs · 정확도 · ONNX 크기&#x27;,2*u,20,K.d);const xs=[2,30,48,66];[&#x27;stage&#x27;,&#x27;macs_m&#x27;,&#x27;acc&#x27;,&#x27;onnx_kb&#x27;].forEach((h,j)=&gt;txt(g,h,xs[j]*u,46,K.d,&#x27;11.5px monospace&#x27;));
+  [[&#x27;FP32 원본&#x27;,&#x27;41.2&#x27;,&#x27;0.8460&#x27;,&#x27;1,071&#x27;],[&#x27;① prune 50%&#x27;,&#x27;10.5&#x27;,&#x27;0.1000&#x27;,&#x27;—&#x27;],[&#x27;② + KD&#x27;,&#x27;10.5&#x27;,&#x27;0.7475&#x27;,&#x27;277&#x27;],[&#x27;③ + INT8 (PTQ)&#x27;,R?&#x27;10.5&#x27;:&#x27;?&#x27;,&#x27;0.7460&#x27;,&#x27;335&#x27;]].forEach((r,i)=&gt;{if(i/4&gt;T)return;const y=72+i*30;g.fillStyle=i%2?&#x27;#0e1628&#x27;:K.bg;g.fillRect(1*u,y-18,98*u,26);r.forEach((v,j)=&gt;txt(g,v,xs[j]*u,y,j?K.x:[K.b,K.r,K.g,K.a][i],&#x27;12.5px &#x27;+(j?&#x27;monospace&#x27;:&#x27;sans-serif&#x27;)));});
+  txt(g,R?&#x27;양자화는 MACs 를 바꾸지 않는다 — 연산 횟수는 같고 한 번의 연산이 싸질 뿐&#x27;:&#x27;&#x27;,2*u,206,K.a,&#x27;12.5px sans-serif&#x27;);txt(g,&#x27;QDQ ONNX (335 KB) 가 FP32 ONNX (277 KB) 보다 큰 이유: weight 는 아직 FP32 + Q/DQ 노드 (Day 4) — 작아지는 것은 엔진&#x27;,2*u,230,K.d,&#x27;11.5px sans-serif&#x27;);}
+}
+async function play(s,ms,n){S=s;await tween(n||20,ms||80,t=&gt;{T=t;draw();});}
+steps([
+ {n:&#x27;① 개념 — 왜 이 순서인가&#x27;,vt:&#x27;구조 → 회복 → 양자화 → 엔진&#x27;,run:()=&gt;play(0,300,4),
+  q:[&#x27;가지치기 · KD · INT8 양자화를 한 모델에 모두 적용합니다. 양자화는 언제 해야 할까요?&#x27;,[&#x27;맨 처음 — 작은 숫자로 바꾼 뒤 나머지를 한다&#x27;,&#x27;맨 마지막 — 구조와 weight 가 확정된 뒤&#x27;,&#x27;가지치기와 KD 사이&#x27;],1,&#x27;양자화 범위 (scale) 는 최종 weight · 활성값의 분포로 정합니다. 그 뒤에 구조를 바꾸거나 다시 학습하면 범위가 맞지 않게 됩니다. 그래서 구조 → 회복 → 양자화 순서입니다.&#x27;],
+  kv:[[&#x27;① ②&#x27;,&#x27;prune → KD (구조 · weight 확정)&#x27;],[&#x27;③&#x27;,&#x27;INT8 PTQ → 손실 &gt; 1%p 면 QAT&#x27;],[&#x27;④&#x27;,&#x27;QDQ ONNX → TensorRT&#x27;]],st:[&#x27;info&#x27;,&#x27;양자화는 항상 마지막&#x27;],
+  code:`m = prune_channels(model, ratio)       &lt;span class=&quot;c&quot;&gt;# ① 구조&lt;/span&gt;\ntrain_kd(m, teacher)                   &lt;span class=&quot;c&quot;&gt;# ② 회복&lt;/span&gt;\nq = to_int8(m)                         &lt;span class=&quot;c&quot;&gt;# ③ 양자화&lt;/span&gt;\nexport_b1(copy.deepcopy(q), out)       &lt;span class=&quot;c&quot;&gt;# ④ QDQ ONNX&lt;/span&gt;`,
+  ex:&#x27;&lt;p&gt;Day 5 과제 6 의 4번 질문 (&quot;양자화와 어떤 순서로?&quot;) 의 답을 오늘 직접 실행해 확인합니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;② 실습 3-1 — KD 모델을 INT8 로&#x27;,vt:&#x27;PTQ 로 충분한가&#x27;,run:()=&gt;play(1),
+  q:[&#x27;가지치기 + KD 모델 (0.7475) 을 INT8 PTQ 했습니다. Day 4 의 기준 (손실 &gt; 1%p 면 QAT) 으로 QAT 가 필요할까요?&#x27;,[&#x27;필요하다 — 작아진 모델은 양자화에 무너진다 (0.60)&#x27;,&#x27;필요 없다 — 손실 0.2%p (0.7455)&#x27;,&#x27;필요하다 — 가지치기한 모델은 항상 QAT 를 해야 한다&#x27;],1,&#x27;0.7475 → 0.7455 (QDQ ONNX 0.746) 로 손실 0.2%p 입니다. 가지치기로 작아진 모델도 8비트에서는 PTQ 로 충분했습니다. 다만 모델에 따라 다르므로 항상 재 보고 판정합니다.&#x27;],
+  kv:[[&#x27;KD → INT8 PTQ&#x27;,&#x27;0.7475 → 0.7455&#x27;],[&#x27;need_qat&#x27;,&#x27;False (손실 0.2%p)&#x27;],[&#x27;QDQ ONNX&#x27;,&#x27;0.7460 · trt_check ok&#x27;]],st:[&#x27;ok&#x27;,&#x27;8비트는 PTQ 로 충분&#x27;],
+  code:`def to_int8(model):\n    return mtq.quantize(&lt;span class=&quot;hl&quot;&gt;copy.deepcopy(model)&lt;/span&gt;.to(DEV), mtq.INT8_DEFAULT_CFG, forward_loop=forward_loop)\n\nq_kd = to_int8(p50_kd)\nneed_qat = (acc_kd - acc_int8) &gt; 0.01`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: Day 4 실습 5-1 의 &lt;code&gt;mtq.quantize&lt;/code&gt; 를 함수로 감쌉니다. 복사본에 적용해 FP32 KD 모델을 지킵니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;③ 실습 3-2 — 순서를 바꾸면&#x27;,vt:&#x27;양자화 → 가지치기&#x27;,run:()=&gt;play(2),
+  q:[&#x27;원본을 먼저 INT8 로 양자화한 뒤 (0.843) torch-pruning 으로 채널 50% 를 자르고 forward 하면?&#x27;,[&#x27;정확도만 조금 떨어진 채 동작한다&#x27;,&#x27;크기가 맞지 않는다는 오류가 난다&#x27;,&#x27;가지치기 자체가 거부되어 모델이 그대로 남는다&#x27;],1,&#x27;Conv 는 8채널로 줄었지만 weight 양자화기는 채널별 범위 (amax) 를 16개 그대로 들고 있어 &quot;size of tensor a (8) must match b (16)&quot; 오류가 납니다. 가지치기 도구는 양자화기 안의 범위를 모릅니다.&#x27;],
+  kv:[[&#x27;양자화만&#x27;,&#x27;0.8430&#x27;],[&#x27;가지치기 뒤 conv1&#x27;,&#x27;(8, 8, 3, 3)&#x27;],[&#x27;양자화기 amax&#x27;,&#x27;16개 → 크기 오류&#x27;]],st:[&#x27;warn&#x27;,&#x27;양자화 뒤에 구조를 바꾸면 깨진다&#x27;],
+  code:`q_first = to_int8(rn20)\nm_bad = copy.deepcopy(q_first).cpu().eval()\nmake_pruner(m_bad, 0.5).step()\ntry: acc_torch(m_bad); err_order = None\nexcept RuntimeError as e: err_order = str(e)`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: 4교시 (Day 5) 의 residual 오류와 같은 종류입니다 — &quot;함께 바뀌어야 하는 것&quot; 을 도구가 모르면 모양이 어긋납니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;④ 예제 3-A — compress.py · 단계별 표&#x27;,vt:&#x27;파이프라인 정리&#x27;,run:()=&gt;play(3,300,4),
+  q:[&#x27;③ INT8 양자화를 한 뒤 모델의 MACs 는 ② (10.5M) 와 비교해 어떻게 될까요?&#x27;,[&#x27;1/4 로 줄어든다 — 32비트가 8비트가 되므로&#x27;,&#x27;그대로 10.5M&#x27;,&#x27;4배로 늘어난다 — Q/DQ 노드가 붙으므로&#x27;],1,&#x27;MACs 는 곱셈-누산의 &quot;횟수&quot; 입니다. 양자화는 횟수를 바꾸지 않고 한 번의 연산을 싸게 (INT8) 만듭니다. 횟수를 줄이는 것은 가지치기입니다 — 두 기법은 서로 다른 축을 줄입니다.&#x27;],
+  kv:[[&#x27;FP32 → ③&#x27;,&#x27;MACs 41.2M → 10.5M&#x27;],[&#x27;정확도&#x27;,&#x27;0.846 → 0.746&#x27;],[&#x27;산출물&#x27;,&#x27;compress.py · rn20_p50_kd_int8.onnx&#x27;]],st:[&#x27;ok&#x27;,&#x27;pruning 은 횟수, 양자화는 한 번의 비용&#x27;],
+  code:`def compress(model, teacher, ratio=0.5, epochs=EPOCHS, out=&quot;compressed_int8.onnx&quot;):\n    m = prune_channels(model, ratio)\n    train_kd(m, teacher, epochs=epochs)\n    q = to_int8(m)\n    export_b1(copy.deepcopy(q), out)\n    return m, q`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;제공 코드 (실행만)&lt;/b&gt;: 오늘 만든 함수들의 소스를 모아 &lt;code&gt;compress.py&lt;/code&gt; 로 저장합니다. 다른 모델에 쓰려면 ignored_layers · 데이터 로더 · 보정 데이터만 바꾸면 됩니다.&lt;/p&gt;&#x27;},
+]);
+
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe></section>
+<section class="lesson" id="d6-4" data-title="D6-4 탐지 모델 INT8 준비"><iframe title="D6-4 탐지 모델 INT8 준비" loading="lazy" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;ko&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+&lt;title&gt;탐지 모델 INT8 준비 — Quantization·Pruning Day 6&lt;/title&gt;
+&lt;style&gt;
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:&quot;Consolas&quot;,&quot;D2Coding&quot;,&quot;JetBrains Mono&quot;,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:&quot;Pretendard&quot;,&quot;Noto Sans KR&quot;,&quot;Segoe UI&quot;,sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  @media(max-width:520px){.app{padding:16px 12px 30px}}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .sub code,.explain code,.note code{font-family:var(--mono);color:var(--blue)}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono);max-width:100%;overflow-wrap:anywhere}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.red{color:var(--red);border-color:var(--red)}.pill.green{color:var(--green);border-color:var(--green)}.pill.purple{color:var(--purple);border-color:var(--purple)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;min-width:0}
+  @media(max-width:520px){.panel{padding:12px 10px}}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.run{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700}
+  button.sel{background:#123d33;border-color:var(--teal);color:var(--teal)}
+  button:disabled{opacity:.4;cursor:default}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .grid{display:grid;grid-template-columns:1.25fr 1fr;gap:14px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .grid&gt;*{min-width:0}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.two{grid-template-columns:1fr}}
+  .two&gt;*{min-width:0}
+  canvas{width:100%;display:block;background:#0a0f1c;border:1px solid var(--line);border-radius:8px}
+  svg{max-width:100%}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+  .lab{font-size:13px;color:var(--dim)}
+  .sl{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;margin:8px 0}
+  .sl label{color:var(--amber);width:70px;flex:none}
+  .sl input{flex:1;min-width:60px;accent-color:var(--amber)}
+  .sl output{width:64px;text-align:right;flex:none}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-family:var(--mono);font-size:13.5px}
+  .kv span:nth-child(odd){color:var(--dim)}
+  .kv b{font-weight:600;overflow-wrap:anywhere}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;white-space:pre-wrap;min-height:64px;overflow-wrap:anywhere}
+  .code .g{color:var(--green)}.code .e{color:var(--red)}.code .c{color:#5d7292}.code .a{color:var(--amber)}.code .b{color:var(--blue)}.code .t{color:var(--teal)}
+  .code .hl{background:#3a2e12;color:var(--amber);border-radius:3px;padding:0 2px}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px;overflow-wrap:anywhere;white-space:pre-line}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}.explain b.purple{color:var(--purple)}
+  table.tt{border-collapse:collapse;font-family:var(--mono);font-size:13px;width:100%}
+  table.tt th,table.tt td{border:1px solid var(--line);padding:4px 6px;text-align:center}
+  table.tt th{color:var(--dim);font-weight:600;background:#0e1628}
+  table.tt tr.cur td{background:#2a2210}
+  .ok1{color:var(--green)}.bad1{color:var(--red)}.dim{color:var(--dim)}
+  .scroll{overflow-x:auto;max-width:100%}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .note{font-size:12.5px;color:var(--dim);border-left:3px solid var(--amber);padding:4px 10px;margin-top:10px}
+  .chk{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--dim)}
+  .chk input{accent-color:var(--amber)}
+  .ctl button{font-family:var(--mono)}
+  input[type=number],input.num,select{background:#0a0f1c;border:1px solid #2a3a5c;color:var(--text);border-radius:6px;padding:4px 6px;font-family:var(--mono);font-size:13px;width:74px}
+  select{width:auto}
+  .seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+  .seg button{padding:5px 10px}
+  .mono{font-family:var(--mono)}
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+  .arr{color:var(--dim);font-family:var(--mono);flex:none}
+  .fb{border:1px solid #2a3a5c;border-radius:8px;padding:7px 10px;background:#0a0f1c;font-family:var(--mono);font-size:13px;transition:all .3s;min-width:0;overflow-wrap:anywhere}
+  .fb small{display:block;color:var(--dim);font-size:11.5px;font-family:inherit}
+  .fb.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber);box-shadow:0 0 0 2px #f5b94233}
+  .fb.done{border-color:var(--teal);color:var(--teal)}
+  .fb.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .fb.off{opacity:.35}
+  .cells{display:flex;flex-wrap:wrap;gap:4px}
+  .cell{min-width:38px;height:30px;padding:0 6px;border:1px solid #2a3a5c;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;background:#0a0f1c;transition:all .25s}
+  .cell.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber)}
+  .cell.w{border-color:#3b6aa8;color:var(--blue)}.cell.bb{border-color:#7a5a2a;color:var(--amber)}
+.goals ol{margin:4px 0 0 18px;padding:0;font-size:13.5px;line-height:1.75;color:var(--text)}
+.goals ol li b{color:var(--amber)}
+#quiz .q{margin:0 0 8px;font-size:14px;line-height:1.55}
+#quiz .opts{display:flex;flex-direction:column;gap:6px}
+#quiz .opts button{text-align:left;background:#0b1220;border:1px solid #334155;color:var(--text);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer}
+#quiz .opts button:hover:not(:disabled){border-color:var(--teal)}
+#quiz .opts button.ok{border-color:#34d399;background:#0f2a22;color:#6ee7b7}
+#quiz .opts button.no{border-color:#f87171;background:#2a1215;color:#fca5a5}
+#quiz .why{margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--text)}
+.tagrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:12px;color:var(--dim)}
+.kv .wait{grid-column:1/-1;color:var(--dim);font-size:12.5px}
+
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;app&quot;&gt;
+&lt;div id=&quot;root&quot;&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;script&gt;
+
+const $=s=&gt;document.querySelector(s), $$=s=&gt;[...document.querySelectorAll(s)];
+const RM=window.matchMedia&amp;&amp;window.matchMedia(&#x27;(prefers-reduced-motion: reduce)&#x27;).matches;
+const sleep=ms=&gt;new Promise(r=&gt;setTimeout(r,RM?Math.min(ms,80):ms));
+let busy=false, timer=null;
+function setStatus(c,m){const s=$(&#x27;#status&#x27;);s.className=&#x27;status &#x27;+c;s.innerHTML=m;}
+function setCode(h){$(&#x27;#code&#x27;).innerHTML=h;}
+function fitCanvas(c){const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;const w=Math.max(10,Math.round(r.width*d)),h=Math.max(10,Math.round(r.height*d));if(c.width!==w||c.height!==h){c.width=w;c.height=h;}const g=c.getContext(&#x27;2d&#x27;);g.setTransform(d,0,0,d,0,0);return [g,r.width,r.height];}
+function initPresets(P,stop){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;if(stop)stop();$$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#explain&#x27;).innerHTML=P[i].ex;try{await P[i].run();}finally{busy=false;}});}
+const esc=s=&gt;String(s).replace(/&amp;/g,&#x27;&amp;amp;&#x27;).replace(/&lt;/g,&#x27;&amp;lt;&#x27;).replace(/&gt;/g,&#x27;&amp;gt;&#x27;);
+const fmt=n=&gt;n.toLocaleString(&#x27;en-US&#x27;);
+function stopTimer(){if(timer){clearInterval(timer);timer=null;}}
+/* Day 2 · 3 공통 — 교시 흐름 (노트북 순서) + 먼저 예측 + 실측 공개 */
+const K={b:&#x27;#60a5fa&#x27;,a:&#x27;#f59e0b&#x27;,g:&#x27;#34d399&#x27;,r:&#x27;#f87171&#x27;,p:&#x27;#c084fc&#x27;,t:&#x27;#2dd4bf&#x27;,d:&#x27;#8a9bb8&#x27;,x:&#x27;#dbe4f0&#x27;,l:&#x27;#334155&#x27;,bg:&#x27;#111a2e&#x27;,z:&#x27;#1f2b45&#x27;};
+let R=false, CUR=null;
+function layout(o){document.getElementById(&#x27;root&#x27;).innerHTML=`
+&lt;h1&gt;${o.h1}&lt;/h1&gt;&lt;p class=&quot;sub&quot;&gt;${o.sub}&lt;/p&gt;
+&lt;div class=&quot;panel goals&quot;&gt;&lt;h2&gt;이 교시에서 배우는 것&lt;/h2&gt;&lt;ol&gt;${o.goals.map(g=&gt;`&lt;li&gt;${g}&lt;/li&gt;`).join(&#x27;&#x27;)}&lt;/ol&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;교시 흐름 — 노트북 순서대로 (누르면 재생)&lt;/h2&gt;&lt;div class=&quot;presets&quot; id=&quot;presets&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2 id=&quot;vt&quot;&gt;그림&lt;/h2&gt;&lt;canvas id=&quot;cv&quot; style=&quot;height:${o.h||250}px&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+&lt;div class=&quot;grid&quot;&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;🤔 먼저 예측 — 고르면 실측값이 나옵니다&lt;/h2&gt;&lt;div id=&quot;quiz&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;강사 실측 (노트북 실행 결과)&lt;/h2&gt;&lt;div class=&quot;kv&quot; id=&quot;kv&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;노트북 코드&lt;/h2&gt;&lt;div class=&quot;code&quot; id=&quot;code&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;상태&lt;/h2&gt;&lt;div class=&quot;status info&quot; id=&quot;status&quot;&gt;단계를 누르세요.&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;panel explain&quot; id=&quot;explain&quot;&gt;&lt;/div&gt;`;}
+function showKV(rows){$(&#x27;#kv&#x27;).innerHTML=rows.map(([k,v])=&gt;`&lt;span&gt;${k}&lt;/span&gt;&lt;b&gt;${v}&lt;/b&gt;`).join(&#x27;&#x27;);}
+function reveal(){if(!CUR||R)return;R=true;showKV(CUR.kv);setCode(CUR.code);$(&#x27;#explain&#x27;).innerHTML=CUR.ex;if(CUR.st)setStatus(CUR.st[0],CUR.st[1]);if(window.draw)draw();}
+function ask(q){const [qs,opts,ans,why]=q;
+  $(&#x27;#quiz&#x27;).innerHTML=`&lt;p class=&quot;q&quot;&gt;${qs}&lt;/p&gt;&lt;div class=&quot;opts&quot;&gt;${opts.map((o,i)=&gt;`&lt;button type=&quot;button&quot; data-i=&quot;${i}&quot;&gt;${o}&lt;/button&gt;`).join(&#x27;&#x27;)}&lt;/div&gt;&lt;p class=&quot;why&quot; hidden&gt;&lt;/p&gt;`;
+  $$(&#x27;#quiz .opts button&#x27;).forEach(b=&gt;b.onclick=()=&gt;{const i=+b.dataset.i;$$(&#x27;#quiz .opts button&#x27;).forEach((x,j)=&gt;{x.disabled=true;x.classList.toggle(&#x27;ok&#x27;,j===ans);x.classList.toggle(&#x27;no&#x27;,j===i&amp;&amp;i!==ans);});
+    const w=$(&#x27;#quiz .why&#x27;);w.hidden=false;w.innerHTML=(i===ans?&#x27;✅ 맞았습니다. &#x27;:&#x27;❌ 다시 생각해 봅시다. &#x27;)+why;reveal();});}
+function steps(P){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;stopTimer();const p=P[i];CUR=p;R=false;
+    $$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#vt&#x27;).textContent=p.vt||p.n;$(&#x27;#explain&#x27;).innerHTML=&#x27;&lt;p class=&quot;dim&quot;&gt;예측을 고르면 이 단계의 해설이 나타납니다.&lt;/p&gt;&#x27;;setCode(&#x27;&lt;span class=&quot;c&quot;&gt;# 예측을 고르면 이 단계의 노트북 코드가 나타납니다&lt;/span&gt;&#x27;);
+    $(&#x27;#kv&#x27;).innerHTML=&#x27;&lt;span class=&quot;wait&quot;&gt;왼쪽 위 예측을 먼저 고르세요 — 고르면 실측값이 나타납니다.&lt;/span&gt;&#x27;;setStatus(&#x27;info&#x27;,p.s0||&#x27;애니메이션을 보고 예측을 골라 보세요.&#x27;);ask(p.q);
+    try{await p.run();}finally{busy=false;}});
+  $(&#x27;#presets button&#x27;).click();}
+function cv(){const [g,W,H]=fitCanvas($(&#x27;#cv&#x27;));g.clearRect(0,0,W,H);g.textAlign=&#x27;left&#x27;;g.lineWidth=1;return [g,W,H];}
+function box(g,x,y,w,h,t,c,sub,on){g.fillStyle=on?c+&#x27;33&#x27;:K.bg;g.strokeStyle=c;g.lineWidth=on?2.5:1.2;g.beginPath();g.roundRect(x,y,w,h,7);g.fill();g.stroke();g.lineWidth=1;
+  g.fillStyle=K.x;g.font=&#x27;12px sans-serif&#x27;;g.textAlign=&#x27;center&#x27;;g.fillText(t,x+w/2,y+h/2+(sub?-3:4));if(sub){g.fillStyle=K.d;g.font=&#x27;10.5px sans-serif&#x27;;g.fillText(sub,x+w/2,y+h/2+12);}g.textAlign=&#x27;left&#x27;;}
+function arr(g,x1,y1,x2,y2,c){g.strokeStyle=c||K.d;g.fillStyle=c||K.d;g.lineWidth=1.5;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();const a=Math.atan2(y2-y1,x2-x1);g.beginPath();g.moveTo(x2,y2);g.lineTo(x2-8*Math.cos(a-.4),y2-8*Math.sin(a-.4));g.lineTo(x2-8*Math.cos(a+.4),y2-8*Math.sin(a+.4));g.fill();g.lineWidth=1;}
+function txt(g,s,x,y,c,f,al){g.fillStyle=c||K.x;g.font=f||&#x27;12px sans-serif&#x27;;g.textAlign=al||&#x27;left&#x27;;g.fillText(s,x,y);g.textAlign=&#x27;left&#x27;;}
+function hbar(g,x,y,w,h,frac,c,label,val){g.fillStyle=K.z;g.fillRect(x,y,w,h);g.fillStyle=c;g.fillRect(x,y,Math.max(0,w*Math.min(1,frac)),h);if(label)txt(g,label,x-6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;,&#x27;right&#x27;);if(val)txt(g,val,x+w*Math.min(1,frac)+6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;);}
+async function tween(n,ms,f){for(let k=1;k&lt;=n;k++){f(k/n);await sleep(ms);}}
+window.__d6={};
+
+layout({h1:&#x27;탐지 모델 INT8 준비 — YOLOv8n 엔진 3종&#x27;,sub:&#x27;4교시 노트북 순서: 재학습 없이 할 수 있는 것 → 배포 영상으로 보정 데이터 (4-1) → INT8 · INT8-mixed 모델과 엔진 3종 (4-2) → 정리.&#x27;,
+ goals:[&#x27;재학습 없이: &lt;b&gt;FP16 · INT8 PTQ · mixed precision&lt;/b&gt;. QAT · pruning · KD 는 학습 데이터가 있어야 한다&#x27;,&#x27;보정은 &lt;b&gt;배포할 장면의 영상&lt;/b&gt; 으로 — 평가 구간과 나눈다&#x27;,&#x27;엔진 3종: &lt;b&gt;FP16&lt;/b&gt; (기준) · &lt;b&gt;INT8&lt;/b&gt; (head 후처리 제외) · &lt;b&gt;INT8-mixed&lt;/b&gt; (+ 첫 Conv · 출력 Conv 6개)&#x27;]});
+let S=0,T=0;
+function draw(){const [g,W,H]=cv();const u=W/100;
+ if(S===0){txt(g,&#x27;YOLOv8n 에 오늘 적용하는 것&#x27;,2*u,20,K.d);
+  [[&#x27;FP16&#x27;,&#x27;재학습 불필요&#x27;,K.g,1],[&#x27;INT8 PTQ (QDQ)&#x27;,&#x27;보정 데이터만&#x27;,K.g,1],[&#x27;mixed precision&#x27;,&#x27;재학습 불필요&#x27;,K.g,1],[&#x27;QAT · structured pruning · KD&#x27;,R?&#x27;학습 데이터 · 수 시간 필요 — 오늘은 하지 않음&#x27;:&#x27;?&#x27;,K.r,0]].forEach(([a,b,c,ok],i)=&gt;{if(i/4&gt;T)return;const y=34+i*48;box(g,2*u,y,34*u,38,a,ok||R?c:K.l,&#x27;&#x27;,!ok);txt(g,(ok?&#x27;✓ &#x27;:&#x27;&#x27;)+b,39*u,y+24,ok?K.x:(R?K.r:K.d),&#x27;12.5px sans-serif&#x27;);});
+  txt(g,&#x27;12월 프로젝트에서 자기 데이터로 fine-tuning 할 때 pruning · KD · QAT 를 적용한다&#x27;,2*u,238,K.d,&#x27;12px sans-serif&#x27;);}
+ if(S===1){txt(g,&#x27;people.mp4 — 795 프레임 (10 FPS)&#x27;,2*u,20,K.d);const x0=4*u,w=92*u;
+  g.fillStyle=&#x27;#0f2a27&#x27;;g.fillRect(x0,40,w*480/795,36);g.fillStyle=&#x27;#3a2a10&#x27;;g.fillRect(x0+w*480/795,40,w*315/795,36);g.strokeStyle=K.l;g.strokeRect(x0,40,w,36);
+  for(let i=0;i&lt;48;i++){if(i/48&gt;T)break;g.fillStyle=K.g;g.fillRect(x0+w*(i*10)/795,40,2,36);}
+  txt(g,&#x27;프레임 0 ~ 479 — 보정 (10프레임마다 = 48장)&#x27;,x0,96,K.g,&#x27;12.5px sans-serif&#x27;);txt(g,&#x27;480 ~ 794 — 평가&#x27;,x0+w*480/795,96,K.a,&#x27;12.5px sans-serif&#x27;);
+  [[52.4,59.9],[61.0,61.2],[61.6,61.8],[62.6,74.1],[75.9,78.4]].forEach(([a,b])=&gt;{g.fillStyle=K.r;g.fillRect(x0+w*a/79.5,110,Math.max(2,w*(b-a)/79.5),12);});txt(g,&#x27;침입 이벤트 (FP16 기준 5건) 는 모두 평가 구간에&#x27;,x0,142,K.d,&#x27;12px sans-serif&#x27;);
+  txt(g,R?&#x27;보정과 평가에 같은 프레임을 쓰면 결과가 낙관적으로 나온다 → 구간을 나눈다&#x27;:&#x27;&#x27;,2*u,186,K.a,&#x27;12.5px sans-serif&#x27;);txt(g,&#x27;활성값 범위는 입력 분포에 따라 달라진다 → 실제로 돌릴 카메라 영상으로 보정&#x27;,2*u,212,K.x,&#x27;12.5px sans-serif&#x27;);}
+ if(S===2){txt(g,&#x27;개념도 — YOLOv8n 에서 양자화하는 곳&#x27;,2*u,20,K.d);
+  box(g,2*u,40,26*u,46,&#x27;backbone · neck Conv&#x27;,K.b,&#x27;INT8&#x27;);arr(g,28*u,63,34*u,63);box(g,34*u,40,26*u,46,&#x27;Detect head 의 Conv&#x27;,K.b,&#x27;INT8 (mixed: 출력 6개 제외)&#x27;);arr(g,60*u,63,66*u,63);box(g,66*u,40,30*u,46,&#x27;head 후처리&#x27;,K.r,R?&#x27;24개 노드 제외 → FP16&#x27;:&#x27;양자화하면?&#x27;,true);
+  txt(g,&#x27;프레임 530 에서 찾은 사람 수&#x27;,2*u,120,K.d,&#x27;12px sans-serif&#x27;);[[&#x27;FP16&#x27;,6],[&#x27;INT8&#x27;,6],[&#x27;INT8-mixed&#x27;,6]].forEach(([n,v],i)=&gt;hbar(g,24*u,130+i*28,40*u,20,(i&amp;&amp;!R?0:v/8)*T,[K.d,K.g,K.p][i],n,i&amp;&amp;!R?&#x27;?&#x27;:v+&#x27;명&#x27;));
+  txt(g,R?&#x27;후처리 (DFL · 박스 디코딩 · Concat) 만 빼면 INT8 도 FP16 과 같은 6명&#x27;:&#x27;&#x27;,2*u,236,K.a,&#x27;12.5px sans-serif&#x27;);}
+ if(S===3){txt(g,&#x27;엔진 3종 — ONNX 크기 (KB) 와 Q/DQ&#x27;,2*u,20,K.d);
+  [[&#x27;FP16 (yolov8n.onnx)&#x27;,12550,&#x27;기준&#x27;,K.d],[&#x27;INT8&#x27;,3507,&#x27;head 후처리 24개 제외 · Q/DQ 499개&#x27;,K.g],[&#x27;INT8-mixed&#x27;,3592,R?&#x27;+ 첫 Conv · 출력 Conv 6개 제외 · Q/DQ 가 더 적다&#x27;:&#x27;Q/DQ 수는 INT8 보다?&#x27;,K.p]].forEach(([n,v,d,c],i)=&gt;{const y=40+i*58;hbar(g,30*u,y,44*u,24,v/13000*T,c,n,v.toLocaleString()+&#x27; KB&#x27;);txt(g,d,30*u,y+44,K.d,&#x27;12px sans-serif&#x27;);});
+  txt(g,&#x27;ORT 의 QDQ 는 weight 를 INT8 로 저장 → ONNX 가 약 1/3.6. GPU 에서는 이 ONNX 로 TensorRT 엔진을 만든다&#x27;,2*u,232,K.x,&#x27;12px sans-serif&#x27;);}
+}
+async function play(s,ms,n){S=s;await tween(n||20,ms||80,t=&gt;{T=t;draw();});}
+steps([
+ {n:&#x27;① 개념 — 재학습 없이 할 수 있는 것&#x27;,vt:&#x27;오늘의 범위&#x27;,run:()=&gt;play(0,300,4),
+  q:[&#x27;COCO 학습 데이터 없이 yolov8n.onnx 파일만 가지고는 적용하기 어려운 기법은?&#x27;,[&#x27;FP16 엔진 빌드 (빌드 플래그 하나로 끝나는 변환)&#x27;,&#x27;INT8 PTQ (보정 영상 48장)&#x27;,&#x27;structured pruning + fine-tuning&#x27;],2,&#x27;FP16 은 플래그 하나, INT8 PTQ 는 보정 데이터 몇십 장이면 됩니다. structured pruning 은 자른 뒤 반드시 다시 학습해야 하므로 (Day 5) 학습 데이터와 시간이 필요합니다. QAT · KD 도 마찬가지입니다.&#x27;],
+  kv:[[&#x27;재학습 없이&#x27;,&#x27;FP16 · INT8 PTQ · mixed precision&#x27;],[&#x27;재학습 필요&#x27;,&#x27;QAT · structured pruning · KD&#x27;],[&#x27;오늘&#x27;,&#x27;재학습 없는 범위&#x27;]],st:[&#x27;info&#x27;,&#x27;먼저 재학습 없는 기법부터&#x27;],
+  code:`&lt;span class=&quot;c&quot;&gt;# 엔진 이름: FP16 (기준) · INT8 (head 후처리 제외) · INT8-mixed (+ 첫 Conv · 출력 Conv 6개 제외)&lt;/span&gt;`,
+  ex:&#x27;&lt;p&gt;GPU 가 없으면 같은 ONNX 를 ONNX Runtime CPU 로 돌립니다 — 이때 &quot;FP16&quot; 은 FP32 ONNX 입니다. TensorRT 엔진의 값은 수업에서 GPU 로 측정합니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;② 실습 4-1 — 배포 영상으로 보정&#x27;,vt:&#x27;보정 구간 · 평가 구간&#x27;,run:()=&gt;play(1,60,48),
+  q:[&#x27;보정 (calibration) 에 쓴 프레임으로 그대로 결과를 평가하면 어떻게 될까요?&#x27;,[&#x27;문제없다 — 보정은 정답을 쓰지 않으므로&#x27;,&#x27;결과가 실제보다 좋게 나온다&#x27;,&#x27;결과가 실제보다 나쁘게 나온다&#x27;],1,&#x27;양자화 범위가 그 프레임들에 꼭 맞게 정해졌으므로 다른 장면보다 잘 맞습니다. 그래서 앞부분 (0 ~ 479) 에서 10프레임마다 48장을 보정에 쓰고, 뒷부분 (480 ~) 으로 평가합니다.&#x27;],
+  kv:[[&#x27;보정&#x27;,&#x27;프레임 0 ~ 470 · 48장&#x27;],[&#x27;평가&#x27;,&#x27;프레임 480 ~ 794 (315장)&#x27;],[&#x27;입력&#x27;,&#x27;(1, 3, 640, 640) float32&#x27;]],st:[&#x27;ok&#x27;,&#x27;보정은 배포 장면으로, 평가와 나눠서&#x27;],
+  code:`CAL_IDX = list(range(0, EVAL_START, 10))\ncal_frames = read_frames(CAL_IDX)\n\nclass FrameReader(CalibrationDataReader):\n    def __init__(self, frames):\n        self.it = iter([{&quot;images&quot;: &lt;span class=&quot;hl&quot;&gt;to_input(f)[0]&lt;/span&gt;} for f in frames])\n    def get_next(self):\n        return next(self.it, None)`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: 전처리까지 추론할 때와 똑같아야 합니다 (&lt;code&gt;to_input&lt;/code&gt;). reader 는 한 번 쓰면 끝나므로 양자화할 때마다 새로 만듭니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;③ 실습 4-2 — INT8 · INT8-mixed · 엔진 3종&#x27;,vt:&#x27;head 후처리는 제외&#x27;,run:()=&gt;play(2),
+  q:[&#x27;Detect head 의 후처리 (박스 디코딩 · 마지막 Concat) 까지 INT8 로 양자화하면 어떻게 될까요? (Day 3)&#x27;,[&#x27;조금 더 빨라질 뿐 결과는 같다&#x27;,&#x27;사람을 하나도 찾지 못한다&#x27;,&#x27;박스 위치만 몇 픽셀 어긋난다&#x27;],1,&#x27;박스 좌표 (0 ~ 640) 와 점수 (0 ~ 1) 가 한 텐서에 담겨 scale 하나를 쓰게 되면 점수가 모두 0 으로 반올림됩니다. 그 24개 노드만 빼면 프레임 530 에서 INT8 도 FP16 과 같은 6명을 찾습니다.&#x27;],
+  kv:[[&#x27;head 제외 노드&#x27;,&#x27;24개&#x27;],[&#x27;프레임 530&#x27;,&#x27;FP16 6명 · INT8 6명 · mixed 6명&#x27;],[&#x27;trt_check&#x27;,&#x27;ok (zero_point 0)&#x27;]],st:[&#x27;ok&#x27;,&#x27;엔진 3종 준비&#x27;],
+  code:`head = [n.name for n in g_y.node if n.name.startswith(&quot;/model.22/&quot;) and not re.match(r&quot;/model.22/cv[23]\\.\\d/&quot;, n.name)]\nmake_yolo_int8(&quot;yolov8n_int8.onnx&quot;, FrameReader(cal_frames), exclude=head)\nmake_yolo_int8(&quot;yolov8n_int8_mixed.onnx&quot;, FrameReader(cal_frames), exclude=head + [&quot;/model.0/conv/Conv&quot;] + last_convs)\nENG = {&quot;FP16&quot;: make_infer(YOLO_ONNX, fp16=True), &quot;INT8&quot;: make_infer(&quot;yolov8n_int8.onnx&quot;, fp16=True, int8=True), ...}`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: Day 3 실습 6-2 · 미니 프로젝트에서 한 일을 배포 영상의 보정 데이터로 다시 합니다. &lt;code&gt;ENG&lt;/code&gt; 는 5교시 파이프라인에 그대로 끼웁니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;④ 정리 — 엔진 3종&#x27;,vt:&#x27;크기와 Q/DQ&#x27;,run:()=&gt;play(3),
+  q:[&#x27;INT8-mixed 는 INT8 에서 예민한 층 7개를 더 제외한 모델입니다. Q/DQ 노드 수는 INT8 과 비교해 어떨까요?&#x27;,[&#x27;더 많다&#x27;,&#x27;더 적다&#x27;,&#x27;같다&#x27;],1,&#x27;제외한 층 주변에는 Q/DQ 가 붙지 않으므로 더 적습니다 (확인 셀이 검사). 그만큼 FP16 으로 도는 부분이 늘어 조금 느려지는 대신 FP16 결과에 더 가까워질 수 있습니다 — 5 · 6교시에 실제 파이프라인으로 확인합니다.&#x27;],
+  kv:[[&#x27;FP16&#x27;,&#x27;12,550 KB&#x27;],[&#x27;INT8&#x27;,&#x27;3,507 KB · Q/DQ 499&#x27;],[&#x27;INT8-mixed&#x27;,&#x27;3,592 KB&#x27;]],st:[&#x27;info&#x27;,&#x27;4교시 정리 — 5교시에 파이프라인에 넣습니다&#x27;],
+  code:`n_people = {k: len(detect(frame530, f)[0]) for k, f in ENG.items()}`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;4교시 정리&lt;/b&gt;: 재학습 없는 범위 = FP16 · INT8 PTQ · mixed · 보정은 배포 영상으로, 평가와 나눠서 · 엔진 3종 준비.&lt;/p&gt;&#x27;},
+]);
+
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe></section>
+<section class="lesson" id="d6-5" data-title="D6-5 파이프라인 엔진 교체"><iframe title="D6-5 파이프라인 엔진 교체" loading="lazy" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;ko&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+&lt;title&gt;파이프라인 엔진 교체 — Quantization·Pruning Day 6&lt;/title&gt;
+&lt;style&gt;
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:&quot;Consolas&quot;,&quot;D2Coding&quot;,&quot;JetBrains Mono&quot;,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:&quot;Pretendard&quot;,&quot;Noto Sans KR&quot;,&quot;Segoe UI&quot;,sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  @media(max-width:520px){.app{padding:16px 12px 30px}}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .sub code,.explain code,.note code{font-family:var(--mono);color:var(--blue)}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono);max-width:100%;overflow-wrap:anywhere}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.red{color:var(--red);border-color:var(--red)}.pill.green{color:var(--green);border-color:var(--green)}.pill.purple{color:var(--purple);border-color:var(--purple)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;min-width:0}
+  @media(max-width:520px){.panel{padding:12px 10px}}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.run{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700}
+  button.sel{background:#123d33;border-color:var(--teal);color:var(--teal)}
+  button:disabled{opacity:.4;cursor:default}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .grid{display:grid;grid-template-columns:1.25fr 1fr;gap:14px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .grid&gt;*{min-width:0}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.two{grid-template-columns:1fr}}
+  .two&gt;*{min-width:0}
+  canvas{width:100%;display:block;background:#0a0f1c;border:1px solid var(--line);border-radius:8px}
+  svg{max-width:100%}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+  .lab{font-size:13px;color:var(--dim)}
+  .sl{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;margin:8px 0}
+  .sl label{color:var(--amber);width:70px;flex:none}
+  .sl input{flex:1;min-width:60px;accent-color:var(--amber)}
+  .sl output{width:64px;text-align:right;flex:none}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-family:var(--mono);font-size:13.5px}
+  .kv span:nth-child(odd){color:var(--dim)}
+  .kv b{font-weight:600;overflow-wrap:anywhere}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;white-space:pre-wrap;min-height:64px;overflow-wrap:anywhere}
+  .code .g{color:var(--green)}.code .e{color:var(--red)}.code .c{color:#5d7292}.code .a{color:var(--amber)}.code .b{color:var(--blue)}.code .t{color:var(--teal)}
+  .code .hl{background:#3a2e12;color:var(--amber);border-radius:3px;padding:0 2px}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px;overflow-wrap:anywhere;white-space:pre-line}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}.explain b.purple{color:var(--purple)}
+  table.tt{border-collapse:collapse;font-family:var(--mono);font-size:13px;width:100%}
+  table.tt th,table.tt td{border:1px solid var(--line);padding:4px 6px;text-align:center}
+  table.tt th{color:var(--dim);font-weight:600;background:#0e1628}
+  table.tt tr.cur td{background:#2a2210}
+  .ok1{color:var(--green)}.bad1{color:var(--red)}.dim{color:var(--dim)}
+  .scroll{overflow-x:auto;max-width:100%}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .note{font-size:12.5px;color:var(--dim);border-left:3px solid var(--amber);padding:4px 10px;margin-top:10px}
+  .chk{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--dim)}
+  .chk input{accent-color:var(--amber)}
+  .ctl button{font-family:var(--mono)}
+  input[type=number],input.num,select{background:#0a0f1c;border:1px solid #2a3a5c;color:var(--text);border-radius:6px;padding:4px 6px;font-family:var(--mono);font-size:13px;width:74px}
+  select{width:auto}
+  .seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+  .seg button{padding:5px 10px}
+  .mono{font-family:var(--mono)}
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+  .arr{color:var(--dim);font-family:var(--mono);flex:none}
+  .fb{border:1px solid #2a3a5c;border-radius:8px;padding:7px 10px;background:#0a0f1c;font-family:var(--mono);font-size:13px;transition:all .3s;min-width:0;overflow-wrap:anywhere}
+  .fb small{display:block;color:var(--dim);font-size:11.5px;font-family:inherit}
+  .fb.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber);box-shadow:0 0 0 2px #f5b94233}
+  .fb.done{border-color:var(--teal);color:var(--teal)}
+  .fb.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .fb.off{opacity:.35}
+  .cells{display:flex;flex-wrap:wrap;gap:4px}
+  .cell{min-width:38px;height:30px;padding:0 6px;border:1px solid #2a3a5c;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;background:#0a0f1c;transition:all .25s}
+  .cell.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber)}
+  .cell.w{border-color:#3b6aa8;color:var(--blue)}.cell.bb{border-color:#7a5a2a;color:var(--amber)}
+.goals ol{margin:4px 0 0 18px;padding:0;font-size:13.5px;line-height:1.75;color:var(--text)}
+.goals ol li b{color:var(--amber)}
+#quiz .q{margin:0 0 8px;font-size:14px;line-height:1.55}
+#quiz .opts{display:flex;flex-direction:column;gap:6px}
+#quiz .opts button{text-align:left;background:#0b1220;border:1px solid #334155;color:var(--text);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer}
+#quiz .opts button:hover:not(:disabled){border-color:var(--teal)}
+#quiz .opts button.ok{border-color:#34d399;background:#0f2a22;color:#6ee7b7}
+#quiz .opts button.no{border-color:#f87171;background:#2a1215;color:#fca5a5}
+#quiz .why{margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--text)}
+.tagrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:12px;color:var(--dim)}
+.kv .wait{grid-column:1/-1;color:var(--dim);font-size:12.5px}
+
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;app&quot;&gt;
+&lt;div id=&quot;root&quot;&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;script&gt;
+
+const $=s=&gt;document.querySelector(s), $$=s=&gt;[...document.querySelectorAll(s)];
+const RM=window.matchMedia&amp;&amp;window.matchMedia(&#x27;(prefers-reduced-motion: reduce)&#x27;).matches;
+const sleep=ms=&gt;new Promise(r=&gt;setTimeout(r,RM?Math.min(ms,80):ms));
+let busy=false, timer=null;
+function setStatus(c,m){const s=$(&#x27;#status&#x27;);s.className=&#x27;status &#x27;+c;s.innerHTML=m;}
+function setCode(h){$(&#x27;#code&#x27;).innerHTML=h;}
+function fitCanvas(c){const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;const w=Math.max(10,Math.round(r.width*d)),h=Math.max(10,Math.round(r.height*d));if(c.width!==w||c.height!==h){c.width=w;c.height=h;}const g=c.getContext(&#x27;2d&#x27;);g.setTransform(d,0,0,d,0,0);return [g,r.width,r.height];}
+function initPresets(P,stop){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;if(stop)stop();$$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#explain&#x27;).innerHTML=P[i].ex;try{await P[i].run();}finally{busy=false;}});}
+const esc=s=&gt;String(s).replace(/&amp;/g,&#x27;&amp;amp;&#x27;).replace(/&lt;/g,&#x27;&amp;lt;&#x27;).replace(/&gt;/g,&#x27;&amp;gt;&#x27;);
+const fmt=n=&gt;n.toLocaleString(&#x27;en-US&#x27;);
+function stopTimer(){if(timer){clearInterval(timer);timer=null;}}
+/* Day 2 · 3 공통 — 교시 흐름 (노트북 순서) + 먼저 예측 + 실측 공개 */
+const K={b:&#x27;#60a5fa&#x27;,a:&#x27;#f59e0b&#x27;,g:&#x27;#34d399&#x27;,r:&#x27;#f87171&#x27;,p:&#x27;#c084fc&#x27;,t:&#x27;#2dd4bf&#x27;,d:&#x27;#8a9bb8&#x27;,x:&#x27;#dbe4f0&#x27;,l:&#x27;#334155&#x27;,bg:&#x27;#111a2e&#x27;,z:&#x27;#1f2b45&#x27;};
+let R=false, CUR=null;
+function layout(o){document.getElementById(&#x27;root&#x27;).innerHTML=`
+&lt;h1&gt;${o.h1}&lt;/h1&gt;&lt;p class=&quot;sub&quot;&gt;${o.sub}&lt;/p&gt;
+&lt;div class=&quot;panel goals&quot;&gt;&lt;h2&gt;이 교시에서 배우는 것&lt;/h2&gt;&lt;ol&gt;${o.goals.map(g=&gt;`&lt;li&gt;${g}&lt;/li&gt;`).join(&#x27;&#x27;)}&lt;/ol&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;교시 흐름 — 노트북 순서대로 (누르면 재생)&lt;/h2&gt;&lt;div class=&quot;presets&quot; id=&quot;presets&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2 id=&quot;vt&quot;&gt;그림&lt;/h2&gt;&lt;canvas id=&quot;cv&quot; style=&quot;height:${o.h||250}px&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+&lt;div class=&quot;grid&quot;&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;🤔 먼저 예측 — 고르면 실측값이 나옵니다&lt;/h2&gt;&lt;div id=&quot;quiz&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;강사 실측 (노트북 실행 결과)&lt;/h2&gt;&lt;div class=&quot;kv&quot; id=&quot;kv&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;노트북 코드&lt;/h2&gt;&lt;div class=&quot;code&quot; id=&quot;code&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;상태&lt;/h2&gt;&lt;div class=&quot;status info&quot; id=&quot;status&quot;&gt;단계를 누르세요.&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;panel explain&quot; id=&quot;explain&quot;&gt;&lt;/div&gt;`;}
+function showKV(rows){$(&#x27;#kv&#x27;).innerHTML=rows.map(([k,v])=&gt;`&lt;span&gt;${k}&lt;/span&gt;&lt;b&gt;${v}&lt;/b&gt;`).join(&#x27;&#x27;);}
+function reveal(){if(!CUR||R)return;R=true;showKV(CUR.kv);setCode(CUR.code);$(&#x27;#explain&#x27;).innerHTML=CUR.ex;if(CUR.st)setStatus(CUR.st[0],CUR.st[1]);if(window.draw)draw();}
+function ask(q){const [qs,opts,ans,why]=q;
+  $(&#x27;#quiz&#x27;).innerHTML=`&lt;p class=&quot;q&quot;&gt;${qs}&lt;/p&gt;&lt;div class=&quot;opts&quot;&gt;${opts.map((o,i)=&gt;`&lt;button type=&quot;button&quot; data-i=&quot;${i}&quot;&gt;${o}&lt;/button&gt;`).join(&#x27;&#x27;)}&lt;/div&gt;&lt;p class=&quot;why&quot; hidden&gt;&lt;/p&gt;`;
+  $$(&#x27;#quiz .opts button&#x27;).forEach(b=&gt;b.onclick=()=&gt;{const i=+b.dataset.i;$$(&#x27;#quiz .opts button&#x27;).forEach((x,j)=&gt;{x.disabled=true;x.classList.toggle(&#x27;ok&#x27;,j===ans);x.classList.toggle(&#x27;no&#x27;,j===i&amp;&amp;i!==ans);});
+    const w=$(&#x27;#quiz .why&#x27;);w.hidden=false;w.innerHTML=(i===ans?&#x27;✅ 맞았습니다. &#x27;:&#x27;❌ 다시 생각해 봅시다. &#x27;)+why;reveal();});}
+function steps(P){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;stopTimer();const p=P[i];CUR=p;R=false;
+    $$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#vt&#x27;).textContent=p.vt||p.n;$(&#x27;#explain&#x27;).innerHTML=&#x27;&lt;p class=&quot;dim&quot;&gt;예측을 고르면 이 단계의 해설이 나타납니다.&lt;/p&gt;&#x27;;setCode(&#x27;&lt;span class=&quot;c&quot;&gt;# 예측을 고르면 이 단계의 노트북 코드가 나타납니다&lt;/span&gt;&#x27;);
+    $(&#x27;#kv&#x27;).innerHTML=&#x27;&lt;span class=&quot;wait&quot;&gt;왼쪽 위 예측을 먼저 고르세요 — 고르면 실측값이 나타납니다.&lt;/span&gt;&#x27;;setStatus(&#x27;info&#x27;,p.s0||&#x27;애니메이션을 보고 예측을 골라 보세요.&#x27;);ask(p.q);
+    try{await p.run();}finally{busy=false;}});
+  $(&#x27;#presets button&#x27;).click();}
+function cv(){const [g,W,H]=fitCanvas($(&#x27;#cv&#x27;));g.clearRect(0,0,W,H);g.textAlign=&#x27;left&#x27;;g.lineWidth=1;return [g,W,H];}
+function box(g,x,y,w,h,t,c,sub,on){g.fillStyle=on?c+&#x27;33&#x27;:K.bg;g.strokeStyle=c;g.lineWidth=on?2.5:1.2;g.beginPath();g.roundRect(x,y,w,h,7);g.fill();g.stroke();g.lineWidth=1;
+  g.fillStyle=K.x;g.font=&#x27;12px sans-serif&#x27;;g.textAlign=&#x27;center&#x27;;g.fillText(t,x+w/2,y+h/2+(sub?-3:4));if(sub){g.fillStyle=K.d;g.font=&#x27;10.5px sans-serif&#x27;;g.fillText(sub,x+w/2,y+h/2+12);}g.textAlign=&#x27;left&#x27;;}
+function arr(g,x1,y1,x2,y2,c){g.strokeStyle=c||K.d;g.fillStyle=c||K.d;g.lineWidth=1.5;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();const a=Math.atan2(y2-y1,x2-x1);g.beginPath();g.moveTo(x2,y2);g.lineTo(x2-8*Math.cos(a-.4),y2-8*Math.sin(a-.4));g.lineTo(x2-8*Math.cos(a+.4),y2-8*Math.sin(a+.4));g.fill();g.lineWidth=1;}
+function txt(g,s,x,y,c,f,al){g.fillStyle=c||K.x;g.font=f||&#x27;12px sans-serif&#x27;;g.textAlign=al||&#x27;left&#x27;;g.fillText(s,x,y);g.textAlign=&#x27;left&#x27;;}
+function hbar(g,x,y,w,h,frac,c,label,val){g.fillStyle=K.z;g.fillRect(x,y,w,h);g.fillStyle=c;g.fillRect(x,y,Math.max(0,w*Math.min(1,frac)),h);if(label)txt(g,label,x-6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;,&#x27;right&#x27;);if(val)txt(g,val,x+w*Math.min(1,frac)+6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;);}
+async function tween(n,ms,f){for(let k=1;k&lt;=n;k++){f(k/n);await sleep(ms);}}
+window.__d6={};
+
+layout({h1:&#x27;파이프라인 엔진 교체 — 추론기만 바꾼다&#x27;,sub:&#x27;5교시 노트북 순서: 프레임 시간 4단계 → 단계별 시간 재기 (5-1) → 엔진 3종으로 침입 감지 실행 (5-2) → 산출물.&#x27;,
+ goals:[&#x27;파이프라인이 &lt;b&gt;추론기를 인자로&lt;/b&gt; 받으면 엔진만 교체하면 된다 — 전 · 후처리는 그대로&#x27;,&#x27;프레임 시간 = &lt;b&gt;read + pre + infer + post&lt;/b&gt; — 양자화로 빨라지는 것은 infer 뿐&#x27;,&#x27;산출물: &lt;b&gt;intrusion_int8.mp4&lt;/b&gt; · &lt;b&gt;events_*.csv&lt;/b&gt; 3종&#x27;]});
+let S=0,T=0;
+function draw(){const [g,W,H]=cv();const u=W/100;
+ if(S===0){[[&#x27;read&#x27;,&#x27;영상 디코딩&#x27;,K.l],[&#x27;pre&#x27;,&#x27;letterbox · RGB · /255&#x27;,K.l],[&#x27;infer&#x27;,&#x27;엔진&#x27;,K.a],[&#x27;post&#x27;,&#x27;디코딩 · NMS · 구역 판정&#x27;,K.l]].forEach(([a,b,c],i)=&gt;{if(i/4&gt;T)return;const x=2*u+i*24.5*u;box(g,x,44,21*u,50,a,R&amp;&amp;i===2?K.g:c,b,i===2);if(i&lt;3)arr(g,x+21*u,69,x+24.5*u,69);txt(g,i===2?(R?&#x27;GPU — 양자화로 빨라진다&#x27;:&#x27;?&#x27;):&#x27;CPU — 그대로&#x27;,x+2*u,116,i===2?K.a:K.d,&#x27;12px sans-serif&#x27;);});
+  txt(g,&#x27;process_frame(frame, infer, …) — infer 자리에 FP16 · INT8 · INT8-mixed 엔진을 바꿔 끼운다&#x27;,2*u,162,K.x,&#x27;12.5px sans-serif&#x27;);txt(g,&#x27;경보 규칙 (구역 안에 연속 3프레임) 은 한 글자도 바뀌지 않는다&#x27;,2*u,188,K.d,&#x27;12.5px sans-serif&#x27;);}
+ if(S===1){txt(g,&#x27;프레임당 시간 (ms) — 이 화면은 ONNX Runtime CPU 로 잰 값입니다 (약)&#x27;,2*u,20,K.d);
+  [[&#x27;FP16 (CPU 에서는 FP32)&#x27;,[.6,5.5,89,1.8],97,1],[&#x27;INT8 (QDQ)&#x27;,[.6,5.8,157,2.0],166,R],[&#x27;INT8-mixed&#x27;,[.6,5.3,152,1.9],160,R]].forEach(([n,v,tot,on],i)=&gt;{const y=42+i*48;txt(g,n,2*u,y+18,K.x,&#x27;12.5px sans-serif&#x27;);let x=30*u;if(on)v.forEach((ms,j)=&gt;{const w=ms/170*52*u*T;g.fillStyle=[K.l,K.b,K.a,K.g][j];g.fillRect(x,y,w,24);x+=w;});txt(g,on?&#x27;약 &#x27;+tot+&#x27; ms&#x27;:&#x27;?&#x27;,x+8,y+17,K.x,&#x27;12px sans-serif&#x27;);});
+  [&#x27;read&#x27;,&#x27;pre&#x27;,&#x27;infer&#x27;,&#x27;post&#x27;].forEach((n,j)=&gt;{g.fillStyle=[K.l,K.b,K.a,K.g][j];g.fillRect(30*u+j*12*u,190,12,12);txt(g,n,30*u+j*12*u+18,201,K.d,&#x27;11.5px sans-serif&#x27;);});
+  txt(g,R?&#x27;CPU 에서는 추론이 92 ~ 95% · QDQ INT8 (S8 대칭) 이 FP32 보다 느리다 — TensorRT 용 형식&#x27;:&#x27;&#x27;,2*u,228,K.a,&#x27;12.5px sans-serif&#x27;);txt(g,R?&#x27;T4 + TensorRT 의 값은 수업에서 GPU 로 측정합니다&#x27;:&#x27;&#x27;,2*u,248,K.d,&#x27;12px sans-serif&#x27;);}
+ if(S===2){txt(g,&#x27;run_intrusion — 평가 구간 315 프레임 (480 ~ 794) · 경보 프레임 수와 이벤트 수&#x27;,2*u,20,K.d);
+  [[&#x27;FP16&#x27;,224,5,1],[&#x27;INT8&#x27;,218,4,R],[&#x27;INT8-mixed&#x27;,219,4,R]].forEach(([n,a,e,on],i)=&gt;{hbar(g,26*u,44+i*40,46*u,26,(on?a/315:0)*T,[K.d,K.g,K.p][i],n,on?&#x27;경보 &#x27;+a+&#x27; 프레임 · 이벤트 &#x27;+e+&#x27;건&#x27;:&#x27;?&#x27;);});
+  txt(g,&#x27;파일: intrusion_fp16.mp4 · intrusion_int8.mp4 · intrusion_int8_mixed.mp4 · events_*.csv&#x27;,2*u,186,K.x,&#x27;12px sans-serif&#x27;);txt(g,R?&#x27;바꾼 코드는 infer 인자 하나 — 차이가 서비스에 의미가 있는지는 6교시에 따진다&#x27;:&#x27;&#x27;,2*u,212,K.a,&#x27;12.5px sans-serif&#x27;);}
+ if(S===3){[[&#x27;intrusion_int8.mp4&#x27;,&#x27;INT8 엔진으로 돌린 결과 영상 (구역 · 박스 · 경보 표시)&#x27;,K.g],[&#x27;events_fp16 / int8 / int8_mixed.csv&#x27;,&#x27;엔진별 이벤트 (start_s, end_s)&#x27;,K.b],[&#x27;LOGS[엔진]&#x27;,&#x27;프레임별 n_people · n_inside · alarm · ms&#x27;,K.a]].forEach(([a,b,c],i)=&gt;{if(i/3&gt;T)return;const y=34+i*58;box(g,2*u,y,40*u,44,a,c,&#x27;&#x27;,true);txt(g,b,45*u,y+27,K.x,&#x27;12.5px sans-serif&#x27;);});
+  txt(g,R?&#x27;GPU 가 없으면 평가 구간 (프레임 480 ~) 만 돌린다 — 이벤트는 모두 이 구간에 있다&#x27;:&#x27;&#x27;,2*u,222,K.d,&#x27;12px sans-serif&#x27;);}
+}
+async function play(s,ms,n){S=s;await tween(n||20,ms||80,t=&gt;{T=t;draw();});}
+steps([
+ {n:&#x27;① 개념 — 프레임 시간 4단계&#x27;,vt:&#x27;어디가 빨라지나&#x27;,run:()=&gt;play(0,300,4),
+  q:[&#x27;엔진을 FP16 에서 INT8 로 바꾸면 네 단계 (read · pre · infer · post) 중 어디가 빨라질까요?&#x27;,[&#x27;네 단계 모두&#x27;,&#x27;infer 만&#x27;,&#x27;pre 와 infer&#x27;],1,&#x27;양자화는 엔진 안의 연산만 바꿉니다. 영상 디코딩 (read), 전처리 (pre), NMS · 구역 판정 (post) 은 CPU 코드 그대로입니다. 그래서 추론이 빨라질수록 나머지의 비율이 커집니다.&#x27;],
+  kv:[[&#x27;read · pre · post&#x27;,&#x27;CPU — 그대로&#x27;],[&#x27;infer&#x27;,&#x27;엔진 — 양자화로 빨라짐&#x27;],[&#x27;교체하는 것&#x27;,&#x27;infer 인자 하나&#x27;]],st:[&#x27;info&#x27;,&#x27;엔진만 바꾼다&#x27;],
+  code:`vis, info, streak = process_frame(frame, &lt;span class=&quot;hl&quot;&gt;infer&lt;/span&gt;, streak, tag=tag)     &lt;span class=&quot;c&quot;&gt;# OT Day 5 과제 1 — 추론기를 인자로&lt;/span&gt;`,
+  ex:&#x27;&lt;p&gt;OT Day 5 에서 파이프라인을 &quot;추론기를 인자로 받는 구조&quot; 로 만든 이유가 오늘 드러납니다 — ORT → TensorRT FP16 → INT8 로 바꿀 때마다 한 줄만 달라집니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;② 실습 5-1 — time_stages&#x27;,vt:&#x27;단계별 시간&#x27;,run:()=&gt;play(1),
+  q:[&#x27;GPU 없이 ONNX Runtime CPU 로 돌리면, QDQ INT8 ONNX 의 추론은 FP32 ONNX 와 비교해 어떨까요?&#x27;,[&#x27;약 4배 빠르다 — 8비트이므로&#x27;,&#x27;더 느리다&#x27;,&#x27;똑같다&#x27;],1,&#x27;강사 실측: FP32 약 89 ms, QDQ INT8 약 157 ms. TensorRT 용 S8 대칭 QDQ 형식은 ORT CPU 에서 잘 최적화되지 않습니다 (Day 2: CPU 는 U8 · QOperator). &quot;INT8 이면 빠르다&quot; 가 아니라 &quot;런타임에 맞는 형식이어야 빠르다&quot; 입니다. TensorRT 값은 수업에서 GPU 로 측정합니다.&#x27;],
+  kv:[[&#x27;FP16 (CPU: FP32)&#x27;,&#x27;약 97 ms · 추론 92%&#x27;],[&#x27;INT8&#x27;,&#x27;약 166 ms · 추론 95%&#x27;],[&#x27;read · pre · post&#x27;,&#x27;약 0.6 · 5.5 · 1.8 ms&#x27;]],st:[&#x27;warn&#x27;,&#x27;형식과 런타임이 맞아야 빨라진다&#x27;],
+  code:`def time_stages(cap, infer, conf=0.25):\n    t0 = time.perf_counter(); ok, frame = cap.read()\n    t1 = time.perf_counter(); x, r, (pl, pt) = to_input(frame)\n    t2 = time.perf_counter(); out = infer(x)\n    t3 = time.perf_counter(); ...   &lt;span class=&quot;c&quot;&gt;# decode_yolo · 좌표 복원 · in_zone&lt;/span&gt;\n    t4 = time.perf_counter()\n    return {&quot;read&quot;: ..., &quot;pre&quot;: ..., &quot;infer&quot;: ..., &quot;post&quot;: ...}`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: warm-up 3번 뒤 30프레임 평균을 &lt;code&gt;stage_df&lt;/code&gt; 로 만듭니다. 시간은 실행마다 달라지므로 숫자보다 &quot;어느 단계가 큰가&quot; 를 봅니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;③ 실습 5-2 — run_intrusion&#x27;,vt:&#x27;엔진 3종으로 실행&#x27;,run:()=&gt;play(2),
+  q:[&#x27;FP16 엔진은 평가 구간 315 프레임 중 224 프레임에서 경보를 냈습니다. INT8 엔진은?&#x27;,[&#x27;0 프레임 — 사람을 찾지 못한다&#x27;,&#x27;218 프레임 — 거의 같다&#x27;,&#x27;315 프레임 — 항상 경보가 울린다&#x27;],1,&#x27;INT8 218 · INT8-mixed 219 프레임으로 거의 같습니다. 이벤트 수는 FP16 5건, INT8 · INT8-mixed 4건입니다. 이 차이가 서비스에 의미가 있는지는 6교시에 프레임 · 이벤트 수준으로 따집니다.&#x27;],
+  kv:[[&#x27;FP16&#x27;,&#x27;경보 224 프레임 · 이벤트 5건&#x27;],[&#x27;INT8&#x27;,&#x27;218 프레임 · 4건&#x27;],[&#x27;INT8-mixed&#x27;,&#x27;219 프레임 · 4건&#x27;]],st:[&#x27;ok&#x27;,&#x27;엔진만 바꿔 영상 3개 · CSV 3개&#x27;],
+  code:`for name, f in ENG.items():\n    tag = name.lower().replace(&quot;-&quot;, &quot;_&quot;)\n    LOGS[name] = run_intrusion(VIDEO, f&quot;intrusion_{tag}.mp4&quot;, f, *SEG, tag=name)\n    EVENTS[name] = find_events(LOGS[name].alarm.values, V_FPS, first=SEG[0])\n    pd.DataFrame(EVENTS[name], columns=[&quot;start_s&quot;, &quot;end_s&quot;]).to_csv(f&quot;events_{tag}.csv&quot;, index=False)`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: &lt;code&gt;run_intrusion&lt;/code&gt; 은 영상을 열어 &lt;code&gt;start&lt;/code&gt; 프레임부터 &lt;code&gt;process_frame&lt;/code&gt; → 저장 → 로그를 반복하고 DataFrame 을 돌려줍니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;④ 정리 — 산출물&#x27;,vt:&#x27;영상 · CSV · 로그&#x27;,run:()=&gt;play(3,400,3),
+  q:[&#x27;엔진을 바꿔 다시 돌릴 때 전처리 · 후처리 · 경보 규칙 코드는 얼마나 고쳐야 했을까요?&#x27;,[&#x27;전처리의 정규화 값을 INT8 에 맞게 고친다&#x27;,&#x27;고치지 않는다&#x27;,&#x27;후처리의 conf 기준을 엔진마다 다시 맞춘다&#x27;],1,&#x27;QDQ 모델의 입력 · 출력은 여전히 float 입니다 (Q/DQ 가 모델 안에 있음). 그래서 전처리 · 후처리 · 경보 규칙은 그대로이고 infer 만 바뀝니다 — 엔진 사이의 비교가 공정해지는 이유이기도 합니다.&#x27;],
+  kv:[[&#x27;영상&#x27;,&#x27;intrusion_*.mp4 3개&#x27;],[&#x27;이벤트&#x27;,&#x27;events_*.csv 3개&#x27;],[&#x27;로그&#x27;,&#x27;LOGS — 6교시 비교의 재료&#x27;]],st:[&#x27;info&#x27;,&#x27;5교시 정리 — 6교시에 결과를 비교합니다&#x27;],
+  code:`&lt;span class=&quot;c&quot;&gt;# mp4v 코덱 영상은 브라우저에서 바로 재생되지 않을 수 있다 → OT Day 5 의 to_h264 로 변환&lt;/span&gt;`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;5교시 정리&lt;/b&gt;: 추론기를 인자로 받는 구조 → 엔진만 교체 · 프레임 시간은 네 단계로 나눠 잰다 · 산출물은 영상과 이벤트 CSV.&lt;/p&gt;&#x27;},
+]);
+
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe></section>
+<section class="lesson" id="d6-6" data-title="D6-6 이벤트 일치율과 병목"><iframe title="D6-6 이벤트 일치율과 병목" loading="lazy" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;ko&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+&lt;title&gt;이벤트 일치율과 병목 — Quantization·Pruning Day 6&lt;/title&gt;
+&lt;style&gt;
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:&quot;Consolas&quot;,&quot;D2Coding&quot;,&quot;JetBrains Mono&quot;,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:&quot;Pretendard&quot;,&quot;Noto Sans KR&quot;,&quot;Segoe UI&quot;,sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  @media(max-width:520px){.app{padding:16px 12px 30px}}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .sub code,.explain code,.note code{font-family:var(--mono);color:var(--blue)}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono);max-width:100%;overflow-wrap:anywhere}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.red{color:var(--red);border-color:var(--red)}.pill.green{color:var(--green);border-color:var(--green)}.pill.purple{color:var(--purple);border-color:var(--purple)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;min-width:0}
+  @media(max-width:520px){.panel{padding:12px 10px}}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.run{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700}
+  button.sel{background:#123d33;border-color:var(--teal);color:var(--teal)}
+  button:disabled{opacity:.4;cursor:default}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .grid{display:grid;grid-template-columns:1.25fr 1fr;gap:14px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .grid&gt;*{min-width:0}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.two{grid-template-columns:1fr}}
+  .two&gt;*{min-width:0}
+  canvas{width:100%;display:block;background:#0a0f1c;border:1px solid var(--line);border-radius:8px}
+  svg{max-width:100%}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+  .lab{font-size:13px;color:var(--dim)}
+  .sl{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;margin:8px 0}
+  .sl label{color:var(--amber);width:70px;flex:none}
+  .sl input{flex:1;min-width:60px;accent-color:var(--amber)}
+  .sl output{width:64px;text-align:right;flex:none}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-family:var(--mono);font-size:13.5px}
+  .kv span:nth-child(odd){color:var(--dim)}
+  .kv b{font-weight:600;overflow-wrap:anywhere}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;white-space:pre-wrap;min-height:64px;overflow-wrap:anywhere}
+  .code .g{color:var(--green)}.code .e{color:var(--red)}.code .c{color:#5d7292}.code .a{color:var(--amber)}.code .b{color:var(--blue)}.code .t{color:var(--teal)}
+  .code .hl{background:#3a2e12;color:var(--amber);border-radius:3px;padding:0 2px}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px;overflow-wrap:anywhere;white-space:pre-line}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}.explain b.purple{color:var(--purple)}
+  table.tt{border-collapse:collapse;font-family:var(--mono);font-size:13px;width:100%}
+  table.tt th,table.tt td{border:1px solid var(--line);padding:4px 6px;text-align:center}
+  table.tt th{color:var(--dim);font-weight:600;background:#0e1628}
+  table.tt tr.cur td{background:#2a2210}
+  .ok1{color:var(--green)}.bad1{color:var(--red)}.dim{color:var(--dim)}
+  .scroll{overflow-x:auto;max-width:100%}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .note{font-size:12.5px;color:var(--dim);border-left:3px solid var(--amber);padding:4px 10px;margin-top:10px}
+  .chk{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--dim)}
+  .chk input{accent-color:var(--amber)}
+  .ctl button{font-family:var(--mono)}
+  input[type=number],input.num,select{background:#0a0f1c;border:1px solid #2a3a5c;color:var(--text);border-radius:6px;padding:4px 6px;font-family:var(--mono);font-size:13px;width:74px}
+  select{width:auto}
+  .seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+  .seg button{padding:5px 10px}
+  .mono{font-family:var(--mono)}
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+  .arr{color:var(--dim);font-family:var(--mono);flex:none}
+  .fb{border:1px solid #2a3a5c;border-radius:8px;padding:7px 10px;background:#0a0f1c;font-family:var(--mono);font-size:13px;transition:all .3s;min-width:0;overflow-wrap:anywhere}
+  .fb small{display:block;color:var(--dim);font-size:11.5px;font-family:inherit}
+  .fb.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber);box-shadow:0 0 0 2px #f5b94233}
+  .fb.done{border-color:var(--teal);color:var(--teal)}
+  .fb.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .fb.off{opacity:.35}
+  .cells{display:flex;flex-wrap:wrap;gap:4px}
+  .cell{min-width:38px;height:30px;padding:0 6px;border:1px solid #2a3a5c;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;background:#0a0f1c;transition:all .25s}
+  .cell.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber)}
+  .cell.w{border-color:#3b6aa8;color:var(--blue)}.cell.bb{border-color:#7a5a2a;color:var(--amber)}
+.goals ol{margin:4px 0 0 18px;padding:0;font-size:13.5px;line-height:1.75;color:var(--text)}
+.goals ol li b{color:var(--amber)}
+#quiz .q{margin:0 0 8px;font-size:14px;line-height:1.55}
+#quiz .opts{display:flex;flex-direction:column;gap:6px}
+#quiz .opts button{text-align:left;background:#0b1220;border:1px solid #334155;color:var(--text);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer}
+#quiz .opts button:hover:not(:disabled){border-color:var(--teal)}
+#quiz .opts button.ok{border-color:#34d399;background:#0f2a22;color:#6ee7b7}
+#quiz .opts button.no{border-color:#f87171;background:#2a1215;color:#fca5a5}
+#quiz .why{margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--text)}
+.tagrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:12px;color:var(--dim)}
+.kv .wait{grid-column:1/-1;color:var(--dim);font-size:12.5px}
+
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;app&quot;&gt;
+&lt;div id=&quot;root&quot;&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;script&gt;
+
+const $=s=&gt;document.querySelector(s), $$=s=&gt;[...document.querySelectorAll(s)];
+const RM=window.matchMedia&amp;&amp;window.matchMedia(&#x27;(prefers-reduced-motion: reduce)&#x27;).matches;
+const sleep=ms=&gt;new Promise(r=&gt;setTimeout(r,RM?Math.min(ms,80):ms));
+let busy=false, timer=null;
+function setStatus(c,m){const s=$(&#x27;#status&#x27;);s.className=&#x27;status &#x27;+c;s.innerHTML=m;}
+function setCode(h){$(&#x27;#code&#x27;).innerHTML=h;}
+function fitCanvas(c){const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;const w=Math.max(10,Math.round(r.width*d)),h=Math.max(10,Math.round(r.height*d));if(c.width!==w||c.height!==h){c.width=w;c.height=h;}const g=c.getContext(&#x27;2d&#x27;);g.setTransform(d,0,0,d,0,0);return [g,r.width,r.height];}
+function initPresets(P,stop){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;if(stop)stop();$$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#explain&#x27;).innerHTML=P[i].ex;try{await P[i].run();}finally{busy=false;}});}
+const esc=s=&gt;String(s).replace(/&amp;/g,&#x27;&amp;amp;&#x27;).replace(/&lt;/g,&#x27;&amp;lt;&#x27;).replace(/&gt;/g,&#x27;&amp;gt;&#x27;);
+const fmt=n=&gt;n.toLocaleString(&#x27;en-US&#x27;);
+function stopTimer(){if(timer){clearInterval(timer);timer=null;}}
+/* Day 2 · 3 공통 — 교시 흐름 (노트북 순서) + 먼저 예측 + 실측 공개 */
+const K={b:&#x27;#60a5fa&#x27;,a:&#x27;#f59e0b&#x27;,g:&#x27;#34d399&#x27;,r:&#x27;#f87171&#x27;,p:&#x27;#c084fc&#x27;,t:&#x27;#2dd4bf&#x27;,d:&#x27;#8a9bb8&#x27;,x:&#x27;#dbe4f0&#x27;,l:&#x27;#334155&#x27;,bg:&#x27;#111a2e&#x27;,z:&#x27;#1f2b45&#x27;};
+let R=false, CUR=null;
+function layout(o){document.getElementById(&#x27;root&#x27;).innerHTML=`
+&lt;h1&gt;${o.h1}&lt;/h1&gt;&lt;p class=&quot;sub&quot;&gt;${o.sub}&lt;/p&gt;
+&lt;div class=&quot;panel goals&quot;&gt;&lt;h2&gt;이 교시에서 배우는 것&lt;/h2&gt;&lt;ol&gt;${o.goals.map(g=&gt;`&lt;li&gt;${g}&lt;/li&gt;`).join(&#x27;&#x27;)}&lt;/ol&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;교시 흐름 — 노트북 순서대로 (누르면 재생)&lt;/h2&gt;&lt;div class=&quot;presets&quot; id=&quot;presets&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2 id=&quot;vt&quot;&gt;그림&lt;/h2&gt;&lt;canvas id=&quot;cv&quot; style=&quot;height:${o.h||250}px&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+&lt;div class=&quot;grid&quot;&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;🤔 먼저 예측 — 고르면 실측값이 나옵니다&lt;/h2&gt;&lt;div id=&quot;quiz&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;강사 실측 (노트북 실행 결과)&lt;/h2&gt;&lt;div class=&quot;kv&quot; id=&quot;kv&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;노트북 코드&lt;/h2&gt;&lt;div class=&quot;code&quot; id=&quot;code&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;상태&lt;/h2&gt;&lt;div class=&quot;status info&quot; id=&quot;status&quot;&gt;단계를 누르세요.&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;panel explain&quot; id=&quot;explain&quot;&gt;&lt;/div&gt;`;}
+function showKV(rows){$(&#x27;#kv&#x27;).innerHTML=rows.map(([k,v])=&gt;`&lt;span&gt;${k}&lt;/span&gt;&lt;b&gt;${v}&lt;/b&gt;`).join(&#x27;&#x27;);}
+function reveal(){if(!CUR||R)return;R=true;showKV(CUR.kv);setCode(CUR.code);$(&#x27;#explain&#x27;).innerHTML=CUR.ex;if(CUR.st)setStatus(CUR.st[0],CUR.st[1]);if(window.draw)draw();}
+function ask(q){const [qs,opts,ans,why]=q;
+  $(&#x27;#quiz&#x27;).innerHTML=`&lt;p class=&quot;q&quot;&gt;${qs}&lt;/p&gt;&lt;div class=&quot;opts&quot;&gt;${opts.map((o,i)=&gt;`&lt;button type=&quot;button&quot; data-i=&quot;${i}&quot;&gt;${o}&lt;/button&gt;`).join(&#x27;&#x27;)}&lt;/div&gt;&lt;p class=&quot;why&quot; hidden&gt;&lt;/p&gt;`;
+  $$(&#x27;#quiz .opts button&#x27;).forEach(b=&gt;b.onclick=()=&gt;{const i=+b.dataset.i;$$(&#x27;#quiz .opts button&#x27;).forEach((x,j)=&gt;{x.disabled=true;x.classList.toggle(&#x27;ok&#x27;,j===ans);x.classList.toggle(&#x27;no&#x27;,j===i&amp;&amp;i!==ans);});
+    const w=$(&#x27;#quiz .why&#x27;);w.hidden=false;w.innerHTML=(i===ans?&#x27;✅ 맞았습니다. &#x27;:&#x27;❌ 다시 생각해 봅시다. &#x27;)+why;reveal();});}
+function steps(P){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;stopTimer();const p=P[i];CUR=p;R=false;
+    $$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#vt&#x27;).textContent=p.vt||p.n;$(&#x27;#explain&#x27;).innerHTML=&#x27;&lt;p class=&quot;dim&quot;&gt;예측을 고르면 이 단계의 해설이 나타납니다.&lt;/p&gt;&#x27;;setCode(&#x27;&lt;span class=&quot;c&quot;&gt;# 예측을 고르면 이 단계의 노트북 코드가 나타납니다&lt;/span&gt;&#x27;);
+    $(&#x27;#kv&#x27;).innerHTML=&#x27;&lt;span class=&quot;wait&quot;&gt;왼쪽 위 예측을 먼저 고르세요 — 고르면 실측값이 나타납니다.&lt;/span&gt;&#x27;;setStatus(&#x27;info&#x27;,p.s0||&#x27;애니메이션을 보고 예측을 골라 보세요.&#x27;);ask(p.q);
+    try{await p.run();}finally{busy=false;}});
+  $(&#x27;#presets button&#x27;).click();}
+function cv(){const [g,W,H]=fitCanvas($(&#x27;#cv&#x27;));g.clearRect(0,0,W,H);g.textAlign=&#x27;left&#x27;;g.lineWidth=1;return [g,W,H];}
+function box(g,x,y,w,h,t,c,sub,on){g.fillStyle=on?c+&#x27;33&#x27;:K.bg;g.strokeStyle=c;g.lineWidth=on?2.5:1.2;g.beginPath();g.roundRect(x,y,w,h,7);g.fill();g.stroke();g.lineWidth=1;
+  g.fillStyle=K.x;g.font=&#x27;12px sans-serif&#x27;;g.textAlign=&#x27;center&#x27;;g.fillText(t,x+w/2,y+h/2+(sub?-3:4));if(sub){g.fillStyle=K.d;g.font=&#x27;10.5px sans-serif&#x27;;g.fillText(sub,x+w/2,y+h/2+12);}g.textAlign=&#x27;left&#x27;;}
+function arr(g,x1,y1,x2,y2,c){g.strokeStyle=c||K.d;g.fillStyle=c||K.d;g.lineWidth=1.5;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();const a=Math.atan2(y2-y1,x2-x1);g.beginPath();g.moveTo(x2,y2);g.lineTo(x2-8*Math.cos(a-.4),y2-8*Math.sin(a-.4));g.lineTo(x2-8*Math.cos(a+.4),y2-8*Math.sin(a+.4));g.fill();g.lineWidth=1;}
+function txt(g,s,x,y,c,f,al){g.fillStyle=c||K.x;g.font=f||&#x27;12px sans-serif&#x27;;g.textAlign=al||&#x27;left&#x27;;g.fillText(s,x,y);g.textAlign=&#x27;left&#x27;;}
+function hbar(g,x,y,w,h,frac,c,label,val){g.fillStyle=K.z;g.fillRect(x,y,w,h);g.fillStyle=c;g.fillRect(x,y,Math.max(0,w*Math.min(1,frac)),h);if(label)txt(g,label,x-6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;,&#x27;right&#x27;);if(val)txt(g,val,x+w*Math.min(1,frac)+6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;);}
+async function tween(n,ms,f){for(let k=1;k&lt;=n;k++){f(k/n);await sleep(ms);}}
+window.__d6={};
+
+layout({h1:&#x27;이벤트 일치율과 병목 — 결과를 어떻게 비교하나&#x27;,sub:&#x27;6교시 노트북 순서: 프레임 일치율 (6-1) → 이벤트 수준 비교 (6-2) → 병목의 이동 · Amdahl (예제 6-A) → 정리.&#x27;,
+ goals:[&#x27;GT 가 없는 현장 영상은 &lt;b&gt;기준 엔진 (FP16) 과의 일치율&lt;/b&gt; 로 평가한다&#x27;,&#x27;&lt;b&gt;프레임 수준&lt;/b&gt; (사람 수 · 경보) 과 &lt;b&gt;이벤트 수준&lt;/b&gt; (재현율 · 시작 시각 차이) — 지표는 서비스가 정한다&#x27;,&#x27;추론이 빨라질수록 병목은 &lt;b&gt;전 · 후처리&lt;/b&gt; 로 옮겨간다 (Amdahl)&#x27;]});
+let S=0,T=0;
+function draw(){const [g,W,H]=cv();const u=W/100;
+ if(S===0){txt(g,&#x27;FP16 과 같은 값을 낸 프레임의 비율 (평가 구간 315 프레임)&#x27;,2*u,20,K.d);
+  [[&#x27;n_people (사람 수)&#x27;,.7873,.7968],[&#x27;n_inside (구역 안)&#x27;,.9111,.9429],[&#x27;alarm (경보)&#x27;,.9746,.9841]].forEach(([n,a,b],i)=&gt;{const y=40+i*62;txt(g,n,2*u,y+28,K.x,&#x27;bold 13px sans-serif&#x27;);hbar(g,30*u,y,46*u,20,(i===2&amp;&amp;!R?0:a)*T,K.g,&#x27;INT8&#x27;,i===2&amp;&amp;!R?&#x27;?&#x27;:(a*100).toFixed(1)+&#x27;%&#x27;);hbar(g,30*u,y+25,46*u,20,(i===2&amp;&amp;!R?0:b)*T,K.p,&#x27;INT8-mixed&#x27;,i===2&amp;&amp;!R?&#x27;?&#x27;:(b*100).toFixed(1)+&#x27;%&#x27;);});
+  txt(g,R?&#x27;사람 수는 conf 0.25 경계의 박스 하나로도 달라진다 · 경보는 &quot;구역 안에 한 명이라도 연속 3프레임&quot; 이라 안정적&#x27;:&#x27;&#x27;,2*u,236,K.a,&#x27;12px sans-serif&#x27;);}
+ if(S===1){txt(g,&#x27;경보 타임라인 (초) — 평가 구간 48.0 ~ 79.4초&#x27;,2*u,20,K.d);const x0=16*u,w=80*u,tx=t=&gt;x0+(t-48)/31.4*w;
+  [[&#x27;FP16&#x27;,[[52.4,59.9],[61.0,61.2],[61.6,61.8],[62.6,74.1],[75.9,78.4]],K.d],[&#x27;INT8&#x27;,[[52.4,59.9],[60.7,60.7],[62.6,74.1],[76.0,78.4]],K.g],[&#x27;INT8-mixed&#x27;,[[52.4,59.9],[61.8,61.8],[62.6,74.1],[75.9,78.4]],K.p]].forEach(([n,ev,c],i)=&gt;{if(i&amp;&amp;!R)return;const y=40+i*42;txt(g,n,2*u,y+17,K.x,&#x27;12.5px sans-serif&#x27;);g.fillStyle=&#x27;#0e1628&#x27;;g.fillRect(x0,y,w,24);ev.forEach(([a,b])=&gt;{g.fillStyle=c;g.fillRect(tx(a),y,Math.max(3,(tx(b)-tx(a))*T),24);});});
+  if(R){g.strokeStyle=K.r;g.lineWidth=2;g.strokeRect(tx(60.4),34,tx(62.1)-tx(60.4),120);g.lineWidth=1;txt(g,&#x27;0.2초 (3프레임) 짜리 짧은 이벤트 2건 — 엔진마다 하나씩 놓쳤다&#x27;,tx(52),176,K.r,&#x27;12px sans-serif&#x27;);}
+  txt(g,R?&#x27;FP16 5건 중 4건 재현 (80%) · 긴 이벤트 3건은 모두 재현 · 시작 시각 차이 최대 0.3초&#x27;:&#x27;INT8 은 FP16 의 이벤트 5건을 모두 재현했을까?&#x27;,2*u,206,R?K.x:K.a,&#x27;12.5px sans-serif&#x27;);txt(g,R?&#x27;경계에 걸린 프레임 하나로 &quot;연속 3프레임&quot; 조건이 깨진다 → 짧은 이벤트가 가장 먼저 흔들린다&#x27;:&#x27;&#x27;,2*u,230,K.d,&#x27;12px sans-serif&#x27;);}
+ if(S===2){txt(g,&#x27;Amdahl — 전체 속도비 = 1 / ((1 − p) + p / k) · p = 추론 비율 · k = 추론 속도비&#x27;,2*u,20,K.d);
+  [[&#x27;p = 0.92 (오늘 CPU 실측)&#x27;,[1.85,3.22,12.4],K.b],[&#x27;p = 0.50 (추론이 이미 빠를 때 — 예시)&#x27;,[R?1.33:0,R?1.6:0,R?2.0:0],K.a]].forEach(([n,v,c],i)=&gt;{const y=40+i*96;txt(g,n,2*u,y+8,K.x,&#x27;bold 12.5px sans-serif&#x27;);[&#x27;추론 2배&#x27;,&#x27;추론 4배&#x27;,&#x27;추론 무한대&#x27;].forEach((l,j)=&gt;hbar(g,26*u,y+16+j*22,46*u,17,v[j]/13*T,c,l,v[j]?v[j]+&#x27;배&#x27;:&#x27;?&#x27;));});
+  txt(g,R?&#x27;추론 비율이 낮아질수록 추론을 더 빠르게 해도 전체는 거의 안 빨라진다 → 다음 병목은 전 · 후처리&#x27;:&#x27;&#x27;,2*u,238,K.a,&#x27;12.5px sans-serif&#x27;);}
+ if(S===3){[[&#x27;인원 계수 서비스&#x27;,&#x27;사람 수 일치율 (79 ~ 80%) 을 본다 — INT8 을 그대로 쓰기 어렵다&#x27;,K.r],[&#x27;침입 경보 서비스&#x27;,&#x27;경보 일치율 (97.5 ~ 98.4%) · 이벤트 재현율을 본다&#x27;,K.g],[&#x27;실시간성&#x27;,R?&#x27;프레임 전체 시간 · p95 를 본다 — 추론 시간만 보면 안 된다&#x27;:&#x27;무엇을 볼까?&#x27;,K.a]].forEach(([a,b,c],i)=&gt;{if(i/3&gt;T)return;const y=34+i*60;box(g,2*u,y,26*u,44,a,c,&#x27;&#x27;,true);txt(g,b,31*u,y+27,K.x,&#x27;12.5px sans-serif&#x27;);});
+  txt(g,&#x27;같은 엔진이라도 서비스에 따라 &quot;쓸 수 있다 / 없다&quot; 가 달라진다&#x27;,2*u,228,K.d,&#x27;12px sans-serif&#x27;);}
+}
+async function play(s,ms,n){S=s;await tween(n||20,ms||80,t=&gt;{T=t;draw();});}
+steps([
+ {n:&#x27;① 실습 6-1 — 프레임 일치율&#x27;,vt:&#x27;FP16 과 같은 프레임의 비율&#x27;,run:()=&gt;play(0),
+  q:[&#x27;INT8 엔진이 FP16 과 &quot;사람 수&quot; 가 같은 프레임은 78.7% 였습니다. &quot;경보&quot; 가 같은 프레임의 비율은?&#x27;,[&#x27;더 낮다 (약 60%)&#x27;,&#x27;더 높다 (97.5%)&#x27;,&#x27;같다 (78.7%)&#x27;],1,&#x27;경보 일치율은 INT8 97.5% · INT8-mixed 98.4% 입니다. 사람 수는 경계선 박스 하나로도 달라지지만, 경보는 &quot;구역 안에 한 명이라도 연속 3프레임&quot; 이라 박스 몇 개의 차이에 흔들리지 않습니다.&#x27;],
+  kv:[[&#x27;n_people&#x27;,&#x27;78.7% · 79.7%&#x27;],[&#x27;n_inside&#x27;,&#x27;91.1% · 94.3%&#x27;],[&#x27;alarm&#x27;,&#x27;97.5% · 98.4%&#x27;]],st:[&#x27;ok&#x27;,&#x27;지표에 따라 일치율이 다르다&#x27;],
+  code:`def agreement(ref, log):\n    return {c: float((ref[c].values == log[c].values).mean()) for c in [&quot;n_people&quot;, &quot;n_inside&quot;, &quot;alarm&quot;]}\n\nagree_df = pd.DataFrame([{&quot;engine&quot;: k, **agreement(LOGS[&quot;FP16&quot;], v), &quot;events&quot;: len(EVENTS[k])} for k, v in LOGS.items()])`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: 정답 (GT) 이 없는 현장 영상에서는 mAP 를 잴 수 없습니다. 대신 기준 엔진과 얼마나 같은 결정을 내리는지를 봅니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;② 실습 6-2 — 이벤트 수준 비교&#x27;,vt:&#x27;놓친 이벤트 · 시작 시각&#x27;,run:()=&gt;play(1),
+  q:[&#x27;FP16 의 이벤트 5건 중 INT8 이 재현하지 못한 것이 1건 있습니다. 어떤 이벤트일까요?&#x27;,[&#x27;가장 긴 이벤트 (11.5초)&#x27;,&#x27;0.2초짜리 짧은 이벤트&#x27;,&#x27;맨 처음 이벤트&#x27;],1,&#x27;61.6 ~ 61.8초의 3프레임짜리 이벤트입니다 (INT8-mixed 는 61.0 ~ 61.2초를 놓침). &quot;연속 3프레임&quot; 조건은 프레임 하나만 달라져도 깨지므로 짧은 이벤트가 가장 먼저 흔들립니다. 긴 이벤트 3건은 모두 재현됐고 시작 시각 차이는 최대 0.3초입니다.&#x27;],
+  kv:[[&#x27;재현율&#x27;,&#x27;INT8 80% · INT8-mixed 80% (5건 중 4건)&#x27;],[&#x27;놓친 것&#x27;,&#x27;0.2초짜리 이벤트&#x27;],[&#x27;시작 시각 차이&#x27;,&#x27;최대 0.3초&#x27;]],st:[&#x27;warn&#x27;,&#x27;짧은 이벤트가 가장 약하다&#x27;],
+  code:`def match_events(ref, ev, tol=0.5):\n    rows = []\n    for a, b in ref:\n        hit = [(s, e) for s, e in ev if &lt;span class=&quot;hl&quot;&gt;s &lt;= b + tol and e &gt;= a - tol&lt;/span&gt;]\n        rows.append({&quot;ref_start&quot;: a, &quot;ref_end&quot;: b, &quot;matched&quot;: bool(hit), &quot;start_diff_s&quot;: round(hit[0][0] - a, 1) if hit else np.nan})\n    return pd.DataFrame(rows, columns=[&quot;ref_start&quot;, &quot;ref_end&quot;, &quot;matched&quot;, &quot;start_diff_s&quot;])`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: 인자를 바꿔 &lt;code&gt;match_events(EVENTS[&quot;INT8&quot;], EVENTS[&quot;FP16&quot;])&lt;/code&gt; 로 부르면 반대 방향 (INT8 에만 있는 이벤트 = 오경보) 도 볼 수 있습니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;③ 예제 6-A — 병목의 이동&#x27;,vt:&#x27;Amdahl 의 법칙&#x27;,run:()=&gt;play(2),
+  q:[&#x27;추론이 프레임 시간의 50% 를 차지합니다. 추론만 2배 빠르게 하면 프레임 전체는 몇 배 빨라질까요?&#x27;,[&#x27;정확히 2.0배&#x27;,&#x27;약 1.33배&#x27;,&#x27;약 1.90배&#x27;],1,&#x27;1 / (0.5 + 0.5 / 2) = 1.33배. 추론을 무한히 빠르게 해도 2배가 한계입니다. 추론 비율이 0.92 인 오늘의 CPU 에서는 2배 → 1.85배이지만, GPU 에서 추론이 수 ms 로 줄면 전 · 후처리가 다음 병목이 됩니다.&#x27;],
+  kv:[[&#x27;p = 0.92&#x27;,&#x27;추론 2배 → 전체 1.85배 · 한계 12.4배&#x27;],[&#x27;p = 0.50&#x27;,&#x27;추론 2배 → 전체 1.33배 · 한계 2배&#x27;],[&#x27;다음 병목&#x27;,&#x27;read · pre · post (CPU)&#x27;]],st:[&#x27;info&#x27;,&#x27;추론만 빨라져서는 한계가 있다&#x27;],
+  code:`p = float(stage_df.infer_share[&quot;FP16&quot;])\namdahl_df = pd.DataFrame([{&quot;infer_speedup&quot;: k, &quot;frame_speedup&quot;: 1 / ((1 - p) + p / k)} for k in [1, 2, 4, 10, 1e9]])`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;제공 코드 (실행만)&lt;/b&gt;: 실무에서는 전처리를 GPU 로 옮기거나 (DALI · CV-CUDA), NMS 를 엔진 안에 넣거나, 디코딩을 하드웨어로 처리합니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;④ 정리 — 지표는 서비스가 정한다&#x27;,vt:&#x27;무엇을 볼 것인가&#x27;,run:()=&gt;play(3,400,3),
+  q:[&#x27;같은 INT8 엔진을 &quot;인원 계수&quot; 서비스와 &quot;침입 경보&quot; 서비스에 쓰려 합니다. 판단이 같을까요?&#x27;,[&#x27;같다 — 엔진이 같으면 품질도 같다&#x27;,&#x27;다르다 — 보는 지표가 다르다&#x27;,&#x27;같다 — 둘 다 mAP 로 판단한다&#x27;],1,&#x27;인원 계수는 사람 수 일치율 (78.7%) 이 기준이라 그대로 쓰기 어렵고, 침입 경보는 경보 일치율 (97.5%) · 이벤트 재현율이 기준이라 쓸 만합니다. 평가 지표는 모델이 아니라 서비스가 정합니다.&#x27;],
+  kv:[[&#x27;프레임 수준&#x27;,&#x27;사람 수 &lt; 구역 안 &lt; 경보&#x27;],[&#x27;이벤트 수준&#x27;,&#x27;재현율 · 시작 시각 차이&#x27;],[&#x27;시간&#x27;,&#x27;프레임 전체 · p95&#x27;]],st:[&#x27;info&#x27;,&#x27;6교시 정리 — 7교시에 표로 모읍니다&#x27;],
+  code:`&lt;span class=&quot;c&quot;&gt;# 7교시: agree_df · LOGS 를 qp_baseline.csv 에 모은다&lt;/span&gt;`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;6교시 정리&lt;/b&gt;: GT 가 없으면 기준 엔진과의 일치율 · 프레임과 이벤트 두 수준 · 추론이 빨라지면 병목이 옮겨간다.&lt;/p&gt;&#x27;},
+]);
+
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe></section>
+<section class="lesson" id="d6-7" data-title="D6-7 배포 판단"><iframe title="D6-7 배포 판단" loading="lazy" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;ko&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+&lt;title&gt;배포 판단 — Quantization·Pruning Day 6&lt;/title&gt;
+&lt;style&gt;
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:&quot;Consolas&quot;,&quot;D2Coding&quot;,&quot;JetBrains Mono&quot;,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:&quot;Pretendard&quot;,&quot;Noto Sans KR&quot;,&quot;Segoe UI&quot;,sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  @media(max-width:520px){.app{padding:16px 12px 30px}}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .sub code,.explain code,.note code{font-family:var(--mono);color:var(--blue)}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono);max-width:100%;overflow-wrap:anywhere}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.red{color:var(--red);border-color:var(--red)}.pill.green{color:var(--green);border-color:var(--green)}.pill.purple{color:var(--purple);border-color:var(--purple)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;min-width:0}
+  @media(max-width:520px){.panel{padding:12px 10px}}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.run{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700}
+  button.sel{background:#123d33;border-color:var(--teal);color:var(--teal)}
+  button:disabled{opacity:.4;cursor:default}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .grid{display:grid;grid-template-columns:1.25fr 1fr;gap:14px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .grid&gt;*{min-width:0}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.two{grid-template-columns:1fr}}
+  .two&gt;*{min-width:0}
+  canvas{width:100%;display:block;background:#0a0f1c;border:1px solid var(--line);border-radius:8px}
+  svg{max-width:100%}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+  .lab{font-size:13px;color:var(--dim)}
+  .sl{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;margin:8px 0}
+  .sl label{color:var(--amber);width:70px;flex:none}
+  .sl input{flex:1;min-width:60px;accent-color:var(--amber)}
+  .sl output{width:64px;text-align:right;flex:none}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-family:var(--mono);font-size:13.5px}
+  .kv span:nth-child(odd){color:var(--dim)}
+  .kv b{font-weight:600;overflow-wrap:anywhere}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;white-space:pre-wrap;min-height:64px;overflow-wrap:anywhere}
+  .code .g{color:var(--green)}.code .e{color:var(--red)}.code .c{color:#5d7292}.code .a{color:var(--amber)}.code .b{color:var(--blue)}.code .t{color:var(--teal)}
+  .code .hl{background:#3a2e12;color:var(--amber);border-radius:3px;padding:0 2px}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px;overflow-wrap:anywhere;white-space:pre-line}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}.explain b.purple{color:var(--purple)}
+  table.tt{border-collapse:collapse;font-family:var(--mono);font-size:13px;width:100%}
+  table.tt th,table.tt td{border:1px solid var(--line);padding:4px 6px;text-align:center}
+  table.tt th{color:var(--dim);font-weight:600;background:#0e1628}
+  table.tt tr.cur td{background:#2a2210}
+  .ok1{color:var(--green)}.bad1{color:var(--red)}.dim{color:var(--dim)}
+  .scroll{overflow-x:auto;max-width:100%}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .note{font-size:12.5px;color:var(--dim);border-left:3px solid var(--amber);padding:4px 10px;margin-top:10px}
+  .chk{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--dim)}
+  .chk input{accent-color:var(--amber)}
+  .ctl button{font-family:var(--mono)}
+  input[type=number],input.num,select{background:#0a0f1c;border:1px solid #2a3a5c;color:var(--text);border-radius:6px;padding:4px 6px;font-family:var(--mono);font-size:13px;width:74px}
+  select{width:auto}
+  .seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+  .seg button{padding:5px 10px}
+  .mono{font-family:var(--mono)}
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+  .arr{color:var(--dim);font-family:var(--mono);flex:none}
+  .fb{border:1px solid #2a3a5c;border-radius:8px;padding:7px 10px;background:#0a0f1c;font-family:var(--mono);font-size:13px;transition:all .3s;min-width:0;overflow-wrap:anywhere}
+  .fb small{display:block;color:var(--dim);font-size:11.5px;font-family:inherit}
+  .fb.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber);box-shadow:0 0 0 2px #f5b94233}
+  .fb.done{border-color:var(--teal);color:var(--teal)}
+  .fb.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .fb.off{opacity:.35}
+  .cells{display:flex;flex-wrap:wrap;gap:4px}
+  .cell{min-width:38px;height:30px;padding:0 6px;border:1px solid #2a3a5c;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;background:#0a0f1c;transition:all .25s}
+  .cell.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber)}
+  .cell.w{border-color:#3b6aa8;color:var(--blue)}.cell.bb{border-color:#7a5a2a;color:var(--amber)}
+.goals ol{margin:4px 0 0 18px;padding:0;font-size:13.5px;line-height:1.75;color:var(--text)}
+.goals ol li b{color:var(--amber)}
+#quiz .q{margin:0 0 8px;font-size:14px;line-height:1.55}
+#quiz .opts{display:flex;flex-direction:column;gap:6px}
+#quiz .opts button{text-align:left;background:#0b1220;border:1px solid #334155;color:var(--text);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer}
+#quiz .opts button:hover:not(:disabled){border-color:var(--teal)}
+#quiz .opts button.ok{border-color:#34d399;background:#0f2a22;color:#6ee7b7}
+#quiz .opts button.no{border-color:#f87171;background:#2a1215;color:#fca5a5}
+#quiz .why{margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--text)}
+.tagrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:12px;color:var(--dim)}
+.kv .wait{grid-column:1/-1;color:var(--dim);font-size:12.5px}
+
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;app&quot;&gt;
+&lt;div id=&quot;root&quot;&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;script&gt;
+
+const $=s=&gt;document.querySelector(s), $$=s=&gt;[...document.querySelectorAll(s)];
+const RM=window.matchMedia&amp;&amp;window.matchMedia(&#x27;(prefers-reduced-motion: reduce)&#x27;).matches;
+const sleep=ms=&gt;new Promise(r=&gt;setTimeout(r,RM?Math.min(ms,80):ms));
+let busy=false, timer=null;
+function setStatus(c,m){const s=$(&#x27;#status&#x27;);s.className=&#x27;status &#x27;+c;s.innerHTML=m;}
+function setCode(h){$(&#x27;#code&#x27;).innerHTML=h;}
+function fitCanvas(c){const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;const w=Math.max(10,Math.round(r.width*d)),h=Math.max(10,Math.round(r.height*d));if(c.width!==w||c.height!==h){c.width=w;c.height=h;}const g=c.getContext(&#x27;2d&#x27;);g.setTransform(d,0,0,d,0,0);return [g,r.width,r.height];}
+function initPresets(P,stop){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;if(stop)stop();$$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#explain&#x27;).innerHTML=P[i].ex;try{await P[i].run();}finally{busy=false;}});}
+const esc=s=&gt;String(s).replace(/&amp;/g,&#x27;&amp;amp;&#x27;).replace(/&lt;/g,&#x27;&amp;lt;&#x27;).replace(/&gt;/g,&#x27;&amp;gt;&#x27;);
+const fmt=n=&gt;n.toLocaleString(&#x27;en-US&#x27;);
+function stopTimer(){if(timer){clearInterval(timer);timer=null;}}
+/* Day 2 · 3 공통 — 교시 흐름 (노트북 순서) + 먼저 예측 + 실측 공개 */
+const K={b:&#x27;#60a5fa&#x27;,a:&#x27;#f59e0b&#x27;,g:&#x27;#34d399&#x27;,r:&#x27;#f87171&#x27;,p:&#x27;#c084fc&#x27;,t:&#x27;#2dd4bf&#x27;,d:&#x27;#8a9bb8&#x27;,x:&#x27;#dbe4f0&#x27;,l:&#x27;#334155&#x27;,bg:&#x27;#111a2e&#x27;,z:&#x27;#1f2b45&#x27;};
+let R=false, CUR=null;
+function layout(o){document.getElementById(&#x27;root&#x27;).innerHTML=`
+&lt;h1&gt;${o.h1}&lt;/h1&gt;&lt;p class=&quot;sub&quot;&gt;${o.sub}&lt;/p&gt;
+&lt;div class=&quot;panel goals&quot;&gt;&lt;h2&gt;이 교시에서 배우는 것&lt;/h2&gt;&lt;ol&gt;${o.goals.map(g=&gt;`&lt;li&gt;${g}&lt;/li&gt;`).join(&#x27;&#x27;)}&lt;/ol&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;교시 흐름 — 노트북 순서대로 (누르면 재생)&lt;/h2&gt;&lt;div class=&quot;presets&quot; id=&quot;presets&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2 id=&quot;vt&quot;&gt;그림&lt;/h2&gt;&lt;canvas id=&quot;cv&quot; style=&quot;height:${o.h||250}px&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+&lt;div class=&quot;grid&quot;&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;🤔 먼저 예측 — 고르면 실측값이 나옵니다&lt;/h2&gt;&lt;div id=&quot;quiz&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;강사 실측 (노트북 실행 결과)&lt;/h2&gt;&lt;div class=&quot;kv&quot; id=&quot;kv&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;노트북 코드&lt;/h2&gt;&lt;div class=&quot;code&quot; id=&quot;code&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;상태&lt;/h2&gt;&lt;div class=&quot;status info&quot; id=&quot;status&quot;&gt;단계를 누르세요.&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;panel explain&quot; id=&quot;explain&quot;&gt;&lt;/div&gt;`;}
+function showKV(rows){$(&#x27;#kv&#x27;).innerHTML=rows.map(([k,v])=&gt;`&lt;span&gt;${k}&lt;/span&gt;&lt;b&gt;${v}&lt;/b&gt;`).join(&#x27;&#x27;);}
+function reveal(){if(!CUR||R)return;R=true;showKV(CUR.kv);setCode(CUR.code);$(&#x27;#explain&#x27;).innerHTML=CUR.ex;if(CUR.st)setStatus(CUR.st[0],CUR.st[1]);if(window.draw)draw();}
+function ask(q){const [qs,opts,ans,why]=q;
+  $(&#x27;#quiz&#x27;).innerHTML=`&lt;p class=&quot;q&quot;&gt;${qs}&lt;/p&gt;&lt;div class=&quot;opts&quot;&gt;${opts.map((o,i)=&gt;`&lt;button type=&quot;button&quot; data-i=&quot;${i}&quot;&gt;${o}&lt;/button&gt;`).join(&#x27;&#x27;)}&lt;/div&gt;&lt;p class=&quot;why&quot; hidden&gt;&lt;/p&gt;`;
+  $$(&#x27;#quiz .opts button&#x27;).forEach(b=&gt;b.onclick=()=&gt;{const i=+b.dataset.i;$$(&#x27;#quiz .opts button&#x27;).forEach((x,j)=&gt;{x.disabled=true;x.classList.toggle(&#x27;ok&#x27;,j===ans);x.classList.toggle(&#x27;no&#x27;,j===i&amp;&amp;i!==ans);});
+    const w=$(&#x27;#quiz .why&#x27;);w.hidden=false;w.innerHTML=(i===ans?&#x27;✅ 맞았습니다. &#x27;:&#x27;❌ 다시 생각해 봅시다. &#x27;)+why;reveal();});}
+function steps(P){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;stopTimer();const p=P[i];CUR=p;R=false;
+    $$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#vt&#x27;).textContent=p.vt||p.n;$(&#x27;#explain&#x27;).innerHTML=&#x27;&lt;p class=&quot;dim&quot;&gt;예측을 고르면 이 단계의 해설이 나타납니다.&lt;/p&gt;&#x27;;setCode(&#x27;&lt;span class=&quot;c&quot;&gt;# 예측을 고르면 이 단계의 노트북 코드가 나타납니다&lt;/span&gt;&#x27;);
+    $(&#x27;#kv&#x27;).innerHTML=&#x27;&lt;span class=&quot;wait&quot;&gt;왼쪽 위 예측을 먼저 고르세요 — 고르면 실측값이 나타납니다.&lt;/span&gt;&#x27;;setStatus(&#x27;info&#x27;,p.s0||&#x27;애니메이션을 보고 예측을 골라 보세요.&#x27;);ask(p.q);
+    try{await p.run();}finally{busy=false;}});
+  $(&#x27;#presets button&#x27;).click();}
+function cv(){const [g,W,H]=fitCanvas($(&#x27;#cv&#x27;));g.clearRect(0,0,W,H);g.textAlign=&#x27;left&#x27;;g.lineWidth=1;return [g,W,H];}
+function box(g,x,y,w,h,t,c,sub,on){g.fillStyle=on?c+&#x27;33&#x27;:K.bg;g.strokeStyle=c;g.lineWidth=on?2.5:1.2;g.beginPath();g.roundRect(x,y,w,h,7);g.fill();g.stroke();g.lineWidth=1;
+  g.fillStyle=K.x;g.font=&#x27;12px sans-serif&#x27;;g.textAlign=&#x27;center&#x27;;g.fillText(t,x+w/2,y+h/2+(sub?-3:4));if(sub){g.fillStyle=K.d;g.font=&#x27;10.5px sans-serif&#x27;;g.fillText(sub,x+w/2,y+h/2+12);}g.textAlign=&#x27;left&#x27;;}
+function arr(g,x1,y1,x2,y2,c){g.strokeStyle=c||K.d;g.fillStyle=c||K.d;g.lineWidth=1.5;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();const a=Math.atan2(y2-y1,x2-x1);g.beginPath();g.moveTo(x2,y2);g.lineTo(x2-8*Math.cos(a-.4),y2-8*Math.sin(a-.4));g.lineTo(x2-8*Math.cos(a+.4),y2-8*Math.sin(a+.4));g.fill();g.lineWidth=1;}
+function txt(g,s,x,y,c,f,al){g.fillStyle=c||K.x;g.font=f||&#x27;12px sans-serif&#x27;;g.textAlign=al||&#x27;left&#x27;;g.fillText(s,x,y);g.textAlign=&#x27;left&#x27;;}
+function hbar(g,x,y,w,h,frac,c,label,val){g.fillStyle=K.z;g.fillRect(x,y,w,h);g.fillStyle=c;g.fillRect(x,y,Math.max(0,w*Math.min(1,frac)),h);if(label)txt(g,label,x-6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;,&#x27;right&#x27;);if(val)txt(g,val,x+w*Math.min(1,frac)+6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;);}
+async function tween(n,ms,f){for(let k=1;k&lt;=n;k++){f(k/n);await sleep(ms);}}
+window.__d6={};
+
+layout({h1:&#x27;배포 판단 — 최종 성능표와 경량화 결정표&#x27;,sub:&#x27;7교시 노트북 순서: 기법 선택 순서 → 최종 qp_baseline.csv (7-1) → 장치별 경량화 결정표 (7-2) → 정리.&#x27;,
+ goals:[&#x27;&lt;b&gt;재학습 없는 기법&lt;/b&gt; (FP16 → INT8 PTQ → mixed) 을 먼저, 부족하면 &lt;b&gt;prune → KD → INT8&lt;/b&gt;&#x27;,&#x27;결과는 한 표에: 크기 · 지연 · &lt;b&gt;p95&lt;/b&gt; · FPS · 정확도 (또는 일치율)&#x27;,&#x27;&lt;b&gt;장치가 기법을 정한다&lt;/b&gt;: Jetson = TensorRT INT8 QDQ · Raspberry Pi = CPU 용 INT8 + pruning · MCU = 전부 INT8&#x27;]});
+let S=0,T=0;
+function draw(){const [g,W,H]=cv();const u=W/100;
+ if(S===0){[[&#x27;1. 목표를 숫자로&#x27;,&#x27;지연 (ms · FPS) · 크기 · 정확도 하한&#x27;,K.l],[&#x27;2. 재학습 없이&#x27;,&#x27;FP16 → INT8 PTQ → mixed precision&#x27;,K.g],[&#x27;3. 부족하면 재학습&#x27;,R?&#x27;structured pruning → KD → INT8 PTQ → (손실 &gt; 1%p 면) QAT&#x27;:&#x27;?&#x27;,K.a],[&#x27;4. 다시 잰다&#x27;,&#x27;실제 장치 · 실제 파이프라인에서&#x27;,K.b]].forEach(([a,b,c],i)=&gt;{if(i/4&gt;T)return;const y=30+i*52;box(g,2*u,y,26*u,40,a,c,&#x27;&#x27;,i===2);txt(g,b,31*u,y+25,K.x,&#x27;12.5px sans-serif&#x27;);});
+  txt(g,&#x27;MACs ≠ 지연 (Day 5) · 추론 ≠ 프레임 전체 (6교시)&#x27;,2*u,H-6,K.d,&#x27;12px sans-serif&#x27;);}
+ if(S===1){txt(g,&#x27;qp_baseline.csv — Day6 5행 (지연 · FPS 는 ORT CPU 실측 예시, 실행마다 다름)&#x27;,2*u,20,K.d);const xs=[2,24,50,64,78];[&#x27;model&#x27;,&#x27;quant&#x27;,&#x27;size_kb&#x27;,&#x27;acc&#x27;,&#x27;fps&#x27;].forEach((h,j)=&gt;txt(g,h,xs[j]*u,44,K.d,&#x27;11.5px monospace&#x27;));
+  [[&#x27;rn20_p50_kd&#x27;,&#x27;FP32 (prune 50% + KD)&#x27;,&#x27;277&#x27;,&#x27;0.7475&#x27;,&#x27;—&#x27;],[&#x27;rn20_p50_kd_int8&#x27;,&#x27;INT8 (prune 50% + KD)&#x27;,&#x27;335&#x27;,&#x27;0.7460&#x27;,&#x27;—&#x27;],[&#x27;yolov8n_intrusion&#x27;,&#x27;FP16&#x27;,&#x27;12,550&#x27;,&#x27;1.000&#x27;,&#x27;약 11&#x27;],[&#x27;yolov8n_intrusion&#x27;,&#x27;INT8&#x27;,&#x27;3,507&#x27;,R?&#x27;0.975&#x27;:&#x27;?&#x27;,&#x27;약 6&#x27;],[&#x27;yolov8n_intrusion&#x27;,&#x27;INT8-mixed&#x27;,&#x27;3,592&#x27;,R?&#x27;0.984&#x27;:&#x27;?&#x27;,&#x27;약 6&#x27;]].forEach((r,i)=&gt;{if(i/5&gt;T)return;const y=68+i*28;g.fillStyle=i%2?&#x27;#0e1628&#x27;:K.bg;g.fillRect(1*u,y-17,98*u,25);r.forEach((v,j)=&gt;txt(g,v,xs[j]*u,y,j===3&amp;&amp;i&gt;2?K.a:K.x,&#x27;12px &#x27;+(j&gt;1?&#x27;monospace&#x27;:&#x27;sans-serif&#x27;)));});
+  txt(g,R?&#x27;침입 감지 행의 acc = FP16 기준 경보 일치율 — 분류 행의 정확도와 다른 지표&#x27;:&#x27;침입 감지 행의 acc 열에는 무엇이 들어갈까?&#x27;,2*u,222,R?K.a:K.d,&#x27;12.5px sans-serif&#x27;);txt(g,&#x27;GPU 에서는 TensorRT 엔진의 지연 · FPS 가 들어갑니다 — 수업에서 측정&#x27;,2*u,244,K.d,&#x27;12px sans-serif&#x27;);}
+ if(S===2){txt(g,&#x27;decision_df — recommend(dev) 를 세 장치에&#x27;,2*u,20,K.d);
+  [[&#x27;Jetson Orin Nano&#x27;,&#x27;TensorRT&#x27;,&#x27;INT8 (QDQ) + FP16&#x27;,&#x27;kd False&#x27;,K.g],[&#x27;Raspberry Pi 5&#x27;,R?&#x27;ONNX Runtime / TFLite&#x27;:&#x27;?&#x27;,R?&#x27;INT8 (static PTQ)&#x27;:&#x27;?&#x27;,&#x27;kd False&#x27;,K.b],[&#x27;MCU (Cortex-M7)&#x27;,&#x27;TFLite Micro&#x27;,&#x27;INT8 only&#x27;,&#x27;kd True&#x27;,K.a]].forEach(([d,r,p,k,c],i)=&gt;{if(i/3&gt;T)return;const y=36+i*58;box(g,2*u,y,24*u,44,d,c,&#x27;&#x27;,i===1);txt(g,r,29*u,y+18,K.x,&#x27;12.5px sans-serif&#x27;);txt(g,p+&#x27; · structured · &#x27;+k,29*u,y+38,K.d,&#x27;12px sans-serif&#x27;);});
+  txt(g,&#x27;규칙: NVIDIA GPU → TensorRT · ram &lt; 1 MB → TFLite Micro + INT8 only · ram &lt; 1 GB → KD 로 아주 작은 모델&#x27;,2*u,226,K.d,&#x27;11.5px sans-serif&#x27;);}
+ if(S===3){txt(g,&#x27;개념도 — 평균과 p95 (10 FPS 영상 = 프레임 주기 100 ms)&#x27;,2*u,20,K.d);const x0=6*u,w=80*u;
+  g.strokeStyle=K.z;g.beginPath();g.moveTo(x0,170);g.lineTo(x0+w,170);g.stroke();g.strokeStyle=K.b;g.lineWidth=2;g.beginPath();for(let i=0;i&lt;=80;i++){const z=(i-28)/9,y=170-110*Math.exp(-z*z/2)-(i&gt;50?18*Math.exp(-(i-62)*(i-62)/40):0);i?g.lineTo(x0+i*u,y):g.moveTo(x0+i*u,y);}g.stroke();g.lineWidth=1;
+  [[28,&#x27;평균&#x27;,K.g],[R?56:28,R?&#x27;p95&#x27;:&#x27;&#x27;,K.a],[66,&#x27;주기 100 ms&#x27;,K.r]].forEach(([x,l,c])=&gt;{g.strokeStyle=c;g.setLineDash([4,4]);g.beginPath();g.moveTo(x0+x*u,40);g.lineTo(x0+x*u,170);g.stroke();g.setLineDash([]);txt(g,l,x0+x*u+4,52,c,&#x27;12px sans-serif&#x27;);});
+  txt(g,R?&#x27;평균이 주기 안에 들어도 p95 가 넘으면 가끔 프레임을 놓친다 — 실시간은 p95 로 판단&#x27;:&#x27;&#x27;,2*u,206,K.a,&#x27;12.5px sans-serif&#x27;);txt(g,&#x27;오늘 CPU 실측: FP16 평균 약 89 ms · p95 약 105 ms (10 FPS 주기 100 ms 를 가끔 넘는다)&#x27;,2*u,230,K.d,&#x27;12px sans-serif&#x27;);}
+}
+async function play(s,ms,n){S=s;await tween(n||20,ms||80,t=&gt;{T=t;draw();});}
+steps([
+ {n:&#x27;① 개념 — 기법 선택 순서&#x27;,vt:&#x27;싼 것부터&#x27;,run:()=&gt;play(0,300,4),
+  q:[&#x27;목표 지연을 못 맞췄습니다. 가장 먼저 시도할 것은?&#x27;,[&#x27;structured pruning 을 한 뒤 KD 로 다시 학습하기&#x27;,&#x27;FP16 · INT8 PTQ 같은 재학습 없는 기법&#x27;,&#x27;QAT&#x27;],1,&#x27;재학습 없는 기법은 몇 분이면 결과가 나옵니다 (FP16 → INT8 PTQ → mixed precision). 여기서 목표를 만족하면 끝입니다. 부족할 때만 학습 데이터 · 시간이 드는 prune → KD → INT8 로 갑니다.&#x27;],
+  kv:[[&#x27;먼저&#x27;,&#x27;FP16 → INT8 PTQ → mixed&#x27;],[&#x27;부족하면&#x27;,&#x27;prune → KD → INT8 (→ QAT)&#x27;],[&#x27;항상&#x27;,&#x27;실제 장치 · 파이프라인에서 재측정&#x27;]],st:[&#x27;info&#x27;,&#x27;비용이 낮은 기법부터&#x27;],
+  code:`&lt;span class=&quot;c&quot;&gt;# 1) 목표를 숫자로  2) 재학습 없는 기법  3) prune → KD → INT8  4) 실제 장치에서 다시 잰다&lt;/span&gt;`,
+  ex:&#x27;&lt;p&gt;오전 (ResNet-20) 은 3단계까지, 오후 (YOLOv8n) 는 2단계까지 한 것입니다. 12월 프로젝트에서 자기 데이터가 생기면 YOLO 에도 3단계를 적용합니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;② 실습 7-1 — 최종 qp_baseline&#x27;,vt:&#x27;한 표에 모은다&#x27;,run:()=&gt;play(1,300,5),
+  q:[&#x27;침입 감지 3행의 acc 열에는 무엇을 넣었을까요? (현장 영상에는 정답 박스가 없습니다)&#x27;,[&#x27;COCO 에서 잰 mAP@0.5&#x27;,&#x27;FP16 기준 경보 일치율&#x27;,&#x27;프레임당 사람 수의 평균&#x27;],1,&#x27;GT 가 없어 mAP 를 잴 수 없으므로 6교시의 경보 일치율 (FP16 1.000 · INT8 0.975 · INT8-mixed 0.984) 을 넣습니다. 분류 행의 정확도와 다른 지표이므로 표를 읽을 때 model 을 함께 봅니다.&#x27;],
+  kv:[[&#x27;분류 2행&#x27;,&#x27;rn20_p50_kd 0.7475 · int8 0.7460&#x27;],[&#x27;침입 감지 3행&#x27;,&#x27;일치율 1.000 · 0.975 · 0.984&#x27;],[&#x27;열&#x27;,&#x27;size_kb · acc · mean_ms · p95_ms · fps&#x27;]],st:[&#x27;ok&#x27;,&#x27;Day 2 ~ 6 결과가 한 표에&#x27;],
+  code:`for k, lg in LOGS.items():\n    rows.append({&quot;day&quot;: &quot;Day6&quot;, &quot;model&quot;: &quot;yolov8n_intrusion&quot;, &quot;quant&quot;: k, &quot;size_kb&quot;: size_kb(YOLO_FILES[k]), &quot;acc&quot;: _al[k],\n                 &quot;mean_ms&quot;: lg.ms.mean(), &quot;p95_ms&quot;: &lt;span class=&quot;hl&quot;&gt;np.percentile(lg.ms, 95)&lt;/span&gt;, &quot;fps_b32&quot;: 1000 / lg.ms.mean()})`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: 같은 (day, model, quant) 가 이미 있으면 마지막 것만 남깁니다 — 셀을 다시 실행해도 행이 중복되지 않습니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;③ 실습 7-2 — 경량화 결정표&#x27;,vt:&#x27;장치가 기법을 정한다&#x27;,run:()=&gt;play(2,400,3),
+  q:[&#x27;NVIDIA GPU 가 없는 Raspberry Pi 5 (메모리 8 GB) 에 권할 런타임과 정밀도는?&#x27;,[&#x27;TensorRT · INT8 (QDQ) + FP16 fallback 을 켠 엔진&#x27;,&#x27;ONNX Runtime / TFLite · INT8 (static PTQ)&#x27;,&#x27;TFLite Micro · INT8 only&#x27;],1,&#x27;TensorRT 는 NVIDIA GPU 가 필요하고, TFLite Micro 는 메모리가 수백 KB 인 MCU 용입니다. ARM CPU 에서는 ONNX Runtime 이나 TFLite 의 INT8 을 쓰며, TensorRT 용 S8 QDQ 가 아니라 CPU 에 맞는 형식 (U8 · QOperator) 을 고릅니다.&#x27;],
+  kv:[[&#x27;Jetson&#x27;,&#x27;TensorRT · INT8 (QDQ) + FP16&#x27;],[&#x27;Raspberry Pi&#x27;,&#x27;ORT / TFLite · INT8 (static PTQ)&#x27;],[&#x27;MCU&#x27;,&#x27;TFLite Micro · INT8 only · KD&#x27;]],st:[&#x27;ok&#x27;,&#x27;규칙을 코드로 남긴다&#x27;],
+  code:`def recommend(dev):\n    tiny = dev[&quot;ram_mb&quot;] &lt; 1\n    if dev[&quot;nvidia_gpu&quot;]: runtime, precision = &quot;TensorRT&quot;, &quot;INT8 (QDQ) + FP16&quot;\n    elif tiny:            runtime, precision = &quot;TFLite Micro&quot;, &quot;INT8 only&quot;\n    else:                 runtime, precision = &quot;ONNX Runtime / TFLite&quot;, &quot;INT8 (static PTQ)&quot;\n    return {&quot;runtime&quot;: runtime, &quot;precision&quot;: precision, &quot;pruning&quot;: &quot;structured&quot;, &quot;kd&quot;: dev[&quot;ram_mb&quot;] &lt; 1024}`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;직접 구현&lt;/b&gt;: pruning 은 어떤 장치에서나 &quot;structured&quot; 입니다 — unstructured 는 일반 커널에서 빨라지지 않기 때문입니다 (Day 5).&lt;/p&gt;&#x27;},
+ {n:&#x27;④ 정리 — p95&#x27;,vt:&#x27;평균만 보면 안 된다&#x27;,run:()=&gt;play(3),
+  q:[&#x27;10 FPS 카메라 (프레임 주기 100 ms) 에서 평균 처리 시간이 89 ms 입니다. 실시간으로 문제없을까요?&#x27;,[&#x27;문제없다 — 평균이 100 ms 보다 작다&#x27;,&#x27;p95 를 봐야 안다&#x27;,&#x27;문제 있다 — 평균이 50 ms 아래여야 한다&#x27;],1,&#x27;평균이 주기 안에 들어도 느린 프레임이 주기를 넘으면 그때마다 밀립니다. 오늘 CPU 실측은 평균 약 89 ms · p95 약 105 ms 로, 20번에 한 번쯤은 100 ms 를 넘습니다. 실시간 여부는 p95 (또는 p99) 로 판단합니다.&#x27;],
+  kv:[[&#x27;평균&#x27;,&#x27;약 89 ms (FP16 · CPU)&#x27;],[&#x27;p95&#x27;,&#x27;약 105 ms&#x27;],[&#x27;주기&#x27;,&#x27;100 ms (10 FPS)&#x27;]],st:[&#x27;info&#x27;,&#x27;7교시 정리 — 8교시는 평가 대비&#x27;],
+  code:`&quot;p95_ms&quot;: np.percentile(lg.ms, 95)`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;7교시 정리&lt;/b&gt;: 싼 기법부터 · 결과는 한 표에 (p95 포함) · 장치가 기법을 정한다. 산출물: &lt;code&gt;qp_baseline.csv&lt;/code&gt; · &lt;code&gt;decision_table.csv&lt;/code&gt;.&lt;/p&gt;&#x27;},
+]);
+
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe></section>
+<section class="lesson" id="d6-8" data-title="D6-8 평가 대비 정리"><iframe title="D6-8 평가 대비 정리" loading="lazy" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;ko&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+&lt;title&gt;평가 대비 정리 — Quantization·Pruning Day 6&lt;/title&gt;
+&lt;style&gt;
+  :root{--bg:#0b1220;--panel:#111a2e;--line:#1f2b45;--text:#dbe4f0;--dim:#8a9bb8;--amber:#f5b942;--teal:#2dd4bf;--blue:#60a5fa;--green:#4ade80;--red:#f87171;--purple:#c084fc;--mono:&quot;Consolas&quot;,&quot;D2Coding&quot;,&quot;JetBrains Mono&quot;,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:&quot;Pretendard&quot;,&quot;Noto Sans KR&quot;,&quot;Segoe UI&quot;,sans-serif;font-size:15px;line-height:1.55}
+  .app{max-width:1100px;margin:0 auto;padding:22px 20px 40px}
+  @media(max-width:520px){.app{padding:16px 12px 30px}}
+  h1{color:var(--amber);font-size:24px;margin:0 0 6px}
+  .sub{color:var(--dim);margin:0 0 14px}
+  .sub code,.explain code,.note code{font-family:var(--mono);color:var(--blue)}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .pill{border:1px solid;border-radius:999px;padding:4px 12px;font-size:13px;font-family:var(--mono);max-width:100%;overflow-wrap:anywhere}
+  .pill.teal{color:var(--teal);border-color:var(--teal)}.pill.amber{color:var(--amber);border-color:var(--amber)}.pill.blue{color:var(--blue);border-color:var(--blue)}.pill.red{color:var(--red);border-color:var(--red)}.pill.green{color:var(--green);border-color:var(--green)}.pill.purple{color:var(--purple);border-color:var(--purple)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;min-width:0}
+  @media(max-width:520px){.panel{padding:12px 10px}}
+  .panel h2{font-size:14px;color:var(--dim);margin:0 0 10px;font-weight:600}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  button{background:#172239;border:1px solid #2a3a5c;color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover{border-color:var(--amber)}button.active{background:#3a2e12;border-color:var(--amber);color:var(--amber)}
+  button.run{background:#123d33;border-color:var(--teal);color:var(--teal);font-weight:700}
+  button.sel{background:#123d33;border-color:var(--teal);color:var(--teal)}
+  button:disabled{opacity:.4;cursor:default}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .grid{display:grid;grid-template-columns:1.25fr 1fr;gap:14px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .grid&gt;*{min-width:0}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.two{grid-template-columns:1fr}}
+  .two&gt;*{min-width:0}
+  canvas{width:100%;display:block;background:#0a0f1c;border:1px solid var(--line);border-radius:8px}
+  svg{max-width:100%}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+  .lab{font-size:13px;color:var(--dim)}
+  .sl{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;margin:8px 0}
+  .sl label{color:var(--amber);width:70px;flex:none}
+  .sl input{flex:1;min-width:60px;accent-color:var(--amber)}
+  .sl output{width:64px;text-align:right;flex:none}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-family:var(--mono);font-size:13.5px}
+  .kv span:nth-child(odd){color:var(--dim)}
+  .kv b{font-weight:600;overflow-wrap:anywhere}
+  .code{font-family:var(--mono);background:#0a0f1c;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;white-space:pre-wrap;min-height:64px;overflow-wrap:anywhere}
+  .code .g{color:var(--green)}.code .e{color:var(--red)}.code .c{color:#5d7292}.code .a{color:var(--amber)}.code .b{color:var(--blue)}.code .t{color:var(--teal)}
+  .code .hl{background:#3a2e12;color:var(--amber);border-radius:3px;padding:0 2px}
+  .status{border-radius:8px;padding:10px 12px;font-size:14px;border:1px solid var(--line);min-height:44px;overflow-wrap:anywhere;white-space:pre-line}
+  .status.ok{border-color:var(--green);color:var(--green);background:#0d2216}.status.info{border-color:var(--teal);color:var(--teal);background:#0f2a27}.status.warn{border-color:var(--red);color:var(--red);background:#2a1212}
+  .explain p{margin:6px 0}.explain b.teal{color:var(--teal)}.explain b.amber{color:var(--amber)}.explain b.green{color:var(--green)}.explain b.red{color:var(--red)}.explain b.blue{color:var(--blue)}.explain b.purple{color:var(--purple)}
+  table.tt{border-collapse:collapse;font-family:var(--mono);font-size:13px;width:100%}
+  table.tt th,table.tt td{border:1px solid var(--line);padding:4px 6px;text-align:center}
+  table.tt th{color:var(--dim);font-weight:600;background:#0e1628}
+  table.tt tr.cur td{background:#2a2210}
+  .ok1{color:var(--green)}.bad1{color:var(--red)}.dim{color:var(--dim)}
+  .scroll{overflow-x:auto;max-width:100%}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .note{font-size:12.5px;color:var(--dim);border-left:3px solid var(--amber);padding:4px 10px;margin-top:10px}
+  .chk{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--dim)}
+  .chk input{accent-color:var(--amber)}
+  .ctl button{font-family:var(--mono)}
+  input[type=number],input.num,select{background:#0a0f1c;border:1px solid #2a3a5c;color:var(--text);border-radius:6px;padding:4px 6px;font-family:var(--mono);font-size:13px;width:74px}
+  select{width:auto}
+  .seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+  .seg button{padding:5px 10px}
+  .mono{font-family:var(--mono)}
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+  .arr{color:var(--dim);font-family:var(--mono);flex:none}
+  .fb{border:1px solid #2a3a5c;border-radius:8px;padding:7px 10px;background:#0a0f1c;font-family:var(--mono);font-size:13px;transition:all .3s;min-width:0;overflow-wrap:anywhere}
+  .fb small{display:block;color:var(--dim);font-size:11.5px;font-family:inherit}
+  .fb.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber);box-shadow:0 0 0 2px #f5b94233}
+  .fb.done{border-color:var(--teal);color:var(--teal)}
+  .fb.bad{border-color:var(--red);color:var(--red);background:#2a1212}
+  .fb.off{opacity:.35}
+  .cells{display:flex;flex-wrap:wrap;gap:4px}
+  .cell{min-width:38px;height:30px;padding:0 6px;border:1px solid #2a3a5c;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;background:#0a0f1c;transition:all .25s}
+  .cell.hot{border-color:var(--amber);background:#3a2e12;color:var(--amber)}
+  .cell.w{border-color:#3b6aa8;color:var(--blue)}.cell.bb{border-color:#7a5a2a;color:var(--amber)}
+.goals ol{margin:4px 0 0 18px;padding:0;font-size:13.5px;line-height:1.75;color:var(--text)}
+.goals ol li b{color:var(--amber)}
+#quiz .q{margin:0 0 8px;font-size:14px;line-height:1.55}
+#quiz .opts{display:flex;flex-direction:column;gap:6px}
+#quiz .opts button{text-align:left;background:#0b1220;border:1px solid #334155;color:var(--text);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer}
+#quiz .opts button:hover:not(:disabled){border-color:var(--teal)}
+#quiz .opts button.ok{border-color:#34d399;background:#0f2a22;color:#6ee7b7}
+#quiz .opts button.no{border-color:#f87171;background:#2a1215;color:#fca5a5}
+#quiz .why{margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--text)}
+.tagrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:12px;color:var(--dim)}
+.kv .wait{grid-column:1/-1;color:var(--dim);font-size:12.5px}
+
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;app&quot;&gt;
+&lt;div id=&quot;root&quot;&gt;&lt;/div&gt;
+
+&lt;/div&gt;
+&lt;script&gt;
+
+const $=s=&gt;document.querySelector(s), $$=s=&gt;[...document.querySelectorAll(s)];
+const RM=window.matchMedia&amp;&amp;window.matchMedia(&#x27;(prefers-reduced-motion: reduce)&#x27;).matches;
+const sleep=ms=&gt;new Promise(r=&gt;setTimeout(r,RM?Math.min(ms,80):ms));
+let busy=false, timer=null;
+function setStatus(c,m){const s=$(&#x27;#status&#x27;);s.className=&#x27;status &#x27;+c;s.innerHTML=m;}
+function setCode(h){$(&#x27;#code&#x27;).innerHTML=h;}
+function fitCanvas(c){const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;const w=Math.max(10,Math.round(r.width*d)),h=Math.max(10,Math.round(r.height*d));if(c.width!==w||c.height!==h){c.width=w;c.height=h;}const g=c.getContext(&#x27;2d&#x27;);g.setTransform(d,0,0,d,0,0);return [g,r.width,r.height];}
+function initPresets(P,stop){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;if(stop)stop();$$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#explain&#x27;).innerHTML=P[i].ex;try{await P[i].run();}finally{busy=false;}});}
+const esc=s=&gt;String(s).replace(/&amp;/g,&#x27;&amp;amp;&#x27;).replace(/&lt;/g,&#x27;&amp;lt;&#x27;).replace(/&gt;/g,&#x27;&amp;gt;&#x27;);
+const fmt=n=&gt;n.toLocaleString(&#x27;en-US&#x27;);
+function stopTimer(){if(timer){clearInterval(timer);timer=null;}}
+/* Day 2 · 3 공통 — 교시 흐름 (노트북 순서) + 먼저 예측 + 실측 공개 */
+const K={b:&#x27;#60a5fa&#x27;,a:&#x27;#f59e0b&#x27;,g:&#x27;#34d399&#x27;,r:&#x27;#f87171&#x27;,p:&#x27;#c084fc&#x27;,t:&#x27;#2dd4bf&#x27;,d:&#x27;#8a9bb8&#x27;,x:&#x27;#dbe4f0&#x27;,l:&#x27;#334155&#x27;,bg:&#x27;#111a2e&#x27;,z:&#x27;#1f2b45&#x27;};
+let R=false, CUR=null;
+function layout(o){document.getElementById(&#x27;root&#x27;).innerHTML=`
+&lt;h1&gt;${o.h1}&lt;/h1&gt;&lt;p class=&quot;sub&quot;&gt;${o.sub}&lt;/p&gt;
+&lt;div class=&quot;panel goals&quot;&gt;&lt;h2&gt;이 교시에서 배우는 것&lt;/h2&gt;&lt;ol&gt;${o.goals.map(g=&gt;`&lt;li&gt;${g}&lt;/li&gt;`).join(&#x27;&#x27;)}&lt;/ol&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;교시 흐름 — 노트북 순서대로 (누르면 재생)&lt;/h2&gt;&lt;div class=&quot;presets&quot; id=&quot;presets&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;panel&quot;&gt;&lt;h2 id=&quot;vt&quot;&gt;그림&lt;/h2&gt;&lt;canvas id=&quot;cv&quot; style=&quot;height:${o.h||250}px&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;
+&lt;div class=&quot;grid&quot;&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;🤔 먼저 예측 — 고르면 실측값이 나옵니다&lt;/h2&gt;&lt;div id=&quot;quiz&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;강사 실측 (노트북 실행 결과)&lt;/h2&gt;&lt;div class=&quot;kv&quot; id=&quot;kv&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div&gt;&lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;노트북 코드&lt;/h2&gt;&lt;div class=&quot;code&quot; id=&quot;code&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+ &lt;div class=&quot;panel&quot;&gt;&lt;h2&gt;상태&lt;/h2&gt;&lt;div class=&quot;status info&quot; id=&quot;status&quot;&gt;단계를 누르세요.&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;panel explain&quot; id=&quot;explain&quot;&gt;&lt;/div&gt;`;}
+function showKV(rows){$(&#x27;#kv&#x27;).innerHTML=rows.map(([k,v])=&gt;`&lt;span&gt;${k}&lt;/span&gt;&lt;b&gt;${v}&lt;/b&gt;`).join(&#x27;&#x27;);}
+function reveal(){if(!CUR||R)return;R=true;showKV(CUR.kv);setCode(CUR.code);$(&#x27;#explain&#x27;).innerHTML=CUR.ex;if(CUR.st)setStatus(CUR.st[0],CUR.st[1]);if(window.draw)draw();}
+function ask(q){const [qs,opts,ans,why]=q;
+  $(&#x27;#quiz&#x27;).innerHTML=`&lt;p class=&quot;q&quot;&gt;${qs}&lt;/p&gt;&lt;div class=&quot;opts&quot;&gt;${opts.map((o,i)=&gt;`&lt;button type=&quot;button&quot; data-i=&quot;${i}&quot;&gt;${o}&lt;/button&gt;`).join(&#x27;&#x27;)}&lt;/div&gt;&lt;p class=&quot;why&quot; hidden&gt;&lt;/p&gt;`;
+  $$(&#x27;#quiz .opts button&#x27;).forEach(b=&gt;b.onclick=()=&gt;{const i=+b.dataset.i;$$(&#x27;#quiz .opts button&#x27;).forEach((x,j)=&gt;{x.disabled=true;x.classList.toggle(&#x27;ok&#x27;,j===ans);x.classList.toggle(&#x27;no&#x27;,j===i&amp;&amp;i!==ans);});
+    const w=$(&#x27;#quiz .why&#x27;);w.hidden=false;w.innerHTML=(i===ans?&#x27;✅ 맞았습니다. &#x27;:&#x27;❌ 다시 생각해 봅시다. &#x27;)+why;reveal();});}
+function steps(P){$(&#x27;#presets&#x27;).innerHTML=P.map(p=&gt;`&lt;button type=&quot;button&quot;&gt;${p.n}&lt;/button&gt;`).join(&#x27;&#x27;);
+  $$(&#x27;#presets button&#x27;).forEach((b,i)=&gt;b.onclick=async()=&gt;{if(busy)return;busy=true;stopTimer();const p=P[i];CUR=p;R=false;
+    $$(&#x27;#presets button&#x27;).forEach(x=&gt;x.classList.toggle(&#x27;active&#x27;,x===b));$(&#x27;#vt&#x27;).textContent=p.vt||p.n;$(&#x27;#explain&#x27;).innerHTML=&#x27;&lt;p class=&quot;dim&quot;&gt;예측을 고르면 이 단계의 해설이 나타납니다.&lt;/p&gt;&#x27;;setCode(&#x27;&lt;span class=&quot;c&quot;&gt;# 예측을 고르면 이 단계의 노트북 코드가 나타납니다&lt;/span&gt;&#x27;);
+    $(&#x27;#kv&#x27;).innerHTML=&#x27;&lt;span class=&quot;wait&quot;&gt;왼쪽 위 예측을 먼저 고르세요 — 고르면 실측값이 나타납니다.&lt;/span&gt;&#x27;;setStatus(&#x27;info&#x27;,p.s0||&#x27;애니메이션을 보고 예측을 골라 보세요.&#x27;);ask(p.q);
+    try{await p.run();}finally{busy=false;}});
+  $(&#x27;#presets button&#x27;).click();}
+function cv(){const [g,W,H]=fitCanvas($(&#x27;#cv&#x27;));g.clearRect(0,0,W,H);g.textAlign=&#x27;left&#x27;;g.lineWidth=1;return [g,W,H];}
+function box(g,x,y,w,h,t,c,sub,on){g.fillStyle=on?c+&#x27;33&#x27;:K.bg;g.strokeStyle=c;g.lineWidth=on?2.5:1.2;g.beginPath();g.roundRect(x,y,w,h,7);g.fill();g.stroke();g.lineWidth=1;
+  g.fillStyle=K.x;g.font=&#x27;12px sans-serif&#x27;;g.textAlign=&#x27;center&#x27;;g.fillText(t,x+w/2,y+h/2+(sub?-3:4));if(sub){g.fillStyle=K.d;g.font=&#x27;10.5px sans-serif&#x27;;g.fillText(sub,x+w/2,y+h/2+12);}g.textAlign=&#x27;left&#x27;;}
+function arr(g,x1,y1,x2,y2,c){g.strokeStyle=c||K.d;g.fillStyle=c||K.d;g.lineWidth=1.5;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();const a=Math.atan2(y2-y1,x2-x1);g.beginPath();g.moveTo(x2,y2);g.lineTo(x2-8*Math.cos(a-.4),y2-8*Math.sin(a-.4));g.lineTo(x2-8*Math.cos(a+.4),y2-8*Math.sin(a+.4));g.fill();g.lineWidth=1;}
+function txt(g,s,x,y,c,f,al){g.fillStyle=c||K.x;g.font=f||&#x27;12px sans-serif&#x27;;g.textAlign=al||&#x27;left&#x27;;g.fillText(s,x,y);g.textAlign=&#x27;left&#x27;;}
+function hbar(g,x,y,w,h,frac,c,label,val){g.fillStyle=K.z;g.fillRect(x,y,w,h);g.fillStyle=c;g.fillRect(x,y,Math.max(0,w*Math.min(1,frac)),h);if(label)txt(g,label,x-6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;,&#x27;right&#x27;);if(val)txt(g,val,x+w*Math.min(1,frac)+6,y+h/2+4,K.x,&#x27;12px sans-serif&#x27;);}
+async function tween(n,ms,f){for(let k=1;k&lt;=n;k++){f(k/n);await sleep(ms);}}
+window.__d6={};
+
+layout({h1:&#x27;평가 대비 정리 — 예제 2문항과 6일 요약&#x27;,sub:&#x27;8교시 미니 프로젝트의 흐름입니다 (정답 코드는 없습니다). 내일 파트2 평가의 실습과 같은 수준의 예제 2문항을 혼자 풉니다.&#x27;,
+ goals:[&#x27;&lt;b&gt;쉬움&lt;/b&gt;: ONNX 모델 static PTQ → 크기 · 정확도 · 지연 비교 표&#x27;,&#x27;&lt;b&gt;중간&lt;/b&gt;: structured pruning → 학습 → MACs · 정확도 · 지연 결과표&#x27;,&#x27;평가 실습은 &lt;b&gt;표 + 수치로 쓴 한 줄 결론&lt;/b&gt; 까지 — 끝까지 못 해도 실행되는 곳까지 제출&#x27;],h:270});
+let S=0,T=0;
+function draw(){const [g,W,H]=cv();const u=W/100;
+ if(S===0){txt(g,&#x27;ptq_df — FP32 ONNX vs static PTQ INT8 (QDQ · S8 대칭 · 보정 500장)&#x27;,2*u,20,K.d);
+  hbar(g,28*u,42,48*u,22,1071/1200*T,K.b,&#x27;FP32 · 크기&#x27;,&#x27;1,071 KB&#x27;);hbar(g,28*u,68,48*u,22,(R?323/1200:0)*T,K.g,&#x27;INT8 · 크기&#x27;,R?&#x27;323 KB&#x27;:&#x27;?&#x27;);
+  hbar(g,28*u,116,48*u,22,.846/.9*T,K.b,&#x27;FP32 · 정확도&#x27;,&#x27;0.846&#x27;);hbar(g,28*u,142,48*u,22,.842/.9*T,K.g,&#x27;INT8 · 정확도&#x27;,&#x27;0.842&#x27;);
+  txt(g,R?&#x27;결론 한 줄: &quot;INT8 은 크기 약 1/3.3 · 정확도 손실 0.4%p — PTQ 로 충분&quot;&#x27;:&#x27;&#x27;,2*u,196,K.a,&#x27;12.5px sans-serif&#x27;);txt(g,&#x27;지연은 실행한 환경에서 잰 값을 그대로 적는다 (CPU 에서는 QDQ 가 FP32 보다 느릴 수 있다 — 5교시)&#x27;,2*u,222,K.d,&#x27;12px sans-serif&#x27;);}
+ if(S===1){txt(g,&#x27;prune_df — structured pruning 30% + 학습 3 epoch (강사 실측 예시 · KD)&#x27;,2*u,20,K.d);
+  [[&#x27;FP32&#x27;,41.2,.846],[&#x27;pruned 30%&#x27;,19.7,.1315],[&#x27;pruned 30% + tuned&#x27;,19.7,R?.807:0]].forEach(([n,m,a],i)=&gt;{const y=40+i*56;txt(g,n,2*u,y+24,K.x,&#x27;bold 12.5px sans-serif&#x27;);hbar(g,30*u,y,44*u,18,m/41.2*T,K.b,&#x27;MACs&#x27;,m+&#x27;M&#x27;);hbar(g,30*u,y+22,44*u,18,a*T,i===1?K.r:K.g,&#x27;정확도&#x27;,a?a.toFixed(4):&#x27;?&#x27;);});
+  const x=30*u+44*u*.816;g.strokeStyle=K.a;g.setLineDash([4,4]);g.beginPath();g.moveTo(x,36);g.lineTo(x,206);g.stroke();g.setLineDash([]);txt(g,&#x27;기준 0.816&#x27;,x+4,46,K.a,&#x27;11px sans-serif&#x27;);
+  txt(g,R?&#x27;0.807 &lt; 0.816 — 3%p 기준에 0.9%p 못 미친다. 표와 함께 &quot;기준을 만족하는가&quot; 를 적는 것이 결론&#x27;:&#x27;&#x27;,2*u,236,K.a,&#x27;12.5px sans-serif&#x27;);}
+ if(S===2){txt(g,&#x27;answer — 몇 배 · 몇 %p 로 요약 (강사 실측 예시)&#x27;,2*u,20,K.d);
+  [[&#x27;ptq_size_x&#x27;,&#x27;3.31배&#x27;,K.g],[&#x27;ptq_acc_drop_pp&#x27;,&#x27;0.4%p&#x27;,K.g],[&#x27;prune_macs_x&#x27;,&#x27;2.10배&#x27;,K.b],[&#x27;prune_acc_drop_pp&#x27;,&#x27;3.9%p&#x27;,K.a],[&#x27;pass_3pp&#x27;,R?&#x27;False&#x27;:&#x27;?&#x27;,R?K.r:K.l]].forEach(([a,b,c],i)=&gt;{if(i/5&gt;T)return;box(g,2*u+(i%3)*33*u,38+Math.floor(i/3)*60,30*u,46,a,c,b,i===4);});
+  txt(g,&#x27;eval_practice.csv — ptq_df 2행 + prune_df 3행 (task 열로 구분)&#x27;,2*u,186,K.x,&#x27;12.5px sans-serif&#x27;);txt(g,&#x27;표만 내고 결론이 없으면 평가에서도 실무에서도 절반&#x27;,2*u,212,K.d,&#x27;12px sans-serif&#x27;);}
+ if(S===3){[[&#x27;필답&#x27;,&#x27;scale · zero-point 계산 · PTQ / QAT · calibration · QDQ · mixed precision · unstructured vs structured · KD&#x27;,K.b],[&#x27;실습 (쉬움)&#x27;,&#x27;ONNX 모델 static PTQ 후 정확도 · latency 비교&#x27;,K.g],[&#x27;실습 (중간)&#x27;,&#x27;structured pruning + fine-tuning 후 결과표&#x27;,K.a],[&#x27;제출&#x27;,R?&#x27;소스 기준 · 기능별 부분 점수 — 실행되는 곳까지 제출&#x27;:&#x27;끝까지 못 했다면?&#x27;,K.p]].forEach(([a,b,c],i)=&gt;{if(i/4&gt;T)return;const y=30+i*52;box(g,2*u,y,18*u,40,a,c,&#x27;&#x27;,i===3);txt(g,b,23*u,y+25,K.x,&#x27;12px sans-serif&#x27;);});
+  txt(g,&#x27;파트2 평가 (11/24) — ONNX·TensorRT + Quantization·Pruning&#x27;,2*u,H-6,K.d,&#x27;12px sans-serif&#x27;);}
+ if(S===4){[[&#x27;Day 1&#x27;,&#x27;양자화 원리&#x27;,&#x27;scale · zero-point&#x27;,K.b],[&#x27;Day 2&#x27;,&#x27;PTQ&#x27;,&#x27;8비트는 대부분 충분&#x27;,K.b],[&#x27;Day 3&#x27;,&#x27;진단 · TensorRT&#x27;,&#x27;mixed · QDQ&#x27;,K.b],[&#x27;Day 4&#x27;,&#x27;QAT&#x27;,&#x27;저비트에서만&#x27;,K.b],[&#x27;Day 5&#x27;,&#x27;Pruning&#x27;,R?&#x27;structured 가 속도&#x27;:&#x27;?&#x27;,K.g],[&#x27;Day 6&#x27;,&#x27;통합&#x27;,&#x27;Prune → KD → INT8&#x27;,K.a]].forEach(([a,b,c,col],i)=&gt;{if(i/6&gt;T)return;box(g,2*u+(i%3)*33*u,34+Math.floor(i/3)*74,30*u,60,a+&#x27; — &#x27;+b,col,c,i===4);});
+  txt(g,&#x27;숫자를 작게 (양자화) · 적게 (가지치기) · 배우게 (증류) · 그리고 실제 장치에서 다시 잰다&#x27;,2*u,206,K.x,&#x27;12.5px sans-serif&#x27;);txt(g,&#x27;12월 [프로젝트] 현장 안전 모니터링 — compress.py · INT8 파이프라인 · qp_baseline.csv · 결정표를 배포 기준으로&#x27;,2*u,232,K.d,&#x27;12px sans-serif&#x27;);}
+}
+async function play(s,ms,n){S=s;await tween(n||20,ms||80,t=&gt;{T=t;draw();});}
+steps([
+ {n:&#x27;① 과제 1 (쉬움) — static PTQ&#x27;,vt:&#x27;크기 · 정확도 · 지연 표&#x27;,run:()=&gt;play(0),
+  q:[&#x27;FP32 ONNX 는 1,071 KB 입니다. ONNX Runtime 의 static PTQ (QDQ) 로 만든 INT8 ONNX 의 크기는?&#x27;,[&#x27;약 1,135 KB — 조금 커진다&#x27;,&#x27;약 323 KB — 약 1/3.3&#x27;,&#x27;약 134 KB — 1/8&#x27;],1,&#x27;ORT 의 quantize_static 은 weight 를 INT8 로 저장하므로 약 1/3.3 이 됩니다 (bias · Q/DQ 정보가 있어 정확히 1/4 은 아님). Day 4 의 ModelOpt export 는 weight 를 FP32 로 두어 조금 커졌습니다 — 도구마다 다릅니다. 정확도는 0.846 → 0.842.&#x27;],
+  kv:[[&#x27;크기&#x27;,&#x27;1,071 → 323 KB (3.31배)&#x27;],[&#x27;정확도&#x27;,&#x27;0.846 → 0.842 (−0.4%p)&#x27;],[&#x27;trt_check&#x27;,&#x27;ok — TensorRT 용 QDQ&#x27;]],st:[&#x27;ok&#x27;,&#x27;표 + 한 줄 결론&#x27;],
+  code:`&lt;span class=&quot;c&quot;&gt;# TODO: export_b1 → eval_fp32.onnx · make_trt_int8 → eval_int8.onnx&lt;/span&gt;\n&lt;span class=&quot;c&quot;&gt;#       ptq_df (model, size_kb, acc, latency_ms) — 행 FP32, INT8&lt;/span&gt;`,
+  ex:&#x27;&lt;p&gt;미니 프로젝트에는 &lt;b&gt;정답 보기 셀이 없습니다&lt;/b&gt;. 데이터 셀의 &lt;code&gt;make_trt_int8&lt;/code&gt; · &lt;code&gt;onnx_acc&lt;/code&gt; · &lt;code&gt;deploy_lat&lt;/code&gt; 을 조합합니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;② 과제 2 (중간) — pruning + 학습&#x27;,vt:&#x27;결과표&#x27;,run:()=&gt;play(1),
+  q:[&#x27;채널 30% 를 자르고 3 epoch 학습한 모델 (강사 실측 0.807) 은 &quot;FP32 대비 3%p 이내&quot; 기준 (0.816) 을 만족할까요?&#x27;,[&#x27;만족한다&#x27;,&#x27;만족하지 못한다 — 0.9%p 부족&#x27;,&#x27;판단할 수 없다 — MACs 를 봐야 한다&#x27;],1,&#x27;0.807 &lt; 0.816 입니다. MACs 는 41.2M → 19.7M (2.1배 감소) 로 줄었지만 기준에는 조금 못 미칩니다. 비율을 20% 로 낮추거나 학습 예산을 늘리는 것이 다음 선택입니다 — 이것까지 적는 것이 결론입니다.&#x27;],
+  kv:[[&#x27;MACs&#x27;,&#x27;41.2M → 19.7M&#x27;],[&#x27;정확도&#x27;,&#x27;0.846 → 0.13 → 0.807&#x27;],[&#x27;3%p 기준&#x27;,&#x27;미달 (0.816)&#x27;]],st:[&#x27;warn&#x27;,&#x27;기준을 만족하는지까지 적는다&#x27;],
+  code:`&lt;span class=&quot;c&quot;&gt;# TODO: p30 = prune_channels(rn20, 0.3) → 복사본을 3 epoch 학습 (finetune 또는 train_kd)&lt;/span&gt;\n&lt;span class=&quot;c&quot;&gt;#       prune_df (model, macs_m, params, acc, latency_ms) — 행 FP32, pruned 30%, pruned 30% + tuned&lt;/span&gt;`,
+  ex:&#x27;&lt;p&gt;fine-tuning 이든 KD 든 됩니다 — &lt;code&gt;method&lt;/code&gt; 에 쓴 방법을 적습니다. 채점은 표의 일관성 (MACs 감소 · 학습 뒤 회복) 을 봅니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;③ 과제 3 — 저장 · 요약&#x27;,vt:&#x27;몇 배 · 몇 %p&#x27;,run:()=&gt;play(2,300,5),
+  q:[&#x27;결과표를 만든 뒤 요약 (answer) 에는 무엇을 적어야 할까요?&#x27;,[&#x27;표에 있는 숫자를 빠짐없이 그대로 다시 나열한다&#x27;,&#x27;몇 배 · 몇 %p · 기준 통과 여부&#x27;,&#x27;사용한 함수 이름 목록&#x27;],1,&#x27;&quot;크기 3.31배 감소 · 정확도 −0.4%p&quot;, &quot;MACs 2.1배 감소 · 정확도 −3.9%p · 3%p 기준 미달&quot; 처럼 비율과 차이, 그리고 판정을 적습니다. 읽는 사람이 표를 다시 계산하지 않아도 결론을 알 수 있어야 합니다.&#x27;],
+  kv:[[&#x27;ptq&#x27;,&#x27;3.31배 · −0.4%p&#x27;],[&#x27;prune&#x27;,&#x27;2.10배 · −3.9%p&#x27;],[&#x27;pass_3pp&#x27;,&#x27;False&#x27;]],st:[&#x27;ok&#x27;,&#x27;표 → 요약 → 결론&#x27;],
+  code:`&lt;span class=&quot;c&quot;&gt;# TODO: eval_practice.csv (task 열: ptq · prune)&lt;/span&gt;\n&lt;span class=&quot;c&quot;&gt;#       answer = {&quot;ptq_size_x&quot;, &quot;ptq_acc_drop_pp&quot;, &quot;prune_macs_x&quot;, &quot;prune_acc_drop_pp&quot;, &quot;pass_3pp&quot;}&lt;/span&gt;`,
+  ex:&#x27;&lt;p&gt;과제 4 (강사 채점 10점) 에서 이 숫자로 &quot;배포해도 되는가&quot; 를 판단하는 글을 씁니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;④ 평가 안내 — 범위와 제출&#x27;,vt:&#x27;파트2 평가&#x27;,run:()=&gt;play(3,300,4),
+  q:[&#x27;실습 평가에서 시간이 모자라 마지막 표를 완성하지 못했습니다. 어떻게 제출하는 것이 좋을까요?&#x27;,[&#x27;완성하지 못했으므로 제출하지 않는다&#x27;,&#x27;실행되는 곳까지 정리해 제출한다&#x27;,&#x27;오류가 나더라도 코드를 끝까지 채워 제출한다&#x27;],1,&#x27;제출은 소스 기준 · 기능별 부분 점수입니다. 모델 변환 · 측정 · 표처럼 기능 단위로 점수가 있으므로, 실행되는 상태로 만든 곳까지 제출하면 그만큼 점수를 받습니다. 실행되지 않는 코드는 채점하기 어렵습니다.&#x27;],
+  kv:[[&#x27;실습 (쉬움)&#x27;,&#x27;static PTQ 후 정확도 · latency 비교&#x27;],[&#x27;실습 (중간)&#x27;,&#x27;structured pruning + fine-tuning 결과표&#x27;],[&#x27;제출&#x27;,&#x27;소스 기준 · 기능별 부분 점수&#x27;]],st:[&#x27;info&#x27;,&#x27;실행되는 곳까지 제출&#x27;],
+  code:`&lt;span class=&quot;c&quot;&gt;# 필답: scale · zero-point · PTQ / QAT · calibration · QDQ · mixed precision · pruning · KD&lt;/span&gt;`,
+  ex:&#x27;&lt;p&gt;ONNX·TensorRT 과목의 범위 (ONNX export · ORT 추론 · 엔진 빌드 · FP16 · 성능표) 도 함께 나옵니다.&lt;/p&gt;&#x27;},
+ {n:&#x27;⑤ 6일 정리&#x27;,vt:&#x27;한 줄씩&#x27;,run:()=&gt;play(4,300,6),
+  q:[&#x27;6일을 통틀어, 일반 하드웨어에서 &quot;속도&quot; 를 얻는 가지치기는 어떤 것이었나요?&#x27;,[&#x27;unstructured — 0 을 많이 만들수록 빨라진다&#x27;,&#x27;structured — 텐서 모양을 줄인다&#x27;,&#x27;2:4 — 어떤 GPU 에서나 2배&#x27;],1,&#x27;unstructured 는 압축 크기만 줄고 속도는 그대로였고 (Day 5 3 · 7교시), 2:4 는 Ampere 이후 GPU 에서만 가속됩니다. 채널을 줄이는 structured 만 어떤 엔진에서나 빨라졌고, fine-tuning · KD 와 한 세트였습니다.&#x27;],
+  kv:[[&#x27;양자화&#x27;,&#x27;8비트는 PTQ · 저비트 · 손실 클 때 QAT&#x27;],[&#x27;가지치기&#x27;,&#x27;structured + fine-tuning / KD&#x27;],[&#x27;통합&#x27;,&#x27;Prune → KD → INT8 → 실제 장치에서 재측정&#x27;]],st:[&#x27;info&#x27;,&#x27;수고하셨습니다 — 내일은 파트2 평가&#x27;],
+  code:`&lt;span class=&quot;c&quot;&gt;# 산출물: compress.py · intrusion_int8.mp4 · events_*.csv · qp_baseline.csv · decision_table.csv&lt;/span&gt;`,
+  ex:&#x27;&lt;p&gt;&lt;b&gt;6일 정리&lt;/b&gt;: 숫자를 작게 (양자화), 적게 (가지치기), 배우게 (증류) 한 뒤, 항상 실제 장치 · 실제 파이프라인에서 다시 잽니다. 12월 프로젝트에서 이 산출물을 배포 기준으로 씁니다.&lt;/p&gt;&#x27;},
+]);
+
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe></section>
+</main>
+</div>
+<script>
+const ids = [...document.querySelectorAll('nav button')].map(b => b.dataset.id);
+function fit(fr) {
+  try {
+    const d = fr.contentDocument; if (!d || !d.body) return;
+    fr.style.height = Math.max(600, d.documentElement.scrollHeight) + 'px';
+  } catch (e) {}
+}
+function show(id, push) {
+  if (!ids.includes(id)) id = ids[0];
+  document.querySelectorAll('section.lesson').forEach(s => s.classList.toggle('active', s.id === id));
+  document.querySelectorAll('nav button').forEach(b => b.setAttribute('aria-current', b.dataset.id === id ? 'true' : 'false'));
+  const sec = document.getElementById(id);
+  document.title = sec.dataset.title + ' — Quantization·Pruning Day 6';
+  const fr = sec.querySelector('iframe');
+  fr.loading = 'eager'; fit(fr);
+  if (push) history.replaceState(null, '', '#' + id);
+  window.scrollTo({ top: 0 });
+}
+document.querySelectorAll('section.lesson iframe').forEach(fr => {
+  fr.addEventListener('load', () => {
+    fit(fr);
+    try {
+      new ResizeObserver(() => fit(fr)).observe(fr.contentDocument.body);
+      fr.contentDocument.addEventListener('keydown', key);   // iframe 안에서도 ← → 동작
+    } catch (e) {}
+  });
+});
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => show(b.dataset.id, true));
+function key(e) {
+  if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  const cur = ids.indexOf(location.hash.slice(1) || ids[0]);
+  if (e.key === 'ArrowRight' && cur < ids.length - 1) show(ids[cur + 1], true);
+  if (e.key === 'ArrowLeft' && cur > 0) show(ids[cur - 1], true);
+}
+document.addEventListener('keydown', key);
+window.addEventListener('resize', () => document.querySelectorAll('section.lesson.active iframe').forEach(fit));
+window.addEventListener('hashchange', () => show(location.hash.slice(1), false));   // 주소창에서 #d1-N 을 바꿔도 이동
+show(location.hash.slice(1), false);
+</script>
+</body>
+</html>
